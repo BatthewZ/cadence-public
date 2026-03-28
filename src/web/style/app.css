@@ -1,0 +1,72 @@
+@import "./fonts.css";
+
+@import "tailwindcss";
+@import "./tokens/index.css";
+@import "./responsive/index.css";
+@import "./components/index.css";
+@import "./animations/index.css";
+@import "./themes/index.css";
+
+html {
+  background-color: var(--C-CANVAS);
+  scrollbar-width: thin;
+  scrollbar-color: var(--C-BORDER-DEFAULT) transparent;
+}
+
+html::-webkit-scrollbar {
+  width: 6px;
+}
+
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: var(--C-BORDER-DEFAULT);
+  border-radius: var(--RADIUS-FULL);
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: var(--C-BORDER-STRONG);
+}
+
+:root {
+  color-scheme: light;
+
+  --DEFAULT-FONT: "Poppins", sans-serif;
+  --DEFAULT-MONO-FONT: "Libertinus Mono", monospace;
+  --HEADING-FONT: var(--DEFAULT-FONT);
+  --HEADING-LETTER-SPACING: normal;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  font-family: var(--DEFAULT-FONT);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.mono-font {
+  font-family: var(--DEFAULT-MONO-FONT);
+}
+
+body:has(dialog[open].no-body-scroll) {
+  overflow: hidden;
+}
+
+/* Touch-safe hover reveal: semi-visible on touch, hidden-until-hover on desktop */
+.hover-reveal {
+  opacity: 0.45;
+  transition: opacity var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+@media (hover: hover) {
+  .hover-reveal {
+    opacity: 0;
+  }
+
+  .group:hover .hover-reveal {
+    opacity: 1;
+  }
+}

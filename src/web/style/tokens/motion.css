@@ -1,0 +1,47 @@
+:root {
+  --MOTION-DURATION-ENTER: 300ms;
+  --MOTION-DURATION-EXIT: 200ms;
+  --MOTION-DURATION-SHIFT: 400ms;
+  --MOTION-DURATION-PAGE: 350ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.33, 1, 0.68, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.22, 1, 0.36, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.33, 1, 0.68, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --MOTION-DISTANCE-SM: 8px;
+  --MOTION-DISTANCE-MD: 20px;
+  --MOTION-DISTANCE-LG: 40px;
+  --MOTION-STAGGER-DELAY: 50ms;
+  --MOTION-PARALLAX-RATE: 0.3;
+  --MOTION-SCALE-HOVER: 1.05;
+  --MOTION-SCALE-PRESS: 0.97;
+  --MOTION-PAGE-TRANSITION-IN: fade;
+  --MOTION-PAGE-TRANSITION-OUT: fade-out;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: none;
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: none;
+}
+
+/*
+* ------------
+*   Tailwind
+* ------------
+*/
+
+@theme inline {
+  --motion-duration-enter: var(--MOTION-DURATION-ENTER);
+  --motion-duration-exit: var(--MOTION-DURATION-EXIT);
+  --motion-duration-shift: var(--MOTION-DURATION-SHIFT);
+  --motion-duration-page: var(--MOTION-DURATION-PAGE);
+  --motion-ease-page: var(--MOTION-EASE-PAGE);
+  --motion-ease-enter: var(--MOTION-EASE-ENTER);
+  --motion-ease-exit: var(--MOTION-EASE-EXIT);
+  --motion-ease-shift: var(--MOTION-EASE-SHIFT);
+  --motion-ease-bounce: var(--MOTION-EASE-BOUNCE);
+  --motion-distance-sm: var(--MOTION-DISTANCE-SM);
+  --motion-distance-md: var(--MOTION-DISTANCE-MD);
+  --motion-distance-lg: var(--MOTION-DISTANCE-LG);
+  --motion-stagger-delay: var(--MOTION-STAGGER-DELAY);
+  --motion-parallax-rate: var(--MOTION-PARALLAX-RATE);
+  --motion-scale-hover: var(--MOTION-SCALE-HOVER);
+  --motion-scale-press: var(--MOTION-SCALE-PRESS);
+}

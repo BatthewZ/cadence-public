@@ -1,0 +1,94 @@
+.dropdown-menu-trigger {
+  display: inline-flex;
+  width: fit-content;
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dropdown-menu-content {
+  background: var(--C-SURFACE-0);
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  border-radius: var(--RADIUS-MD);
+  box-shadow: var(--SHADOW-LG);
+  padding: 4px 0;
+  min-width: 180px;
+  z-index: 51;
+  outline: none;
+}
+
+.dropdown-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  background: none;
+  border: none;
+  color: var(--C-TEXT-PRIMARY);
+  font: inherit;
+  font-size: var(--BodyText-2);
+  cursor: pointer;
+  outline: none;
+  text-align: left;
+}
+
+@media (max-width: 639px) {
+  .dropdown-menu-item {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+}
+
+.dropdown-menu-item:hover,
+.dropdown-menu-item:focus-visible {
+  background: var(--C-SURFACE-1);
+}
+
+.dropdown-menu-item[aria-disabled="true"] {
+  color: var(--C-TEXT-MUTED);
+  cursor: default;
+}
+
+.dropdown-menu-item-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--C-TEXT-SECONDARY);
+}
+
+/* Danger variant — used for destructive actions (delete, remove, revoke) */
+.dropdown-menu-item--danger {
+  color: var(--C-STATUS-ERROR);
+}
+
+.dropdown-menu-item--danger .dropdown-menu-item-icon {
+  color: var(--C-STATUS-ERROR);
+}
+
+.dropdown-menu-item--danger:hover,
+.dropdown-menu-item--danger:focus-visible {
+  background: var(--C-STATUS-ERROR-BG);
+}
+
+.dropdown-menu-divider {
+  height: 1px;
+  background: var(--C-BORDER-DEFAULT);
+  border: none;
+  margin: 4px 0;
+}
+
+.dropdown-menu-label {
+  display: block;
+  padding: 6px 12px;
+  font-size: var(--BodyText-3);
+  color: var(--C-TEXT-MUTED);
+  font-weight: 600;
+}
+
+/* Sub-menu trigger stays highlighted while its flyout is open */
+.dropdown-menu-sub-trigger--open {
+  background: var(--C-SURFACE-1);
+}

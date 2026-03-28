@@ -1,0 +1,135 @@
+/* Cyberpunk Theme — Neon-soaked alleyway
+   Near-black with blue undertone, hot pink primary, electric cyan accent.
+   Fonts: Rajdhani (headings), Exo 2 (body) */
+
+:root[data-theme="cyberpunk"] {
+  color-scheme: dark;
+
+  /* Fonts — angular futuristic headings with geometric readable body */
+  --DEFAULT-FONT: "Exo 2", sans-serif;
+  --DEFAULT-MONO-FONT: "IBM Plex Mono", monospace;
+  --HEADING-FONT: "Rajdhani", sans-serif;
+  --HEADING-LETTER-SPACING: 0.02em;
+  --HEADING-TEXT-TRANSFORM: uppercase;
+
+  /* Canvas */
+  --C-CANVAS: #0a0a14;
+
+  /* Brand */
+  --C-PRIMARY: #e6247a;
+  --C-PRIMARY-HOVER: #d01868;
+  --C-PRIMARY-ACTIVE: #f03888;
+  --C-SECONDARY: #1e1e30;
+  --C-SECONDARY-HOVER: #2a2a42;
+  --C-ACCENT: #00e5ff;
+  --C-ACCENT-HOVER: #00c4dd;
+
+  /* Surface — deep dark with purple undertones */
+  --C-SURFACE-0: #0e0e1a;
+  --C-SURFACE-1: #141424;
+  --C-SURFACE-2: #1a1a2e;
+  --C-SURFACE-3: #22223a;
+
+  /* Text — cool off-whites */
+  --C-TEXT-PRIMARY: #eaeaf4;
+  --C-TEXT-SECONDARY: #9898b8;
+  --C-TEXT-MUTED: #5c5c80;
+  --C-TEXT-INVERSE: #0a0a14;
+  --C-TEXT-ON-PRIMARY: #ffffff;
+  --C-TEXT-ON-ACCENT: #0a0a14;
+
+  /* Border */
+  --C-BORDER-DEFAULT: #22223a;
+  --C-BORDER-STRONG: #2e2e4a;
+  --C-BORDER-FOCUS: #00e5ff;
+
+  /* Status */
+  --C-STATUS-ERROR: #ff4466;
+  --C-STATUS-ERROR-BG: #2a0a14;
+  --C-STATUS-SUCCESS: #00e676;
+  --C-STATUS-SUCCESS-BG: #0a2a14;
+  --C-STATUS-WARNING: #ffab00;
+  --C-STATUS-WARNING-BG: #2a220a;
+  --C-STATUS-INFO: #00e5ff;
+  --C-STATUS-INFO-BG: #0a1e2a;
+
+  /* Radius — tight, angular, geometric */
+  --RADIUS-SM: 2px;
+  --RADIUS-MD: 4px;
+  --RADIUS-LG: 6px;
+  --RADIUS-XL: 8px;
+
+  /* Shadows — neon glow (pink and cyan tinted) */
+  --SHADOW-SM: 0 0 6px 0 rgb(230 36 122 / 0.15), 0 0 3px 0 rgb(0 229 255 / 0.08);
+  --SHADOW-MD: 0 0 16px -2px rgb(230 36 122 / 0.2), 0 0 8px -2px rgb(0 229 255 / 0.1);
+  --SHADOW-LG: 0 0 32px -4px rgb(230 36 122 / 0.25), 0 0 16px -4px rgb(0 229 255 / 0.15);
+
+  /* Typography — tech-forward weights */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 28px;
+  --BodyText-2-line-height: 24px;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: cyberpunk-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: cyberpunk-page-out;
+
+  /* Motion — fast and punchy */
+  --MOTION-DURATION-ENTER: 150ms;
+  --MOTION-DURATION-EXIT: 100ms;
+  --MOTION-DURATION-SHIFT: 200ms;
+  --MOTION-DURATION-PAGE: 300ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.77, 0, 0.18, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.22, 1, 0.36, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.33, 1, 0.68, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --MOTION-DISTANCE-SM: 4px;
+  --MOTION-DISTANCE-MD: 12px;
+  --MOTION-DISTANCE-LG: 24px;
+  --MOTION-STAGGER-DELAY: 25ms;
+  --MOTION-SCALE-HOVER: 1.04;
+  --MOTION-SCALE-PRESS: 0.96;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — deep dark with neon tint */
+  --OVERLAY-SCRIM-COLOR: rgb(10 10 20 / 0.8);
+  --OVERLAY-GRADIENT-START: rgb(10 10 20 / 0);
+  --OVERLAY-GRADIENT-END: rgb(10 10 20 / 0.9);
+  --OVERLAY-BLUR: 16px;
+  --OVERLAY-BLUR-HEAVY: 32px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.04;
+  --MEDIA-CARD-HOVER-LIFT: -4px;
+
+  /* Transitions */
+  --DURATION-FAST: 70ms;
+  --DURATION-NORMAL: 140ms;
+  --DURATION-SLOW: 220ms;
+}
+
+@keyframes cyberpunk-page-in {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes cyberpunk-page-out {
+  0% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+  100% {
+    opacity: 0;
+    clip-path: inset(0 0 0 100%);
+  }
+}

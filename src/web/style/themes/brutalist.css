@@ -1,0 +1,131 @@
+/* Brutalist Theme — Concrete architecture
+   Pure white, pure black primary, bold red accent. Raw, honest, no decoration.
+   Fonts: Space Mono (headings), Work Sans (body) */
+
+:root[data-theme="brutalist"] {
+  color-scheme: light;
+
+  /* Fonts — monospaced industrial headings with clean no-nonsense body */
+  --DEFAULT-FONT: "Work Sans", sans-serif;
+  --DEFAULT-MONO-FONT: "Space Mono", monospace;
+  --HEADING-FONT: "Space Mono", monospace;
+  --HEADING-LETTER-SPACING: -0.03em;
+  --HEADING-TEXT-TRANSFORM: uppercase;
+
+  /* Canvas */
+  --C-CANVAS: #ffffff;
+
+  /* Brand */
+  --C-PRIMARY: #0a0a0a;
+  --C-PRIMARY-HOVER: #000000;
+  --C-PRIMARY-ACTIVE: #1a1a1a;
+  --C-SECONDARY: #e8e8e8;
+  --C-SECONDARY-HOVER: #d8d8d8;
+  --C-ACCENT: #dc2626;
+  --C-ACCENT-HOVER: #b91c1c;
+
+  /* Surface — pure whites and stark grays, no warmth */
+  --C-SURFACE-0: #ffffff;
+  --C-SURFACE-1: #f5f5f5;
+  --C-SURFACE-2: #e8e8e8;
+  --C-SURFACE-3: #d4d4d4;
+
+  /* Text — pure black on white, maximum contrast */
+  --C-TEXT-PRIMARY: #0a0a0a;
+  --C-TEXT-SECONDARY: #404040;
+  --C-TEXT-MUTED: #737373;
+  --C-TEXT-INVERSE: #ffffff;
+  --C-TEXT-ON-PRIMARY: #ffffff;
+  --C-TEXT-ON-ACCENT: #ffffff;
+
+  /* Border */
+  --C-BORDER-DEFAULT: #0a0a0a;
+  --C-BORDER-STRONG: #000000;
+  --C-BORDER-FOCUS: #dc2626;
+
+  /* Status */
+  --C-STATUS-ERROR: #dc2626;
+  --C-STATUS-ERROR-BG: #fef2f2;
+  --C-STATUS-SUCCESS: #16a34a;
+  --C-STATUS-SUCCESS-BG: #f0fdf4;
+  --C-STATUS-WARNING: #ca8a04;
+  --C-STATUS-WARNING-BG: #fefce8;
+  --C-STATUS-INFO: #0a0a0a;
+  --C-STATUS-INFO-BG: #f5f5f5;
+
+  /* Radius — 0px everywhere, hard edges */
+  --RADIUS-SM: 0px;
+  --RADIUS-MD: 0px;
+  --RADIUS-LG: 0px;
+  --RADIUS-XL: 0px;
+
+  /* Shadows — hard-offset block shadows, no blur */
+  --SHADOW-SM: 2px 2px 0 0 #0a0a0a;
+  --SHADOW-MD: 3px 3px 0 0 #0a0a0a;
+  --SHADOW-LG: 5px 5px 0 0 #0a0a0a;
+
+  /* Typography — strong, authoritative */
+  --Bold-Weight: 800;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 28px;
+  --BodyText-2-line-height: 24px;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: brutalist-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: brutalist-page-out;
+
+  /* Motion — instant, linear, no personality */
+  --MOTION-DURATION-ENTER: 100ms;
+  --MOTION-DURATION-EXIT: 80ms;
+  --MOTION-DURATION-SHIFT: 150ms;
+  --MOTION-DURATION-PAGE: 120ms;
+  --MOTION-EASE-PAGE: linear;
+  --MOTION-EASE-ENTER: linear;
+  --MOTION-EASE-EXIT: linear;
+  --MOTION-EASE-SHIFT: linear;
+  --MOTION-EASE-BOUNCE: linear;
+  --MOTION-DISTANCE-SM: 0px;
+  --MOTION-DISTANCE-MD: 0px;
+  --MOTION-DISTANCE-LG: 0px;
+  --MOTION-STAGGER-DELAY: 0ms;
+  --MOTION-SCALE-HOVER: 1;
+  --MOTION-SCALE-PRESS: 1;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: none;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: none;
+
+  /* Overlay — stark black */
+  --OVERLAY-SCRIM-COLOR: rgb(10 10 10 / 0.6);
+  --OVERLAY-GRADIENT-START: rgb(10 10 10 / 0);
+  --OVERLAY-GRADIENT-END: rgb(10 10 10 / 0.8);
+  --OVERLAY-BLUR: 0px;
+  --OVERLAY-BLUR-HEAVY: 0px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1;
+  --MEDIA-CARD-HOVER-LIFT: 0px;
+
+  /* Transitions */
+  --DURATION-FAST: 50ms;
+  --DURATION-NORMAL: 100ms;
+  --DURATION-SLOW: 150ms;
+}
+
+@keyframes brutalist-page-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes brutalist-page-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}

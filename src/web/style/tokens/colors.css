@@ -1,0 +1,97 @@
+:root {
+  /* Canvas — the base layer beneath all surfaces */
+  --C-CANVAS: #ffffff;
+
+  /* Brand */
+  --C-PRIMARY: #1e293b;
+  --C-PRIMARY-HOVER: #0f172a;
+  --C-PRIMARY-ACTIVE: #334155;
+  --C-SECONDARY: #e2e8f0;
+  --C-SECONDARY-HOVER: #cbd5e1;
+  --C-ACCENT: #2563eb;
+  --C-ACCENT-HOVER: #1d4ed8;
+
+  /* Surface */
+  --C-SURFACE-0: #ffffff;
+  --C-SURFACE-1: #f9fafb;
+  --C-SURFACE-2: #f3f4f6;
+  --C-SURFACE-3: #e5e7eb;
+
+  /* Text */
+  --C-TEXT-PRIMARY: #111827;
+  --C-TEXT-SECONDARY: #4b5563;
+  --C-TEXT-MUTED: #9ca3af;
+  --C-TEXT-INVERSE: #ffffff;
+  --C-TEXT-ON-PRIMARY: #ffffff;
+  --C-TEXT-ON-ACCENT: #ffffff;
+
+  /* Accent tints */
+  --C-ACCENT-SUBTLE: color-mix(in srgb, var(--C-ACCENT) 6%, var(--C-SURFACE-0));
+  --C-ACCENT-MUTED: color-mix(in srgb, var(--C-ACCENT) 14%, var(--C-SURFACE-0));
+
+  /* Border */
+  --C-BORDER-DEFAULT: #e5e7eb;
+  --C-BORDER-STRONG: #d1d5db;
+  --C-BORDER-FOCUS: #3b82f6;
+
+  /* Status */
+  --C-STATUS-ERROR: #dc2626;
+  --C-STATUS-ERROR-BG: #fef2f2;
+  --C-STATUS-SUCCESS: #16a34a;
+  --C-STATUS-SUCCESS-BG: #f0fdf4;
+  --C-STATUS-WARNING: #d97706;
+  --C-STATUS-WARNING-BG: #fffbeb;
+  --C-STATUS-INFO: #2563eb;
+  --C-STATUS-INFO-BG: #eff6ff;
+}
+
+/*
+* ------------
+*   Tailwind
+* ------------
+*/
+
+@theme inline {
+  /* Canvas */
+  --color-canvas: var(--C-CANVAS);
+
+  /* Brand */
+  --color-primary: var(--C-PRIMARY);
+  --color-primary-hover: var(--C-PRIMARY-HOVER);
+  --color-primary-active: var(--C-PRIMARY-ACTIVE);
+  --color-secondary: var(--C-SECONDARY);
+  --color-secondary-hover: var(--C-SECONDARY-HOVER);
+  --color-accent: var(--C-ACCENT);
+  --color-accent-hover: var(--C-ACCENT-HOVER);
+  --color-accent-subtle: var(--C-ACCENT-SUBTLE);
+  --color-accent-muted: var(--C-ACCENT-MUTED);
+
+  /* Surface */
+  --color-surface-0: var(--C-SURFACE-0);
+  --color-surface-1: var(--C-SURFACE-1);
+  --color-surface-2: var(--C-SURFACE-2);
+  --color-surface-3: var(--C-SURFACE-3);
+
+  /* Text (fg- prefix avoids tailwind-merge conflicts with text-* font-size utilities) */
+  --color-fg-primary: var(--C-TEXT-PRIMARY);
+  --color-fg-secondary: var(--C-TEXT-SECONDARY);
+  --color-fg-muted: var(--C-TEXT-MUTED);
+  --color-fg-inverse: var(--C-TEXT-INVERSE);
+  --color-fg-on-primary: var(--C-TEXT-ON-PRIMARY);
+  --color-fg-on-accent: var(--C-TEXT-ON-ACCENT);
+
+  /* Border */
+  --color-border-default: var(--C-BORDER-DEFAULT);
+  --color-border-strong: var(--C-BORDER-STRONG);
+  --color-border-focus: var(--C-BORDER-FOCUS);
+
+  /* Status */
+  --color-status-error: var(--C-STATUS-ERROR);
+  --color-status-error-bg: var(--C-STATUS-ERROR-BG);
+  --color-status-success: var(--C-STATUS-SUCCESS);
+  --color-status-success-bg: var(--C-STATUS-SUCCESS-BG);
+  --color-status-warning: var(--C-STATUS-WARNING);
+  --color-status-warning-bg: var(--C-STATUS-WARNING-BG);
+  --color-status-info: var(--C-STATUS-INFO);
+  --color-status-info-bg: var(--C-STATUS-INFO-BG);
+}

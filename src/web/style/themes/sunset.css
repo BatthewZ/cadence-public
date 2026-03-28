@@ -1,0 +1,135 @@
+/* Sunset Theme — Golden hour energy
+   Vibrant coral/orange/golden tones on clean white. Bold, warm, alive.
+   Fonts: Sora (headings), Nunito (body) */
+
+:root[data-theme="sunset"] {
+  color-scheme: light;
+
+  /* Fonts — bold geometric headings with a warm rounded body */
+  --DEFAULT-FONT: "Nunito", sans-serif;
+  --DEFAULT-MONO-FONT: "Fira Code", monospace;
+  --HEADING-FONT: "Sora", sans-serif;
+  --HEADING-LETTER-SPACING: -0.02em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas */
+  --C-CANVAS: #fffcf8;
+
+  /* Brand */
+  --C-PRIMARY: #d4542c;
+  --C-PRIMARY-HOVER: #be4420;
+  --C-PRIMARY-ACTIVE: #e06438;
+  --C-SECONDARY: #fce8d8;
+  --C-SECONDARY-HOVER: #f8d8c2;
+  --C-ACCENT: #e89030;
+  --C-ACCENT-HOVER: #d47e22;
+
+  /* Surface — warm whites with golden undertone */
+  --C-SURFACE-0: #fffcf8;
+  --C-SURFACE-1: #fef8f0;
+  --C-SURFACE-2: #fcf0e2;
+  --C-SURFACE-3: #f8e4cc;
+
+  /* Text — warm darks, high contrast */
+  --C-TEXT-PRIMARY: #1e1008;
+  --C-TEXT-SECONDARY: #5c4430;
+  --C-TEXT-MUTED: #947860;
+  --C-TEXT-INVERSE: #fffcf8;
+  --C-TEXT-ON-PRIMARY: #ffffff;
+  --C-TEXT-ON-ACCENT: #1e1008;
+
+  /* Border */
+  --C-BORDER-DEFAULT: #f0dcc6;
+  --C-BORDER-STRONG: #e0c8aa;
+  --C-BORDER-FOCUS: #d4542c;
+
+  /* Status */
+  --C-STATUS-ERROR: #c42b2b;
+  --C-STATUS-ERROR-BG: #fef0f0;
+  --C-STATUS-SUCCESS: #2a8a3e;
+  --C-STATUS-SUCCESS-BG: #eefaf0;
+  --C-STATUS-WARNING: #c47a10;
+  --C-STATUS-WARNING-BG: #fef8ea;
+  --C-STATUS-INFO: #2a6eb4;
+  --C-STATUS-INFO-BG: #eef4fe;
+
+  /* Radius — medium-large, friendly and warm */
+  --RADIUS-SM: 8px;
+  --RADIUS-MD: 12px;
+  --RADIUS-LG: 16px;
+  --RADIUS-XL: 20px;
+
+  /* Shadows — warm golden-tinted */
+  --SHADOW-SM: 0 1px 3px 0 rgb(212 84 44 / 0.06), 0 1px 2px 0 rgb(30 16 8 / 0.04);
+  --SHADOW-MD: 0 4px 10px -2px rgb(212 84 44 / 0.1), 0 2px 4px -2px rgb(30 16 8 / 0.06);
+  --SHADOW-LG: 0 12px 24px -6px rgb(212 84 44 / 0.12), 0 4px 8px -4px rgb(30 16 8 / 0.06);
+
+  /* Typography — bold, confident */
+  --Bold-Weight: 800;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 30px;
+  --BodyText-2-line-height: 24px;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: sunset-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: sunset-page-out;
+
+  /* Motion — energetic, lively */
+  --MOTION-DURATION-ENTER: 280ms;
+  --MOTION-DURATION-EXIT: 180ms;
+  --MOTION-DURATION-SHIFT: 350ms;
+  --MOTION-DURATION-PAGE: 350ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.22, 0.9, 0.36, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.16, 1, 0.3, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.28, 1.5, 0.58, 1);
+  --MOTION-DISTANCE-SM: 10px;
+  --MOTION-DISTANCE-MD: 22px;
+  --MOTION-DISTANCE-LG: 44px;
+  --MOTION-STAGGER-DELAY: 45ms;
+  --MOTION-SCALE-HOVER: 1.04;
+  --MOTION-SCALE-PRESS: 0.96;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — warm golden scrim */
+  --OVERLAY-SCRIM-COLOR: rgb(30 16 8 / 0.4);
+  --OVERLAY-GRADIENT-START: rgb(30 16 8 / 0);
+  --OVERLAY-GRADIENT-END: rgb(30 16 8 / 0.6);
+  --OVERLAY-BLUR: 12px;
+  --OVERLAY-BLUR-HEAVY: 24px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.04;
+  --MEDIA-CARD-HOVER-LIFT: -4px;
+
+  /* Transitions */
+  --DURATION-FAST: 100ms;
+  --DURATION-NORMAL: 200ms;
+  --DURATION-SLOW: 320ms;
+}
+
+@keyframes sunset-page-in {
+  0% {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sunset-page-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(1.01);
+  }
+}

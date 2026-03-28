@@ -1,0 +1,221 @@
+.task-filter-bar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--R-SIZE-5);
+}
+
+.task-filter-bar__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--R-SIZE-5);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.task-filter-bar__controls::-webkit-scrollbar {
+  display: none;
+}
+
+.task-filter-bar__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px var(--R-SIZE-5);
+  border-radius: var(--RADIUS-MD);
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  background: var(--C-SURFACE-0);
+  color: var(--C-TEXT-SECONDARY);
+  font-size: var(--BodyText-3);
+  cursor: pointer;
+  transition: all var(--DURATION-FAST) ease;
+  white-space: nowrap;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+.task-filter-bar__trigger:hover {
+  background: var(--C-SURFACE-1);
+  color: var(--C-TEXT-PRIMARY);
+  border-color: var(--C-BORDER-STRONG);
+}
+
+.task-filter-bar__trigger--active {
+  background: var(--C-ACCENT-SUBTLE);
+  color: var(--C-ACCENT);
+  border-color: var(--C-ACCENT);
+}
+
+.task-filter-bar__trigger--active:hover {
+  background: var(--C-ACCENT-MUTED);
+}
+
+.task-filter-bar__count {
+  font-size: 0.625rem;
+  padding: 0 0.375rem;
+  line-height: 1.25rem;
+}
+
+.task-filter-bar__clear {
+  font-size: var(--BodyText-3);
+  color: var(--C-TEXT-MUTED);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 5px var(--R-SIZE-5);
+  transition: color var(--DURATION-FAST) ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.task-filter-bar__clear:hover {
+  color: var(--C-STATUS-ERROR);
+  text-decoration: underline;
+}
+
+/* Popover content */
+.task-filter-bar__popover {
+  min-width: 200px;
+  max-width: 260px;
+  padding: 10px 12px;
+}
+
+.task-filter-bar__popover-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--C-BORDER-DEFAULT) transparent;
+}
+
+.task-filter-bar__popover-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.task-filter-bar__popover-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.task-filter-bar__popover-list::-webkit-scrollbar-thumb {
+  background: var(--C-BORDER-STRONG);
+  border-radius: var(--RADIUS-FULL);
+}
+
+.task-filter-bar__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: var(--RADIUS-SM);
+  font-size: var(--BodyText-3);
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background var(--DURATION-FAST) ease;
+}
+
+/* Keep badges compact inside filter options */
+.task-filter-bar__option > span {
+  line-height: 1.3;
+  padding-top: 2px;
+  padding-bottom: 2px;
+}
+
+.task-filter-bar__option:hover {
+  background: var(--C-SURFACE-1);
+}
+
+.task-filter-bar__option--button {
+  border: none;
+  background: none;
+  color: var(--C-TEXT-PRIMARY);
+  width: 100%;
+  text-align: left;
+}
+
+.task-filter-bar__option--selected {
+  background: var(--C-ACCENT-SUBTLE);
+  color: var(--C-ACCENT);
+  font-weight: 600;
+}
+
+.task-filter-bar__option--selected:hover {
+  background: var(--C-ACCENT-MUTED);
+}
+
+/* Date inputs */
+.task-filter-bar__date-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.task-filter-bar__date-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.task-filter-bar__date-input {
+  padding: 6px var(--R-SIZE-5);
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  border-radius: var(--RADIUS-SM);
+  background: var(--C-SURFACE-0);
+  color: var(--C-TEXT-PRIMARY);
+  font-size: var(--BodyText-3);
+  font-family: inherit;
+  transition: border-color var(--DURATION-FAST) ease, box-shadow var(--DURATION-FAST) ease;
+}
+
+.task-filter-bar__date-input:focus {
+  outline: none;
+  border-color: var(--C-BORDER-FOCUS);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--C-BORDER-FOCUS) 20%, transparent);
+}
+
+.task-filter-bar__quick-picks {
+  display: flex;
+  gap: var(--R-SIZE-6);
+  flex-wrap: wrap;
+}
+
+/* Filter chips */
+.task-filter-bar__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--R-SIZE-6);
+}
+
+.task-filter-bar__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px var(--R-SIZE-5);
+  border-radius: var(--RADIUS-FULL);
+  background: var(--C-ACCENT-SUBTLE);
+  color: var(--C-ACCENT);
+  font-size: var(--BodyText-3);
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.task-filter-bar__chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--C-ACCENT);
+  opacity: 0.6;
+  padding: 0;
+  border-radius: var(--RADIUS-FULL);
+  transition: opacity var(--DURATION-FAST) ease;
+}
+
+.task-filter-bar__chip button:hover {
+  opacity: 1;
+}

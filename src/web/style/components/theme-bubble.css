@@ -1,0 +1,113 @@
+/* ── Mobile Theme Bubble (FAB) ── */
+
+.theme-bubble {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  z-index: 52;
+}
+
+@media (min-width: 1280px) {
+  .theme-bubble {
+    display: none;
+  }
+}
+
+.theme-bubble__fab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 9999px;
+  border: 1px solid color-mix(in srgb, var(--C-BORDER-DEFAULT) 60%, transparent);
+  background: color-mix(in srgb, var(--C-SURFACE-0) 72%, transparent);
+  backdrop-filter: blur(16px);
+  box-shadow: var(--SHADOW-LG);
+  cursor: pointer;
+  transition:
+    transform var(--DURATION-FAST) var(--MOTION-EASE-SHIFT),
+    box-shadow var(--DURATION-FAST) var(--MOTION-EASE-SHIFT);
+}
+
+.theme-bubble__fab:active {
+  transform: scale(0.93);
+}
+
+.theme-bubble__fab[aria-expanded="true"] {
+  box-shadow: var(--SHADOW-XL);
+}
+
+/* Color swatch inside the FAB */
+.theme-bubble__swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 100%;
+  background: var(--C-PRIMARY);
+  border: 2px solid var(--C-ACCENT);
+  transition:
+    background var(--DURATION-NORMAL) var(--MOTION-EASE-SHIFT),
+    border-color var(--DURATION-NORMAL) var(--MOTION-EASE-SHIFT);
+}
+
+/* ── Popover panel ── */
+
+.theme-bubble__panel {
+  padding: 6px;
+  min-width: 160px;
+}
+
+.theme-bubble__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--RADIUS-MD);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--C-TEXT-SECONDARY);
+  transition:
+    background var(--DURATION-FAST) var(--MOTION-EASE-SHIFT),
+    color var(--DURATION-FAST) var(--MOTION-EASE-SHIFT);
+}
+
+.theme-bubble__option:hover {
+  background: var(--C-SURFACE-2);
+  color: var(--C-TEXT-PRIMARY);
+}
+
+.theme-bubble__option--active {
+  background: var(--C-SURFACE-2);
+  color: var(--C-TEXT-PRIMARY);
+  font-weight: 600;
+}
+
+.theme-bubble__dot {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--C-BORDER-DEFAULT);
+}
+
+.theme-bubble__option--active .theme-bubble__dot {
+  border-color: var(--C-ACCENT);
+  box-shadow:
+    0 0 0 2px var(--C-SURFACE-0),
+    0 0 0 3px var(--C-ACCENT);
+}
+
+.theme-bubble__check {
+  margin-left: auto;
+  color: var(--C-ACCENT);
+  opacity: 0;
+  transition: opacity var(--DURATION-FAST);
+}
+
+.theme-bubble__option--active .theme-bubble__check {
+  opacity: 1;
+}

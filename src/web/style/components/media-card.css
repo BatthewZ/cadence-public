@@ -1,0 +1,64 @@
+.media-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--RADIUS-LG);
+  transition:
+    transform var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    box-shadow var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+  box-shadow: var(--SHADOW-SM);
+}
+
+.media-card:hover {
+  transform: scale(var(--MEDIA-CARD-HOVER-SCALE)) translateY(var(--MEDIA-CARD-HOVER-LIFT));
+  box-shadow: var(--SHADOW-LG);
+}
+
+.media-card:focus-visible {
+  outline: 2px solid var(--C-BORDER-FOCUS);
+  outline-offset: 2px;
+}
+
+.media-card__image-container {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.media-card__image-container--portrait {
+  aspect-ratio: var(--MEDIA-ASPECT-POSTER);
+}
+
+.media-card__image-container--landscape {
+  aspect-ratio: var(--MEDIA-ASPECT-WIDE);
+}
+
+.media-card__image-container--square {
+  aspect-ratio: var(--MEDIA-ASPECT-SQUARE);
+}
+
+.media-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, var(--OVERLAY-GRADIENT-END), var(--OVERLAY-GRADIENT-START));
+  pointer-events: none;
+}
+
+/* Content sits on top of a dark overlay — force light text in all themes */
+.media-card__content {
+  --C-TEXT-PRIMARY: #fff;
+  --C-TEXT-SECONDARY: rgba(255, 255, 255, 0.7);
+  --C-TEXT-MUTED: rgba(255, 255, 255, 0.5);
+  --C-TEXT-INVERSE: #fff;
+  --C-TEXT-ON-PRIMARY: #fff;
+  --C-TEXT-ON-ACCENT: #fff;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .media-card {
+    transition: box-shadow var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+  }
+
+  .media-card:hover {
+    transform: none;
+  }
+}

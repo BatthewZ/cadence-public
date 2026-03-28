@@ -1,0 +1,8 @@
+@keyframes hold-delete-ring {
+  from {
+    stroke-dashoffset: 56.549;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}

@@ -1,0 +1,135 @@
+/* Botanical Theme — Morning light through a greenhouse window
+   Warm cream canvas, sage green primary, terracotta accent, organic and calm.
+   Fonts: Lora (headings), Source Sans 3 (body) */
+
+:root[data-theme="botanical"] {
+  color-scheme: light;
+
+  /* Fonts — refined serif headings with a clean warm body */
+  --DEFAULT-FONT: "Source Sans 3", sans-serif;
+  --DEFAULT-MONO-FONT: "DM Mono", monospace;
+  --HEADING-FONT: "DM Serif Display", serif;
+  --HEADING-LETTER-SPACING: -0.01em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas */
+  --C-CANVAS: #faf6f0;
+
+  /* Brand */
+  --C-PRIMARY: #4a6741;
+  --C-PRIMARY-HOVER: #3d5736;
+  --C-PRIMARY-ACTIVE: #5a7751;
+  --C-SECONDARY: #e8e0d4;
+  --C-SECONDARY-HOVER: #ddd4c6;
+  --C-ACCENT: #c07a50;
+  --C-ACCENT-HOVER: #a86840;
+
+  /* Surface — warm cream layers */
+  --C-SURFACE-0: #faf6f0;
+  --C-SURFACE-1: #f5efe6;
+  --C-SURFACE-2: #ede5d8;
+  --C-SURFACE-3: #e0d6c6;
+
+  /* Text — earthy warm darks */
+  --C-TEXT-PRIMARY: #2c2418;
+  --C-TEXT-SECONDARY: #5c5040;
+  --C-TEXT-MUTED: #8a7e6e;
+  --C-TEXT-INVERSE: #faf6f0;
+  --C-TEXT-ON-PRIMARY: #faf6f0;
+  --C-TEXT-ON-ACCENT: #faf6f0;
+
+  /* Border */
+  --C-BORDER-DEFAULT: #e0d6c6;
+  --C-BORDER-STRONG: #cfc4b0;
+  --C-BORDER-FOCUS: #4a6741;
+
+  /* Status */
+  --C-STATUS-ERROR: #c0392b;
+  --C-STATUS-ERROR-BG: #fdf0ee;
+  --C-STATUS-SUCCESS: #3d8b37;
+  --C-STATUS-SUCCESS-BG: #edf7ec;
+  --C-STATUS-WARNING: #c07a50;
+  --C-STATUS-WARNING-BG: #fdf5ee;
+  --C-STATUS-INFO: #3a7ca5;
+  --C-STATUS-INFO-BG: #edf5fa;
+
+  /* Radius — large, organic, soft */
+  --RADIUS-SM: 12px;
+  --RADIUS-MD: 16px;
+  --RADIUS-LG: 20px;
+  --RADIUS-XL: 24px;
+
+  /* Shadows — soft diffuse warm shadows */
+  --SHADOW-SM: 0 1px 4px 0 rgb(44 36 24 / 0.06);
+  --SHADOW-MD: 0 4px 12px -2px rgb(44 36 24 / 0.08), 0 2px 4px -2px rgb(44 36 24 / 0.04);
+  --SHADOW-LG: 0 12px 28px -6px rgb(44 36 24 / 0.1), 0 4px 8px -4px rgb(44 36 24 / 0.05);
+
+  /* Typography — warm, readable weights */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 32px;
+  --BodyText-2-line-height: 26px;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: botanical-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: botanical-page-out;
+
+  /* Motion — gentle and organic */
+  --MOTION-DURATION-ENTER: 400ms;
+  --MOTION-DURATION-EXIT: 280ms;
+  --MOTION-DURATION-SHIFT: 500ms;
+  --MOTION-DURATION-PAGE: 420ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.16, 1, 0.3, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.22, 1.1, 0.44, 1);
+  --MOTION-DISTANCE-SM: 10px;
+  --MOTION-DISTANCE-MD: 24px;
+  --MOTION-DISTANCE-LG: 44px;
+  --MOTION-STAGGER-DELAY: 65ms;
+  --MOTION-SCALE-HOVER: 1.02;
+  --MOTION-SCALE-PRESS: 0.98;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay */
+  --OVERLAY-SCRIM-COLOR: rgb(44 36 24 / 0.4);
+  --OVERLAY-GRADIENT-START: rgb(44 36 24 / 0);
+  --OVERLAY-GRADIENT-END: rgb(44 36 24 / 0.6);
+  --OVERLAY-BLUR: 10px;
+  --OVERLAY-BLUR-HEAVY: 24px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.02;
+  --MEDIA-CARD-HOVER-LIFT: -3px;
+
+  /* Transitions */
+  --DURATION-FAST: 130ms;
+  --DURATION-NORMAL: 250ms;
+  --DURATION-SLOW: 400ms;
+}
+
+@keyframes botanical-page-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px) scale(0.99);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes botanical-page-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px) scale(1.005);
+  }
+}

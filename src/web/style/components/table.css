@@ -1,0 +1,130 @@
+/* ------------------------------------------------------------------ */
+/*  Table                                                             */
+/* ------------------------------------------------------------------ */
+
+/* Root wrapper */
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  border-radius: var(--RADIUS-MD);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--C-SURFACE-0);
+}
+
+/* Head */
+.table-head {
+  background: var(--C-SURFACE-1);
+  border-bottom: 2px solid var(--C-BORDER-DEFAULT);
+}
+
+/* Header Cell */
+.table-header-cell {
+  text-align: left;
+  font-weight: 600;
+  color: var(--C-TEXT-PRIMARY);
+  white-space: nowrap;
+}
+
+.table-header-cell--sortable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+}
+
+.table-header-cell--sortable:hover {
+  background: var(--C-SURFACE-2);
+}
+
+.table-header-cell--sortable:focus-visible {
+  outline: 2px solid var(--C-BORDER-FOCUS);
+  outline-offset: -2px;
+}
+
+.table-header-cell--sortable:active {
+  background: var(--C-SURFACE-3);
+}
+
+.table-header-cell__sort-icon {
+  display: inline-flex;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.table-header-cell__sort-icon--muted {
+  color: var(--C-TEXT-MUTED);
+}
+
+.table-header-cell__sort-icon--active {
+  color: var(--C-ACCENT);
+}
+
+/* Body */
+.table-body {
+  /* base styles */
+}
+
+/* Row */
+.table-row {
+  border-bottom: 1px solid var(--C-BORDER-DEFAULT);
+}
+
+.table-row:last-child {
+  border-bottom: none;
+}
+
+.table-row--selected {
+  background: color-mix(in srgb, var(--C-ACCENT) 8%, transparent);
+}
+
+.table-row--striped:nth-child(even) {
+  background: var(--C-SURFACE-1);
+}
+
+.table-row--selected.table-row--striped:nth-child(even) {
+  background: color-mix(in srgb, var(--C-ACCENT) 8%, transparent);
+}
+
+/* Cell */
+.table-cell {
+  color: var(--C-TEXT-PRIMARY);
+}
+
+/* Density: dense */
+.table-cell--dense {
+  padding: 4px 12px;
+  font-size: var(--BodyText-2);
+}
+
+/* Density: comfortable */
+.table-cell--comfortable {
+  padding: 10px 16px;
+  font-size: var(--BodyText-1);
+}
+
+/* Density: spacious */
+.table-cell--spacious {
+  padding: 16px 16px;
+  font-size: var(--BodyText-1);
+}
+
+/* Sticky header */
+.table--sticky-header .table-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.table--sticky-header .table-header-cell {
+  box-shadow: var(--SHADOW-SM);
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .table-header-cell--sortable {
+    transition: none;
+  }
+}

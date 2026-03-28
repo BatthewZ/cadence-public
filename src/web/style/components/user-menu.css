@@ -1,0 +1,110 @@
+/* ─────────────────────────────────────────────
+   UserMenu — sidebar account dropdown trigger
+   ───────────────────────────────────────────── */
+
+.user-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--C-TEXT-PRIMARY);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: background var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.user-menu-trigger:hover {
+  background: var(--C-SURFACE-2);
+}
+
+.user-menu-trigger:focus-visible {
+  outline: 2px solid var(--C-BORDER-FOCUS);
+  outline-offset: -2px;
+}
+
+.user-menu-trigger-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.user-menu-trigger-name {
+  display: block;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 1.3;
+  color: var(--C-TEXT-PRIMARY);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu-trigger-email {
+  display: block;
+  font-size: 11px;
+  line-height: 1.3;
+  color: var(--C-TEXT-MUTED);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu-trigger-chevron {
+  flex-shrink: 0;
+  color: var(--C-TEXT-MUTED);
+  transition: transform var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.user-menu-trigger[aria-expanded="true"] .user-menu-trigger-chevron {
+  transform: rotate(180deg);
+}
+
+/* Inside sidebar: fill available width */
+.app-shell-sidebar .user-menu-trigger {
+  width: 100%;
+}
+
+/* Collapsed sidebar: center avatar, hide text */
+.app-shell-sidebar[data-collapsed] .user-menu-trigger {
+  justify-content: center;
+  padding: 8px;
+}
+
+.app-shell-sidebar[data-collapsed] .user-menu-trigger-info,
+.app-shell-sidebar[data-collapsed] .user-menu-trigger-chevron {
+  display: none;
+}
+
+/* Menu header (non-interactive user info inside the dropdown) */
+.user-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+}
+
+.user-menu-header-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.user-menu-header-name {
+  font-weight: 600;
+  font-size: var(--BodyText-2);
+  color: var(--C-TEXT-PRIMARY);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-menu-header-email {
+  font-size: var(--BodyText-3);
+  color: var(--C-TEXT-MUTED);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

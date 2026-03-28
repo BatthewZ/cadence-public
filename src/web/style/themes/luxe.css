@@ -1,0 +1,135 @@
+/* Luxe Theme — First-class lounge
+   Rich dark navy/charcoal, gold/champagne accent, deep plum primary.
+   Fonts: Cormorant Garamond (headings), Jost (body) */
+
+:root[data-theme="luxe"] {
+  color-scheme: dark;
+
+  /* Fonts — high-fashion serif headings with elegant geometric body */
+  --DEFAULT-FONT: "Jost", sans-serif;
+  --DEFAULT-MONO-FONT: "DM Mono", monospace;
+  --HEADING-FONT: "Cormorant Garamond", serif;
+  --HEADING-LETTER-SPACING: 0.01em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas */
+  --C-CANVAS: #121018;
+
+  /* Brand */
+  --C-PRIMARY: #6e4a80;
+  --C-PRIMARY-HOVER: #5e3a70;
+  --C-PRIMARY-ACTIVE: #7e5a90;
+  --C-SECONDARY: #282230;
+  --C-SECONDARY-HOVER: #342e3c;
+  --C-ACCENT: #d4a85a;
+  --C-ACCENT-HOVER: #c49848;
+
+  /* Surface — rich dark navy with plum undertones */
+  --C-SURFACE-0: #16141e;
+  --C-SURFACE-1: #1c1a26;
+  --C-SURFACE-2: #24222e;
+  --C-SURFACE-3: #2e2c38;
+
+  /* Text — warm cream and muted golds */
+  --C-TEXT-PRIMARY: #ece4d8;
+  --C-TEXT-SECONDARY: #a89e90;
+  --C-TEXT-MUTED: #6e6458;
+  --C-TEXT-INVERSE: #121018;
+  --C-TEXT-ON-PRIMARY: #ece4d8;
+  --C-TEXT-ON-ACCENT: #121018;
+
+  /* Border */
+  --C-BORDER-DEFAULT: #2e2c38;
+  --C-BORDER-STRONG: #3e3c48;
+  --C-BORDER-FOCUS: #d4a85a;
+
+  /* Status */
+  --C-STATUS-ERROR: #e87070;
+  --C-STATUS-ERROR-BG: #281818;
+  --C-STATUS-SUCCESS: #5cc888;
+  --C-STATUS-SUCCESS-BG: #18281c;
+  --C-STATUS-WARNING: #d4a85a;
+  --C-STATUS-WARNING-BG: #282218;
+  --C-STATUS-INFO: #70a8e8;
+  --C-STATUS-INFO-BG: #182028;
+
+  /* Radius — small-medium, precise and refined */
+  --RADIUS-SM: 4px;
+  --RADIUS-MD: 6px;
+  --RADIUS-LG: 10px;
+  --RADIUS-XL: 14px;
+
+  /* Shadows — warm candlelight glow */
+  --SHADOW-SM: 0 1px 4px 0 rgb(18 16 24 / 0.4), 0 0 0 1px rgb(212 168 90 / 0.03);
+  --SHADOW-MD: 0 4px 12px -2px rgb(18 16 24 / 0.5), 0 2px 4px -1px rgb(212 168 90 / 0.04);
+  --SHADOW-LG: 0 14px 28px -6px rgb(18 16 24 / 0.6), 0 4px 8px -4px rgb(212 168 90 / 0.05);
+
+  /* Typography — elegant, precise */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 500;
+
+  --BodyText-1-line-height: 30px;
+  --BodyText-2-line-height: 26px;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: luxe-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: luxe-page-out;
+
+  /* Motion — elegant and deliberate */
+  --MOTION-DURATION-ENTER: 400ms;
+  --MOTION-DURATION-EXIT: 280ms;
+  --MOTION-DURATION-SHIFT: 500ms;
+  --MOTION-DURATION-PAGE: 440ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.16, 1, 0.3, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.22, 1.05, 0.44, 1);
+  --MOTION-DISTANCE-SM: 8px;
+  --MOTION-DISTANCE-MD: 18px;
+  --MOTION-DISTANCE-LG: 36px;
+  --MOTION-STAGGER-DELAY: 60ms;
+  --MOTION-SCALE-HOVER: 1.02;
+  --MOTION-SCALE-PRESS: 0.98;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — rich dark scrim */
+  --OVERLAY-SCRIM-COLOR: rgb(18 16 24 / 0.7);
+  --OVERLAY-GRADIENT-START: rgb(18 16 24 / 0);
+  --OVERLAY-GRADIENT-END: rgb(18 16 24 / 0.85);
+  --OVERLAY-BLUR: 14px;
+  --OVERLAY-BLUR-HEAVY: 28px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.02;
+  --MEDIA-CARD-HOVER-LIFT: -3px;
+
+  /* Transitions */
+  --DURATION-FAST: 130ms;
+  --DURATION-NORMAL: 250ms;
+  --DURATION-SLOW: 400ms;
+}
+
+@keyframes luxe-page-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes luxe-page-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+}

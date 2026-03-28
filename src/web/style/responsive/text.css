@@ -1,0 +1,186 @@
+/* @import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"); */
+
+:root {
+  /* Headings */
+  --H1: 36px;
+  --H1-line-height: 44px;
+
+  --H2: 28px;
+  --H2-line-height: 36px;
+
+  --H3: 24px;
+  --H3-line-height: 32px;
+
+  --H4: 20px;
+  --H4-line-height: 32px;
+
+  --H5: 18px;
+  --H5-line-height: 28px;
+
+  --H6: 16px;
+  --H6-line-height: 24px;
+
+  /* Body */
+  --BodyText-1: 14px;
+  --BodyText-1-line-height: 30px;
+
+  --BodyText-2: 13px;
+  --BodyText-2-line-height: 24px;
+
+  --BodyText-3: 12px;
+  --BodyText-3-line-height: 28px;
+
+  --Semibold-Weight: 500;
+  --Bold-Weight: 600;
+}
+
+/* 640px */
+@media (width >= 40rem) {
+  :root {
+    /* Headings */
+    --H1: 64px;
+    --H1-line-height: 72px;
+
+    --H2: 48px;
+    --H2-line-height: 64px;
+
+    --H3: 36px;
+    --H3-line-height: 50px;
+
+    --H4: 28px;
+    --H4-line-height: 42px;
+
+    --H5: 20px;
+    --H5-line-height: 32px;
+
+    --H6: 20px;
+    --H6-line-height: 32px;
+
+    /* Body */
+    --BodyText-1: 16px;
+    --BodyText-1-line-height: 32px;
+
+    --BodyText-2: 14px;
+    --BodyText-2-line-height: 28px;
+
+    --BodyText-3: 13px;
+    --BodyText-3-line-height: 28px;
+
+    --Semibold-Weight: 600;
+    --Bold-Weight: 700;
+  }
+}
+
+/*
+* ------------
+*   Tailwind
+* ------------
+*/
+
+/* 
+ use 'inline' to allow overriding
+ You can do inline overrides with this syntax: [--R-SIZE-1:20px]
+ */
+@theme inline {
+  --text-h1: var(--H1);
+  --text-h1--line-height: var(--H1-line-height);
+
+  --text-h2: var(--H2);
+  --text-h2--line-height: var(--H2-line-height);
+
+  --text-h3: var(--H3);
+  --text-h3--line-height: var(--H3-line-height);
+
+  --text-h4: var(--H4);
+  --text-h4--line-height: var(--H4-line-height);
+
+  --text-h5: var(--H5);
+  --text-h5--line-height: var(--H5-line-height);
+
+  --text-h6: var(--H6);
+  --text-h6--line-height: var(--H6-line-height);
+
+  --text-body-1: var(--BodyText-1);
+  --text-body-1--line-height: var(--BodyText-1-line-height);
+
+  --text-body-2: var(--BodyText-2);
+  --text-body-2--line-height: var(--BodyText-2-line-height);
+
+  --text-body-3: var(--BodyText-3);
+  --text-body-3--line-height: var(--BodyText-3-line-height);
+
+  --font-weight-bold: var(--Bold-Weight);
+  --font-weight-semibold: var(--Semibold-Weight);
+}
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p {
+    margin: 0px;
+    padding: 0px;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .h1,
+  .h2,
+  .h3,
+  .h4,
+  .h5,
+  .h6 {
+    font-family: var(--HEADING-FONT);
+    letter-spacing: var(--HEADING-LETTER-SPACING);
+    text-transform: var(--HEADING-TEXT-TRANSFORM);
+  }
+
+  h1,
+  .h1 {
+    font-size: var(--H1);
+    line-height: var(--H1-line-height);
+    font-weight: 700;
+  }
+
+  h2,
+  .h2 {
+    font-size: var(--H2);
+    line-height: var(--H2-line-height);
+    font-weight: 700;
+  }
+
+  h3,
+  .h3 {
+    font-size: var(--H3);
+    line-height: var(--H3-line-height);
+    font-weight: 700;
+  }
+
+  h4,
+  .h4 {
+    font-size: var(--H4);
+    line-height: var(--H4-line-height);
+    font-weight: 700;
+  }
+
+  h5,
+  .h5 {
+    font-size: var(--H5);
+    line-height: var(--H5-line-height);
+    font-weight: 700;
+  }
+
+  h6,
+  .h6 {
+    font-size: var(--H6);
+    line-height: var(--H6-line-height);
+    font-weight: 600;
+  }
+}

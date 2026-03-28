@@ -1,0 +1,21 @@
+:root {
+  --OVERLAY-SCRIM-COLOR: rgb(0 0 0 / 0.5);
+  --OVERLAY-GRADIENT-START: rgb(0 0 0 / 0);
+  --OVERLAY-GRADIENT-END: rgb(0 0 0 / 0.7);
+  --OVERLAY-BLUR: 8px;
+  --OVERLAY-BLUR-HEAVY: 20px;
+}
+
+/*
+* ------------
+*   Tailwind
+* ------------
+*/
+
+@theme inline {
+  --overlay-scrim-color: var(--OVERLAY-SCRIM-COLOR);
+  --overlay-gradient-start: var(--OVERLAY-GRADIENT-START);
+  --overlay-gradient-end: var(--OVERLAY-GRADIENT-END);
+  --overlay-blur: var(--OVERLAY-BLUR);
+  --overlay-blur-heavy: var(--OVERLAY-BLUR-HEAVY);
+}

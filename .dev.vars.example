@@ -1,0 +1,9 @@
+# Better Auth signing secret — generate with: openssl rand -base64 32
+BETTER_AUTH_SECRET=replace-me-with-a-random-secret
+
+# App base URL — must match the dev server address
+BETTER_AUTH_URL=http://localhost:8787
+
+# Additional trusted origins (comma-separated) — only needed if your frontend
+# runs on a different origin than BETTER_AUTH_URL (e.g., preview deployments)
+# TRUSTED_ORIGINS=https://preview.example.com,https://admin.example.com

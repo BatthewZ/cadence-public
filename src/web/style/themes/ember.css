@@ -1,0 +1,135 @@
+/* Ember Theme — Campfire in the dark
+   Deep warm blacks with glowing orange/amber. Rugged, grounded, lived-in.
+   Fonts: Bitter (headings), Rubik (body) */
+
+:root[data-theme="ember"] {
+  color-scheme: dark;
+
+  /* Fonts — sturdy serif headings with a warm geometric body */
+  --DEFAULT-FONT: "Rubik", sans-serif;
+  --DEFAULT-MONO-FONT: "JetBrains Mono", monospace;
+  --HEADING-FONT: "Bitter", serif;
+  --HEADING-LETTER-SPACING: 0em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas — warm near-black with red undertone */
+  --C-CANVAS: #141010;
+
+  /* Brand — glowing ember tones */
+  --C-PRIMARY: #c44e20;
+  --C-PRIMARY-HOVER: #b04018;
+  --C-PRIMARY-ACTIVE: #d45e30;
+  --C-SECONDARY: #382820;
+  --C-SECONDARY-HOVER: #483830;
+  --C-ACCENT: #e88830;
+  --C-ACCENT-HOVER: #d47822;
+
+  /* Surface — warm dark layers like cooling embers */
+  --C-SURFACE-0: #181212;
+  --C-SURFACE-1: #201818;
+  --C-SURFACE-2: #2a2020;
+  --C-SURFACE-3: #362a28;
+
+  /* Text — warm off-whites like firelight on skin */
+  --C-TEXT-PRIMARY: #ece0d4;
+  --C-TEXT-SECONDARY: #b0a090;
+  --C-TEXT-MUTED: #6e6058;
+  --C-TEXT-INVERSE: #141010;
+  --C-TEXT-ON-PRIMARY: #ece0d4;
+  --C-TEXT-ON-ACCENT: #141010;
+
+  /* Border — warm embers */
+  --C-BORDER-DEFAULT: #362a28;
+  --C-BORDER-STRONG: #4a3a34;
+  --C-BORDER-FOCUS: #e88830;
+
+  /* Status */
+  --C-STATUS-ERROR: #ef6060;
+  --C-STATUS-ERROR-BG: #2e1818;
+  --C-STATUS-SUCCESS: #5aaa5a;
+  --C-STATUS-SUCCESS-BG: #182a18;
+  --C-STATUS-WARNING: #e8a840;
+  --C-STATUS-WARNING-BG: #2e2418;
+  --C-STATUS-INFO: #60a0d0;
+  --C-STATUS-INFO-BG: #181e2e;
+
+  /* Radius — small-medium, rugged but not harsh */
+  --RADIUS-SM: 6px;
+  --RADIUS-MD: 8px;
+  --RADIUS-LG: 10px;
+  --RADIUS-XL: 14px;
+
+  /* Shadows — warm ember glow */
+  --SHADOW-SM: 0 1px 4px 0 rgb(196 78 32 / 0.1), 0 1px 2px 0 rgb(20 16 16 / 0.3);
+  --SHADOW-MD: 0 4px 12px -2px rgb(196 78 32 / 0.15), 0 2px 4px -2px rgb(20 16 16 / 0.4);
+  --SHADOW-LG: 0 10px 28px -4px rgb(196 78 32 / 0.2), 0 4px 8px -4px rgb(20 16 16 / 0.4);
+
+  /* Typography — sturdy, grounded */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 28px;
+  --BodyText-2-line-height: 24px;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: ember-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: ember-page-out;
+
+  /* Motion — steady, grounded, moderate pace */
+  --MOTION-DURATION-ENTER: 320ms;
+  --MOTION-DURATION-EXIT: 220ms;
+  --MOTION-DURATION-SHIFT: 420ms;
+  --MOTION-DURATION-PAGE: 380ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.3, 0.8, 0.25, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.16, 1, 0.3, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.3, 1.1, 0.5, 1);
+  --MOTION-DISTANCE-SM: 6px;
+  --MOTION-DISTANCE-MD: 16px;
+  --MOTION-DISTANCE-LG: 32px;
+  --MOTION-STAGGER-DELAY: 50ms;
+  --MOTION-SCALE-HOVER: 1.02;
+  --MOTION-SCALE-PRESS: 0.97;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — deep warm black */
+  --OVERLAY-SCRIM-COLOR: rgb(20 16 16 / 0.75);
+  --OVERLAY-GRADIENT-START: rgb(20 16 16 / 0);
+  --OVERLAY-GRADIENT-END: rgb(20 16 16 / 0.85);
+  --OVERLAY-BLUR: 10px;
+  --OVERLAY-BLUR-HEAVY: 22px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.02;
+  --MEDIA-CARD-HOVER-LIFT: -3px;
+
+  /* Transitions */
+  --DURATION-FAST: 110ms;
+  --DURATION-NORMAL: 220ms;
+  --DURATION-SLOW: 350ms;
+}
+
+@keyframes ember-page-in {
+  0% {
+    opacity: 0;
+    filter: brightness(0.6) saturate(1.4);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1) saturate(1);
+  }
+}
+
+@keyframes ember-page-out {
+  0% {
+    opacity: 1;
+    filter: brightness(1) saturate(1);
+  }
+  100% {
+    opacity: 0;
+    filter: brightness(0.6) saturate(1.4);
+  }
+}

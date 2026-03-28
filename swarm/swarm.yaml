@@ -1,0 +1,195 @@
+version: "1"
+
+tasks:
+  planner:
+    prompt-string: |
+      # Find an improvement or issue
+      Look through the swarm/PLAN.md file and the code base in general and find something to improve - like if a command is missing, or if a feature is not fully completed up to where it could be.
+
+      If everything is looking ok, select one of the phases from swarm/PLAN.md (ie all of Phase 1) that is not yet being implemented, and copy it into a feature/phase file.
+
+      # Write a feature file
+
+      Consider the dependency graph of the tasks. Can any of these tasks be done concurrently? Which tasks must be done sequentially?
+
+      Whoever reads this file is going to become an agent orchestrator; someone who can control up to 3-4 subagents at a time.
+
+      Prepare the plan with this in mind and write out the feature file to ./swarm/todo/{feature-name}.pending.md      
+
+      # Exit condition
+
+      If you fail to find an improvement, or if you've successfully written a phase/feature file - exit immediately.
+
+  coder:
+    prompt-string: |
+      # Find unfinished tasks
+
+      Use your agent id to find tasks that you left unfinished by looking for files named:
+      ./swarm/todo/\*.{SWARM_TASK_ID}.processing.md
+
+      If you found a task to continue, skip the "Find a task to complete" section and jump straight to "Execute the task".
+
+      # Find a task to complete
+
+      Look under the ./swarm/todo/ folder for a file suffixed with ".pending.md" - and claim it as a task by renaming it to ".{SWARM_TASK_ID}.processing.md".
+      Make sure the file you choose doesn't have any dependencies that are not completed.
+      Make sure your work won't conflict with other work that is already in progress.
+      If no tasks are found - skip the "Execute the task" step and go to the "If nothing to do" step.
+
+      # Implement the task
+
+      Then read the file and execute the task to completion, adding tests and testing when you think you need to.
+
+      It's really important that you do good work. This bit is really important. Some items in the task file can be done concurrently. 
+      If the task file encourages concurrency, you will become an orchestrator, spawning subagents to do your work. 
+      Be mindful of which items can be done concurrently, and which ones must be done sequentially.
+
+      When done, rename the file to ".completed.md" and add a note about what you did.
+      If you can\'t complete the task, rename the file to ".pending.md" and add a note about what went wrong to the file.
+
+      # If nothing to do
+
+      If there are no pending tasks found, your job is to test the feature and report any issues.
+      Then write those issues as new pending tasks in the swarm/todo/{feature-name}/ folder.
+      When you have done that exit immediately!
+
+    depends_on: [planner]
+
+  refactor:
+    prompt-string: |
+      # Review unstaged git changes for refactoring opportunities
+
+      Run `git diff` to see all unstaged changes in the repository.
+
+      # Analyze the changes
+
+      Look through the diff output and identify refactoring opportunities such as:
+      - Code duplication that could be extracted into shared functions/components
+      - Overly complex functions that should be broken down
+      - Poor naming that could be clarified
+      - Missing type safety or loose typing
+      - Dead code or unused imports introduced by the changes
+      - Inconsistent patterns compared to the rest of the codebase
+
+      # Apply refactors
+
+      If you find refactoring opportunities, apply them directly to the code.
+      Keep changes minimal and focused — don't refactor code outside of what was touched by the unstaged changes.
+      Make sure the code still compiles and any relevant tests still pass after your refactors.
+
+      # If nothing to refactor
+
+      If the unstaged changes look clean, exit immediately.
+
+    depends_on: [coder]
+
+  checker:
+    prompt-string: |
+      # Review unstaged git changes for bugs
+
+      Run `git diff` to see all unstaged changes in the repository.
+
+      # Analyze the changes for bugs
+
+      Carefully review the diff output and look for bugs such as:
+      - Off-by-one errors or incorrect boundary conditions
+      - Null/undefined access without proper guards
+      - Race conditions or missing awaits on async calls
+      - Incorrect logic (wrong operator, inverted condition, swapped arguments)
+      - Unhandled error cases or missing try/catch blocks
+      - Security issues (unsanitized input, exposed secrets, injection vectors)
+      - State management bugs (stale closures, missing dependency arrays, mutation of shared state)
+      - Type mismatches or unsafe casts that could cause runtime errors
+
+      # Fix bugs
+
+      If you find bugs, fix them directly in the code.
+      Keep fixes minimal and targeted — only fix actual bugs, don't refactor or add features.
+      Make sure the code still compiles and any relevant tests still pass after your fixes.
+
+      # If no bugs found
+
+      If the unstaged changes look correct, exit immediately.
+
+    depends_on: [refactor]
+
+  documenter:
+    prompt-string: |
+      # 1. Sync Documentation with Code Changes
+
+      Run `git diff` to identify modified files. For every changed file in `src/`, locate its corresponding documentation "Hub" (the nearest related index file in `/docs`).
+
+      Example mapping:
+      - `src/features/auth/*` -> `docs/auth/auth.md` (or index)
+      - `src/ui/*` -> `docs/ui/ui.md` (or index)
+
+      # 2. Sync Sub-Module Documentation
+
+      If the code change introduces a new sub-feature, utility, or logic block:
+      - Locate the specific sub-markdown file referenced in the Hub's index (e.g., `[Feature X](./feature-x.md)`).
+      - Update that file to reflect the new state of the code (parameters, return types, logic flow).
+      - If a new sub-file is created, ensure it follows the project's standard Markdown structure.
+
+      # 3. Maintain the Index/Hub File
+
+      If a new sub-module was added or a structural change occurred:
+      - **Update the Index:** Add the new file link and a brief description to the central Hub file (e.g., `index.md` or `feature.md`).
+      - **Update Tables:** If the Hub contains "Organization" or "Directory" tables, ensure the rows accurately reflect the current `src/` folder structure.
+      - **Verify Links:** Ensure all relative paths (e.g., `./sub-file.md`) are valid and clicking them would lead to existing files.
+
+      # 4. Enforce Standards & "Rules"
+
+      Check the "Rules" or "Standards" section of the relevant documentation Hub:
+      - Does the new code violate any documented architectural rules (e.g., "No external libraries in this folder" or "All functions must be async")?
+      - If the code violates a rule, do NOT update the docs to match the "bad" code. Instead, add a `> [!WARNING]` note to the documentation or the code file indicating the debt.
+
+      # 5. Exit Condition
+
+      If the documentation accurately represents the current state of the staged/unstaged code,  or the code changes require no documentation updates (e.g., pure refactor or bug fix with no logic change), or after all necessary edits are applied, exit immediately.
+
+    depends_on: [checker]
+
+  tester:
+    prompt-string: |
+      # Run final tests
+
+      Run the full test suite to make sure everything passes:
+      - Run `npm test` (or the appropriate test command for this project)
+      - Run `npm run build` to verify the project compiles cleanly
+      - If there are linting scripts configured, run those too
+
+      # Fix any failures
+
+      If any tests fail or the build breaks:
+      - Read the error output carefully
+      - Fix the issues directly in the code
+      - Re-run the failing tests to confirm the fix
+      - Repeat until everything passes
+
+      # Push to git
+
+      Once all tests pass and the build is clean:
+      - Run `git add -A` to stage all changes
+      - Run `git diff --cached --stat` to review what will be committed
+      - Write a concise, descriptive commit message summarizing the changes made in this iteration
+      - Run `git commit` with that message
+      - Run `git push` to push the commit to the remote
+
+      # If nothing to push
+
+      If there are no unstaged or staged changes (nothing was modified in this iteration), exit immediately.
+
+    depends_on: [documenter]
+
+pipelines:
+  dev:
+    iterations: 15
+    tasks: [planner, coder, refactor, checker, documenter, tester]
+
+  code:
+    iterations: 30
+    tasks: [coder, refactor, checker, documenter, tester]
+
+  qa:
+    iterations: 1
+    tasks: [refactor, checker, documenter, tester]

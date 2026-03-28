@@ -1,0 +1,11 @@
+/* Elements waiting to be revealed */
+.scroll-reveal-hidden {
+  opacity: 0;
+}
+
+/* Reduced motion: skip hidden state entirely */
+@media (prefers-reduced-motion: reduce) {
+  .scroll-reveal-hidden {
+    opacity: 1;
+  }
+}

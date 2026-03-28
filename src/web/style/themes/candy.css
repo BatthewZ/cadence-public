@@ -1,0 +1,135 @@
+/* Candy Theme — Bold primary colors, Memphis meets Bauhaus
+   Saturated red/blue/yellow on white. Chunky, loud, cheerful.
+   Fonts: Fredoka (headings), Plus Jakarta Sans (body) */
+
+:root[data-theme="candy"] {
+  color-scheme: light;
+
+  /* Fonts — rounded bold headings with a clean modern body */
+  --DEFAULT-FONT: "Plus Jakarta Sans", sans-serif;
+  --DEFAULT-MONO-FONT: "Fira Code", monospace;
+  --HEADING-FONT: "Fredoka", sans-serif;
+  --HEADING-LETTER-SPACING: -0.01em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas */
+  --C-CANVAS: #ffffff;
+
+  /* Brand — bold primaries */
+  --C-PRIMARY: #e63946;
+  --C-PRIMARY-HOVER: #d02a38;
+  --C-PRIMARY-ACTIVE: #f04858;
+  --C-SECONDARY: #fde8ea;
+  --C-SECONDARY-HOVER: #fad4d8;
+  --C-ACCENT: #2563eb;
+  --C-ACCENT-HOVER: #1d4ed8;
+
+  /* Surface — clean white with warm tint on deeper layers */
+  --C-SURFACE-0: #ffffff;
+  --C-SURFACE-1: #fefcfa;
+  --C-SURFACE-2: #fef4ee;
+  --C-SURFACE-3: #fceade;
+
+  /* Text — strong contrast */
+  --C-TEXT-PRIMARY: #1a1a2e;
+  --C-TEXT-SECONDARY: #4a4a62;
+  --C-TEXT-MUTED: #8888a0;
+  --C-TEXT-INVERSE: #ffffff;
+  --C-TEXT-ON-PRIMARY: #ffffff;
+  --C-TEXT-ON-ACCENT: #ffffff;
+
+  /* Border */
+  --C-BORDER-DEFAULT: #ede8e2;
+  --C-BORDER-STRONG: #ddd6cc;
+  --C-BORDER-FOCUS: #2563eb;
+
+  /* Status — vivid and saturated */
+  --C-STATUS-ERROR: #e63946;
+  --C-STATUS-ERROR-BG: #fef0f0;
+  --C-STATUS-SUCCESS: #10b981;
+  --C-STATUS-SUCCESS-BG: #ecfdf5;
+  --C-STATUS-WARNING: #f59e0b;
+  --C-STATUS-WARNING-BG: #fffbeb;
+  --C-STATUS-INFO: #2563eb;
+  --C-STATUS-INFO-BG: #eff6ff;
+
+  /* Radius — chunky, playful */
+  --RADIUS-SM: 10px;
+  --RADIUS-MD: 14px;
+  --RADIUS-LG: 18px;
+  --RADIUS-XL: 24px;
+
+  /* Shadows — colorful, saturated */
+  --SHADOW-SM: 0 2px 4px 0 rgb(230 57 70 / 0.08), 0 1px 2px 0 rgb(26 26 46 / 0.04);
+  --SHADOW-MD: 0 4px 12px -2px rgb(230 57 70 / 0.12), 0 2px 4px -2px rgb(37 99 235 / 0.06);
+  --SHADOW-LG: 0 12px 28px -6px rgb(230 57 70 / 0.14), 0 4px 8px -4px rgb(37 99 235 / 0.08);
+
+  /* Typography — bold and punchy */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 28px;
+  --BodyText-2-line-height: 24px;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: candy-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: candy-page-out;
+
+  /* Motion — bouncy, energetic, fun */
+  --MOTION-DURATION-ENTER: 320ms;
+  --MOTION-DURATION-EXIT: 200ms;
+  --MOTION-DURATION-SHIFT: 380ms;
+  --MOTION-DURATION-PAGE: 380ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.22, 0.9, 0.36, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.16, 1, 0.3, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.22, 1.6, 0.5, 1);
+  --MOTION-DISTANCE-SM: 12px;
+  --MOTION-DISTANCE-MD: 26px;
+  --MOTION-DISTANCE-LG: 48px;
+  --MOTION-STAGGER-DELAY: 50ms;
+  --MOTION-SCALE-HOVER: 1.05;
+  --MOTION-SCALE-PRESS: 0.95;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay */
+  --OVERLAY-SCRIM-COLOR: rgb(26 26 46 / 0.4);
+  --OVERLAY-GRADIENT-START: rgb(26 26 46 / 0);
+  --OVERLAY-GRADIENT-END: rgb(26 26 46 / 0.55);
+  --OVERLAY-BLUR: 12px;
+  --OVERLAY-BLUR-HEAVY: 24px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.05;
+  --MEDIA-CARD-HOVER-LIFT: -5px;
+
+  /* Transitions */
+  --DURATION-FAST: 100ms;
+  --DURATION-NORMAL: 200ms;
+  --DURATION-SLOW: 340ms;
+}
+
+@keyframes candy-page-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes candy-page-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}

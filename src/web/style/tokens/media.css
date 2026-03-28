@@ -1,0 +1,25 @@
+:root {
+  --MEDIA-ASPECT-POSTER: 2 / 3;
+  --MEDIA-ASPECT-WIDE: 16 / 9;
+  --MEDIA-ASPECT-SQUARE: 1 / 1;
+  --MEDIA-CARD-HOVER-SCALE: 1.02;
+  --MEDIA-CARD-HOVER-LIFT: -4px;
+  --MEDIA-CAROUSEL-PEEK: 48px;
+  --MEDIA-CAROUSEL-GAP: var(--R-SIZE-5);
+}
+
+/*
+* ------------
+*   Tailwind
+* ------------
+*/
+
+@theme inline {
+  --media-aspect-poster: var(--MEDIA-ASPECT-POSTER);
+  --media-aspect-wide: var(--MEDIA-ASPECT-WIDE);
+  --media-aspect-square: var(--MEDIA-ASPECT-SQUARE);
+  --media-card-hover-scale: var(--MEDIA-CARD-HOVER-SCALE);
+  --media-card-hover-lift: var(--MEDIA-CARD-HOVER-LIFT);
+  --media-carousel-peek: var(--MEDIA-CAROUSEL-PEEK);
+  --media-carousel-gap: var(--MEDIA-CAROUSEL-GAP);
+}

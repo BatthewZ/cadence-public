@@ -1,0 +1,109 @@
+/* ------------------------------------------------------------------ */
+/*  Accordion                                                          */
+/* ------------------------------------------------------------------ */
+
+.accordion {
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Item                                                               */
+/* ------------------------------------------------------------------ */
+
+.accordion-item {
+  border-bottom: 1px solid var(--C-BORDER-DEFAULT);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Trigger                                                            */
+/* ------------------------------------------------------------------ */
+
+.accordion-trigger {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--R-SIZE-4) var(--R-SIZE-6);
+  cursor: pointer;
+  font-size: var(--BodyText-2);
+  font-weight: var(--Semibold-Weight);
+  line-height: var(--BodyText-2-line-height);
+  color: var(--C-TEXT-PRIMARY);
+  transition: background-color var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+}
+
+.accordion-trigger:hover:not(:disabled) {
+  background-color: var(--C-SURFACE-1);
+}
+
+.accordion-trigger:disabled {
+  color: var(--C-TEXT-MUTED);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.accordion-trigger:focus-visible {
+  outline: 2px solid var(--C-BORDER-FOCUS);
+  outline-offset: -2px;
+  border-radius: var(--RADIUS-SM);
+}
+
+.accordion-trigger-text {
+  flex: 1;
+  text-align: left;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Chevron                                                            */
+/* ------------------------------------------------------------------ */
+
+.accordion-chevron {
+  flex-shrink: 0;
+  color: var(--C-TEXT-SECONDARY);
+  transition: transform var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+}
+
+.accordion-trigger[aria-expanded="true"] .accordion-chevron {
+  transform: rotate(180deg);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Content — grid-template-rows animation                             */
+/* ------------------------------------------------------------------ */
+
+.accordion-content {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+}
+
+.accordion-content[data-state="open"] {
+  grid-template-rows: 1fr;
+}
+
+.accordion-content-inner {
+  overflow: hidden;
+}
+
+.accordion-content-inner > * {
+  padding: 0 var(--R-SIZE-6) var(--R-SIZE-4);
+  font-size: var(--BodyText-2);
+  line-height: var(--BodyText-2-line-height);
+  color: var(--C-TEXT-SECONDARY);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Reduced motion                                                     */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .accordion-content {
+    transition: none;
+  }
+
+  .accordion-chevron {
+    transition: none;
+  }
+}

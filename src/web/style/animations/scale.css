@@ -1,0 +1,52 @@
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scale-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
+.scale-in {
+  animation: scale-in var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.scale-out {
+  animation: scale-out var(--MOTION-DURATION-EXIT) var(--MOTION-EASE-EXIT);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scale-in {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .scale-out {
+    animation-duration: 1ms;
+  }
+}
+
+/*
+* ------------
+*   Tailwind
+* ------------
+*/
+
+@theme inline {
+  --animate-scale-in: scale-in var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+  --animate-scale-out: scale-out var(--MOTION-DURATION-EXIT) var(--MOTION-EASE-EXIT);
+}

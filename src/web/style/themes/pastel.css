@@ -1,0 +1,135 @@
+/* Pastel Theme — Stationery shop in Harajuku
+   Soft lavender canvas, lilac primary, peachy-pink accent, bouncy and joyful.
+   Fonts: Quicksand (headings), Nunito Sans (body) */
+
+:root[data-theme="pastel"] {
+  color-scheme: light;
+
+  /* Fonts — rounded friendly headings with soft approachable body */
+  --DEFAULT-FONT: "Nunito Sans", sans-serif;
+  --DEFAULT-MONO-FONT: "DM Mono", monospace;
+  --HEADING-FONT: "Quicksand", sans-serif;
+  --HEADING-LETTER-SPACING: -0.01em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas */
+  --C-CANVAS: #f5f0fa;
+
+  /* Brand */
+  --C-PRIMARY: #8b6aae;
+  --C-PRIMARY-HOVER: #7a5a9e;
+  --C-PRIMARY-ACTIVE: #9c7abe;
+  --C-SECONDARY: #e8e0f2;
+  --C-SECONDARY-HOVER: #ddd4ea;
+  --C-ACCENT: #e88a9a;
+  --C-ACCENT-HOVER: #d87a8a;
+
+  /* Surface — soft lavender and cream layers */
+  --C-SURFACE-0: #f9f5fd;
+  --C-SURFACE-1: #f2ecf8;
+  --C-SURFACE-2: #ebe4f2;
+  --C-SURFACE-3: #e0d6ec;
+
+  /* Text — warm dark purples for good contrast */
+  --C-TEXT-PRIMARY: #2e2240;
+  --C-TEXT-SECONDARY: #5a4e6e;
+  --C-TEXT-MUTED: #8878a0;
+  --C-TEXT-INVERSE: #f9f5fd;
+  --C-TEXT-ON-PRIMARY: #ffffff;
+  --C-TEXT-ON-ACCENT: #2e2240;
+
+  /* Border */
+  --C-BORDER-DEFAULT: #e0d6ec;
+  --C-BORDER-STRONG: #d0c4e0;
+  --C-BORDER-FOCUS: #8b6aae;
+
+  /* Status */
+  --C-STATUS-ERROR: #d44a5e;
+  --C-STATUS-ERROR-BG: #fceef0;
+  --C-STATUS-SUCCESS: #4da870;
+  --C-STATUS-SUCCESS-BG: #eefaf2;
+  --C-STATUS-WARNING: #d4920a;
+  --C-STATUS-WARNING-BG: #fdf6e8;
+  --C-STATUS-INFO: #5a8ac4;
+  --C-STATUS-INFO-BG: #edf2fc;
+
+  /* Radius — very large, pill-shaped, bubbly */
+  --RADIUS-SM: 14px;
+  --RADIUS-MD: 18px;
+  --RADIUS-LG: 24px;
+  --RADIUS-XL: 28px;
+
+  /* Shadows — very soft, lavender-tinted */
+  --SHADOW-SM: 0 2px 6px 0 rgb(139 106 174 / 0.06);
+  --SHADOW-MD: 0 4px 14px -2px rgb(139 106 174 / 0.08), 0 2px 4px -1px rgb(139 106 174 / 0.04);
+  --SHADOW-LG: 0 12px 28px -6px rgb(139 106 174 / 0.1), 0 4px 8px -4px rgb(139 106 174 / 0.05);
+
+  /* Typography — friendly weights */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 32px;
+  --BodyText-2-line-height: 26px;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: pastel-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: pastel-page-out;
+
+  /* Motion — bouncy and playful */
+  --MOTION-DURATION-ENTER: 380ms;
+  --MOTION-DURATION-EXIT: 220ms;
+  --MOTION-DURATION-SHIFT: 460ms;
+  --MOTION-DURATION-PAGE: 400ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.22, 1.2, 0.36, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.16, 1.1, 0.3, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.18, 1.5, 0.4, 1);
+  --MOTION-DISTANCE-SM: 10px;
+  --MOTION-DISTANCE-MD: 22px;
+  --MOTION-DISTANCE-LG: 44px;
+  --MOTION-STAGGER-DELAY: 70ms;
+  --MOTION-SCALE-HOVER: 1.04;
+  --MOTION-SCALE-PRESS: 0.96;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay */
+  --OVERLAY-SCRIM-COLOR: rgb(46 34 64 / 0.35);
+  --OVERLAY-GRADIENT-START: rgb(46 34 64 / 0);
+  --OVERLAY-GRADIENT-END: rgb(46 34 64 / 0.55);
+  --OVERLAY-BLUR: 12px;
+  --OVERLAY-BLUR-HEAVY: 28px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.03;
+  --MEDIA-CARD-HOVER-LIFT: -4px;
+
+  /* Transitions */
+  --DURATION-FAST: 110ms;
+  --DURATION-NORMAL: 220ms;
+  --DURATION-SLOW: 360ms;
+}
+
+@keyframes pastel-page-in {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pastel-page-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(1.01);
+  }
+}

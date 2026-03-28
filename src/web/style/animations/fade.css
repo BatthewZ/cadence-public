@@ -1,0 +1,162 @@
+.fade-in {
+  animation: fade var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.fade-down {
+  animation:
+    slide-down var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    fade var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.fade-right {
+  animation:
+    slide-right var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    fade var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.fade-up {
+  animation:
+    slide-up var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    fade var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.fade-left {
+  animation:
+    slide-left var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    fade var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+@keyframes fade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-down {
+  0% {
+    opacity: 0;
+    transform: translateY(-30%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-right {
+  0% {
+    opacity: 0;
+    transform: translateX(-30%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-left {
+  0% {
+    opacity: 0;
+    transform: translateX(30%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-up {
+  0% {
+    opacity: 0;
+    transform: translateY(30%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.fade-out {
+  animation: fade-out var(--MOTION-DURATION-EXIT) var(--MOTION-EASE-EXIT) forwards;
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-in,
+  .fade-down,
+  .fade-right,
+  .fade-up,
+  .fade-left {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .fade-out {
+    animation-duration: 1ms;
+  }
+}
+
+/*
+* ------------
+*   Tailwind
+* ------------
+*/
+
+@theme inline {
+  --animate-fade-in: fade var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+
+  --animate-fade-down:
+    slide-down var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    fade var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+
+  --animate-fade-right:
+    slide-right var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    fade var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+
+  --animate-fade-up:
+    slide-up var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    fade var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+
+  --animate-fade-left:
+    slide-left var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    fade var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+
+  --animate-fade-out: fade-out var(--MOTION-DURATION-EXIT) var(--MOTION-EASE-EXIT) forwards;
+
+  --animate-slide-in-right: slide-in-right var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+  --animate-slide-out-right: slide-out-right var(--MOTION-DURATION-EXIT) var(--MOTION-EASE-EXIT) forwards;
+}

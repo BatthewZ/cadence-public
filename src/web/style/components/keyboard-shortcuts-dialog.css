@@ -1,0 +1,101 @@
+.keyboard-shortcuts-dialog {
+  padding: var(--S-4) var(--S-5);
+  min-width: min(400px, calc(100vw - 32px));
+  max-width: 500px;
+}
+
+.keyboard-shortcuts-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--S-5);
+}
+
+.keyboard-shortcuts-dialog__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--R-MD);
+  border: none;
+  background: transparent;
+  color: var(--C-TEXT-MUTED);
+  font-size: 18px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.keyboard-shortcuts-dialog__close:hover {
+  background-color: var(--C-SURFACE-2);
+  color: var(--C-TEXT-PRIMARY);
+}
+
+.keyboard-shortcuts-dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--S-5);
+}
+
+.keyboard-shortcuts-dialog__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--S-2);
+}
+
+.keyboard-shortcuts-dialog__section-title {
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+
+.keyboard-shortcuts-dialog__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--S-1);
+}
+
+.keyboard-shortcuts-dialog__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--S-1-5) var(--S-2);
+  border-radius: var(--R-MD);
+}
+
+.keyboard-shortcuts-dialog__row:hover {
+  background-color: var(--C-SURFACE-1);
+}
+
+.keyboard-shortcuts-dialog__description {
+  font-size: var(--T-BODY-3);
+  color: var(--C-TEXT-PRIMARY);
+}
+
+.keyboard-shortcuts-dialog__keys {
+  display: flex;
+  align-items: center;
+  gap: var(--S-1);
+}
+
+.keyboard-shortcuts-dialog__kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--S-1-5);
+  border-radius: var(--R-SM);
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  background-color: var(--C-SURFACE-1);
+  color: var(--C-TEXT-MUTED);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.keyboard-shortcuts-dialog__separator {
+  font-size: 11px;
+  color: var(--C-TEXT-MUTED);
+  padding: 0 var(--S-0-5);
+}

@@ -1,0 +1,301 @@
+/* ─── Label Management Dialog ─── */
+
+.label-mgmt__list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.label-mgmt__row {
+  display: flex;
+  align-items: center;
+  gap: var(--R-SIZE-4);
+  padding: var(--R-SIZE-5) var(--R-SIZE-4);
+  border-radius: var(--RADIUS-SM);
+  transition: background var(--DURATION-FAST) ease;
+}
+
+.label-mgmt__row:hover {
+  background: var(--C-SURFACE-1);
+}
+
+.label-mgmt__row:hover .label-mgmt__delete-btn {
+  opacity: 1;
+}
+
+.label-mgmt__color-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--RADIUS-FULL);
+  border: 2px solid var(--C-BORDER-DEFAULT);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform var(--DURATION-FAST) ease, box-shadow var(--DURATION-FAST) ease;
+}
+
+.label-mgmt__color-dot:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 0 2px var(--C-SURFACE-0), 0 0 0 4px var(--C-BORDER-DEFAULT);
+}
+
+.label-mgmt__name-display {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--RADIUS-SM);
+  font-size: var(--BodyText-2);
+  color: var(--C-TEXT-PRIMARY);
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label-mgmt__name-display:hover {
+  background: var(--C-SURFACE-2);
+}
+
+.label-mgmt__name-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--R-SIZE-5) var(--R-SIZE-4);
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  border-radius: var(--RADIUS-SM);
+  background: var(--C-SURFACE-0);
+  color: var(--C-TEXT-PRIMARY);
+  font-size: var(--BodyText-2);
+  font-family: inherit;
+  line-height: 1.4;
+  transition: border-color var(--DURATION-FAST) ease, box-shadow var(--DURATION-FAST) ease;
+}
+
+.label-mgmt__name-input:focus {
+  outline: none;
+  border-color: var(--C-BORDER-FOCUS);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--C-BORDER-FOCUS) 20%, transparent);
+}
+
+.label-mgmt__task-count {
+  flex-shrink: 0;
+}
+
+.label-mgmt__delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--C-TEXT-MUTED);
+  opacity: 0;
+  padding: 4px;
+  border-radius: var(--RADIUS-SM);
+  transition: opacity var(--DURATION-FAST) ease, color var(--DURATION-FAST) ease, background var(--DURATION-FAST) ease;
+}
+
+.label-mgmt__delete-btn:hover {
+  color: var(--C-STATUS-ERROR);
+  background: var(--C-STATUS-ERROR-SUBTLE);
+}
+
+.label-mgmt__add-row {
+  display: flex;
+  align-items: center;
+  gap: var(--R-SIZE-4);
+  padding-top: var(--R-SIZE-4);
+  border-top: 1px solid var(--C-BORDER-DEFAULT);
+}
+
+/* ─── Color Picker ─── */
+
+.label-mgmt__color-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.label-mgmt__color-picker {
+  padding: 10px;
+}
+
+.label-mgmt__color-picker--inline {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  background: var(--C-SURFACE-0);
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  border-radius: var(--RADIUS-MD);
+  box-shadow: var(--SHADOW-MD, 0 4px 12px rgba(0, 0, 0, 0.1));
+}
+
+.label-mgmt__color-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.label-mgmt__color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--RADIUS-FULL);
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform var(--DURATION-FAST) ease;
+}
+
+.label-mgmt__color-swatch:hover {
+  transform: scale(1.2);
+}
+
+/* ─── Task Label Picker ─── */
+
+.task-label-picker__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: var(--RADIUS-SM);
+  border: none;
+  background: none;
+  color: var(--C-TEXT-SECONDARY);
+  font-size: var(--BodyText-3);
+  cursor: pointer;
+  transition: background var(--DURATION-FAST) ease, color var(--DURATION-FAST) ease;
+  width: 100%;
+  text-align: left;
+}
+
+.task-label-picker__trigger:hover {
+  background: var(--C-SURFACE-1);
+  color: var(--C-TEXT-PRIMARY);
+}
+
+.task-label-picker__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+.task-label-picker__chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: var(--RADIUS-SM);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.task-label-picker__popover {
+  min-width: 220px;
+  max-width: 280px;
+  padding: 10px 12px;
+}
+
+.task-label-picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--C-BORDER-DEFAULT) transparent;
+}
+
+.task-label-picker__list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.task-label-picker__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.task-label-picker__list::-webkit-scrollbar-thumb {
+  background: var(--C-BORDER-STRONG);
+  border-radius: var(--RADIUS-FULL);
+}
+
+.task-label-picker__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: var(--RADIUS-SM);
+  font-size: var(--BodyText-3);
+  line-height: 1.4;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--C-TEXT-PRIMARY);
+  width: 100%;
+  text-align: left;
+  transition: background var(--DURATION-FAST) ease;
+}
+
+.task-label-picker__option:hover {
+  background: var(--C-SURFACE-1);
+}
+
+.task-label-picker__option--active {
+  background: var(--C-ACCENT-SUBTLE);
+}
+
+.task-label-picker__option--active:hover {
+  background: var(--C-ACCENT-MUTED);
+}
+
+.task-label-picker__dot {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--RADIUS-FULL);
+  flex-shrink: 0;
+}
+
+.task-label-picker__swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: var(--RADIUS-SM);
+  flex-shrink: 0;
+}
+
+.task-label-picker__label-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-label-picker__check {
+  flex-shrink: 0;
+  color: var(--C-ACCENT);
+}
+
+.task-label-picker__manage {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 5px 8px;
+  border-top: 1px solid var(--C-BORDER-DEFAULT);
+  padding-top: 10px;
+  width: 100%;
+  font-size: var(--BodyText-3);
+  color: var(--C-TEXT-MUTED);
+  background: none;
+  border: none;
+  border-top: 1px solid var(--C-BORDER-DEFAULT);
+  cursor: pointer;
+  text-align: left;
+  transition: color var(--DURATION-FAST) ease;
+}
+
+.task-label-picker__manage:hover {
+  color: var(--C-ACCENT);
+}

@@ -1,0 +1,196 @@
+/* ------------------------------------------------------------------ */
+/*  Tabs                                                               */
+/* ------------------------------------------------------------------ */
+
+.tabs-list-wrapper {
+  position: relative;
+}
+
+.tabs-list {
+  position: relative;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+/* Hide scrollbar across all browsers for a clean appearance */
+.tabs-list::-webkit-scrollbar {
+  display: none;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Scroll fade indicators                                             */
+/* ------------------------------------------------------------------ */
+/* Gradient fades that appear on edges when tab content overflows,
+   signaling to the user that they can scroll to reveal more tabs.    */
+
+.tabs-scroll-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.tabs-scroll-fade--left {
+  left: 0;
+  background: linear-gradient(to right, var(--C-SURFACE-0), transparent);
+}
+
+.tabs-scroll-fade--right {
+  right: 0;
+  background: linear-gradient(to left, var(--C-SURFACE-0), transparent);
+}
+
+/* Underline variant */
+.tabs-list--underline {
+  border-bottom: 1px solid var(--C-BORDER-DEFAULT);
+}
+
+/* Enclosed variant */
+.tabs-list--enclosed {
+  border-bottom: 1px solid var(--C-BORDER-DEFAULT);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Indicator                                                          */
+/* ------------------------------------------------------------------ */
+
+.tabs-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  pointer-events: none;
+  transition:
+    transform var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT),
+    width var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+}
+
+/* Underline indicator */
+.tabs-indicator--underline {
+  height: 2px;
+  background-color: var(--C-ACCENT);
+}
+
+/* Pill indicator */
+.tabs-indicator--pill {
+  bottom: var(--R-SIZE-6);
+  top: var(--R-SIZE-6);
+  height: auto;
+  border-radius: var(--RADIUS-MD);
+  background-color: var(--C-ACCENT);
+}
+
+/* Enclosed indicator */
+.tabs-indicator--enclosed {
+  bottom: -1px;
+  height: 2px;
+  background-color: var(--C-SURFACE-0);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Tab button                                                         */
+/* ------------------------------------------------------------------ */
+
+.tabs-tab {
+  all: unset;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--R-SIZE-5) var(--R-SIZE-3);
+  cursor: pointer;
+  font-size: var(--BodyText-2);
+  font-weight: var(--Semibold-Weight);
+  line-height: var(--BodyText-2-line-height);
+  color: var(--C-TEXT-SECONDARY);
+  white-space: nowrap;
+  transition:
+    color var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT),
+    background-color var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+  position: relative;
+  z-index: 1;
+}
+
+/* Hover: text color only (no background that would obscure the indicator) */
+.tabs-tab:hover:not(:disabled) {
+  color: var(--C-TEXT-PRIMARY);
+}
+
+/* Underline variant: subtle hover background */
+.tabs-list--underline .tabs-tab:hover:not(:disabled):not([aria-selected="true"]) {
+  background-color: var(--C-SURFACE-1);
+  border-radius: var(--RADIUS-SM);
+}
+
+/* Enclosed variant: background on hover is safe (uses border-based indication) */
+.tabs-list--enclosed .tabs-tab:hover:not(:disabled):not([aria-selected="true"]) {
+  background-color: var(--C-SURFACE-1);
+}
+
+/* Pill variant: subtle hover bg on unselected tabs only (preserves the pill indicator on the selected tab) */
+.tabs-list--pill .tabs-tab:hover:not(:disabled):not([aria-selected="true"]) {
+  background-color: var(--C-SURFACE-1);
+  border-radius: var(--RADIUS-MD);
+}
+
+.tabs-tab[aria-selected="true"] {
+  color: var(--C-ACCENT);
+}
+
+/* Pill variant: selected tab text inverts over accent background */
+.tabs-list--pill .tabs-tab[aria-selected="true"] {
+  color: var(--C-TEXT-ON-ACCENT, var(--C-TEXT-INVERSE));
+}
+
+/* Enclosed variant */
+.tabs-list--enclosed .tabs-tab {
+  border: 1px solid transparent;
+  border-bottom: none;
+  border-radius: var(--RADIUS-MD) var(--RADIUS-MD) 0 0;
+  margin-bottom: -1px;
+}
+
+.tabs-list--enclosed .tabs-tab[aria-selected="true"] {
+  color: var(--C-TEXT-PRIMARY);
+  background-color: var(--C-SURFACE-0);
+  border-color: var(--C-BORDER-DEFAULT);
+}
+
+.tabs-tab:disabled {
+  color: var(--C-TEXT-MUTED);
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.tabs-tab:focus-visible {
+  outline: 2px solid var(--C-BORDER-FOCUS);
+  outline-offset: -2px;
+  border-radius: var(--RADIUS-SM);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Panel                                                              */
+/* ------------------------------------------------------------------ */
+
+.tabs-panel {
+  padding-top: var(--R-SIZE-3);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Reduced motion                                                     */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .tabs-indicator {
+    transition: none;
+  }
+
+  .tabs-tab {
+    transition: none;
+  }
+}

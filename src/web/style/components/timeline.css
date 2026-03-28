@@ -1,0 +1,151 @@
+/* ------------------------------------------------------------------ */
+/*  Timeline                                                           */
+/* ------------------------------------------------------------------ */
+
+.timeline {
+  /* Component geometry tokens — interdependent, so defined together */
+  --_timeline-gutter: var(--R-SIZE-2);
+  --_timeline-line-offset: var(--R-SIZE-5);
+  --_timeline-dot-size: 14px;
+  --_timeline-line-width: 2px;
+
+  position: relative;
+  padding-left: var(--_timeline-gutter);
+}
+
+/* Vertical connecting line */
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: var(--_timeline-line-offset);
+  top: 0;
+  bottom: 0;
+  width: var(--_timeline-line-width);
+  background-color: var(--C-BORDER-DEFAULT);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Item                                                               */
+/* ------------------------------------------------------------------ */
+
+.timeline-item {
+  position: relative;
+  padding-bottom: var(--R-SIZE-6);
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Node (dot on the line)                                             */
+/* ------------------------------------------------------------------ */
+
+.timeline-node {
+  position: absolute;
+  left: calc(
+    var(--_timeline-line-offset) - var(--_timeline-gutter) + var(--_timeline-line-width) / 2 -
+      var(--_timeline-dot-size) / 2
+  );
+  top: 0;
+  z-index: 1;
+}
+
+.timeline-dot {
+  width: var(--_timeline-dot-size);
+  height: var(--_timeline-dot-size);
+  border-radius: var(--RADIUS-FULL);
+  background-color: var(--C-ACCENT);
+  border: var(--_timeline-line-width) solid var(--C-SURFACE-0);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Card                                                               */
+/* ------------------------------------------------------------------ */
+
+.timeline-card {
+  background-color: var(--C-SURFACE-1);
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  border-radius: var(--RADIUS-LG);
+  padding: var(--R-SIZE-4);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Date                                                               */
+/* ------------------------------------------------------------------ */
+
+.timeline-date {
+  display: block;
+  font-size: var(--BodyText-3);
+  line-height: var(--BodyText-3-line-height);
+  color: var(--C-TEXT-MUTED);
+  margin-bottom: var(--R-SIZE-1);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Title                                                              */
+/* ------------------------------------------------------------------ */
+
+.timeline-title {
+  font-size: var(--BodyText-2);
+  line-height: var(--BodyText-2-line-height);
+  font-weight: var(--Bold-Weight);
+  color: var(--C-TEXT-PRIMARY);
+  margin-bottom: var(--R-SIZE-2);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Body                                                               */
+/* ------------------------------------------------------------------ */
+
+.timeline-body {
+  font-size: var(--BodyText-2);
+  line-height: var(--BodyText-2-line-height);
+  color: var(--C-TEXT-SECONDARY);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Desktop: alternating layout (sm breakpoint and up)                 */
+/* ------------------------------------------------------------------ */
+
+@media (width >= 40rem) {
+  .timeline {
+    padding-left: 0;
+  }
+
+  .timeline::before {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  .timeline-item {
+    display: flex;
+    width: 100%;
+  }
+
+  .timeline-node {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Odd items: card on the left */
+  .timeline-item:nth-child(odd) {
+    justify-content: flex-start;
+  }
+
+  .timeline-item:nth-child(odd) .timeline-card {
+    width: calc(50% - var(--_timeline-gutter));
+    margin-right: auto;
+    text-align: right;
+  }
+
+  /* Even items: card on the right */
+  .timeline-item:nth-child(even) {
+    justify-content: flex-end;
+  }
+
+  .timeline-item:nth-child(even) .timeline-card {
+    width: calc(50% - var(--_timeline-gutter));
+    margin-left: auto;
+  }
+}

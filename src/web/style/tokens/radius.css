@@ -1,0 +1,21 @@
+:root {
+  --RADIUS-SM: 4px;
+  --RADIUS-MD: 8px;
+  --RADIUS-LG: 12px;
+  --RADIUS-XL: 16px;
+  --RADIUS-FULL: 9999px;
+}
+
+/*
+* ------------
+*   Tailwind
+* ------------
+*/
+
+@theme inline {
+  --radius-sm: var(--RADIUS-SM);
+  --radius-md: var(--RADIUS-MD);
+  --radius-lg: var(--RADIUS-LG);
+  --radius-xl: var(--RADIUS-XL);
+  --radius-full: var(--RADIUS-FULL);
+}

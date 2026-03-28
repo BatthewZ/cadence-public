@@ -1,0 +1,683 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { Task } from "@/web/contexts/ProjectContext";
+
+// ---------------------------------------------------------------------------
+// Mocks — declared before any imports that depend on them
+// ---------------------------------------------------------------------------
+
+const mockUseProject = vi.fn();
+
+vi.mock("@/web/contexts/ProjectContext", () => ({
+  useProject: (): unknown => mockUseProject(),
+}));
+
+vi.mock("@/web/contexts/WorkspaceContext", () => ({
+  useWorkspace: () => ({
+    workspace: { id: "ws-1", name: "Test Workspace", slug: "test" },
+    members: [],
+    teams: [],
+    refetch: vi.fn(),
+  }),
+}));
+
+vi.mock("@/web/hooks/use-task-filters", () => ({
+  useTaskFilters: (tasks: Task[]) => ({
+    filteredTasks: tasks,
+    hasActiveFilters: false,
+    clearFilters: vi.fn(),
+  }),
+}));
+
+vi.mock("@/web/hooks/use-document-title", () => ({
+  useDocumentTitle: vi.fn(),
+}));
+
+vi.mock("@/web/components/ui/ToastContext", () => ({
+  useToast: () => ({ toast: vi.fn() }),
+}));
+
+vi.mock("@/web/lib/api/client", () => ({
+  api: Object.assign(vi.fn(), {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+  }),
+}));
+
+vi.mock("@/web/lib/auth/auth-client", () => ({
+  useSession: () => ({
+    data: {
+      user: { id: "user-1", name: "Alice", email: "alice@test.com", image: null },
+    },
+  }),
+}));
+
+import { api } from "@/web/lib/api/client";
+const mockPost = api.post as ReturnType<typeof vi.fn>;
+const mockPatch = api.patch as ReturnType<typeof vi.fn>;
+
+// ---------------------------------------------------------------------------
+// Polyfills for jsdom
+// ---------------------------------------------------------------------------
+
+class ResizeObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
+
+class IntersectionObserverStub {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+globalThis.IntersectionObserver = IntersectionObserverStub as unknown as typeof IntersectionObserver;
+
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
+
+// ---------------------------------------------------------------------------
+// Dynamic import so mocks are established first
+// ---------------------------------------------------------------------------
+
+const { default: ProjectTimeline } = await import("./ProjectTimeline");
+
+// ---------------------------------------------------------------------------
+// Date helpers — produce ISO date strings relative to a fixed "now"
+// ---------------------------------------------------------------------------
+
+/** Returns a date string N days from today (negative = past). */
+function daysFromNow(offset: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return d.toISOString().split("T")[0];
+}
+
+// ---------------------------------------------------------------------------
+// Factory helpers
+// ---------------------------------------------------------------------------
+
+function makeTask(overrides: Partial<Task> & { id: string; title: string }): Task {
+  return {
+    taskGroupId: "tg-1",
+    priority: "none",
+    completed: false,
+    position: "000001",
+    ...overrides,
+  };
+}
+
+function setupProjectMock(tasks: Task[]) {
+  mockUseProject.mockReturnValue({
+    project: { id: "proj-1", name: "Test Project", workspaceId: "ws-1" },
+    members: [
+      { id: "m-1", userId: "user-1", name: "Alice", email: "alice@test.com", image: null, role: "admin", joinedAt: "2025-01-01" },
+      { id: "m-2", userId: "user-2", name: "Bob", email: "bob@test.com", image: null, role: "member", joinedAt: "2025-01-01" },
+    ],
+    taskGroups: [
+      { id: "tg-1", name: "To Do", isCompletionGroup: false, position: "a" },
+      { id: "tg-2", name: "Done", isCompletionGroup: true, position: "b" },
+    ],
+    tasks,
+    refetchTasks: vi.fn(),
+    refetchTaskGroups: vi.fn(),
+    refetch: vi.fn(),
+    updateProject: vi.fn(),
+    updateTask: vi.fn(),
+    removeTask: vi.fn(),
+    addTask: vi.fn(),
+    updateTaskGroup: vi.fn(),
+    removeTaskGroup: vi.fn(),
+    addTaskGroup: vi.fn(),
+  });
+}
+
+function renderTimeline() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <ProjectTimeline />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Setup / Teardown
+// ---------------------------------------------------------------------------
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe("ProjectTimeline", () => {
+  // -----------------------------------------------------------------------
+  // 1. Time bucket grouping
+  // -----------------------------------------------------------------------
+  describe("time bucket grouping", () => {
+    it("groups overdue tasks into the Overdue bucket", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Overdue task", dueDate: daysFromNow(-3) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getByText("Overdue")).toBeInTheDocument();
+      expect(screen.getByText("Overdue task")).toBeInTheDocument();
+    });
+
+    it("groups tasks due today into the Today bucket", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Today task", dueDate: daysFromNow(0) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getAllByText("Today").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("Today task")).toBeInTheDocument();
+    });
+
+    it("groups tasks due later this week into This Week bucket", () => {
+      // Find a day that is strictly after today but within this week (Sunday end).
+      // We use +2 days, but if that crosses the week boundary we still verify the bucket renders.
+      const now = new Date();
+      const dayOfWeek = now.getDay(); // 0=Sun
+      // Pick a date later this week. If today is Saturday (6) or Sunday (0), +2 might
+      // go into next week, so use +1 as fallback within the same week.
+      const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+      // Only test this if there are days remaining in the week after today
+      if (daysUntilSunday >= 2) {
+        const tasks = [
+          makeTask({ id: "t-1", title: "This week task", dueDate: daysFromNow(2) }),
+        ];
+        setupProjectMock(tasks);
+        renderTimeline();
+        expect(screen.getByText("This Week")).toBeInTheDocument();
+        expect(screen.getByText("This week task")).toBeInTheDocument();
+      }
+    });
+
+    it("places tasks without a due date in the Unscheduled bucket", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "No date task", dueDate: null }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getByText("Unscheduled")).toBeInTheDocument();
+      expect(screen.getByText("No date task")).toBeInTheDocument();
+    });
+
+    it("places tasks far in the future into the Later bucket", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Far future task", dueDate: daysFromNow(90) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getByText("Later")).toBeInTheDocument();
+      expect(screen.getByText("Far future task")).toBeInTheDocument();
+    });
+
+    it("distributes tasks into multiple buckets correctly", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Overdue one", dueDate: daysFromNow(-5) }),
+        makeTask({ id: "t-2", title: "Today one", dueDate: daysFromNow(0) }),
+        makeTask({ id: "t-3", title: "No date one", dueDate: null }),
+        makeTask({ id: "t-4", title: "Way later", dueDate: daysFromNow(120) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getByText("Overdue")).toBeInTheDocument();
+      expect(screen.getAllByText("Today").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("Unscheduled")).toBeInTheDocument();
+      expect(screen.getByText("Later")).toBeInTheDocument();
+
+      expect(screen.getByText("Overdue one")).toBeInTheDocument();
+      expect(screen.getByText("Today one")).toBeInTheDocument();
+      expect(screen.getByText("No date one")).toBeInTheDocument();
+      expect(screen.getByText("Way later")).toBeInTheDocument();
+    });
+
+    it("shows task counts as badges in each bucket header", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Overdue A", dueDate: daysFromNow(-2) }),
+        makeTask({ id: "t-2", title: "Overdue B", dueDate: daysFromNow(-1) }),
+        makeTask({ id: "t-3", title: "No date X", dueDate: null }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      // The Overdue bucket should display count "2"
+      const overdueSection = screen.getByText("Overdue").closest(".accordion-item");
+      expect(overdueSection).not.toBeNull();
+      expect(within(overdueSection! as HTMLElement).getByText("2")).toBeInTheDocument();
+
+      // The Unscheduled bucket should display count "1"
+      const unscheduledSection = screen.getByText("Unscheduled").closest(".accordion-item");
+      expect(unscheduledSection).not.toBeNull();
+      expect(within(unscheduledSection! as HTMLElement).getByText("1")).toBeInTheDocument();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 2. Unscheduled section
+  // -----------------------------------------------------------------------
+  describe("Unscheduled section", () => {
+    it("renders the CalendarOff icon for unscheduled section", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "No date", dueDate: null }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      // The unscheduled trigger has a muted text class
+      const trigger = screen.getByText("Unscheduled").closest("button");
+      expect(trigger).not.toBeNull();
+      expect(trigger!.className).toContain("text-fg-muted");
+    });
+
+    it("shows multiple unscheduled tasks", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Backlog A", dueDate: null }),
+        makeTask({ id: "t-2", title: "Backlog B", dueDate: null }),
+        makeTask({ id: "t-3", title: "Backlog C", dueDate: null }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getByText("Backlog A")).toBeInTheDocument();
+      expect(screen.getByText("Backlog B")).toBeInTheDocument();
+      expect(screen.getByText("Backlog C")).toBeInTheDocument();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 3. Task row display
+  // -----------------------------------------------------------------------
+  describe("task row display", () => {
+    it("renders task title", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Important task", dueDate: daysFromNow(0) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getByText("Important task")).toBeInTheDocument();
+    });
+
+    it("renders assignee avatar when assigned", () => {
+      const tasks = [
+        makeTask({
+          id: "t-1",
+          title: "Assigned task",
+          dueDate: daysFromNow(0),
+          assigneeId: "user-1",
+          assigneeName: "Alice",
+        }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getByLabelText("Change assigned person")).toBeInTheDocument();
+    });
+
+    it("renders assign button when unassigned", () => {
+      const tasks = [
+        makeTask({
+          id: "t-1",
+          title: "Unassigned task",
+          dueDate: daysFromNow(0),
+          assigneeId: null,
+          assigneeName: undefined,
+        }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getByLabelText("Assign task")).toBeInTheDocument();
+    });
+
+    it("renders priority badge for high-priority tasks", () => {
+      const tasks = [
+        makeTask({
+          id: "t-1",
+          title: "Urgent task",
+          dueDate: daysFromNow(0),
+          priority: "high",
+        }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getByText("High")).toBeInTheDocument();
+    });
+
+    it("renders formatted due date", () => {
+      const dueDate = daysFromNow(30);
+      const tasks = [
+        makeTask({ id: "t-1", title: "Dated task", dueDate }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      // formatDueDate returns "Mon DD" for dates > 7 days away
+      const dateObj = new Date(dueDate);
+      const expected = dateObj.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
+      expect(screen.getByText(expected)).toBeInTheDocument();
+    });
+
+    it("applies line-through styling to completed tasks", () => {
+      const tasks = [
+        makeTask({
+          id: "t-1",
+          title: "Done task",
+          dueDate: daysFromNow(0),
+          completed: true,
+        }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      const title = screen.getByText("Done task");
+      expect(title.className).toContain("line-through");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 4. Checkbox toggles task completion
+  // -----------------------------------------------------------------------
+  describe("checkbox toggle", () => {
+    it("calls updateTask optimistically when checkbox is clicked", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "Toggle me", dueDate: daysFromNow(0), completed: false }),
+      ];
+      setupProjectMock(tasks);
+      const mockUpdateTask = (mockUseProject() as { updateTask: ReturnType<typeof vi.fn> }).updateTask;
+
+      // Mock the API post for completing a task
+      mockPost.mockResolvedValueOnce({
+        task: { ...tasks[0], completed: true },
+      });
+
+      renderTimeline();
+
+      const checkbox = screen.getByRole("checkbox", { name: /Mark "Toggle me" as complete/ });
+      await user.click(checkbox);
+
+      // updateTask should have been called with completed: true (optimistic)
+      expect(mockUpdateTask).toHaveBeenCalledWith("t-1", { completed: true });
+    });
+
+    it("calls the complete endpoint when checking an incomplete task", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "Complete me", dueDate: daysFromNow(0), completed: false }),
+      ];
+      setupProjectMock(tasks);
+
+      mockPost.mockResolvedValueOnce({
+        task: { ...tasks[0], completed: true },
+      });
+
+      renderTimeline();
+
+      const checkbox = screen.getByRole("checkbox", { name: /Mark "Complete me" as complete/ });
+      await user.click(checkbox);
+
+      await waitFor(() => {
+        expect(mockPost).toHaveBeenCalledWith("/api/tasks/t-1/complete", {});
+      });
+    });
+
+    it("calls the uncomplete endpoint when unchecking a completed task", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "Undo me", dueDate: daysFromNow(0), completed: true }),
+      ];
+      setupProjectMock(tasks);
+
+      mockPost.mockResolvedValueOnce({
+        task: { ...tasks[0], completed: false },
+      });
+
+      renderTimeline();
+
+      const checkbox = screen.getByRole("checkbox", { name: /Mark "Undo me" as incomplete/ });
+      await user.click(checkbox);
+
+      await waitFor(() => {
+        expect(mockPost).toHaveBeenCalledWith("/api/tasks/t-1/uncomplete", {});
+      });
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 5. Dropdown menus (priority, assign, actions)
+  // -----------------------------------------------------------------------
+  describe("dropdown menus", () => {
+    it("shows priority options in the priority dropdown", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "Priority task", dueDate: daysFromNow(0), priority: "none" }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      const priorityTrigger = screen.getByLabelText("Set priority");
+      await user.click(priorityTrigger);
+
+      await waitFor(() => {
+        expect(screen.getByText("Set priority")).toBeInTheDocument();
+        expect(screen.getByText("Urgent")).toBeInTheDocument();
+        expect(screen.getByText("Medium")).toBeInTheDocument();
+        expect(screen.getByText("Low")).toBeInTheDocument();
+      });
+    });
+
+    it("calls API to update priority when selected", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "Priority task", dueDate: daysFromNow(0), priority: "none" }),
+      ];
+      setupProjectMock(tasks);
+      mockPatch.mockResolvedValueOnce({});
+      renderTimeline();
+
+      const priorityTrigger = screen.getByLabelText("Set priority");
+      await user.click(priorityTrigger);
+
+      await waitFor(() => {
+        expect(screen.getByText("Urgent")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByText("Urgent"));
+
+      await waitFor(() => {
+        expect(mockPatch).toHaveBeenCalledWith("/api/tasks/t-1", { priority: "urgent" });
+      });
+    });
+
+    it("shows assignee options in the assign dropdown", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "Assign task", dueDate: daysFromNow(0) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      const assignTrigger = screen.getByLabelText("Assign task");
+      await user.click(assignTrigger);
+
+      await waitFor(() => {
+        expect(screen.getByText("Assign to")).toBeInTheDocument();
+        expect(screen.getByText("Unassigned")).toBeInTheDocument();
+        expect(screen.getByText("Alice")).toBeInTheDocument();
+        expect(screen.getByText("Bob")).toBeInTheDocument();
+      });
+    });
+
+    it("renders the task actions three-dot menu", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Actions task", dueDate: daysFromNow(0) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getByLabelText("Task actions")).toBeInTheDocument();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 6. Empty timeline
+  // -----------------------------------------------------------------------
+  describe("empty state", () => {
+    it("shows empty state when there are no tasks", () => {
+      setupProjectMock([]);
+      renderTimeline();
+
+      expect(screen.getByText("No tasks")).toBeInTheDocument();
+      expect(
+        screen.getByText("Create tasks to see them on the timeline"),
+      ).toBeInTheDocument();
+    });
+
+    it("does not show accordion when there are no tasks", () => {
+      setupProjectMock([]);
+      renderTimeline();
+
+      expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 7. Accordion expand/collapse
+  // -----------------------------------------------------------------------
+  describe("accordion expand/collapse", () => {
+    it("auto-expands Overdue and Today buckets by default", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Overdue task", dueDate: daysFromNow(-2) }),
+        makeTask({ id: "t-2", title: "Today task", dueDate: daysFromNow(0) }),
+        makeTask({ id: "t-3", title: "Later task", dueDate: daysFromNow(90) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      // Overdue trigger should be expanded
+      const overdueTrigger = screen.getByText("Overdue").closest("button");
+      expect(overdueTrigger).not.toBeNull();
+      expect(overdueTrigger!.getAttribute("aria-expanded")).toBe("true");
+
+      // Today trigger should be expanded — find the one inside accordion-trigger-text
+      const todayTrigger = screen.getAllByText("Today")
+        .find(el => el.closest(".accordion-trigger-text"))
+        ?.closest("button");
+      expect(todayTrigger).not.toBeNull();
+      expect(todayTrigger!.getAttribute("aria-expanded")).toBe("true");
+
+      // Later trigger should NOT be expanded
+      const laterTrigger = screen.getByText("Later").closest("button");
+      expect(laterTrigger).not.toBeNull();
+      expect(laterTrigger!.getAttribute("aria-expanded")).toBe("false");
+    });
+
+    it("toggles accordion section when trigger is clicked", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "Later task", dueDate: daysFromNow(90) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      const laterTrigger = screen.getByText("Later").closest("button");
+      expect(laterTrigger).not.toBeNull();
+
+      // Initially closed
+      expect(laterTrigger!.getAttribute("aria-expanded")).toBe("false");
+
+      // Click to open
+      await user.click(laterTrigger!);
+      expect(laterTrigger!.getAttribute("aria-expanded")).toBe("true");
+
+      // Click again to close
+      await user.click(laterTrigger!);
+      expect(laterTrigger!.getAttribute("aria-expanded")).toBe("false");
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 8. Loading / spinner state
+  // -----------------------------------------------------------------------
+  describe("loading state", () => {
+    it("shows a spinner when project is not loaded", () => {
+      mockUseProject.mockReturnValue({
+        project: null,
+        members: [],
+        taskGroups: [],
+        tasks: [],
+        refetchTasks: vi.fn(),
+        refetchTaskGroups: vi.fn(),
+        refetch: vi.fn(),
+        updateProject: vi.fn(),
+        updateTask: vi.fn(),
+        removeTask: vi.fn(),
+        addTask: vi.fn(),
+        updateTaskGroup: vi.fn(),
+        removeTaskGroup: vi.fn(),
+        addTaskGroup: vi.fn(),
+      });
+      renderTimeline();
+
+      // The heading "Timeline" should not appear
+      expect(screen.queryByText("Timeline")).not.toBeInTheDocument();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 9. Heading
+  // -----------------------------------------------------------------------
+  describe("page heading", () => {
+    it("renders the Timeline heading", () => {
+      setupProjectMock([]);
+      renderTimeline();
+
+      expect(screen.getByText("Timeline")).toBeInTheDocument();
+    });
+  });
+});

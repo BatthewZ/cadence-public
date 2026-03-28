@@ -1,0 +1,27 @@
+::view-transition-group(root) {
+  animation-duration: var(--MOTION-DURATION-PAGE);
+  animation-timing-function: var(--MOTION-EASE-PAGE);
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--MOTION-DURATION-PAGE);
+  animation-timing-function: var(--MOTION-EASE-PAGE);
+}
+
+::view-transition-old(root) {
+  animation-name: var(--MOTION-PAGE-TRANSITION-OUT);
+  animation-fill-mode: var(--MOTION-PAGE-OLD-ANIMATION-FILL-MODE);
+}
+
+::view-transition-new(root) {
+  animation-name: var(--MOTION-PAGE-TRANSITION-IN);
+  animation-fill-mode: var(--MOTION-PAGE-NEW-ANIMATION-FILL-MODE);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: 0ms;
+  }
+}

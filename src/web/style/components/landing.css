@@ -1,0 +1,240 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Landing Page
+   ═══════════════════════════════════════════════════════════════════ */
+
+.landing {
+  --landing-glow-violet: #7c3aed;
+  --landing-glow-cyan: #06b6d4;
+  overflow-x: hidden;
+}
+
+/* ─── Animated gradient orbs ─── */
+
+.landing-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  will-change: transform;
+  pointer-events: none;
+}
+
+.landing-orb--1 {
+  width: min(600px, 80vw);
+  height: min(600px, 80vw);
+  background: var(--C-ACCENT);
+  opacity: 0.15;
+  top: -20%;
+  right: -10%;
+  animation: landing-float 25s ease-in-out infinite;
+}
+
+.landing-orb--2 {
+  width: min(450px, 60vw);
+  height: min(450px, 60vw);
+  background: var(--landing-glow-violet);
+  opacity: 0.1;
+  bottom: -15%;
+  left: -5%;
+  animation: landing-float 30s ease-in-out infinite reverse;
+}
+
+.landing-orb--3 {
+  width: min(350px, 50vw);
+  height: min(350px, 50vw);
+  background: var(--landing-glow-cyan);
+  opacity: 0.08;
+  top: 40%;
+  left: 30%;
+  animation: landing-float 22s ease-in-out infinite;
+  animation-delay: -7s;
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(40px, -30px) scale(1.05);
+  }
+  66% {
+    transform: translate(-25px, 20px) scale(0.95);
+  }
+}
+
+/* ─── Dot grid overlay ─── */
+
+.landing-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--C-TEXT-INVERSE) 7%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+
+/* ─── Rhythm bar visualization ─── */
+
+.landing-rhythm {
+  display: flex;
+  align-items: end;
+  gap: 3px;
+  height: 48px;
+}
+
+.landing-rhythm-bar {
+  width: 3px;
+  border-radius: var(--RADIUS-FULL);
+  background: currentColor;
+  animation: landing-rhythm-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes landing-rhythm-pulse {
+  0%,
+  100% {
+    height: 15%;
+    opacity: 0.4;
+  }
+  50% {
+    height: var(--bar-height, 60%);
+    opacity: 0.8;
+  }
+}
+
+/* ─── Nav ─── */
+
+.landing-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  transition:
+    background-color var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    border-color var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+  border-bottom: 1px solid transparent;
+}
+
+.landing-nav--scrolled {
+  background-color: color-mix(in srgb, var(--C-PRIMARY) 90%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom-color: color-mix(in srgb, var(--C-TEXT-INVERSE) 10%, transparent);
+}
+
+/* ─── Hero display font ─── */
+
+.landing-display {
+  font-family: "DM Serif Display", serif;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+/* ─── Product showcase ─── */
+
+.landing-showcase {
+  perspective: 1200px;
+}
+
+.landing-showcase-board {
+  transform: rotateX(4deg) rotateY(-2deg);
+  transform-origin: center center;
+  transition: transform var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+}
+
+.landing-showcase-board:hover {
+  transform: rotateX(1deg) rotateY(-0.5deg);
+}
+
+/* Glow beneath showcase */
+.landing-showcase-glow {
+  position: absolute;
+  bottom: -40px;
+  left: 10%;
+  right: 10%;
+  height: 120px;
+  background: var(--C-ACCENT);
+  filter: blur(80px);
+  opacity: 0.15;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* ─── Theme card ─── */
+
+.landing-theme-card {
+  transition:
+    transform var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    box-shadow var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.landing-theme-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--SHADOW-LG);
+}
+
+/* ─── Section divider wave ─── */
+
+.landing-wave {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.landing-wave svg {
+  display: block;
+  width: 100%;
+  height: 48px;
+}
+
+@media (width >= 40rem) {
+  .landing-wave svg {
+    height: 72px;
+  }
+}
+
+/* ─── Feature icon container ─── */
+
+.landing-feature-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--RADIUS-LG);
+  background: var(--C-ACCENT-SUBTLE);
+  color: var(--C-ACCENT);
+  flex-shrink: 0;
+}
+
+/* ─── Reduced motion ─── */
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-orb {
+    animation: none;
+  }
+
+  .landing-rhythm-bar {
+    animation: none;
+    height: var(--bar-height, 60%);
+    opacity: 0.6;
+  }
+
+  .landing-showcase-board {
+    transform: none;
+  }
+
+  .landing-showcase-board:hover {
+    transform: none;
+  }
+
+  .landing-theme-card:hover {
+    transform: none;
+  }
+}

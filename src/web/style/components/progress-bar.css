@@ -1,0 +1,99 @@
+/* ------------------------------------------------------------------ */
+/*  ProgressBar                                                        */
+/* ------------------------------------------------------------------ */
+
+/* Track (outer container) */
+.progress-bar {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--C-SURFACE-1);
+  border-radius: var(--RADIUS-FULL);
+}
+
+/* Size variants */
+.progress-bar--sm {
+  height: var(--R-SIZE-6);
+}
+
+.progress-bar--md {
+  height: var(--R-SIZE-5);
+}
+
+.progress-bar--lg {
+  height: var(--R-SIZE-4);
+}
+
+/* Fill (inner bar) */
+.progress-bar__fill {
+  height: 100%;
+  border-radius: var(--RADIUS-FULL);
+  transition: width var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+}
+
+.progress-bar__fill--no-animate {
+  transition: none;
+}
+
+/* Color variants */
+.progress-bar__fill--accent {
+  background-color: var(--C-ACCENT);
+}
+
+.progress-bar__fill--success {
+  background-color: var(--C-STATUS-SUCCESS);
+}
+
+.progress-bar__fill--warning {
+  background-color: var(--C-STATUS-WARNING);
+}
+
+.progress-bar__fill--error {
+  background-color: var(--C-STATUS-ERROR);
+}
+
+/* Style variants */
+.progress-bar__fill--gradient {
+  background: linear-gradient(90deg, var(--C-ACCENT), var(--C-ACCENT-HOVER));
+}
+
+.progress-bar__fill--striped {
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 8px,
+    rgba(255, 255, 255, 0.15) 8px,
+    rgba(255, 255, 255, 0.15) 16px
+  );
+  background-size: 200% 100%;
+}
+
+/* Label / Value sub-components */
+.progress-bar__label {
+  display: block;
+  font-size: var(--BodyText-2);
+  font-weight: var(--Semibold-Weight);
+  line-height: var(--BodyText-2-line-height);
+  color: var(--C-TEXT-SECONDARY);
+  margin-bottom: var(--R-SIZE-6);
+}
+
+.progress-bar__value {
+  display: block;
+  font-size: var(--BodyText-2);
+  font-weight: var(--Bold-Weight);
+  line-height: var(--BodyText-2-line-height);
+  color: var(--C-TEXT-PRIMARY);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: var(--R-SIZE-6);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Reduced motion                                                     */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-bar__fill {
+    transition: none;
+  }
+}

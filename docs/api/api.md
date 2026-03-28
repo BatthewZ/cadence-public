@@ -1,0 +1,25 @@
+# API
+
+## Overview
+
+The API is a Hono application running inside a Cloudflare Worker. All API endpoints are mounted under `/api/*`. The entry point is `src/api/index.ts`.
+
+## Documentation
+
+- [Middleware](./middleware.md) -- middleware stack, order, and details for each middleware
+- [Endpoints](./endpoints.md) -- available API endpoints and request/response formats (labels, task labels, and more)
+- [Error Handling](./error-handling.md) -- global error handler behavior
+- [Rate Limiting](./rate-limiting.md) -- rate limit configuration and behavior
+- [Validation](./validation.md) -- request validation middleware
+- [Access Resolution](../../src/api/lib/access.ts) -- `resolveProjectAccess()` shared function for project authorization checks (single source of truth used by middleware and route handlers)
+- [Cursor Pagination](../../src/api/lib/pagination.ts) -- `parseCursorParams()`, `parseCursorDate()`, `computeNextCursor()` helpers for simple cursor pagination; `parseCompoundCursor()`, `compoundCursorCondition()`, and `computeCompoundNextCursor()` for compound `"date|id"` cursors that eliminate gaps when rows share identical dates
+- [Adding Routes](./adding-routes.md) -- step-by-step guide for adding new API routes
+- [Frontend API Client](./client.md) -- typed fetch wrapper for the frontend
+- [CORS](./cors.md) -- CORS configuration and allowed origins
+- [Email Service](./email.md) -- email delivery via Resend (production) or console (development)
+- [File Storage](./storage.md) -- file uploads via Cloudflare R2 with upload endpoints
+- [Webhooks](./webhooks.md) -- event types, payload format, signature verification, retry/delivery, auto-disable, retention, dev mode, limits
+- [Webhook Internals](../../src/api/lib/webhooks.ts) -- webhook dispatch, delivery with exponential-backoff retries, HMAC-SHA256 signing, SSRF-safe URL validation, cron-driven retry processing, and auto-disable after 10 consecutive failures
+- [Webhook Payloads](../../src/api/lib/webhook-payloads.ts) -- payload envelope builder, change detection (`computeChanges`), domain-specific data extractors (task, project, invitation, member), secondary event detection, context fetcher, and `fireWebhookEvent` fire-and-forget dispatch helper
+- [Deferred Work](../../src/api/lib/defer.ts) -- `deferWork()` helper that uses the Cloudflare Workers `waitUntil()` API to run non-critical side-effects (activity logging, notifications) after the response is sent
+- [Scheduled Handler](../../src/api/scheduled/index.ts) -- Cloudflare Cron Trigger handler (every 5 min) for webhook retry processing, delivery record cleanup, and expired auth record cleanup (sessions + verification tokens)

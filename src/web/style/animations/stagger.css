@@ -1,0 +1,13 @@
+/* Stagger item: apply animation-delay based on index */
+.stagger-item {
+  --stagger-delay: var(--MOTION-STAGGER-DELAY);
+  animation-delay: calc(var(--stagger-index, 0) * var(--stagger-delay));
+  animation-fill-mode: both;
+}
+
+/* Reduced motion: no stagger delay */
+@media (prefers-reduced-motion: reduce) {
+  .stagger-item {
+    animation-delay: 0ms;
+  }
+}

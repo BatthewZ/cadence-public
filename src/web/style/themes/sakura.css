@@ -1,0 +1,139 @@
+/* Sakura Theme — Kyoto tea house in spring
+   Soft warm white, muted rose/blush primary, matcha green accent.
+   Fonts: EB Garamond (headings), Noto Sans (body) */
+
+:root[data-theme="sakura"] {
+  color-scheme: light;
+
+  /* Fonts — delicate serif headings with clean balanced body */
+  --DEFAULT-FONT: "Noto Sans", sans-serif;
+  --DEFAULT-MONO-FONT: "DM Mono", monospace;
+  --HEADING-FONT: "EB Garamond", serif;
+  --HEADING-LETTER-SPACING: 0.01em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas */
+  --C-CANVAS: #faf8f5;
+
+  /* Brand */
+  --C-PRIMARY: #b07080;
+  --C-PRIMARY-HOVER: #9e6070;
+  --C-PRIMARY-ACTIVE: #c08090;
+  --C-SECONDARY: #ede6e0;
+  --C-SECONDARY-HOVER: #e2dad2;
+  --C-ACCENT: #6a9a72;
+  --C-ACCENT-HOVER: #5a8a62;
+
+  /* Surface — very soft warm whites */
+  --C-SURFACE-0: #faf8f5;
+  --C-SURFACE-1: #f5f2ed;
+  --C-SURFACE-2: #ede8e2;
+  --C-SURFACE-3: #e2dcd4;
+
+  /* Text — warm stone grays for a gentle feel */
+  --C-TEXT-PRIMARY: #2c2624;
+  --C-TEXT-SECONDARY: #5e5450;
+  --C-TEXT-MUTED: #8e8480;
+  --C-TEXT-INVERSE: #faf8f5;
+  --C-TEXT-ON-PRIMARY: #faf8f5;
+  --C-TEXT-ON-ACCENT: #faf8f5;
+
+  /* Border */
+  --C-BORDER-DEFAULT: #e2dcd4;
+  --C-BORDER-STRONG: #d2cac0;
+  --C-BORDER-FOCUS: #b07080;
+
+  /* Status */
+  --C-STATUS-ERROR: #c04848;
+  --C-STATUS-ERROR-BG: #faf0f0;
+  --C-STATUS-SUCCESS: #4a8a52;
+  --C-STATUS-SUCCESS-BG: #f0f8f0;
+  --C-STATUS-WARNING: #b88a30;
+  --C-STATUS-WARNING-BG: #faf6ee;
+  --C-STATUS-INFO: #4a7a9e;
+  --C-STATUS-INFO-BG: #eef4fa;
+
+  /* Radius — medium, gentle but not bubbly */
+  --RADIUS-SM: 6px;
+  --RADIUS-MD: 8px;
+  --RADIUS-LG: 12px;
+  --RADIUS-XL: 16px;
+
+  /* Shadows — barely visible, cool-tinted like ink wash */
+  --SHADOW-SM: 0 1px 4px 0 rgb(44 38 36 / 0.04);
+  --SHADOW-MD: 0 3px 10px -2px rgb(44 38 36 / 0.06), 0 1px 3px -1px rgb(44 38 36 / 0.03);
+  --SHADOW-LG: 0 10px 24px -6px rgb(44 38 36 / 0.08), 0 3px 6px -3px rgb(44 38 36 / 0.03);
+
+  /* Typography — delicate, balanced */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 500;
+
+  --BodyText-1-line-height: 30px;
+  --BodyText-2-line-height: 26px;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: sakura-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: sakura-page-out;
+
+  /* Motion — graceful and measured */
+  --MOTION-DURATION-ENTER: 420ms;
+  --MOTION-DURATION-EXIT: 300ms;
+  --MOTION-DURATION-SHIFT: 520ms;
+  --MOTION-DURATION-PAGE: 450ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.16, 1, 0.3, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.2, 1.05, 0.4, 1);
+  --MOTION-DISTANCE-SM: 8px;
+  --MOTION-DISTANCE-MD: 18px;
+  --MOTION-DISTANCE-LG: 36px;
+  --MOTION-STAGGER-DELAY: 65ms;
+  --MOTION-SCALE-HOVER: 1.02;
+  --MOTION-SCALE-PRESS: 0.98;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — gentle warm scrim */
+  --OVERLAY-SCRIM-COLOR: rgb(44 38 36 / 0.35);
+  --OVERLAY-GRADIENT-START: rgb(44 38 36 / 0);
+  --OVERLAY-GRADIENT-END: rgb(44 38 36 / 0.55);
+  --OVERLAY-BLUR: 10px;
+  --OVERLAY-BLUR-HEAVY: 24px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.02;
+  --MEDIA-CARD-HOVER-LIFT: -2px;
+
+  /* Transitions */
+  --DURATION-FAST: 140ms;
+  --DURATION-NORMAL: 270ms;
+  --DURATION-SLOW: 420ms;
+}
+
+@keyframes sakura-page-in {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(2px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes sakura-page-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+    filter: blur(2px);
+  }
+}

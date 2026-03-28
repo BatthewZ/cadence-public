@@ -1,0 +1,153 @@
+# Route Guards
+
+Route guards are React components that wrap page components to control access based on auth state. They are defined in `src/web/components/guards/` and re-exported from `src/web/components/guards/index.ts`.
+
+### AuthGuard
+
+**File**: `src/web/components/guards/AuthGuard.tsx`
+
+Requires an active session. If the session is loading, shows a spinner. If no session exists, redirects to `/login`.
+
+```tsx
+export function AuthGuard({ children }: { children: React.ReactNode }) {
+  const { data: session, isPending } = useSession();
+
+  if (isPending) {
+    return (
+      <Center className="min-h-screen">
+        <Spinner size="lg" />
+      </Center>
+    );
+  }
+
+  if (!session) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+```
+
+**Usage**:
+
+```tsx
+<Route
+  path="/dashboard"
+  element={
+    <AuthGuard>
+      <Dashboard />
+    </AuthGuard>
+  }
+/>
+```
+
+### GuestGuard
+
+**File**: `src/web/components/guards/GuestGuard.tsx`
+
+Requires no active session. If the session is loading, shows a spinner. If a session exists, redirects to `/`.
+
+```tsx
+export function GuestGuard({ children }: { children: React.ReactNode }) {
+  const { data: session, isPending } = useSession();
+
+  if (isPending) {
+    return (
+      <Center className="min-h-screen">
+        <Spinner size="lg" />
+      </Center>
+    );
+  }
+
+  if (session) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <>{children}</>;
+}
+```
+
+**Usage**:
+
+```tsx
+<Route
+  path="/login"
+  element={
+    <GuestGuard>
+      <Login />
+    </GuestGuard>
+  }
+/>
+```
+
+### WorkspaceGuard
+
+**File**: `src/web/components/guards/WorkspaceGuard.tsx`
+
+Gates workspace routes on a valid workspace slug. Resolves the URL slug to a workspace ID, then prefetches the workspace detail query so that downstream `useWorkspace()` hooks read from a warm React Query cache on first render — no context provider needed. Data lives in the React Query cache (external to the React component tree), so it survives Vite HMR without context-identity issues.
+
+- **Loading** — shows a full-screen spinner while the workspace list and detail are being fetched.
+- **Error** — displays the error message in a centered muted text block.
+- **No match** — redirects to `/workspaces`.
+- **Match** — renders children directly (workspace data is accessed via `useWorkspace()` hook reading from the query cache).
+
+```tsx
+export function WorkspaceGuard({ children }: { children: ReactNode }) {
+  const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
+
+  const { data, error, isLoading: loading } = useQuery({
+    queryKey: queryKeys.workspaces.all,
+    queryFn: () => api.get<WorkspacesResponse>("/api/workspaces"),
+  });
+
+  const workspaces = data?.workspaces ?? [];
+  const workspace = workspaces.find((w) => w.slug === workspaceSlug);
+
+  // Prefetch workspace detail so useWorkspace() reads from warm cache
+  const { isLoading: detailLoading, error: detailError } = useQuery({
+    queryKey: queryKeys.workspaces.detail(workspace?.id ?? ""),
+    queryFn: () => api.get<{ workspace: Workspace }>(`/api/workspaces/${workspace!.id}`),
+    staleTime: 5 * 60_000,
+    enabled: !!workspace?.id,
+  });
+
+  if (loading || detailLoading) {
+    return (
+      <Center className="min-h-screen">
+        <Spinner size="lg" />
+      </Center>
+    );
+  }
+
+  if (error || detailError) {
+    return (
+      <Center className="min-h-screen">
+        <Text variant="body-1" color="muted">
+          {error?.message ?? detailError?.message}
+        </Text>
+      </Center>
+    );
+  }
+
+  if (!workspace) {
+    return <Navigate to="/workspaces" replace />;
+  }
+
+  return <>{children}</>;
+}
+```
+
+**Usage**:
+
+```tsx
+<Route
+  path="/:workspaceSlug"
+  element={
+    <AuthGuard>
+      <WorkspaceGuard>
+        <WorkspaceLayout />
+      </WorkspaceGuard>
+    </AuthGuard>
+  }
+/>
+```

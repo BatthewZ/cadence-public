@@ -1,0 +1,98 @@
+/* ------------------------------------------------------------------ */
+/*  StatCard                                                           */
+/* ------------------------------------------------------------------ */
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--R-SIZE-2);
+  padding: var(--R-SIZE-6);
+  background-color: var(--C-SURFACE-0);
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  border-radius: var(--RADIUS-LG);
+}
+
+@media (min-width: 640px) {
+  .stat-card {
+    padding: var(--R-SIZE-5);
+  }
+}
+
+/* Icon slot */
+.stat-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--R-SIZE-2);
+  height: var(--R-SIZE-2);
+  border-radius: var(--RADIUS-MD);
+  background-color: var(--C-SURFACE-1);
+  color: var(--C-ACCENT);
+}
+
+/* Value */
+.stat-card__value {
+  font-size: var(--H5);
+  font-weight: var(--Bold-Weight);
+  line-height: var(--H5-line-height);
+  color: var(--C-TEXT-PRIMARY);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 640px) {
+  .stat-card__value {
+    font-size: var(--H3);
+    line-height: var(--H3-line-height);
+  }
+}
+
+/* Label */
+.stat-card__label {
+  font-size: var(--BodyText-2);
+  font-weight: var(--Semibold-Weight);
+  line-height: var(--BodyText-2-line-height);
+  color: var(--C-TEXT-SECONDARY);
+}
+
+/* Trend indicator */
+.stat-card__trend {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--R-SIZE-1);
+  font-size: var(--BodyText-2);
+  font-weight: var(--Semibold-Weight);
+  line-height: var(--BodyText-2-line-height);
+}
+
+.stat-card__trend--up {
+  color: var(--C-STATUS-SUCCESS);
+}
+
+.stat-card__trend--down {
+  color: var(--C-STATUS-ERROR);
+}
+
+.stat-card__trend--neutral {
+  color: var(--C-TEXT-SECONDARY);
+}
+
+/* Trend arrow icon */
+.stat-card__trend-icon {
+  width: 1em;
+  height: 1em;
+  transition: transform var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+}
+
+.stat-card__trend--down .stat-card__trend-icon {
+  transform: rotate(180deg);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Reduced motion                                                     */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .stat-card__trend-icon {
+    transition: none;
+  }
+}

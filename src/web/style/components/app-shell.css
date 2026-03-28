@@ -1,0 +1,306 @@
+/* ─────────────────────────────────────────────
+   AppShell — responsive sidebar + navbar layout
+   ───────────────────────────────────────────── */
+
+/* Root grid */
+.app-shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  grid-template-columns: auto 1fr;
+  min-height: 100vh;
+  background: var(--C-SURFACE-1);
+}
+
+/* ── Navbar ── */
+.app-shell-navbar {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding-inline: 16px;
+  background: var(--C-SURFACE-0);
+  border-bottom: 1px solid var(--C-BORDER-DEFAULT);
+  box-shadow: var(--SHADOW-XS);
+}
+
+.app-shell-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--C-TEXT-PRIMARY);
+  white-space: nowrap;
+}
+
+.app-shell-navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* ── Toggle button ── */
+.app-shell-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--C-TEXT-SECONDARY);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    color var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.app-shell-toggle:hover {
+  background: var(--C-SURFACE-2);
+  color: var(--C-TEXT-PRIMARY);
+}
+
+.app-shell-toggle:focus-visible {
+  outline: 2px solid var(--C-BORDER-FOCUS);
+  outline-offset: 2px;
+}
+
+/* ── Sidebar (desktop) ── */
+.app-shell-sidebar {
+  grid-column: 1;
+  grid-row: 2;
+  position: sticky;
+  top: 56px;
+  height: calc(100vh - 56px);
+  width: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: linear-gradient(180deg, var(--C-SURFACE-0) 0%, var(--C-SURFACE-1) 100%);
+  border-right: 1px solid var(--C-BORDER-DEFAULT);
+  padding: 8px;
+  transition: width var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell-sidebar[data-collapsed] {
+  width: 64px;
+}
+
+/* ── Sidebar section ── */
+.app-shell-sidebar-section {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-shell-sidebar-section + .app-shell-sidebar-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--C-BORDER-DEFAULT);
+}
+
+.app-shell-sidebar-section-title {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--C-TEXT-SECONDARY);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Sidebar link ── */
+.app-shell-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--C-TEXT-SECONDARY);
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: background var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    color var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    transform var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.app-shell-sidebar-link:hover {
+  background: var(--C-SURFACE-2);
+  color: var(--C-TEXT-PRIMARY);
+  transform: translateX(2px);
+}
+
+.app-shell-sidebar-link:focus-visible {
+  outline: 2px solid var(--C-BORDER-FOCUS);
+  outline-offset: -2px;
+}
+
+.app-shell-sidebar-link[data-active] {
+  background: var(--C-ACCENT-MUTED);
+  color: var(--C-ACCENT);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 0 var(--C-ACCENT);
+}
+
+.app-shell-sidebar-link-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.app-shell-sidebar-link-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Collapsed: hide labels, center icons */
+.app-shell-sidebar[data-collapsed] .app-shell-sidebar-link {
+  justify-content: center;
+  padding: 8px;
+}
+
+.app-shell-sidebar[data-collapsed] .app-shell-sidebar-link-label {
+  display: none;
+}
+
+.app-shell-sidebar[data-collapsed] .app-shell-sidebar-section-title {
+  display: none;
+}
+
+/* ── Main content ── */
+.app-shell-main {
+  grid-column: 2;
+  grid-row: 2;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 1.5rem;
+}
+
+/* ── Mobile overlay sidebar ── */
+.app-shell-scrim {
+  position: fixed;
+  inset: 56px 0 0 0;
+  z-index: 49;
+  background: var(--OVERLAY-SCRIM-COLOR);
+  animation: app-shell-fade-in var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.app-shell-sidebar-mobile {
+  position: fixed;
+  top: 56px;
+  left: 0;
+  bottom: 0;
+  z-index: 50;
+  width: 280px;
+  max-width: calc(100vw - 56px);
+  background: var(--C-SURFACE-0);
+  border-right: 1px solid var(--C-BORDER-DEFAULT);
+  box-shadow: var(--SHADOW-LG);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  animation: app-shell-slide-in var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.app-shell-sidebar-mobile-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--RADIUS-MD);
+  border: none;
+  background: transparent;
+  color: var(--C-FG-MUTED);
+  cursor: pointer;
+  transition: background var(--MOTION-DURATION-FAST) var(--MOTION-EASE-DEFAULT),
+              color var(--MOTION-DURATION-FAST) var(--MOTION-EASE-DEFAULT);
+}
+
+.app-shell-sidebar-mobile-close:hover {
+  background: var(--C-SURFACE-2);
+  color: var(--C-FG-PRIMARY);
+}
+
+.app-shell-sidebar-mobile-close:focus-visible {
+  outline: 2px solid var(--C-FOCUS);
+  outline-offset: -2px;
+}
+
+@keyframes app-shell-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes app-shell-slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* ── Mobile: hide desktop sidebar, show full-width main ── */
+@media (max-width: 639px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell-navbar {
+    padding-inline: 12px;
+    gap: 6px;
+  }
+
+  .app-shell-navbar-actions {
+    gap: 6px;
+  }
+
+  .app-shell-brand {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .app-shell-sidebar {
+    display: none;
+  }
+
+  .app-shell-main {
+    grid-column: 1;
+    padding: 1rem;
+  }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell-sidebar {
+    transition: none;
+  }
+
+  .app-shell-scrim,
+  .app-shell-sidebar-mobile {
+    animation: none;
+  }
+}

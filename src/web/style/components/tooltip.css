@@ -1,0 +1,13 @@
+.tooltip {
+  background: var(--C-PRIMARY);
+  color: var(--C-TEXT-ON-PRIMARY);
+  padding: 4px 10px;
+  border-radius: var(--RADIUS-SM);
+  box-shadow: var(--SHADOW-SM);
+  font-size: var(--BodyText-2);
+  line-height: var(--BodyText-2-line-height);
+  max-width: 280px;
+  word-wrap: break-word;
+  z-index: 50;
+  pointer-events: none;
+}

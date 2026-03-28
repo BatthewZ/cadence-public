@@ -1,0 +1,136 @@
+/* ─── Task Property Picker (Priority, Group, Assignee) ─── */
+
+.task-property-picker__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: var(--RADIUS-SM);
+  border: none;
+  background: none;
+  color: var(--C-TEXT-PRIMARY);
+  font-size: var(--BodyText-3);
+  cursor: pointer;
+  transition: background var(--DURATION-FAST) ease, color var(--DURATION-FAST) ease;
+  width: 100%;
+  text-align: left;
+  line-height: 1.4;
+  min-height: 32px;
+}
+
+.task-property-picker__trigger:hover {
+  background: var(--C-SURFACE-1);
+}
+
+.task-property-picker__trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.task-property-picker__trigger:disabled:hover {
+  background: none;
+}
+
+.task-property-picker__popover {
+  min-width: 220px;
+  max-width: 280px;
+  padding: 10px 12px;
+}
+
+.task-property-picker__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 260px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--C-BORDER-DEFAULT) transparent;
+}
+
+.task-property-picker__list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.task-property-picker__list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.task-property-picker__list::-webkit-scrollbar-thumb {
+  background: var(--C-BORDER-STRONG);
+  border-radius: var(--RADIUS-FULL);
+}
+
+.task-property-picker__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--RADIUS-SM);
+  font-size: var(--BodyText-3);
+  line-height: 1.4;
+  cursor: pointer;
+  border: none;
+  background: none;
+  color: var(--C-TEXT-PRIMARY);
+  width: 100%;
+  text-align: left;
+  transition: background var(--DURATION-FAST) ease;
+}
+
+.task-property-picker__option:hover {
+  background: var(--C-SURFACE-1);
+}
+
+.task-property-picker__option--active {
+  background: var(--C-ACCENT-SUBTLE);
+}
+
+.task-property-picker__option--active:hover {
+  background: var(--C-ACCENT-MUTED);
+}
+
+.task-property-picker__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--RADIUS-FULL);
+  flex-shrink: 0;
+}
+
+.task-property-picker__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-property-picker__check {
+  flex-shrink: 0;
+  color: var(--C-ACCENT);
+}
+
+.task-property-picker__completion-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--C-STATUS-SUCCESS);
+}
+
+/* Assignee-specific styles */
+
+.task-property-picker__avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-property-picker__unassigned-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--RADIUS-FULL);
+  background: var(--C-SURFACE-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--C-TEXT-MUTED);
+}

@@ -1,0 +1,108 @@
+/* ------------------------------------------------------------------ */
+/*  Task Checkbox — animated circular checkbox for task completion     */
+/* ------------------------------------------------------------------ */
+
+.task-checkbox {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.task-checkbox--disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Visually hidden native input */
+.task-checkbox__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Focus ring on the SVG when native input is focused */
+.task-checkbox__input:focus-visible + .task-checkbox__svg {
+  outline: 2px solid var(--C-BORDER-FOCUS);
+  outline-offset: 2px;
+  border-radius: 50%;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Circle                                                             */
+/* ------------------------------------------------------------------ */
+
+.task-checkbox__circle {
+  fill: transparent;
+  stroke: var(--C-BORDER-STRONG);
+  stroke-width: 1.5;
+  transition:
+    fill var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    stroke var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+    transform var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-BOUNCE);
+  transform-origin: center;
+}
+
+.task-checkbox--checked .task-checkbox__circle {
+  fill: var(--C-ACCENT);
+  stroke: var(--C-ACCENT);
+  animation: task-checkbox-pulse var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-BOUNCE);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Checkmark path                                                     */
+/* ------------------------------------------------------------------ */
+
+.task-checkbox__check {
+  fill: none;
+  stroke: #ffffff;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16;
+  transition:
+    stroke-dashoffset var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+}
+
+.task-checkbox--checked .task-checkbox__check {
+  stroke-dashoffset: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Scale pulse keyframe                                               */
+/* ------------------------------------------------------------------ */
+
+@keyframes task-checkbox-pulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Reduced motion                                                     */
+/* ------------------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .task-checkbox__circle,
+  .task-checkbox__check {
+    transition: none;
+  }
+
+  .task-checkbox--checked .task-checkbox__circle {
+    animation: none;
+  }
+}

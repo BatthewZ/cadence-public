@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Restore theme immediately to prevent FOUC
+      // Must run before any CSS paints the page
+      // Keep theme list in sync with THEMES in src/web/hooks/use-theme.ts
+      try {
+        var t = localStorage.getItem("theme");
+        if (
+          t &&
+          t !== "default" &&
+          [
+            "noir",
+            "botanical",
+            "sunset",
+            "candy",
+            "cyberpunk",
+            "pastel",
+            "brutalist",
+            "chalk",
+            "ocean",
+            "ember",
+            "luxe",
+            "deco",
+            "sakura",
+          ].includes(t)
+        ) {
+          document.documentElement.setAttribute("data-theme", t);
+        }
+      } catch (e) {}
+    </script>
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>Cadence — Find your rhythm</title>
+    <meta
+      name="description"
+      content="Fast, beautiful project management that gets out of your way. Own your data, pick your theme, focus on the work."
+    />
+    <meta property="og:title" content="Cadence — Find your rhythm" />
+    <meta
+      property="og:description"
+      content="Fast, beautiful project management that gets out of your way. Own your data, pick your theme, focus on the work."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Cadence — Find your rhythm" />
+    <meta
+      name="twitter:description"
+      content="Fast, beautiful project management that gets out of your way. Own your data, pick your theme, focus on the work."
+    />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,139 @@
+/* Chalk Theme — Dark matte chalkboard
+   Green-black canvas, chalk-white text, soft pastel accents. Casual and warm.
+   Fonts: Patrick Hand (headings), Karla (body) */
+
+:root[data-theme="chalk"] {
+  color-scheme: dark;
+
+  /* Fonts — handwritten headings with a clean readable body */
+  --DEFAULT-FONT: "Karla", sans-serif;
+  --DEFAULT-MONO-FONT: "IBM Plex Mono", monospace;
+  --HEADING-FONT: "Patrick Hand", cursive;
+  --HEADING-LETTER-SPACING: 0.02em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas — dark matte green-black, like a real chalkboard */
+  --C-CANVAS: #1e2a22;
+
+  /* Brand — soft chalk pastels */
+  --C-PRIMARY: #e8dcc8;
+  --C-PRIMARY-HOVER: #d8ccb8;
+  --C-PRIMARY-ACTIVE: #f0e4d0;
+  --C-SECONDARY: #3a4a3e;
+  --C-SECONDARY-HOVER: #4a5a4e;
+  --C-ACCENT: #f0c87c;
+  --C-ACCENT-HOVER: #e0b86c;
+
+  /* Surface — green-tinted darks, like different parts of the board */
+  --C-SURFACE-0: #222e26;
+  --C-SURFACE-1: #28352c;
+  --C-SURFACE-2: #303e34;
+  --C-SURFACE-3: #3a4a3e;
+
+  /* Text — chalk whites and soft grays */
+  --C-TEXT-PRIMARY: #e8e4dc;
+  --C-TEXT-SECONDARY: #b0aca2;
+  --C-TEXT-MUTED: #6e6a60;
+  --C-TEXT-INVERSE: #1e2a22;
+  --C-TEXT-ON-PRIMARY: #1e2a22;
+  --C-TEXT-ON-ACCENT: #1e2a22;
+
+  /* Border — subtle board texture lines */
+  --C-BORDER-DEFAULT: #3a4a3e;
+  --C-BORDER-STRONG: #4a5a4e;
+  --C-BORDER-FOCUS: #f0c87c;
+
+  /* Status — soft chalk-pastel tones */
+  --C-STATUS-ERROR: #e88080;
+  --C-STATUS-ERROR-BG: #2e2224;
+  --C-STATUS-SUCCESS: #80c890;
+  --C-STATUS-SUCCESS-BG: #222e26;
+  --C-STATUS-WARNING: #f0c87c;
+  --C-STATUS-WARNING-BG: #2e2a22;
+  --C-STATUS-INFO: #80b8e0;
+  --C-STATUS-INFO-BG: #22282e;
+
+  /* Radius — medium, slightly soft like chalk lines */
+  --RADIUS-SM: 6px;
+  --RADIUS-MD: 10px;
+  --RADIUS-LG: 14px;
+  --RADIUS-XL: 18px;
+
+  /* Shadows — soft, dusty, diffuse */
+  --SHADOW-SM: 0 1px 4px 0 rgb(20 28 22 / 0.4);
+  --SHADOW-MD: 0 4px 10px -2px rgb(20 28 22 / 0.5), 0 2px 4px -2px rgb(20 28 22 / 0.3);
+  --SHADOW-LG: 0 10px 24px -4px rgb(20 28 22 / 0.6), 0 4px 8px -4px rgb(20 28 22 / 0.3);
+
+  /* Typography — relaxed, casual weights */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 500;
+
+  --BodyText-1-line-height: 30px;
+  --BodyText-2-line-height: 24px;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: chalk-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: chalk-page-out;
+
+  /* Motion — relaxed, casual, unhurried */
+  --MOTION-DURATION-ENTER: 380ms;
+  --MOTION-DURATION-EXIT: 260ms;
+  --MOTION-DURATION-SHIFT: 480ms;
+  --MOTION-DURATION-PAGE: 400ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.16, 1, 0.3, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.28, 1.15, 0.5, 1);
+  --MOTION-DISTANCE-SM: 8px;
+  --MOTION-DISTANCE-MD: 18px;
+  --MOTION-DISTANCE-LG: 36px;
+  --MOTION-STAGGER-DELAY: 60ms;
+  --MOTION-SCALE-HOVER: 1.02;
+  --MOTION-SCALE-PRESS: 0.98;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — deep dusty green */
+  --OVERLAY-SCRIM-COLOR: rgb(20 28 22 / 0.7);
+  --OVERLAY-GRADIENT-START: rgb(20 28 22 / 0);
+  --OVERLAY-GRADIENT-END: rgb(20 28 22 / 0.85);
+  --OVERLAY-BLUR: 8px;
+  --OVERLAY-BLUR-HEAVY: 20px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.02;
+  --MEDIA-CARD-HOVER-LIFT: -3px;
+
+  /* Transitions */
+  --DURATION-FAST: 130ms;
+  --DURATION-NORMAL: 240ms;
+  --DURATION-SLOW: 380ms;
+}
+
+@keyframes chalk-page-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes chalk-page-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+    filter: blur(1px);
+  }
+}

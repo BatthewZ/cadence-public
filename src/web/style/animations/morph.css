@@ -1,0 +1,79 @@
+@keyframes morph-expand {
+  from {
+    opacity: 0;
+    transform: scale(0.85);
+    clip-path: inset(5% round var(--RADIUS-MD));
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+    clip-path: inset(0 round var(--RADIUS-MD));
+  }
+}
+
+@keyframes morph-collapse {
+  from {
+    opacity: 1;
+    transform: scale(1);
+    clip-path: inset(0 round var(--RADIUS-MD));
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.85);
+    clip-path: inset(5% round var(--RADIUS-MD));
+  }
+}
+
+@keyframes morph-reorder {
+  from {
+    opacity: 0.6;
+    transform: translateY(var(--MOTION-DISTANCE-SM));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.morph-expand {
+  animation: morph-expand var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+}
+
+.morph-collapse {
+  animation: morph-collapse var(--MOTION-DURATION-EXIT) var(--MOTION-EASE-EXIT);
+}
+
+.morph-reorder {
+  animation: morph-reorder var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .morph-expand {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    clip-path: none;
+  }
+
+  .morph-collapse {
+    animation-duration: 1ms;
+  }
+
+  .morph-reorder {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/*
+* ------------
+*   Tailwind
+* ------------
+*/
+
+@theme inline {
+  --animate-morph-expand: morph-expand var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+  --animate-morph-collapse: morph-collapse var(--MOTION-DURATION-EXIT) var(--MOTION-EASE-EXIT);
+  --animate-morph-reorder: morph-reorder var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+}

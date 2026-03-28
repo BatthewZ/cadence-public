@@ -1,0 +1,197 @@
+/* Search trigger button in the navbar */
+.command-palette-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--R-SIZE-5);
+  padding: 6px var(--R-SIZE-5);
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  border-radius: var(--RADIUS-MD);
+  background: var(--C-SURFACE-0);
+  color: var(--C-TEXT-MUTED);
+  font-size: var(--BodyText-3);
+  cursor: pointer;
+  transition: all var(--DURATION-FAST) ease;
+  white-space: nowrap;
+}
+
+.command-palette-trigger:hover {
+  background: var(--C-SURFACE-1);
+  border-color: var(--C-BORDER-STRONG);
+  color: var(--C-TEXT-PRIMARY);
+}
+
+.command-palette-trigger__text {
+  color: var(--C-TEXT-MUTED);
+}
+
+.command-palette-trigger__kbd {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: var(--R-SIZE-6);
+  padding: 0 6px;
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  border-radius: var(--RADIUS-SM);
+  background: var(--C-SURFACE-1);
+  font-size: 0.6875rem;
+  font-family: inherit;
+  line-height: 1.375rem;
+}
+
+/* Command palette — the Dialog provides the backdrop and centering */
+.command-palette {
+  max-width: 580px;
+  width: 100%;
+  padding: 0;
+  border-radius: var(--RADIUS-XL);
+  overflow: hidden;
+  box-shadow: 0 16px 70px rgb(0 0 0 / 0.15), 0 0 0 1px var(--C-BORDER-DEFAULT);
+  /* Position in upper third of screen */
+  margin-top: 12vh;
+  align-self: flex-start;
+}
+
+@media (max-width: 639px) {
+  .command-palette-trigger__text,
+  .command-palette-trigger__kbd {
+    display: none;
+  }
+
+  .command-palette {
+    max-width: calc(100vw - 32px);
+    margin-top: 8vh;
+  }
+}
+
+.command-palette__inner {
+  display: flex;
+  flex-direction: column;
+}
+
+.command-palette__header {
+  display: flex;
+  align-items: center;
+  gap: var(--R-SIZE-5);
+  padding: var(--R-SIZE-4) var(--R-SIZE-3);
+  border-bottom: 1px solid var(--C-BORDER-DEFAULT);
+}
+
+.command-palette__input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--C-TEXT-PRIMARY);
+  font-size: var(--BodyText-1);
+  font-family: inherit;
+  outline: none;
+}
+
+.command-palette__input::placeholder {
+  color: var(--C-TEXT-MUTED);
+}
+
+.command-palette__results {
+  max-height: min(360px, 50vh);
+  overflow-y: auto;
+  padding: var(--R-SIZE-6) 0;
+}
+
+.command-palette__empty {
+  padding: var(--R-SIZE-2) var(--R-SIZE-3);
+  text-align: center;
+}
+
+.command-palette__group-label {
+  padding: var(--R-SIZE-5) var(--R-SIZE-3) var(--R-SIZE-6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.command-palette__item {
+  display: flex;
+  align-items: center;
+  gap: var(--R-SIZE-5);
+  width: 100%;
+  padding: var(--R-SIZE-5) var(--R-SIZE-3);
+  border: none;
+  background: transparent;
+  color: var(--C-TEXT-PRIMARY);
+  font-size: var(--BodyText-2);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--DURATION-FAST) ease;
+}
+
+.command-palette__item:hover,
+.command-palette__item--active {
+  background: var(--C-SURFACE-2);
+}
+
+.command-palette__item-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.command-palette__item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-palette__item-context {
+  font-size: var(--BodyText-3);
+  color: var(--C-TEXT-MUTED);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-palette__footer {
+  display: flex;
+  align-items: center;
+  gap: var(--R-SIZE-3);
+  padding: var(--R-SIZE-5) var(--R-SIZE-3);
+  border-top: 1px solid var(--C-BORDER-DEFAULT);
+  background: var(--C-SURFACE-1);
+}
+
+.command-palette__hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--BodyText-3);
+  color: var(--C-TEXT-MUTED);
+}
+
+/* Chord indicator shown in navbar when a chord prefix is active */
+.chord-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  animation: chord-fade-in 0.15s ease;
+}
+
+@keyframes chord-fade-in {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.command-palette__kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.375rem;
+  height: 1.375rem;
+  padding: 0 6px;
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  border-radius: var(--RADIUS-SM);
+  background: var(--C-SURFACE-0);
+  font-size: 0.6875rem;
+  font-family: inherit;
+  line-height: 1;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.06);
+}

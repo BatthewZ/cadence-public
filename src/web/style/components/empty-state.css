@@ -1,0 +1,98 @@
+/* ------------------------------------------------------------------ */
+/*  EmptyState                                                         */
+/* ------------------------------------------------------------------ */
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: var(--R-SIZE-3);
+  gap: var(--R-SIZE-5);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Size variants                                                      */
+/* ------------------------------------------------------------------ */
+
+.empty-state[data-size="sm"] {
+  padding: var(--R-SIZE-5);
+  gap: var(--R-SIZE-6);
+}
+
+.empty-state[data-size="lg"] {
+  padding: var(--R-SIZE-2);
+  gap: var(--R-SIZE-4);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Icon                                                               */
+/* ------------------------------------------------------------------ */
+
+.empty-state__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--C-TEXT-MUTED);
+}
+
+.empty-state[data-size="sm"] .empty-state__icon {
+  font-size: var(--H5);
+}
+
+.empty-state[data-size="md"] .empty-state__icon {
+  font-size: var(--H4);
+}
+
+.empty-state[data-size="lg"] .empty-state__icon {
+  font-size: var(--H4);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Title                                                              */
+/* ------------------------------------------------------------------ */
+
+.empty-state__title {
+  margin: 0;
+  color: var(--C-TEXT-PRIMARY);
+  font-weight: var(--Semibold-Weight);
+}
+
+.empty-state[data-size="sm"] .empty-state__title {
+  font-size: var(--BodyText-1);
+  line-height: var(--BodyText-1-line-height);
+}
+
+.empty-state[data-size="md"] .empty-state__title {
+  font-size: var(--H5);
+  line-height: var(--H5-line-height);
+}
+
+.empty-state[data-size="lg"] .empty-state__title {
+  font-size: var(--H4);
+  line-height: var(--H4-line-height);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Description                                                        */
+/* ------------------------------------------------------------------ */
+
+.empty-state__description {
+  margin: 0;
+  max-width: 360px;
+  color: var(--C-TEXT-MUTED);
+  font-size: var(--BodyText-2);
+  line-height: var(--BodyText-2-line-height);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Actions                                                            */
+/* ------------------------------------------------------------------ */
+
+.empty-state__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--R-SIZE-5);
+  flex-wrap: wrap;
+}

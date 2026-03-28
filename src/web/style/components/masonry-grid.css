@@ -1,0 +1,64 @@
+.masonry-grid {
+  columns: var(--masonry-columns, 1);
+  column-gap: var(--masonry-gap, var(--R-SIZE-4));
+}
+
+.masonry-grid__item {
+  break-inside: avoid;
+  margin-bottom: var(--masonry-gap, var(--R-SIZE-4));
+}
+
+/* Base column classes (no media query — override CSS fallback) */
+.masonry-grid--base-2 { --masonry-columns: 2; }
+.masonry-grid--base-3 { --masonry-columns: 3; }
+.masonry-grid--base-4 { --masonry-columns: 4; }
+
+/* Responsive column overrides — mobile-first */
+
+@media (width >= 40rem) {
+  .masonry-grid--sm-2 {
+    --masonry-columns: 2;
+  }
+  .masonry-grid--sm-3 {
+    --masonry-columns: 3;
+  }
+  .masonry-grid--sm-4 {
+    --masonry-columns: 4;
+  }
+}
+
+@media (width >= 48rem) {
+  .masonry-grid--md-2 {
+    --masonry-columns: 2;
+  }
+  .masonry-grid--md-3 {
+    --masonry-columns: 3;
+  }
+  .masonry-grid--md-4 {
+    --masonry-columns: 4;
+  }
+}
+
+@media (width >= 64rem) {
+  .masonry-grid--lg-2 {
+    --masonry-columns: 2;
+  }
+  .masonry-grid--lg-3 {
+    --masonry-columns: 3;
+  }
+  .masonry-grid--lg-4 {
+    --masonry-columns: 4;
+  }
+}
+
+@media (width >= 80rem) {
+  .masonry-grid--xl-2 {
+    --masonry-columns: 2;
+  }
+  .masonry-grid--xl-3 {
+    --masonry-columns: 3;
+  }
+  .masonry-grid--xl-4 {
+    --masonry-columns: 4;
+  }
+}

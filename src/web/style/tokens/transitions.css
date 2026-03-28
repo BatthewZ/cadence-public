@@ -1,0 +1,17 @@
+:root {
+  --DURATION-FAST: 100ms;
+  --DURATION-NORMAL: 200ms;
+  --DURATION-SLOW: 300ms;
+}
+
+/*
+* ------------
+*   Tailwind
+* ------------
+*/
+
+@theme inline {
+  --transition-duration-fast: var(--DURATION-FAST);
+  --transition-duration-normal: var(--DURATION-NORMAL);
+  --transition-duration-slow: var(--DURATION-SLOW);
+}

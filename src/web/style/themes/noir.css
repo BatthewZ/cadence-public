@@ -1,0 +1,135 @@
+/* Noir Theme — Jazz bar at midnight
+   Warm dark charcoal, amber/gold accent, sophisticated and easy on the eyes.
+   Fonts: DM Sans (body), DM Serif Display (headings) */
+
+:root[data-theme="noir"] {
+  color-scheme: dark;
+
+  /* Fonts — refined serif headings with a clean geometric body */
+  --DEFAULT-FONT: "DM Sans", sans-serif;
+  --DEFAULT-MONO-FONT: "DM Mono", monospace;
+  --HEADING-FONT: "DM Serif Display", serif;
+  --HEADING-LETTER-SPACING: -0.01em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas */
+  --C-CANVAS: #1a1714;
+
+  /* Brand */
+  --C-PRIMARY: #d4a54a;
+  --C-PRIMARY-HOVER: #c4953a;
+  --C-PRIMARY-ACTIVE: #e4b55a;
+  --C-SECONDARY: #3d352b;
+  --C-SECONDARY-HOVER: #4d453b;
+  --C-ACCENT: #e8b94a;
+  --C-ACCENT-HOVER: #d8a93a;
+
+  /* Surface — warm charcoals with depth */
+  --C-SURFACE-0: #1f1b17;
+  --C-SURFACE-1: #272219;
+  --C-SURFACE-2: #302a20;
+  --C-SURFACE-3: #3a3328;
+
+  /* Text — warm off-whites, never pure white */
+  --C-TEXT-PRIMARY: #ede5d8;
+  --C-TEXT-SECONDARY: #b0a593;
+  --C-TEXT-MUTED: #7a7062;
+  --C-TEXT-INVERSE: #1a1714;
+  --C-TEXT-ON-PRIMARY: #1a1714;
+  --C-TEXT-ON-ACCENT: #1a1714;
+
+  /* Border */
+  --C-BORDER-DEFAULT: #3a3328;
+  --C-BORDER-STRONG: #4d453b;
+  --C-BORDER-FOCUS: #e8b94a;
+
+  /* Status */
+  --C-STATUS-ERROR: #ef6b6b;
+  --C-STATUS-ERROR-BG: #2e1a1a;
+  --C-STATUS-SUCCESS: #5cb87a;
+  --C-STATUS-SUCCESS-BG: #1a2e1e;
+  --C-STATUS-WARNING: #e8b94a;
+  --C-STATUS-WARNING-BG: #2e2a1a;
+  --C-STATUS-INFO: #6baae8;
+  --C-STATUS-INFO-BG: #1a222e;
+
+  /* Radius — smooth, comfortable */
+  --RADIUS-SM: 8px;
+  --RADIUS-MD: 10px;
+  --RADIUS-LG: 12px;
+  --RADIUS-XL: 16px;
+
+  /* Shadows — warm amber-tinted dark shadows */
+  --SHADOW-SM: 0 1px 3px 0 rgb(26 23 20 / 0.4), 0 0 0 1px rgb(212 165 74 / 0.03);
+  --SHADOW-MD: 0 4px 8px -1px rgb(26 23 20 / 0.5), 0 2px 4px -2px rgb(212 165 74 / 0.05);
+  --SHADOW-LG: 0 12px 24px -4px rgb(26 23 20 / 0.6), 0 4px 8px -4px rgb(212 165 74 / 0.06);
+
+  /* Typography — refined weights */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 500;
+
+  --BodyText-1-line-height: 30px;
+  --BodyText-2-line-height: 24px;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: noir-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: noir-page-out;
+
+  /* Motion — smooth and unhurried */
+  --MOTION-DURATION-ENTER: 350ms;
+  --MOTION-DURATION-EXIT: 250ms;
+  --MOTION-DURATION-SHIFT: 450ms;
+  --MOTION-DURATION-PAGE: 400ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.22, 1, 0.36, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.34, 1.2, 0.64, 1);
+  --MOTION-DISTANCE-SM: 8px;
+  --MOTION-DISTANCE-MD: 18px;
+  --MOTION-DISTANCE-LG: 36px;
+  --MOTION-STAGGER-DELAY: 55ms;
+  --MOTION-SCALE-HOVER: 1.02;
+  --MOTION-SCALE-PRESS: 0.98;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — warm dark scrim */
+  --OVERLAY-SCRIM-COLOR: rgb(26 23 20 / 0.7);
+  --OVERLAY-GRADIENT-START: rgb(26 23 20 / 0);
+  --OVERLAY-GRADIENT-END: rgb(26 23 20 / 0.85);
+  --OVERLAY-BLUR: 12px;
+  --OVERLAY-BLUR-HEAVY: 24px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.02;
+  --MEDIA-CARD-HOVER-LIFT: -3px;
+
+  /* Transitions */
+  --DURATION-FAST: 120ms;
+  --DURATION-NORMAL: 220ms;
+  --DURATION-SLOW: 350ms;
+}
+
+@keyframes noir-page-in {
+  0% {
+    opacity: 0;
+    filter: brightness(0.7);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+}
+
+@keyframes noir-page-out {
+  0% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  100% {
+    opacity: 0;
+    filter: brightness(0.7);
+  }
+}

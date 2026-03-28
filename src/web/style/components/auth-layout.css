@@ -1,0 +1,105 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Auth Layout — split-screen for login / register / password flows
+   ═══════════════════════════════════════════════════════════════════ */
+
+.auth-layout {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: 1fr;
+}
+
+@media (width >= 64rem) {
+  .auth-layout {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ─── Branded panel (left side on desktop, top strip on mobile) ─── */
+
+.auth-brand-panel {
+  position: relative;
+  display: none;
+  overflow: hidden;
+  background: var(--C-PRIMARY);
+}
+
+@media (width >= 64rem) {
+  .auth-brand-panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: var(--R-SIZE-1);
+  }
+}
+
+.auth-brand-panel .landing-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+/* ─── Mobile brand header ─── */
+
+.auth-mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--R-SIZE-5);
+  padding: var(--R-SIZE-3);
+  background: var(--C-PRIMARY);
+}
+
+@media (width >= 64rem) {
+  .auth-mobile-header {
+    display: none;
+  }
+}
+
+/* ─── Form panel ─── */
+
+.auth-form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--R-SIZE-3);
+  background: var(--C-SURFACE-1);
+}
+
+@media (width <= 40rem) {
+  .auth-form-panel {
+    align-items: flex-start;
+    padding-top: 24px;
+  }
+}
+
+/* ─── Auth feature list on branded panel ─── */
+
+.auth-feature-item {
+  display: flex;
+  align-items: center;
+  gap: var(--R-SIZE-5);
+  color: color-mix(in srgb, var(--C-TEXT-INVERSE) 70%, transparent);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.auth-feature-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--RADIUS-FULL);
+  background: color-mix(in srgb, var(--C-ACCENT) 20%, transparent);
+  color: var(--C-ACCENT);
+  flex-shrink: 0;
+}
+
+/* ─── Reduced motion ─── */
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-brand-panel .landing-orb {
+    animation: none;
+  }
+}

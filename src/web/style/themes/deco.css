@@ -1,0 +1,139 @@
+/* Deco Theme — Art Deco, roaring twenties glamour
+   Geometric gold on deep dark navy. Sharp, architectural, dramatic.
+   Fonts: Josefin Sans (headings), Raleway (body) */
+
+:root[data-theme="deco"] {
+  color-scheme: dark;
+
+  /* Fonts — geometric display headings with elegant thin body */
+  --DEFAULT-FONT: "Raleway", sans-serif;
+  --DEFAULT-MONO-FONT: "IBM Plex Mono", monospace;
+  --HEADING-FONT: "Josefin Sans", sans-serif;
+  --HEADING-LETTER-SPACING: 0.08em;
+  --HEADING-TEXT-TRANSFORM: uppercase;
+
+  /* Canvas — deep midnight navy */
+  --C-CANVAS: #080c1a;
+
+  /* Brand — gold and brass */
+  --C-PRIMARY: #c4a44a;
+  --C-PRIMARY-HOVER: #b4943a;
+  --C-PRIMARY-ACTIVE: #d4b45a;
+  --C-SECONDARY: #1e2440;
+  --C-SECONDARY-HOVER: #2a3254;
+  --C-ACCENT: #d4b86a;
+  --C-ACCENT-HOVER: #c4a85a;
+
+  /* Surface — deep navy with increasing warmth */
+  --C-SURFACE-0: #0c1020;
+  --C-SURFACE-1: #121830;
+  --C-SURFACE-2: #1a2240;
+  --C-SURFACE-3: #222a4e;
+
+  /* Text — cream and gold-tinted */
+  --C-TEXT-PRIMARY: #e8e0d0;
+  --C-TEXT-SECONDARY: #a09880;
+  --C-TEXT-MUTED: #5c5444;
+  --C-TEXT-INVERSE: #080c1a;
+  --C-TEXT-ON-PRIMARY: #080c1a;
+  --C-TEXT-ON-ACCENT: #080c1a;
+
+  /* Border — gold-tinted lines */
+  --C-BORDER-DEFAULT: #222a4e;
+  --C-BORDER-STRONG: #2e3660;
+  --C-BORDER-FOCUS: #d4b86a;
+
+  /* Status */
+  --C-STATUS-ERROR: #e06060;
+  --C-STATUS-ERROR-BG: #201418;
+  --C-STATUS-SUCCESS: #60b870;
+  --C-STATUS-SUCCESS-BG: #142018;
+  --C-STATUS-WARNING: #d4b86a;
+  --C-STATUS-WARNING-BG: #201c14;
+  --C-STATUS-INFO: #60a0e0;
+  --C-STATUS-INFO-BG: #141820;
+
+  /* Radius — sharp, architectural angles */
+  --RADIUS-SM: 0px;
+  --RADIUS-MD: 2px;
+  --RADIUS-LG: 4px;
+  --RADIUS-XL: 6px;
+
+  /* Shadows — gold-tinted, dramatic */
+  --SHADOW-SM: 0 1px 4px 0 rgb(196 164 74 / 0.08), 0 1px 2px 0 rgb(8 12 26 / 0.4);
+  --SHADOW-MD: 0 4px 12px -2px rgb(196 164 74 / 0.1), 0 2px 4px -2px rgb(8 12 26 / 0.5);
+  --SHADOW-LG: 0 10px 30px -4px rgb(196 164 74 / 0.12), 0 4px 8px -4px rgb(8 12 26 / 0.5);
+
+  /* Typography — dramatic, display-forward */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 28px;
+  --BodyText-2-line-height: 24px;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: deco-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: deco-page-out;
+
+  /* Motion — precise, dramatic, theatrical */
+  --MOTION-DURATION-ENTER: 400ms;
+  --MOTION-DURATION-EXIT: 280ms;
+  --MOTION-DURATION-SHIFT: 500ms;
+  --MOTION-DURATION-PAGE: 450ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.77, 0, 0.18, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.22, 1, 0.36, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.33, 1, 0.68, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.3, 1.05, 0.5, 1);
+  --MOTION-DISTANCE-SM: 6px;
+  --MOTION-DISTANCE-MD: 16px;
+  --MOTION-DISTANCE-LG: 32px;
+  --MOTION-STAGGER-DELAY: 55ms;
+  --MOTION-SCALE-HOVER: 1.03;
+  --MOTION-SCALE-PRESS: 0.97;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — deep midnight */
+  --OVERLAY-SCRIM-COLOR: rgb(8 12 26 / 0.8);
+  --OVERLAY-GRADIENT-START: rgb(8 12 26 / 0);
+  --OVERLAY-GRADIENT-END: rgb(8 12 26 / 0.9);
+  --OVERLAY-BLUR: 12px;
+  --OVERLAY-BLUR-HEAVY: 28px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.03;
+  --MEDIA-CARD-HOVER-LIFT: -3px;
+
+  /* Transitions */
+  --DURATION-FAST: 120ms;
+  --DURATION-NORMAL: 240ms;
+  --DURATION-SLOW: 380ms;
+}
+
+@keyframes deco-page-in {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.95);
+    transform-origin: top center;
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+    transform-origin: top center;
+  }
+}
+
+@keyframes deco-page-out {
+  0% {
+    opacity: 1;
+    transform: scaleY(1);
+    transform-origin: bottom center;
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(0.95);
+    transform-origin: bottom center;
+  }
+}

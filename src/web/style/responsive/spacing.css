@@ -1,0 +1,35 @@
+:root {
+  --R-SIZE-1: 36px;
+  --R-SIZE-2: 20px;
+  --R-SIZE-3: 16px;
+  --R-SIZE-4: 12px;
+  --R-SIZE-5: 8px;
+  --R-SIZE-6: 4px;
+}
+
+/* 640px */
+@media (width >= 40rem) {
+  :root {
+    --R-SIZE-1: 96px;
+    --R-SIZE-2: 32px;
+    --R-SIZE-3: 24px;
+    --R-SIZE-4: 20px;
+    --R-SIZE-5: 12px;
+    --R-SIZE-6: 4px;
+  }
+}
+
+/*
+* ------------
+*   Tailwind
+* ------------
+*/
+
+@theme inline {
+  --spacing-r1: var(--R-SIZE-1);
+  --spacing-r2: var(--R-SIZE-2);
+  --spacing-r3: var(--R-SIZE-3);
+  --spacing-r4: var(--R-SIZE-4);
+  --spacing-r5: var(--R-SIZE-5);
+  --spacing-r6: var(--R-SIZE-6);
+}

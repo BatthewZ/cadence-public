@@ -1,0 +1,22 @@
+name = "your-cadence-worker-name"
+main = "src/api/index.ts"
+compatibility_date = "2025-01-13"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+run_worker_first = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cadence"
+database_id = "update-this-before-going-live"
+
+[[r2_buckets]]
+binding = "STORAGE"
+bucket_name = "update-this-before-going-live"
+
+[triggers]
+crons = ["*/5 * * * *"]
