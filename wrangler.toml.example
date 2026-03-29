@@ -1,7 +1,8 @@
-name = "your-cadence-worker-name"
+name = "cadence"
 main = "src/api/index.ts"
 compatibility_date = "2025-01-13"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = true
 
 [assets]
 directory = "./dist"
@@ -11,12 +12,19 @@ run_worker_first = true
 
 [[d1_databases]]
 binding = "DB"
-database_name = "cadence"
-database_id = "update-this-before-going-live"
+database_name = "your-database-name"
+database_id = "your-database-id"
 
-[[r2_buckets]]
-binding = "STORAGE"
-bucket_name = "update-this-before-going-live"
+# Optional: R2 storage for file uploads
+# [[r2_buckets]]
+# binding = "STORAGE"
+# bucket_name = "your-bucket-name"
 
-[triggers]
-crons = ["*/5 * * * *"]
+# Optional: cron triggers for scheduled tasks
+# [triggers]
+# crons = ["*/5 * * * *"]
+
+# Optional: custom domain
+# [[routes]]
+# pattern = "your-domain.com"
+# custom_domain = true

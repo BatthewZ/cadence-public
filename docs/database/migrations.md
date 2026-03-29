@@ -1,10 +1,10 @@
 # Migration Workflow
 
-| Command                     | Script                                          | Purpose                                                         |
-| --------------------------- | ----------------------------------------------- | --------------------------------------------------------------- |
-| `bun run db:generate`       | `drizzle-kit generate`                          | Diff schema against migrations and generate new SQL             |
-| `bun run db:migrate:local`  | `wrangler d1 migrations apply cadence --local`  | Apply pending migrations to the local D1 database               |
-| `bun run db:migrate:remote` | `wrangler d1 migrations apply cadence --remote` | Apply pending migrations to the remote (production) D1 database |
+| Command                     | Script                                             | Purpose                                                         |
+| --------------------------- | -------------------------------------------------- | --------------------------------------------------------------- |
+| `bun run db:generate`       | `drizzle-kit generate`                             | Diff schema against migrations and generate new SQL             |
+| `bun run db:migrate:local`  | `wrangler d1 migrations apply cadence_au --local`  | Apply pending migrations to the local D1 database               |
+| `bun run db:migrate:remote` | `wrangler d1 migrations apply cadence_au --remote` | Apply pending migrations to the remote (production) D1 database |
 
 Migration files are stored in the `migrations/` directory as numbered SQL files (e.g. `0000_many_gunslinger.sql`). These are standard SQL and are applied in order.
 

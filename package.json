@@ -1,6 +1,6 @@
 {
   "name": "cadence",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,8 +10,8 @@
     "build": "vite build",
     "deploy": "vite build && wrangler deploy",
     "db:generate": "drizzle-kit generate",
-    "db:migrate:local": "wrangler d1 migrations apply cadence --local",
-    "db:migrate:remote": "wrangler d1 migrations apply cadence --remote",
+    "db:migrate:local": "wrangler d1 migrations apply cadence_au --local",
+    "db:migrate:remote": "wrangler d1 migrations apply cadence_au --remote",
     "typecheck": "concurrently -n backend,web,tests,eslint -c blue,green,yellow,red \"bun run typecheck:backend\" \"bun run typecheck:web\" \"bun run typecheck:tests\" \"bun run lint:fix\"",
     "typecheck:ci": "concurrently -n backend,web,tests,eslint -c blue,green,yellow,red \"bun run typecheck:backend\" \"bun run typecheck:web\" \"bun run typecheck:tests\" \"bun run lint\"",
     "ci": "concurrently -n types:backend,types:web,types:tests,lint,test,build -c blue,green,yellow,red,cyan,magenta \"bun run typecheck:backend\" \"bun run typecheck:web\" \"bun run typecheck:tests\" \"bun run lint\" \"bun run test\" \"bun run build\"",
