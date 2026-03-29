@@ -2,11 +2,11 @@
 
 A project management application built on Cloudflare Workers. Organize work with workspaces, projects, kanban boards, and task management. Features team collaboration with invitations, role-based access control, drag-and-drop task boards, multiple project views (board, list, timeline), and outbound webhooks for integrating with external systems.
 
-Read the [project philosophy](docs/ethos.md) to understand the principles behind Cadence.
+**Check out the live site:** [Cadence](https://cadence-project.com/)
 
 > **Note:** This is a personal project. It is shared publicly so anyone can explore the code, learn from it, or fork it for their own use. It is not accepting external contributions or pull requests.
 
-**Live Site:** [Cadence](https://cadence-project.com/)
+Read the [project philosophy](docs/ethos.md) to understand the principles behind Cadence.
 
 ## Tech Stack
 
