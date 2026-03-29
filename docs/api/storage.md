@@ -17,7 +17,9 @@ src/api/routes/projects/
 └── projects.handlers.ts                   # Includes project cover handler implementations
 src/api/routes/tasks/
 ├── tasks.routes.ts                        # Includes task cover upload/delete routes
-├── tasks.handlers.ts                      # Includes task cover handler implementations
+├── tasks.handlers.ts                      # Re-export barrel for handlers/
+├── handlers/
+│   └── cover-image.ts                     # Task cover image upload/delete handler implementations
 ├── attachments.handlers.ts                # Task file attachment handlers (upload, list, delete)
 └── attachments.handlers.test.ts           # Attachment handler tests
 src/shared/schemas/upload.ts               # Validation constants and Zod schemas (images)

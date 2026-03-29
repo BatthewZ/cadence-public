@@ -41,7 +41,10 @@ src/
 │   │   │       └── utils.ts
 │   │   ├── access.ts             # Shared project access resolution (resolveProjectAccess)
 │   │   ├── storage.ts            # R2 storage helpers (put, get, delete)
-│   │   ├── webhooks.ts           # Webhook dispatch, delivery, retry, HMAC signing, SSRF validation
+│   │   ├── webhooks.ts           # Re-export barrel for webhooks/ sub-modules
+│   │   ├── webhooks/             # Webhook internals (split from monolithic webhooks.ts)
+│   │   │   ├── delivery.ts       # Webhook dispatch, delivery with exponential-backoff retries, cron-driven retry processing
+│   │   │   └── utils.ts          # HMAC-SHA256 signing, SSRF-safe URL validation, secret generation
 │   │   └── webhook-payloads.ts   # Webhook payload builders, context fetcher, change detection, fire-and-forget dispatch
 │   ├── scheduled/                # Cron-triggered background tasks
 │   │   ├── index.ts              # handleScheduled entry point (runs every 5 min)
@@ -50,13 +53,26 @@ src/
 │   │   ├── notification-cleanup.ts # Old notification pruning (30d read, 90d unread)
 │   │   ├── task-activity-cleanup.ts # Activity record pruning (90d TTL + 500/task cap)
 │   │   └── webhook-cleanup.ts    # Delivery retention (30-day TTL + 200/webhook cap)
+│   ├── test-utils.ts             # Re-export barrel for test-utils/ sub-modules
+│   ├── test-utils/               # Shared API test utilities
+│   │   ├── db-setup.ts           # Test database setup helpers
+│   │   ├── fakes.ts              # Fake data factories for tests
+│   │   ├── request-helpers.ts    # HTTP request helpers for tests
+│   │   └── seed.ts               # Database seeding for integration tests
 │   └── routes/                   # Domain-grouped route modules
 │       ├── index.ts              # Route aggregator
 │       ├── auth/                 # Auth domain
 │       │   └── auth.routes.ts
 │       ├── dashboard/            # Dashboard domain
 │       │   ├── dashboard.routes.ts
-│       │   └── dashboard.handlers.ts
+│       │   ├── dashboard.handlers.ts  # Re-export barrel for handlers/
+│       │   └── handlers/              # Split handler modules
+│       │       ├── activity.ts        # Project & workspace activity feeds
+│       │       ├── helpers.ts         # Shared cost aggregation & SQL helpers
+│       │       ├── my-tasks.ts        # My tasks endpoint
+│       │       ├── project-dashboard.ts # Project dashboard stats
+│       │       ├── upcoming-tasks.ts  # Upcoming tasks endpoint
+│       │       └── workspace-dashboard.ts # Workspace dashboard stats
 │       ├── invitations/          # Invitation domain
 │       │   ├── invitations.routes.ts
 │       │   └── invitations.handlers.ts
@@ -68,7 +84,15 @@ src/
 │       │   └── task-groups.handlers.ts
 │       ├── tasks/                # Tasks domain
 │       │   ├── tasks.routes.ts
-│       │   └── tasks.handlers.ts
+│       │   ├── tasks.handlers.ts      # Re-export barrel for handlers/
+│       │   └── handlers/              # Split handler modules
+│       │       ├── activity.ts        # Task activity feed
+│       │       ├── comments.ts        # Comment CRUD
+│       │       ├── completion.ts      # Task complete/uncomplete
+│       │       ├── cover-image.ts     # Task cover image upload/delete
+│       │       ├── subtasks.ts        # Subtask CRUD
+│       │       ├── task-crud.ts       # Core task CRUD (create, get, list, update, delete)
+│       │       └── task-operations.ts # Task move & duplicate
 │       ├── teams/                # Teams domain (UI hidden — feature not yet functionally integrated)
 │       │   ├── teams.routes.ts
 │       │   └── teams.handlers.ts
@@ -278,10 +302,11 @@ src/
 
 | Folder | Purpose | Rule |
 |---|---|---|
-| `routes/{domain}/` | Domain route module | Contains `{domain}.routes.ts` and `{domain}.handlers.ts`. |
+| `routes/{domain}/` | Domain route module | Contains `{domain}.routes.ts` and `{domain}.handlers.ts`. Large handler files may be split into a `handlers/` subdirectory with the original file becoming a re-export barrel (e.g. `tasks/handlers/task-crud.ts`, `dashboard/handlers/workspace-dashboard.ts`). |
 | `routes/index.ts` | Route aggregator | Imports and mounts all domain routes. |
 | `middleware/` | Shared middleware | Cross-cutting concerns: auth, authorization, logging, rate limiting, validation, security headers. |
-| `lib/` | Shared utilities | Auth factory, email service, storage helpers, project access resolution (`access.ts`), webhook dispatch and payload builders (`webhooks.ts`, `webhook-payloads.ts`). |
+| `test-utils/` | Shared API test utilities | Test database setup, fake data factories, database seeding, and HTTP request helpers. |
+| `lib/` | Shared utilities | Auth factory, email service, storage helpers, project access resolution (`access.ts`), webhook internals (`webhooks/` subdirectory with delivery and utils modules, re-exported via `webhooks.ts`), and payload builders (`webhook-payloads.ts`). |
 | `lib/email/` | Email service | Resend + console transports, with domain-specific templates (verification, password reset, workspace invitation). |
 | `scheduled/` | Cron-triggered tasks | Background maintenance (webhook retries, delivery cleanup, auth cleanup, notification cleanup, task activity cleanup, invitation cleanup). Entry point: `index.ts`. |
 | `env.ts` | Environment types | Bindings, variables, and Hono env type. |

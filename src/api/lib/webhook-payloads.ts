@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import type { Context } from "hono";
 
 import type { Database } from "../../db";
 import { user } from "../../db/schema/auth";
@@ -10,6 +11,7 @@ import type {
   WebhookEventType,
   WebhookPayloadEnvelope,
 } from "../../shared/types/webhook";
+import type { AppEnv } from "../env";
 import { dispatchWebhookEvent } from "./webhooks";
 
 // ---------------------------------------------------------------------------
@@ -387,4 +389,21 @@ export function fireWebhookEvent(
       )
       .catch((err) => console.error("[webhooks] dispatch failed:", err)),
   );
+}
+
+/**
+ * Convenience wrapper that extracts the workspace ID, database, and execution
+ * context from a Hono handler context before dispatching webhook events.
+ * No-ops silently when the workspace ID is unavailable (e.g. missing project context).
+ */
+export function dispatchWebhook(
+  c: Context<AppEnv>,
+  projectId: string,
+  events: WebhookEventDescriptor[],
+): void {
+  const workspaceId = c.get("currentProject")?.workspaceId;
+  if (!workspaceId) return;
+  const db = c.get("db");
+  const actorId = c.get("user")!.id;
+  fireWebhookEvent(db, () => c.executionCtx, { workspaceId, actorId, projectId }, events);
 }
