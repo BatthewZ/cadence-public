@@ -5,7 +5,7 @@ import { OverdueTasksSection } from "@/web/components/dashboard/OverdueTasksSect
 import { PriorityBreakdownSection } from "@/web/components/dashboard/PriorityBreakdown";
 import { TeamWorkloadSection } from "@/web/components/dashboard/TeamWorkload";
 import { Stack } from "@/web/components/layout";
-import { QueryErrorRetry } from "@/web/components/ui";
+import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { TaskDetailDialog } from "@/web/components/ui/TaskDetailDialog";
 import { useProject } from "@/web/contexts/ProjectContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";

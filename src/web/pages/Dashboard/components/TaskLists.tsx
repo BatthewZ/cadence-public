@@ -8,10 +8,10 @@ import {
   EmptyState,
   EmptyStateDescription,
   EmptyStateTitle,
-  QueryErrorRetry,
   Skeleton,
   Text,
 } from "@/web/components/ui";
+import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";

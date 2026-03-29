@@ -16,11 +16,11 @@ import {
   EmptyStateDescription,
   EmptyStateIcon,
   EmptyStateTitle,
-  QueryErrorRetry,
   Text,
 } from "@/web/components/ui";
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { CreateProjectDialog } from "@/web/components/ui/CreateProjectDialog";
+import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { TaskDetailDialog } from "@/web/components/ui/TaskDetailDialog";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
