@@ -15,6 +15,10 @@ app.use(
   rateLimit({ max: 5, windowSeconds: 60, prefix: "auth-signup" })
 );
 app.use(
+  "/auth/request-password-reset",
+  rateLimit({ max: 3, windowSeconds: 60, prefix: "auth-password-reset" })
+);
+app.use(
   "/auth/*",
   rateLimit({ max: 30, windowSeconds: 60, prefix: "auth-general" })
 );

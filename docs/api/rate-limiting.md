@@ -59,6 +59,7 @@ X-RateLimit-Reset: 1700000000
 |---|---|---|---|
 | `/api/auth/sign-in/*` | 10 | 60s | `auth-signin` |
 | `/api/auth/sign-up/*` | 5 | 60s | `auth-signup` |
+| `/api/auth/request-password-reset` | 3 | 60s | `auth-password-reset` |
 | `/api/auth/*` (all other) | 30 | 60s | `auth-general` |
 
 ## Limitations

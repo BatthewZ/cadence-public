@@ -115,6 +115,7 @@ function makeWorkspace(overrides: Partial<Workspace> & { id: string }): Workspac
     name: "Default Workspace",
     slug: "default-workspace",
     description: undefined,
+    ownerId: "user-1",
     memberCount: 1,
     theme: null,
     ...overrides,

@@ -52,7 +52,7 @@ function OverdueTasksSection<T extends OverdueTask>({
             <button
               key={task.id}
               type="button"
-              className="flex w-full items-center gap-r5 px-r4 py-r5 text-left hover:bg-status-error/5 rounded-md transition-colors cursor-pointer"
+              className="flex w-full items-center gap-r5 py-r5 text-left hover:bg-status-error/5 rounded-md transition-colors cursor-pointer"
               onClick={() => onTaskClick(task.id)}
             >
               <Badge

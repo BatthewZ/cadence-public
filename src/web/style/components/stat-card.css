@@ -6,16 +6,10 @@
   display: flex;
   flex-direction: column;
   gap: var(--R-SIZE-2);
-  padding: var(--R-SIZE-6);
+  padding: var(--R-SIZE-3);
   background-color: var(--C-SURFACE-0);
   border: 1px solid var(--C-BORDER-DEFAULT);
   border-radius: var(--RADIUS-LG);
-}
-
-@media (min-width: 640px) {
-  .stat-card {
-    padding: var(--R-SIZE-5);
-  }
 }
 
 /* Icon slot */

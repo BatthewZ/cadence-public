@@ -22,6 +22,12 @@ export function UserMenu() {
   const isMobile = appShell?.isMobile ?? false;
   const workspaceCtx = useOptionalWorkspace();
 
+  // When inside AppShell (workspace view with sidebar), use sidebar-appropriate placements.
+  // When outside AppShell (e.g. /workspaces top nav), use "bottom-end" so it drops below the trigger.
+  const placement = appShell
+    ? (isMobile ? "top-end" : "right-end")
+    : "bottom-end" as const;
+
   if (!session?.user) return null;
 
   const { name, email, image } = session.user;
@@ -48,7 +54,7 @@ export function UserMenu() {
   }
 
   return (
-    <DropdownMenu placement={isMobile ? "top-end" : "right-end"}>
+    <DropdownMenu placement={placement}>
       <DropdownMenu.Trigger asChild>
         <button className="user-menu-trigger" aria-label="Account menu">
           <Avatar size="sm" name={name} src={image} />

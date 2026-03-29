@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useParams } from "react-router-dom";
 
+import type { WorkspaceRole } from "@/shared/types/roles";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 
@@ -19,7 +20,9 @@ export interface Workspace {
   name: string;
   slug: string;
   description?: string;
+  ownerId: string;
   theme?: string | null;
+  role?: WorkspaceRole;
   memberCount?: number;
   members?: WorkspaceMember[];
   teams?: WorkspaceTeam[];
@@ -64,6 +67,24 @@ export interface WorkspaceContextValue {
   error: string | null;
 }
 
+/* ─── Helpers ─── */
+
+/**
+ * Finds the best workspace match for a given slug from a list.
+ *
+ * Slugs are unique per owner, but a user could be a member of two workspaces
+ * with the same slug (one they own, one they were invited to). In that case
+ * this prefers the workspace the user owns, falling back to the first match.
+ */
+export function findWorkspaceBySlug(
+  workspaces: Workspace[],
+  slug: string,
+): Workspace | undefined {
+  const matches = workspaces.filter((w) => w.slug === slug);
+  if (matches.length <= 1) return matches[0];
+  return matches.find((w) => w.role === "owner") ?? matches[0];
+}
+
 /* ─── Internal Hooks ─── */
 
 /**
@@ -81,7 +102,7 @@ function useWorkspaceId(): string | null {
     enabled: !!workspaceSlug,
   });
   if (!workspaceSlug || !data) return null;
-  return data.workspaces.find((w) => w.slug === workspaceSlug)?.id ?? null;
+  return findWorkspaceBySlug(data.workspaces, workspaceSlug)?.id ?? null;
 }
 
 /**

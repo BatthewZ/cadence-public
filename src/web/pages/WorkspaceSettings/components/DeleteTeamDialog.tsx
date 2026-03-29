@@ -1,6 +1,4 @@
-import {
-  ConfirmDialog,
-} from "@/web/components/ui";
+import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
 
 export function DeleteTeamDialog({
   open,

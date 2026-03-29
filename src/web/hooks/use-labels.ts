@@ -43,26 +43,79 @@ export function useUpdateLabel(projectId: string) {
     mutationFn: ({ labelId, ...input }: { labelId: string; name?: string; color?: string }) =>
       api.patch<{ label: Label }>(`/api/projects/${projectId}/labels/${labelId}`, input),
     onMutate: async ({ labelId, ...input }) => {
-      await qc.cancelQueries({
-        queryKey: queryKeys.projects.labels(projectId),
-      });
-      const prev = qc.getQueryData<{ labels: Label[] }>(queryKeys.projects.labels(projectId));
+      await Promise.all([
+        qc.cancelQueries({ queryKey: queryKeys.projects.labels(projectId) }),
+        qc.cancelQueries({ queryKey: queryKeys.projects.tasks(projectId) }),
+      ]);
+
+      const prevLabels = qc.getQueryData<{ labels: Label[] }>(
+        queryKeys.projects.labels(projectId)
+      );
+      const prevTasks = qc.getQueryData<{ tasks: Task[] }>(
+        queryKeys.projects.tasks(projectId)
+      );
+
+      // Update labels cache
       qc.setQueryData<{ labels: Label[] }>(queryKeys.projects.labels(projectId), (old) => {
         if (!old) return old;
         return {
           labels: old.labels.map((l) => (l.id === labelId ? { ...l, ...input } : l)),
         };
       });
-      return { prev };
+
+      // Update embedded label data in all tasks
+      qc.setQueryData<{ tasks: Task[] }>(queryKeys.projects.tasks(projectId), (old) => {
+        if (!old) return old;
+        return {
+          tasks: old.tasks.map((t) => ({
+            ...t,
+            labels: t.labels?.map((l) => (l.id === labelId ? { ...l, ...input } : l)),
+          })),
+        };
+      });
+
+      // Update any active task detail queries that contain this label
+      const prevTaskDetails: Array<[readonly unknown[], TaskDetailData | undefined]> = [];
+      const taskDetailQueries = qc.getQueriesData<TaskDetailData>({ queryKey: ["tasks"] });
+      for (const [key, data] of taskDetailQueries) {
+        if (data?.task?.labels?.some((l: TaskLabelInfo) => l.id === labelId)) {
+          prevTaskDetails.push([key, data]);
+          qc.setQueryData<TaskDetailData>(key, (old) => {
+            if (!old) return old;
+            return {
+              ...old,
+              task: {
+                ...old.task,
+                labels: old.task.labels?.map((l: TaskLabelInfo) =>
+                  l.id === labelId ? { ...l, ...input } : l
+                ),
+              },
+            };
+          });
+        }
+      }
+
+      return { prevLabels, prevTasks, prevTaskDetails };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) {
-        qc.setQueryData(queryKeys.projects.labels(projectId), ctx.prev);
+      if (ctx?.prevLabels) {
+        qc.setQueryData(queryKeys.projects.labels(projectId), ctx.prevLabels);
+      }
+      if (ctx?.prevTasks) {
+        qc.setQueryData(queryKeys.projects.tasks(projectId), ctx.prevTasks);
+      }
+      if (ctx?.prevTaskDetails) {
+        for (const [key, data] of ctx.prevTaskDetails) {
+          qc.setQueryData(key, data);
+        }
       }
     },
     onSettled: () => {
       void qc.invalidateQueries({
         queryKey: queryKeys.projects.labels(projectId),
+      });
+      void qc.invalidateQueries({
+        queryKey: queryKeys.projects.tasks(projectId),
       });
     },
   });

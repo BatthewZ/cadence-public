@@ -393,14 +393,15 @@ export function TaskDetailPanelInner({
     try {
       await deleteTaskMutation.mutateAsync();
       setShowDeleteDialog(false);
-      // Clear task from URL
+      // Cancel task queries to prevent 404 refetches while panel unmounts
+      await qc.cancelQueries({ queryKey: ["tasks", taskId] });
+      // Clear task from URL (triggers panel unmount)
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         next.delete("task");
         return next;
       });
       removeTaskFromContext(taskId);
-      void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
     } catch {
       toast("Failed to delete task", { variant: "error" });

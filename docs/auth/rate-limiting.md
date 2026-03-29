@@ -6,6 +6,7 @@ Auth routes have rate limits to prevent brute-force attacks. These are applied i
 |---|---|---|---|
 | `/auth/sign-in/*` | 10 | 60 seconds | `auth-signin` |
 | `/auth/sign-up/*` | 5 | 60 seconds | `auth-signup` |
+| `/auth/request-password-reset` | 3 | 60 seconds | `auth-password-reset` |
 | `/auth/*` (all other auth) | 30 | 60 seconds | `auth-general` |
 
 Rate limits are applied **per client IP** (determined from the `cf-connecting-ip` or `x-forwarded-for` header). The more specific limits (`sign-in`, `sign-up`) are applied first, then the general limit applies to all auth endpoints.

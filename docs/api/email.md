@@ -88,7 +88,7 @@ See [Auth Environment Variables](../auth/environment.md) for the full list.
 
 The email service is created inside `createAuth(env)` and used by two Better Auth callbacks:
 
-- `emailAndPassword.sendResetPassword` -- sends the password reset email.
+- `emailAndPassword.sendResetPassword` -- checks a D1-backed cooldown (`isResetCooldownActive` in `src/api/lib/password-reset-cooldown.ts`) to suppress duplicate emails within 5 minutes, then sends the password reset email. This distributed cooldown works across all Worker isolates, unlike the in-memory rate limiter.
 - `emailVerification.sendVerificationEmail` -- sends the email verification email.
 
 See [Auth Configuration](../auth/configuration.md) for the full setup.

@@ -71,18 +71,33 @@ export function GeneralTab({
       api.patch<unknown>(`/api/projects/${projectId}`, input),
     onMutate: async (input) => {
       const key = queryKeys.projects.detail(projectId);
+      const wpKey = queryKeys.workspaces.projects(project.workspaceId);
       await qc.cancelQueries({ queryKey: key });
+      await qc.cancelQueries({ queryKey: wpKey });
       const previousData = qc.getQueryData(key);
+      const previousWorkspaceProjects = qc.getQueryData(wpKey);
       updateProject({ name: input.name, description: input.description, status: input.status, budget: input.budget });
-      return { previousData };
+      // Optimistically update sidebar project list
+      if (input.name) {
+        qc.setQueryData(wpKey, (old: { projects: Array<{ id: string; name: string }> } | undefined) =>
+          old
+            ? { projects: old.projects.map((p) => (p.id === projectId ? { ...p, name: input.name } : p)) }
+            : old,
+        );
+      }
+      return { previousData, previousWorkspaceProjects };
     },
     onError: (_err, _input, context) => {
       if (context?.previousData) {
         qc.setQueryData(queryKeys.projects.detail(projectId), context.previousData);
       }
+      if (context?.previousWorkspaceProjects) {
+        qc.setQueryData(queryKeys.workspaces.projects(project.workspaceId), context.previousWorkspaceProjects);
+      }
     },
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.projects(project.workspaceId) });
     },
   });
   const saveError = saveErrorObj?.message ?? null;

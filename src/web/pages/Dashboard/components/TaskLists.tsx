@@ -44,7 +44,7 @@ function TaskRow({ task, onTaskClick }: { task: DashboardTask; onTaskClick: (tas
   return (
     <button
       type="button"
-      className="flex w-full items-center gap-r5 px-r4 py-r5 text-left hover:bg-surface-1 rounded-md transition-colors"
+      className="flex w-full items-center gap-r5 py-r5 text-left hover:bg-surface-1 rounded-md transition-colors"
       onClick={() => onTaskClick(task.id)}
     >
       <Text variant="body-2" className="flex-1 truncate">
@@ -99,7 +99,7 @@ function TimeGroupedTaskList({ onTaskClick }: { onTaskClick: (taskId: string) =>
           <Stack key={i} gap="r5">
             <Skeleton variant="text" className="h-5 w-28" />
             {Array.from({ length: 3 }, (_, j) => (
-              <Row key={j} align="center" gap="r5" className="px-r4 py-r5">
+              <Row key={j} align="center" gap="r5" className="py-r5">
                 <Skeleton variant="rounded" className="h-5 w-14 shrink-0" />
                 <Skeleton variant="text" className="h-4 flex-1" />
                 <Skeleton variant="text" className="h-4 w-16 shrink-0" />
@@ -221,7 +221,7 @@ function MyTasksPreview({ onTaskClick }: { onTaskClick: (taskId: string) => void
     return (
       <Stack gap="r6">
         {Array.from({ length: 3 }, (_, i) => (
-          <Row key={i} align="center" gap="r5" className="px-r4 py-r5">
+          <Row key={i} align="center" gap="r5" className="py-r5">
             <Skeleton variant="rounded" className="h-5 w-14 shrink-0" />
             <Skeleton variant="text" className="h-4 flex-1" />
             <Skeleton variant="rounded" className="h-5 w-20 shrink-0" />
@@ -260,7 +260,7 @@ function MyTasksPreview({ onTaskClick }: { onTaskClick: (taskId: string) => void
         <button
           key={task.id}
           type="button"
-          className="flex w-full items-center gap-r5 px-r4 py-r5 text-left hover:bg-surface-1 rounded-md transition-colors"
+          className="flex w-full items-center gap-r5 py-r5 text-left hover:bg-surface-1 rounded-md transition-colors"
           onClick={() => onTaskClick(task.id)}
         >
           <Badge variant={getPriorityBadgeVariant(task.priority)} className="shrink-0">

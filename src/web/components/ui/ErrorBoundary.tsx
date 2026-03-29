@@ -1,5 +1,20 @@
 import { Component } from "react";
 
+const CHUNK_RELOAD_KEY = "cadence:chunk-reload";
+const CHUNK_RELOAD_MAX_AGE_MS = 10_000;
+
+/** Detect errors caused by stale chunk references after a deployment */
+function isChunkLoadError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const msg = error.message;
+  return (
+    msg.includes("Failed to fetch dynamically imported module") ||
+    msg.includes("Loading chunk") ||
+    msg.includes("Loading CSS chunk") ||
+    error.name === "ChunkLoadError"
+  );
+}
+
 interface Props {
   children: React.ReactNode;
   /** When any key changes, the error state is automatically reset.
@@ -24,6 +39,19 @@ export class ErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(): State {
     return { hasError: true };
+  }
+
+  componentDidCatch(error: unknown) {
+    if (isChunkLoadError(error)) {
+      // Prevent infinite reload: only auto-reload once within a short window
+      const lastReload = sessionStorage.getItem(CHUNK_RELOAD_KEY);
+      if (!lastReload || Date.now() - Number(lastReload) > CHUNK_RELOAD_MAX_AGE_MS) {
+        sessionStorage.setItem(CHUNK_RELOAD_KEY, String(Date.now()));
+        window.location.reload();
+        return;
+      }
+      // If we already reloaded recently, fall through to the error UI
+    }
   }
 
   componentDidMount() {

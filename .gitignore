@@ -5,3 +5,4 @@ dist/
 .env
 .playwright-cli
 .claude/worktrees/
+wrangler.toml

@@ -90,7 +90,7 @@ describe("withSpaSecurityHeaders", () => {
     const wrapped = withSpaSecurityHeaders(original, "/workspaces");
     const csp = wrapped.headers.get("Content-Security-Policy");
 
-    expect(csp).toContain("script-src 'self' 'unsafe-inline'");
+    expect(csp).toContain("script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com");
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
   });

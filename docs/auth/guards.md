@@ -101,7 +101,7 @@ export function WorkspaceGuard({ children }: { children: ReactNode }) {
   });
 
   const workspaces = data?.workspaces ?? [];
-  const workspace = workspaces.find((w) => w.slug === workspaceSlug);
+  const workspace = workspaceSlug ? findWorkspaceBySlug(workspaces, workspaceSlug) : undefined;
 
   // Prefetch workspace detail so useWorkspace() reads from warm cache
   const { isLoading: detailLoading, error: detailError } = useQuery({
@@ -136,6 +136,8 @@ export function WorkspaceGuard({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 ```
+
+> `findWorkspaceBySlug` (from `WorkspaceContext.tsx`) handles the case where multiple workspaces share the same slug (possible now that slugs are unique per owner, not globally). It prefers the workspace the user owns, falling back to the first match.
 
 **Usage**:
 

@@ -120,6 +120,13 @@
       "when": 1774679458514,
       "tag": "0016_shocking_kabuki",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1774698289784,
+      "tag": "0017_tidy_wild_pack",
+      "breakpoints": true
     }
   ]
 }

@@ -106,11 +106,14 @@ export * from "./workspace";
 | ------------- | ----------------------------- | ----------------------------------------- | ------------------------------ |
 | `id`          | `text`                        | **Primary key**                           | Unique workspace identifier    |
 | `name`        | `text`                        | `NOT NULL`                                | Workspace display name         |
-| `slug`        | `text`                        | `NOT NULL`, `UNIQUE`                      | URL-friendly workspace slug    |
+| `slug`        | `text`                        | `NOT NULL`                                | URL-friendly workspace slug    |
 | `description` | `text`                        |                                           | Workspace description          |
 | `ownerId`     | `text`                        | `NOT NULL`, **FK** -> `user.id` (cascade) | References the workspace owner |
 | `createdAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                | Creation timestamp             |
 | `updatedAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                | Last update timestamp          |
+| `theme`       | `text`                        |                                           | Workspace theme                |
+
+**Indexes:** unique on (`ownerId`, `slug`) — slugs are unique per owner, not globally
 
 #### `workspaceMember`
 

@@ -26,13 +26,14 @@
 ### Password Reset
 
 1. User submits their email on `/forgot-password`.
-2. Frontend calls `requestPasswordReset({ email })`.
+2. Frontend calls `requestPasswordReset({ email })`. The endpoint is rate-limited to 3 requests per 60 seconds per IP.
 3. Better Auth creates a `verification` record and calls the `sendResetPassword` callback with the reset URL.
-4. The [email service](../api/email.md) sends a password reset email with the reset link (via Resend in production, or logged to console in development).
-5. User clicks the link, which opens `/reset-password?token=...`.
-6. User submits a new password.
-7. Frontend calls `resetPassword({ newPassword, token })`.
-8. Better Auth verifies the token, updates the password in the `account` table, and deletes the verification record.
+4. A **D1-backed cooldown check** (`isResetCooldownActive`) queries the `verification` table for recent reset tokens belonging to this user. If a reset email was already sent within the last 5 minutes, the send is suppressed and a warning is logged. This prevents email spam even across Worker isolates (unlike in-memory rate limiting which is per-isolate).
+5. The [email service](../api/email.md) sends a password reset email with the reset link (via Resend in production, or logged to console in development).
+6. User clicks the link, which opens `/reset-password?token=...`.
+7. User submits a new password.
+8. Frontend calls `resetPassword({ newPassword, token })`.
+9. Better Auth verifies the token, updates the password in the `account` table, and deletes the verification record.
 
 ### Email Verification
 

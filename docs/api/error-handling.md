@@ -53,7 +53,7 @@ Handlers use `db.batch()` to combine multiple D1 statements into a single round-
 Write batches are atomic — if any statement fails, none are applied.
 
 - **`createProject`** — Inserts the project, creator as admin member, and default task groups in a single `db.batch()` call.
-- **`createWorkspace`** — Inserts the workspace and owner membership in a single `db.batch()` call. Catches unique-constraint violations on the `slug` column and returns `409` instead of a generic `500`.
+- **`createWorkspace`** — Inserts the workspace and owner membership in a single `db.batch()` call. Catches unique-constraint violations on the `(ownerId, slug)` composite index and returns `409` instead of a generic `500`.
 - **`deleteProject`** — Deletes tasks then the project in a single ordered batch (task → project ordering preserves FK constraint behavior).
 - **`deleteAttachment`** — Batches DB record deletes and runs them concurrently with the R2 object deletion via `Promise.all`.
 

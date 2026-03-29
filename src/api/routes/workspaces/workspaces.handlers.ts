@@ -16,6 +16,8 @@ import {
   fireWebhookEvent,
 } from "../../lib/webhook-payloads";
 
+const DUPLICATE_SLUG_ERROR = "You already have a workspace with that URL";
+
 export async function createWorkspace(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
@@ -50,7 +52,7 @@ export async function createWorkspace(c: Context<AppEnv>) {
       error instanceof Error &&
       error.message.toLowerCase().includes("unique")
     ) {
-      return c.json({ error: "A workspace with that slug already exists" }, 409);
+      return c.json({ error: DUPLICATE_SLUG_ERROR }, 409);
     }
     throw error;
   }
@@ -160,7 +162,7 @@ export async function updateWorkspace(c: Context<AppEnv>) {
       error instanceof Error &&
       error.message.toLowerCase().includes("unique")
     ) {
-      return c.json({ error: "A workspace with that slug already exists" }, 409);
+      return c.json({ error: DUPLICATE_SLUG_ERROR }, 409);
     }
     throw error;
   }

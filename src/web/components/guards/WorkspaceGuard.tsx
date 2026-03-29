@@ -4,7 +4,7 @@ import { Navigate, useParams } from "react-router-dom";
 
 import { Center } from "@/web/components/layout";
 import { Spinner, Text } from "@/web/components/ui";
-import { type Workspace, type WorkspacesResponse } from "@/web/contexts/WorkspaceContext";
+import { findWorkspaceBySlug, type Workspace, type WorkspacesResponse } from "@/web/contexts/WorkspaceContext";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 
@@ -24,7 +24,7 @@ export function WorkspaceGuard({ children }: { children: ReactNode }) {
   });
 
   const workspaces = data?.workspaces ?? [];
-  const workspace = workspaces.find((w) => w.slug === workspaceSlug);
+  const workspace = workspaceSlug ? findWorkspaceBySlug(workspaces, workspaceSlug) : undefined;
 
   // Prefetch workspace detail so useWorkspace() reads from warm cache
   const { isLoading: detailLoading, error: detailError } = useQuery({

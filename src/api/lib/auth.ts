@@ -9,6 +9,7 @@ import { createEmailService } from "./email";
 import { emailVerificationEmail } from "./email/templates/email-verification";
 import { passwordResetEmail } from "./email/templates/password-reset";
 import { createMigratingVerify, hashPassword } from "./password";
+import { isResetCooldownActive } from "./password-reset-cooldown";
 
 /**
  * Module-scoped cache for the Better Auth instance.
@@ -62,6 +63,10 @@ export function createAuth(env: AppBindings) {
         }),
       },
       sendResetPassword: async ({ user, url }) => {
+        if (await isResetCooldownActive(db, user.id)) {
+          console.warn("Password reset cooldown active, skipping email:", { userId: user.id });
+          return;
+        }
         try {
           const { subject, html, text } = passwordResetEmail({ url });
           await emailService.send({

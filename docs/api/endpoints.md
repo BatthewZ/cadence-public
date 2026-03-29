@@ -127,7 +127,7 @@ Creates a new workspace. The authenticated user is automatically added as the wo
 }
 ```
 
-**Errors:** 409 (slug already exists).
+**Errors:** 409 (slug already exists for this owner).
 
 ### `GET /api/workspaces`
 
@@ -201,7 +201,7 @@ Updates workspace details.
 { "workspace": { "id": "...", "name": "...", "slug": "...", "..." } }
 ```
 
-**Errors:** 409 (slug already exists).
+**Errors:** 409 (slug already exists for this owner).
 
 ### `DELETE /api/workspaces/:workspaceId`
 

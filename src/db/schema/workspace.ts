@@ -22,7 +22,9 @@ export const workspace = sqliteTable(
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
     theme: text("theme"),
   },
-  (table) => [uniqueIndex("workspace_slug_unique").on(table.slug)],
+  (table) => [
+    uniqueIndex("workspace_owner_slug_unique").on(table.ownerId, table.slug),
+  ],
 );
 
 export const workspaceMember = sqliteTable(

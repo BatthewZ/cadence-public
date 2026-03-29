@@ -19,6 +19,10 @@ export function createAuth(env: AppBindings) {
     emailAndPassword: {
       enabled: true,
       sendResetPassword: async ({ user, url }) => {
+        if (await isResetCooldownActive(db, user.id)) {
+          console.warn("Password reset cooldown active, skipping email:", { userId: user.id });
+          return;
+        }
         try {
           const { subject, html, text } = passwordResetEmail({ url });
           await emailService.send({ to: user.email, from: fromAddress, subject, html, text });
@@ -82,7 +86,7 @@ export function createAuth(env: AppBindings) {
 |---|---|---|
 | `database` | Drizzle adapter with D1 + SQLite provider | Stores users, sessions, accounts, and verification tokens in D1. |
 | `emailAndPassword.enabled` | `true` | Enables email/password sign-up and sign-in. |
-| `emailAndPassword.sendResetPassword` | Email service (Resend or console fallback) | Sends a password reset email via the configured email service. Failures are caught and logged so they do not crash the auth flow. See [Email Service](../api/email.md). |
+| `emailAndPassword.sendResetPassword` | Email service (Resend or console fallback) | Checks a D1-backed cooldown (`isResetCooldownActive`) to suppress duplicate reset emails within 5 minutes, then sends a password reset email via the configured email service. Failures are caught and logged so they do not crash the auth flow. See [Email Service](../api/email.md) and [Password Reset Cooldown](../../src/api/lib/password-reset-cooldown.ts). |
 | `emailVerification.sendVerificationEmail` | Email service (Resend or console fallback) | Sends an email verification link after sign-up. Failures are caught and logged so they do not crash the auth flow. See [Email Service](../api/email.md). |
 | `user.deleteUser.enabled` | `true` | Enables the account deletion endpoint. |
 | `user.deleteUser.beforeDelete` | async hook | Pre-deletes all tasks belonging to the user's workspaces before the cascade runs, avoiding a foreign-key restrict violation on `task.taskGroupId`. Uses subqueries to resolve workspace → project → task ownership. |
