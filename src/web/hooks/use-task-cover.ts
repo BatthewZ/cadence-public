@@ -76,17 +76,19 @@ export function useTaskCover({
   }, [taskId, setLocalTask, updateTaskInContext, invalidateTaskQueries, toast, refetch]);
 
   const handleCoverPositionChange = useCallback(
-    (pos: number) => {
+    async (pos: number) => {
       setLocalTask((prev) =>
         prev ? { ...prev, coverImagePosition: pos } : prev,
       );
       updateTaskInContext(taskId, { coverImagePosition: pos });
-      void patchTaskMutateAsync({
-        coverImagePosition: pos,
-      } as Partial<TaskDetail>).catch(() => {
+      try {
+        await patchTaskMutateAsync({
+          coverImagePosition: pos,
+        } as Partial<TaskDetail>);
+      } catch {
         toast("Failed to update cover position", { variant: "error" });
         void refetch();
-      });
+      }
     },
     [taskId, setLocalTask, updateTaskInContext, patchTaskMutateAsync, toast, refetch],
   );

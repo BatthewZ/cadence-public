@@ -11,6 +11,7 @@ import {
   EmptyState,
   EmptyStateDescription,
   EmptyStateTitle,
+  QueryErrorRetry,
   Tabs,
   Text,
 } from "@/web/components/ui";
@@ -100,6 +101,7 @@ export default function MyTasks() {
     data,
     isLoading: loading,
     isError,
+    refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -285,9 +287,7 @@ export default function MyTasks() {
         </Tabs>
 
         {isError && (
-          <Text variant="body-2" color="secondary">
-            Failed to load tasks.
-          </Text>
+          <QueryErrorRetry message="Failed to load tasks." onRetry={refetch} />
         )}
 
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">

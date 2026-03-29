@@ -4,9 +4,12 @@ import type { Context } from "hono";
 import type { Database } from "../../../db";
 import { task, taskGroup } from "../../../db/schema/task";
 import { generateKeyBetween } from "../../../shared/lib/fractional-index";
-import type { CreateTaskGroupInput, ReorderTaskGroupInput, UpdateTaskGroupInput } from "../../../shared/schemas/task-group";
+import { createTaskGroupSchema, reorderTaskGroupSchema, updateTaskGroupSchema } from "../../../shared/schemas/task-group";
 import type { AppEnv } from "../../env";
 import { resolveProjectAccess } from "../../lib/access";
+import { errorResponse } from "../../lib/error-response";
+import { requireParam } from "../../lib/params";
+import { validJson } from "../../lib/validated";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -45,8 +48,8 @@ async function resolveTaskGroupWithAccess(
 
 export async function createTaskGroup(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { projectId } = c.req.param();
-  const body = c.req.valid("json" as never) as CreateTaskGroupInput;
+  const projectId = requireParam(c, "projectId");
+  const body = validJson(c, createTaskGroupSchema);
 
   // Find the last task group by position to generate the next position
   const [lastGroup] = await db
@@ -78,7 +81,7 @@ export async function createTaskGroup(c: Context<AppEnv>) {
 
 export async function listTaskGroups(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { projectId } = c.req.param();
+  const projectId = requireParam(c, "projectId");
 
   // Batch groups + task counts in a single round-trip
   const [groups, taskCounts] = await db.batch([
@@ -106,17 +109,17 @@ export async function listTaskGroups(c: Context<AppEnv>) {
 export async function updateTaskGroup(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { taskGroupId } = c.req.param();
-  const body = c.req.valid("json" as never) as UpdateTaskGroupInput;
+  const taskGroupId = requireParam(c, "taskGroupId");
+  const body = validJson(c, updateTaskGroupSchema);
 
   const result = await resolveTaskGroupWithAccess(db, taskGroupId, user.id);
 
   if (!result) {
-    return c.json({ error: "Not found" }, 404);
+    return errorResponse(c, "Not found", 404);
   }
 
   if (result.role !== "admin" && result.role !== "member") {
-    return c.json({ error: "Forbidden" }, 403);
+    return errorResponse(c, "Forbidden", 403);
   }
 
   const now = new Date();
@@ -138,33 +141,27 @@ export async function updateTaskGroup(c: Context<AppEnv>) {
 export async function deleteTaskGroup(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { taskGroupId } = c.req.param();
+  const taskGroupId = requireParam(c, "taskGroupId");
 
   const result = await resolveTaskGroupWithAccess(db, taskGroupId, user.id);
 
   if (!result) {
-    return c.json({ error: "Not found" }, 404);
+    return errorResponse(c, "Not found", 404);
   }
 
   if (result.role !== "admin") {
-    return c.json({ error: "Forbidden" }, 403);
+    return errorResponse(c, "Forbidden", 403);
   }
 
   // targetGroupId is required in query params to reassign tasks
   const targetGroupId = c.req.query("targetGroupId");
 
   if (!targetGroupId) {
-    return c.json(
-      { error: "targetGroupId query parameter is required to reassign tasks" },
-      400,
-    );
+    return errorResponse(c, "targetGroupId query parameter is required to reassign tasks", 400);
   }
 
   if (targetGroupId === taskGroupId) {
-    return c.json(
-      { error: "targetGroupId must be different from the group being deleted" },
-      400,
-    );
+    return errorResponse(c, "targetGroupId must be different from the group being deleted", 400);
   }
 
   // Verify target group exists and belongs to the same project
@@ -175,7 +172,7 @@ export async function deleteTaskGroup(c: Context<AppEnv>) {
     .limit(1);
 
   if (!targetGroup || targetGroup.projectId !== result.group.projectId) {
-    return c.json({ error: "Target group not found in this project" }, 404);
+    return errorResponse(c, "Target group not found in this project", 404);
   }
 
   // Batch: move tasks to target group, then delete the group (order preserved)
@@ -192,17 +189,17 @@ export async function deleteTaskGroup(c: Context<AppEnv>) {
 export async function reorderTaskGroup(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { taskGroupId } = c.req.param();
-  const body = c.req.valid("json" as never) as ReorderTaskGroupInput;
+  const taskGroupId = requireParam(c, "taskGroupId");
+  const body = validJson(c, reorderTaskGroupSchema);
 
   const result = await resolveTaskGroupWithAccess(db, taskGroupId, user.id);
 
   if (!result) {
-    return c.json({ error: "Not found" }, 404);
+    return errorResponse(c, "Not found", 404);
   }
 
   if (result.role !== "admin" && result.role !== "member") {
-    return c.json({ error: "Forbidden" }, 403);
+    return errorResponse(c, "Forbidden", 403);
   }
 
   const now = new Date();

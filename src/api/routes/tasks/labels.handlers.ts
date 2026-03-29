@@ -3,18 +3,21 @@ import type { Context } from "hono";
 
 import { label, taskLabel } from "../../../db/schema/label";
 import { task } from "../../../db/schema/task";
-import type { AssignLabelInput } from "../../../shared/schemas/label";
+import { assignLabelSchema } from "../../../shared/schemas/label";
 import { MAX_LABELS_PER_TASK } from "../../../shared/schemas/label";
 import type { AppEnv } from "../../env";
 import { deferWork } from "../../lib/defer";
+import { errorResponse } from "../../lib/error-response";
+import { requireParam, requireParams } from "../../lib/params";
+import { validJson } from "../../lib/validated";
 import { fireWebhookEvent } from "../../lib/webhook-payloads";
 import { logActivity } from "./log-activity";
 
 export async function assignLabel(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { taskId } = c.req.param();
-  const body = c.req.valid("json" as never) as AssignLabelInput;
+  const taskId = requireParam(c, "taskId");
+  const body = validJson(c, assignLabelSchema);
 
   // Batch all 4 lookups: task, label, existing assignment, label count
   const [taskResult, labelResult, assignmentResult, [{ value: labelCount }]] = await db.batch([
@@ -37,16 +40,16 @@ export async function assignLabel(c: Context<AppEnv>) {
 
   const foundTask = taskResult[0];
   if (!foundTask) {
-    return c.json({ error: "Task not found" }, 404);
+    return errorResponse(c, "Task not found", 404);
   }
 
   const foundLabel = labelResult[0];
   if (!foundLabel) {
-    return c.json({ error: "Label not found" }, 404);
+    return errorResponse(c, "Label not found", 404);
   }
 
   if (foundLabel.projectId !== foundTask.projectId) {
-    return c.json({ error: "Label does not belong to the same project as the task" }, 400);
+    return errorResponse(c, "Label does not belong to the same project as the task", 400);
   }
 
   // Check if already assigned (idempotent)
@@ -56,10 +59,7 @@ export async function assignLabel(c: Context<AppEnv>) {
 
   // Check task label count
   if (labelCount >= MAX_LABELS_PER_TASK) {
-    return c.json(
-      { error: `Maximum of ${MAX_LABELS_PER_TASK} labels per task reached` },
-      400,
-    );
+    return errorResponse(c, `Maximum of ${MAX_LABELS_PER_TASK} labels per task reached`, 400);
   }
 
   const id = crypto.randomUUID();
@@ -93,7 +93,7 @@ export async function assignLabel(c: Context<AppEnv>) {
 export async function unassignLabel(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { taskId, labelId: labelIdParam } = c.req.param();
+  const { taskId, labelId: labelIdParam } = requireParams(c, "taskId", "labelId");
 
   // Batch assignment check and label name lookup
   const [assignmentResult, labelResult] = await db.batch([
@@ -109,7 +109,7 @@ export async function unassignLabel(c: Context<AppEnv>) {
 
   const assignment = assignmentResult[0];
   if (!assignment) {
-    return c.json({ error: "Label assignment not found" }, 404);
+    return errorResponse(c, "Label assignment not found", 404);
   }
 
   const foundLabel = labelResult[0];

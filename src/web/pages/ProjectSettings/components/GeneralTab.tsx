@@ -98,6 +98,7 @@ export function GeneralTab({
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.projects(project.workspaceId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(project.workspaceId) });
     },
   });
   const saveError = saveErrorObj?.message ?? null;
@@ -144,7 +145,7 @@ export function GeneralTab({
   }
 
   const handleIconChange = useCallback(
-    (newIcon: string | null) => {
+    async (newIcon: string | null) => {
       setIcon(newIcon);
       // Persist to API and optimistically update project detail cache
       updateProject({ icon: newIcon });
@@ -155,12 +156,14 @@ export function GeneralTab({
           ? { projects: old.projects.map((p) => (p.id === projectId ? { ...p, icon: newIcon } : p)) }
           : old,
       );
-      void api.patch(`/api/projects/${projectId}`, { icon: newIcon }).catch(() => {
+      try {
+        await api.patch(`/api/projects/${projectId}`, { icon: newIcon });
+      } catch {
         // Revert on failure by re-syncing with server
         toast("Failed to update icon.", { variant: "error" });
         refetch();
         void qc.invalidateQueries({ queryKey: wpKey });
-      });
+      }
     },
     [projectId, project.workspaceId, updateProject, qc, toast, refetch]
   );
@@ -317,7 +320,7 @@ export function GeneralTab({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleCoverRemove()}
+                      onClick={() => { void handleCoverRemove(); }}
                     >
                       Remove
                     </Button>
@@ -436,7 +439,7 @@ export function GeneralTab({
           <IconPicker
             value={icon}
             onChange={(newIcon) => {
-              handleIconChange(newIcon);
+              void handleIconChange(newIcon);
               if (newIcon !== null) {
                 setIconDialogOpen(false);
               }
@@ -449,7 +452,7 @@ export function GeneralTab({
               variant="ghost"
               size="sm"
               onClick={() => {
-                handleIconChange(null);
+                void handleIconChange(null);
                 setIconDialogOpen(false);
               }}
             >

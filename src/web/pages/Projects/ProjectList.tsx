@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -22,6 +23,7 @@ import { useWorkspace, type WorkspaceProject } from "@/web/contexts/WorkspaceCon
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useFavorites } from "@/web/hooks/use-favorites";
 import { api } from "@/web/lib/api/client";
+import { queryKeys } from "@/web/lib/query-keys";
 
 import { ProjectCardGrid } from "./components/ProjectCardGrid";
 import { RenameProjectDialog } from "./components/RenameProjectDialog";
@@ -32,6 +34,7 @@ export default function ProjectList() {
   const navigate = useNavigate();
   const { workspace, projects, loading, error, refetchProjects } = useWorkspace();
   const { toast } = useToast();
+  const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<WorkspaceProject | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -45,7 +48,7 @@ export default function ProjectList() {
     void navigate(`/w/${workspace.slug}/projects/${projectId}/board`);
   }
 
-  function handleChangeProjectStatus(
+  async function handleChangeProjectStatus(
     projectId: string,
     status: "active" | "completed" | "archived",
     successMessage: string,
@@ -53,19 +56,20 @@ export default function ProjectList() {
   ) {
     setHiddenProjectIds((prev) => new Set(prev).add(projectId));
     toast(successMessage, { variant: "success" });
-    api
-      .patch(`/api/projects/${projectId}`, { status })
-      .then(() => {
-        refetchProjects();
-      })
-      .catch(() => {
-        setHiddenProjectIds((prev) => {
-          const next = new Set(prev);
-          next.delete(projectId);
-          return next;
-        });
-        toast(failureMessage, { variant: "error" });
+    try {
+      await api.patch(`/api/projects/${projectId}`, { status });
+      refetchProjects();
+      if (workspace) {
+        void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
+      }
+    } catch {
+      setHiddenProjectIds((prev) => {
+        const next = new Set(prev);
+        next.delete(projectId);
+        return next;
       });
+      toast(failureMessage, { variant: "error" });
+    }
   }
 
   async function handleDeleteProject() {

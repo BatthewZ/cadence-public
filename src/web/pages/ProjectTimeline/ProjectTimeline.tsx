@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { CalendarOff } from "lucide-react";
 import {
   useCallback,
@@ -15,11 +16,13 @@ import {
   Text,
 } from "@/web/components/ui";
 import { BulkActionBar } from "@/web/components/ui/BulkActionBar";
+import { useToast } from "@/web/components/ui/ToastContext";
 import { type Task, useProject } from "@/web/contexts/ProjectContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useMultiSelect } from "@/web/hooks/use-multi-select";
 import { useTaskFilters } from "@/web/hooks/use-task-filters";
 import { api } from "@/web/lib/api/client";
+import { queryKeys } from "@/web/lib/query-keys";
 
 import type { TimelineTask } from "./components/grouping";
 import { groupTasksIntoBuckets } from "./components/grouping";
@@ -32,6 +35,8 @@ import { TimelineTaskRow } from "./components/TimelineTaskRow";
 export default function ProjectTimeline() {
   useDocumentTitle("Timeline");
   const { project, tasks, updateTask } = useProject();
+  const { toast } = useToast();
+  const qc = useQueryClient();
   const { filteredTasks } = useTaskFilters(tasks);
 
   // Multi-select state
@@ -65,23 +70,25 @@ export default function ProjectTimeline() {
   );
 
   const handleToggleCompleted = useCallback(
-    (taskId: string, currentlyCompleted: boolean) => {
+    async (taskId: string, currentlyCompleted: boolean) => {
       // Optimistic update
       updateTask(taskId, { completed: !currentlyCompleted });
       const endpoint = currentlyCompleted
         ? `/api/tasks/${taskId}/uncomplete`
         : `/api/tasks/${taskId}/complete`;
-      api
-        .post<{ task: Task }>(endpoint, {})
-        .then((res) => {
-          updateTask(taskId, res.task);
-        })
-        .catch(() => {
-          // Revert on failure
-          updateTask(taskId, { completed: currentlyCompleted });
-        });
+      try {
+        const res = await api.post<{ task: Task }>(endpoint, {});
+        updateTask(taskId, res.task);
+        if (project) {
+          void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
+        }
+      } catch {
+        // Revert on failure
+        updateTask(taskId, { completed: currentlyCompleted });
+        toast("Failed to update task", { variant: "error" });
+      }
     },
-    [updateTask],
+    [updateTask, toast, qc, project],
   );
 
   if (!project) {
@@ -132,7 +139,7 @@ export default function ProjectTimeline() {
                       <TimelineTaskRow
                         key={task.id}
                         task={task}
-                        onToggleCompleted={handleToggleCompleted}
+                        onToggleCompleted={(taskId, completed) => { void handleToggleCompleted(taskId, completed); }}
                         selected={selectedIds.has(task.id)}
                         onToggleSelect={handleToggleSelect}
                       />

@@ -134,6 +134,7 @@ export function SortableTaskCard({
       // Apply the full server response (includes new taskGroupId, position)
       ctxUpdateTask(task.id, res.task);
       void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(task.id) });
+      void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
     } catch {
       // Revert
       ctxUpdateTask(task.id, { completed: !checked });

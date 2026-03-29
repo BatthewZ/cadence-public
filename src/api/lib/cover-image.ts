@@ -13,6 +13,7 @@ import type { Database } from "../../db";
 import { upload } from "../../db/schema/uploads";
 import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_SIZE } from "../../shared/schemas/upload";
 import type { AppEnv } from "../env";
+import { errorResponse } from "./error-response";
 import { deleteObject, generateObjectKey, putObject } from "./storage";
 
 /** Minimal info the shared helpers need about the owning entity. */
@@ -47,7 +48,7 @@ interface DeleteCoverOptions {
  */
 export async function handleUploadCover(c: Context<AppEnv>, opts: UploadCoverOptions) {
   const storage = c.env.STORAGE;
-  if (!storage) return c.json({ error: "File storage is not configured" }, 503);
+  if (!storage) return errorResponse(c, "File storage is not configured", 503);
 
   const user = c.get("user")!;
 
@@ -55,25 +56,22 @@ export async function handleUploadCover(c: Context<AppEnv>, opts: UploadCoverOpt
   const file = formData["file"];
 
   if (!(file instanceof File)) {
-    return c.json({ error: "No file provided" }, 400);
+    return errorResponse(c, "No file provided", 400);
   }
 
   if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
-    return c.json(
-      { error: "Invalid file type. Allowed: JPEG, PNG, GIF, WebP" },
-      400,
-    );
+    return errorResponse(c, "Invalid file type. Allowed: JPEG, PNG, GIF, WebP", 400);
   }
 
   if (file.size > MAX_UPLOAD_SIZE) {
-    return c.json({ error: "File too large. Maximum size is 5MB" }, 400);
+    return errorResponse(c, "File too large. Maximum size is 5MB", 400);
   }
 
   const db = c.get("db");
 
   const entity = await opts.getEntity(db);
   if (!entity) {
-    return c.json({ error: "Not found" }, 404);
+    return errorResponse(c, "Not found", 404);
   }
 
   // Find old cover upload record if one exists
@@ -100,7 +98,7 @@ export async function handleUploadCover(c: Context<AppEnv>, opts: UploadCoverOpt
     });
   } catch (error) {
     console.error(`Failed to upload ${opts.purpose} to R2:`, error);
-    return c.json({ error: "Failed to upload file" }, 500);
+    return errorResponse(c, "Failed to upload file", 500);
   }
 
   const id = crypto.randomUUID();
@@ -127,7 +125,7 @@ export async function handleUploadCover(c: Context<AppEnv>, opts: UploadCoverOpt
     await deleteObject(storage, key).catch((err) => console.error(`Failed to clean up orphaned R2 object for ${opts.purpose}:`, err));
     await db.delete(upload).where(eq(upload.id, id)).catch((err) => console.error(`Failed to clean up orphaned upload record for ${opts.purpose}:`, err));
     console.error(`Failed to save ${opts.purpose} upload record:`, error);
-    return c.json({ error: "Failed to save upload" }, 500);
+    return errorResponse(c, "Failed to save upload", 500);
   }
 
   // Clean up old cover AFTER new one is fully saved
@@ -154,13 +152,13 @@ export async function handleUploadCover(c: Context<AppEnv>, opts: UploadCoverOpt
  */
 export async function handleDeleteCover(c: Context<AppEnv>, opts: DeleteCoverOptions) {
   const storage = c.env.STORAGE;
-  if (!storage) return c.json({ error: "File storage is not configured" }, 503);
+  if (!storage) return errorResponse(c, "File storage is not configured", 503);
 
   const db = c.get("db");
 
   const entity = await opts.getEntity(db);
   if (!entity) {
-    return c.json({ error: "Not found" }, 404);
+    return errorResponse(c, "Not found", 404);
   }
 
   if (!entity.coverImageKey) {

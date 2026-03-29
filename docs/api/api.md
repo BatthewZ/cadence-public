@@ -11,6 +11,9 @@ The API is a Hono application running inside a Cloudflare Worker. All API endpoi
 - [Error Handling](./error-handling.md) -- global error handler behavior
 - [Rate Limiting](./rate-limiting.md) -- rate limit configuration and behavior
 - [Validation](./validation.md) -- request validation middleware
+- [Error Response Helper](../../src/api/lib/error-response.ts) -- `errorResponse()` returns a JSON error with `requestId`; `throwWithContext()` re-throws with a contextual prefix for structured logging
+- [Parameter Extraction](../../src/api/lib/params.ts) -- `requireParam()` / `requireParams()` type-safe path parameter extraction that throws on missing params (replaces unsafe `as string` casts)
+- [Validated Data Access](../../src/api/lib/validated.ts) -- `validJson()` / `validQuery()` type-safe wrappers for accessing zValidator-parsed data in standalone handler functions
 - [Access Resolution](../../src/api/lib/access.ts) -- `resolveProjectAccess()` shared function for project authorization checks (single source of truth used by middleware and route handlers)
 - [Cursor Pagination](../../src/api/lib/pagination.ts) -- `parseCursorParams()`, `parseCursorDate()`, `computeNextCursor()` helpers for simple cursor pagination; `parseCompoundCursor()`, `compoundCursorCondition()`, and `computeCompoundNextCursor()` for compound `"date|id"` cursors that eliminate gaps when rows share identical dates
 - [Adding Routes](./adding-routes.md) -- step-by-step guide for adding new API routes

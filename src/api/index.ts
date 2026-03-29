@@ -1,11 +1,11 @@
 import { sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { HTTPException } from "hono/http-exception";
 
 import { createDb } from "../db";
 import type { AppBindings, AppEnv } from "./env";
 import { resolveAllowedOrigin } from "./lib/auth";
+import { errorResponse } from "./lib/error-response";
 import { authSessionMiddleware } from "./middleware/auth";
 import { requestLogger } from "./middleware/logger";
 import { requestIdMiddleware } from "./middleware/request-id";
@@ -17,10 +17,6 @@ const app = new Hono<AppEnv>();
 
 app.onError((err, c) => {
   const requestId = c.get("requestId") ?? "unknown";
-
-  if (err instanceof HTTPException) {
-    return c.json({ error: err.message, requestId }, err.status);
-  }
 
   console.error(
     JSON.stringify({
@@ -78,8 +74,7 @@ app.use("/api/*", authSessionMiddleware);
 app.route("/api", routes);
 
 app.all("/api/*", (c) => {
-  const requestId = c.get("requestId") ?? "unknown";
-  return c.json({ error: "Not Found", requestId }, 404);
+  return errorResponse(c, "Not Found", 404);
 });
 
 app.get("/robots.txt", () => {

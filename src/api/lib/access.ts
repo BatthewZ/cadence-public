@@ -81,7 +81,7 @@ export async function resolveProjectAccess(
   // Direct project membership
   if (row.projRole) {
     return {
-      role: row.projRole as ProjectRole,
+      role: row.projRole,
       source: "project",
       project: { id: row.projectId, workspaceId: row.workspaceId },
     };
@@ -155,7 +155,7 @@ export async function resolveTaskAccess(
     return {
       found: true,
       access: {
-        role: row.projRole as ProjectRole,
+        role: row.projRole,
         source: "project",
         project: { id: row.projectId, workspaceId: row.workspaceId },
       },

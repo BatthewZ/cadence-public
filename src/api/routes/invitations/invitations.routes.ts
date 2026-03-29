@@ -49,7 +49,11 @@ app.delete(
 app.get("/invitations/pending", requireAuth, listMyPendingInvitations);
 
 // Get invitation by token (public, no auth)
-app.get("/invitations/:token", getInvitation);
+app.get(
+  "/invitations/:token",
+  rateLimit({ max: 10, windowSeconds: 60, prefix: "invitation-lookup" }),
+  getInvitation,
+);
 
 // Accept invitation
 app.post(

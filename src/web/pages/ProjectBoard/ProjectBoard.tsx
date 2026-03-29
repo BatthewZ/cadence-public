@@ -54,6 +54,7 @@ export { COLUMN_TASK_LIMIT } from "./components/dnd-helpers";
 
 export default function ProjectBoard() {
   const {
+    project,
     taskGroups,
     tasks,
     members,
@@ -162,7 +163,7 @@ export default function ProjectBoard() {
   );
 
   const handleDragEnd = useCallback(
-    (event: DragEndEvent) => {
+    async (event: DragEndEvent) => {
       const { active, over } = event;
       const dragOriginGroupId = dragOriginGroupRef.current;
       setActiveItem(null);
@@ -200,15 +201,15 @@ export default function ProjectBoard() {
         // Optimistic update via context
         ctxUpdateTaskGroup(activeParsed.id, { position: newPosition });
 
-        void api
-          .patch(`/api/task-groups/${activeParsed.id}/reorder`, {
+        try {
+          await api.patch(`/api/task-groups/${activeParsed.id}/reorder`, {
             position: newPosition,
-          })
-          .catch(() => {
-            // Revert on failure — refetch from server
-            ctxUpdateTaskGroup(activeParsed.id, { position: sortedGroups[oldIndex].position });
-            toast("Failed to reorder section", { variant: "error" });
           });
+        } catch {
+          // Revert on failure — refetch from server
+          ctxUpdateTaskGroup(activeParsed.id, { position: sortedGroups[oldIndex].position });
+          toast("Failed to reorder section", { variant: "error" });
+        }
         return;
       }
 
@@ -268,28 +269,27 @@ export default function ProjectBoard() {
           completed: optimisticCompleted,
         });
 
-        void api
-          .patch<{ task: Task }>(`/api/tasks/${activeParsed.id}/move`, {
+        try {
+          const res = await api.patch<{ task: Task }>(`/api/tasks/${activeParsed.id}/move`, {
             taskGroupId: targetGroupId,
             position: newPosition,
-          })
-          .then((res) => {
-            // Apply full server state (includes completedAt, completedBy)
-            ctxUpdateTask(activeParsed.id, res.task);
-            void qcBoard.invalidateQueries({ queryKey: queryKeys.tasks.detail(activeParsed.id) });
-          })
-          .catch(() => {
-            // Revert
-            ctxUpdateTask(activeParsed.id, {
-              taskGroupId: oldGroupId,
-              position: oldPosition,
-              completed: oldCompleted,
-            });
-            toast("Failed to move task", { variant: "error" });
           });
+          // Apply full server state (includes completedAt, completedBy)
+          ctxUpdateTask(activeParsed.id, res.task);
+          void qcBoard.invalidateQueries({ queryKey: queryKeys.tasks.detail(activeParsed.id) });
+          void qcBoard.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
+        } catch {
+          // Revert
+          ctxUpdateTask(activeParsed.id, {
+            taskGroupId: oldGroupId,
+            position: oldPosition,
+            completed: oldCompleted,
+          });
+          toast("Failed to move task", { variant: "error" });
+        }
       }
     },
-    [sortedGroups, tasks, toast, ctxUpdateTask, ctxUpdateTaskGroup, qcBoard]
+    [sortedGroups, tasks, toast, ctxUpdateTask, ctxUpdateTaskGroup, qcBoard, project.id]
   );
 
   // --- Render overlay ---
@@ -321,7 +321,7 @@ export default function ProjectBoard() {
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
-        onDragEnd={handleDragEnd}
+        onDragEnd={(event) => { void handleDragEnd(event); }}
       >
         <SortableContext items={groupIds} strategy={horizontalListSortingStrategy}>
           {sortedGroups.map((group) => (

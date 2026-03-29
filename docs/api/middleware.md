@@ -214,7 +214,7 @@ Guards routes that require an authenticated user. This is the simplest gate -- i
 
 | Status | Body | Condition |
 |---|---|---|
-| 401 | `{ "error": "Unauthorized" }` | No authenticated user |
+| 401 | `{ "error": "Unauthorized", "requestId": "..." }` | No authenticated user |
 
 **Usage:**
 
@@ -240,8 +240,8 @@ Verifies that the authenticated user is a member of the workspace identified by 
 
 | Status | Body | Condition |
 |---|---|---|
-| 401 | `{ "error": "Unauthorized" }` | No authenticated user |
-| 403 | `{ "error": "Forbidden" }` | User is not a member of the workspace |
+| 401 | `{ "error": "Unauthorized", "requestId": "..." }` | No authenticated user |
+| 403 | `{ "error": "Forbidden", "requestId": "..." }` | User is not a member of the workspace |
 
 **Usage:**
 
@@ -272,8 +272,8 @@ Verifies that the authenticated user holds one of the specified roles within the
 
 | Status | Body | Condition |
 |---|---|---|
-| 401 | `{ "error": "Unauthorized" }` | No authenticated user |
-| 403 | `{ "error": "Forbidden" }` | User is not a workspace member, or their role is not in the allowed list |
+| 401 | `{ "error": "Unauthorized", "requestId": "..." }` | No authenticated user |
+| 403 | `{ "error": "Forbidden", "requestId": "..." }` | User is not a workspace member, or their role is not in the allowed list |
 
 **Usage:**
 
@@ -320,9 +320,9 @@ The access resolution logic is implemented in `resolveProjectAccess()` (`src/api
 
 | Status | Body | Condition |
 |---|---|---|
-| 401 | `{ "error": "Unauthorized" }` | No authenticated user |
-| 404 | `{ "error": "Not found" }` | Project does not exist |
-| 403 | `{ "error": "Forbidden" }` | Project exists but user has no access |
+| 401 | `{ "error": "Unauthorized", "requestId": "..." }` | No authenticated user |
+| 404 | `{ "error": "Not found", "requestId": "..." }` | Project does not exist |
+| 403 | `{ "error": "Forbidden", "requestId": "..." }` | Project exists but user has no access |
 
 **Usage:**
 
@@ -356,9 +356,9 @@ Verifies that the authenticated user holds one of the specified effective roles 
 
 | Status | Body | Condition |
 |---|---|---|
-| 401 | `{ "error": "Unauthorized" }` | No authenticated user |
-| 404 | `{ "error": "Not found" }` | Project does not exist |
-| 403 | `{ "error": "Forbidden" }` | User has no project access, or their effective role is not in the allowed list |
+| 401 | `{ "error": "Unauthorized", "requestId": "..." }` | No authenticated user |
+| 404 | `{ "error": "Not found", "requestId": "..." }` | Project does not exist |
+| 403 | `{ "error": "Forbidden", "requestId": "..." }` | User has no project access, or their effective role is not in the allowed list |
 
 **Usage:**
 
@@ -401,9 +401,9 @@ Resolves the project that owns the task identified by the `:taskId` route parame
 
 | Status | Body | Condition |
 |---|---|---|
-| 401 | `{ "error": "Unauthorized" }` | No authenticated user |
-| 404 | `{ "error": "Not found" }` | Task does not exist |
-| 403 | `{ "error": "Forbidden" }` | Task exists but user has no access to its parent project |
+| 401 | `{ "error": "Unauthorized", "requestId": "..." }` | No authenticated user |
+| 404 | `{ "error": "Not found", "requestId": "..." }` | Task does not exist |
+| 403 | `{ "error": "Forbidden", "requestId": "..." }` | Task exists but user has no access to its parent project |
 
 **Usage:**
 

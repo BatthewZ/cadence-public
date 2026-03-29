@@ -1561,7 +1561,7 @@ Revokes a pending invitation (sets its status to `"revoked"`).
 
 ### `GET /api/invitations/:token`
 
-Looks up an invitation by its token. Returns workspace and inviter details. No authentication required -- used for the public invitation acceptance page.
+Looks up an invitation by its token. Returns workspace and inviter details. No authentication required -- used for the public invitation acceptance page. Rate-limited to 10 requests per minute.
 
 **Auth:** Not required.
 
@@ -1580,9 +1580,11 @@ Looks up an invitation by its token. Returns workspace and inviter details. No a
 }
 ```
 
+**Errors:** 400 (invitation expired or not pending), 404 (invalid token), 429 (rate limit exceeded).
+
 ### `POST /api/invitations/accept`
 
-Accepts a workspace invitation. The authenticated user is added as a workspace member with the role specified in the invitation.
+Accepts a workspace invitation. The authenticated user is added as a workspace member with the role specified in the invitation. Rate-limited to 10 requests per minute.
 
 **Auth:** Required.
 **Authorization:** Any authenticated user.
@@ -1599,7 +1601,7 @@ Accepts a workspace invitation. The authenticated user is added as a workspace m
 { "ok": true, "workspaceId": "workspaceId" }
 ```
 
-**Errors:** 400 (invitation expired), 404 (invalid token), 409 (invitation already accepted/declined).
+**Errors:** 400 (invitation expired), 404 (invalid token), 409 (invitation already accepted/declined), 429 (rate limit exceeded).
 
 ---
 

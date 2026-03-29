@@ -39,11 +39,13 @@ export function useProjectCover(
     [upload, projectId, updateProject],
   );
 
-  const handleRemove = useCallback(() => {
+  const handleRemove = useCallback(async () => {
     updateProject({ coverImageKey: null });
-    void api.delete(`/api/projects/${projectId}/cover`).catch(() => {
+    try {
+      await api.delete(`/api/projects/${projectId}/cover`);
+    } catch {
       onRemoveError?.();
-    });
+    }
   }, [projectId, updateProject, onRemoveError]);
 
   return { coverUrl, uploading, handleUpload, handleRemove };

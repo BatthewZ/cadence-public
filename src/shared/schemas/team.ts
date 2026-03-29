@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { TEAM_ROLES } from "../types/roles";
+
 export const createTeamSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
@@ -12,7 +14,7 @@ export const updateTeamSchema = z.object({
 
 export const addTeamMemberSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
-  role: z.string().optional(),
+  role: z.enum(TEAM_ROLES).optional(),
 });
 
 export type CreateTeamInput = z.infer<typeof createTeamSchema>;

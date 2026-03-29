@@ -18,7 +18,7 @@ describe("GET /me", () => {
     const res = await app.request("/me");
 
     expect(res.status).toBe(401);
-    expect(await res.json()).toEqual({ error: "Unauthorized" });
+    expect(await res.json()).toMatchObject({ error: "Unauthorized" });
   });
 
   it("returns user when authenticated", async () => {

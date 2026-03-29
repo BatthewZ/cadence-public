@@ -5,11 +5,14 @@ import { user as userTable } from "../../../db/schema/auth";
 import { project, projectMember } from "../../../db/schema/project";
 import { task, taskGroup } from "../../../db/schema/task";
 import { workspaceMember } from "../../../db/schema/workspace";
-import type { CreateProjectInput } from "../../../shared/schemas/project";
+import { addProjectMemberSchema, createProjectSchema, updateProjectSchema } from "../../../shared/schemas/project";
 import type { AppEnv } from "../../env";
 import { handleDeleteCover, handleUploadCover } from "../../lib/cover-image";
 import { deferWork } from "../../lib/defer";
+import { errorResponse } from "../../lib/error-response";
 import { createNotification } from "../../lib/notifications";
+import { requireParam, requireParams } from "../../lib/params";
+import { validJson } from "../../lib/validated";
 import {
   buildMemberEventData,
   buildProjectEventData,
@@ -19,8 +22,8 @@ import {
 
 export async function createProject(c: Context<AppEnv>) {
   const user = c.get("user")!;
-  const { workspaceId } = c.req.param();
-  const body = c.req.valid("json" as never) as CreateProjectInput;
+  const workspaceId = requireParam(c, "workspaceId");
+  const body = validJson(c, createProjectSchema);
 
   const db = c.get("db");
   const now = new Date();
@@ -77,7 +80,7 @@ export async function createProject(c: Context<AppEnv>) {
 }
 
 export async function listProjects(c: Context<AppEnv>) {
-  const { workspaceId } = c.req.param();
+  const workspaceId = requireParam(c, "workspaceId");
   const user = c.get("user")!;
   const membership = c.get("workspaceMembership")!;
   const db = c.get("db");
@@ -148,7 +151,7 @@ export async function listProjects(c: Context<AppEnv>) {
 }
 
 export async function getProject(c: Context<AppEnv>) {
-  const { projectId } = c.req.param();
+  const projectId = requireParam(c, "projectId");
   const db = c.get("db");
 
   const [found] = await db
@@ -158,7 +161,7 @@ export async function getProject(c: Context<AppEnv>) {
     .limit(1);
 
   if (!found) {
-    return c.json({ error: "Project not found" }, 404);
+    return errorResponse(c, "Project not found", 404);
   }
 
   return c.json({ project: found });
@@ -166,16 +169,8 @@ export async function getProject(c: Context<AppEnv>) {
 
 export async function updateProject(c: Context<AppEnv>) {
   const user = c.get("user")!;
-  const { projectId } = c.req.param();
-  const body = c.req.valid("json" as never) as {
-    name?: string;
-    description?: string | null;
-    status?: string;
-    icon?: string | null;
-    coverImageKey?: string | null;
-    coverImagePosition?: number | null;
-    budget?: number | null;
-  };
+  const projectId = requireParam(c, "projectId");
+  const body = validJson(c, updateProjectSchema);
 
   const db = c.get("db");
   const now = new Date();
@@ -195,7 +190,7 @@ export async function updateProject(c: Context<AppEnv>) {
     .returning();
 
   if (!updated) {
-    return c.json({ error: "Project not found" }, 404);
+    return errorResponse(c, "Project not found", 404);
   }
 
   // Non-blocking webhook dispatch for project.updated (and project.archived if status changed)
@@ -217,7 +212,7 @@ export async function updateProject(c: Context<AppEnv>) {
 
 export async function deleteProject(c: Context<AppEnv>) {
   const user = c.get("user")!;
-  const { projectId } = c.req.param();
+  const projectId = requireParam(c, "projectId");
   const db = c.get("db");
 
   const [found] = await db
@@ -227,7 +222,7 @@ export async function deleteProject(c: Context<AppEnv>) {
     .limit(1);
 
   if (!found) {
-    return c.json({ error: "Project not found" }, 404);
+    return errorResponse(c, "Project not found", 404);
   }
 
   // Batch deletes: tasks first (task.taskGroupId has onDelete:"restrict"),
@@ -246,7 +241,7 @@ export async function deleteProject(c: Context<AppEnv>) {
 }
 
 export async function listMembers(c: Context<AppEnv>) {
-  const { projectId } = c.req.param();
+  const projectId = requireParam(c, "projectId");
   const db = c.get("db");
 
   const members = await db
@@ -272,11 +267,8 @@ export async function listMembers(c: Context<AppEnv>) {
 
 export async function addMember(c: Context<AppEnv>) {
   const user = c.get("user")!;
-  const { projectId } = c.req.param();
-  const body = c.req.valid("json" as never) as {
-    userId: string;
-    role: string;
-  };
+  const projectId = requireParam(c, "projectId");
+  const body = validJson(c, addProjectMemberSchema);
 
   const db = c.get("db");
 
@@ -291,7 +283,7 @@ export async function addMember(c: Context<AppEnv>) {
 
   const proj = projResult[0];
   if (!proj) {
-    return c.json({ error: "Project not found" }, 404);
+    return errorResponse(c, "Project not found", 404);
   }
 
   // Workspace membership check needs workspaceId from the project query
@@ -300,10 +292,10 @@ export async function addMember(c: Context<AppEnv>) {
     .limit(1);
 
   if (!wsMember) {
-    return c.json({ error: "User is not a member of the workspace" }, 400);
+    return errorResponse(c, "User is not a member of the workspace", 400);
   }
   if (existingResult[0]) {
-    return c.json({ error: "User is already a project member" }, 409);
+    return errorResponse(c, "User is already a project member", 409);
   }
 
   const now = new Date();
@@ -337,7 +329,7 @@ export async function addMember(c: Context<AppEnv>) {
 
 export async function removeMember(c: Context<AppEnv>) {
   const actor = c.get("user")!;
-  const { projectId, userId } = c.req.param();
+  const { projectId, userId } = requireParams(c, "projectId", "userId");
   const db = c.get("db");
 
   // Batch independent lookups: member check + project (for webhook workspaceId)
@@ -362,7 +354,7 @@ export async function removeMember(c: Context<AppEnv>) {
   const member = memberResult[0];
 
   if (!member) {
-    return c.json({ error: "Member not found" }, 404);
+    return errorResponse(c, "Member not found", 404);
   }
 
   await db
@@ -390,7 +382,7 @@ export async function removeMember(c: Context<AppEnv>) {
 // ---------------------------------------------------------------------------
 
 export async function uploadProjectCover(c: Context<AppEnv>) {
-  const { projectId } = c.req.param();
+  const projectId = requireParam(c, "projectId");
   return handleUploadCover(c, {
     purpose: "project-cover",
     getEntity: async (db) => {
@@ -411,7 +403,7 @@ export async function uploadProjectCover(c: Context<AppEnv>) {
 }
 
 export async function deleteProjectCover(c: Context<AppEnv>) {
-  const { projectId } = c.req.param();
+  const projectId = requireParam(c, "projectId");
   return handleDeleteCover(c, {
     purpose: "project-cover",
     entityLabel: "project",

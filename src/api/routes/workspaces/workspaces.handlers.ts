@@ -5,12 +5,15 @@ import { user as userTable } from "../../../db/schema/auth";
 import { project } from "../../../db/schema/project";
 import { task } from "../../../db/schema/task";
 import { workspace, workspaceMember } from "../../../db/schema/workspace";
-import type {
-  CreateWorkspaceInput,
-  UpdateMemberRoleInput,
-  UpdateWorkspaceInput,
+import {
+  createWorkspaceSchema,
+  updateMemberRoleSchema,
+  updateWorkspaceSchema,
 } from "../../../shared/schemas/workspace";
 import type { AppEnv } from "../../env";
+import { errorResponse, throwWithContext } from "../../lib/error-response";
+import { requireParam, requireParams } from "../../lib/params";
+import { validJson } from "../../lib/validated";
 import {
   buildMemberEventData,
   fireWebhookEvent,
@@ -21,7 +24,7 @@ const DUPLICATE_SLUG_ERROR = "You already have a workspace with that URL";
 export async function createWorkspace(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const body = c.req.valid("json" as never) as CreateWorkspaceInput;
+  const body = validJson(c, createWorkspaceSchema);
 
   const id = crypto.randomUUID();
   const now = new Date();
@@ -52,9 +55,9 @@ export async function createWorkspace(c: Context<AppEnv>) {
       error instanceof Error &&
       error.message.toLowerCase().includes("unique")
     ) {
-      return c.json({ error: DUPLICATE_SLUG_ERROR }, 409);
+      return errorResponse(c, DUPLICATE_SLUG_ERROR, 409);
     }
-    throw error;
+    throwWithContext(error, "createWorkspace");
   }
 
   return c.json({ workspace: newWorkspace }, 201);
@@ -113,7 +116,7 @@ export async function listWorkspaces(c: Context<AppEnv>) {
 
 export async function getWorkspace(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
+  const workspaceId = requireParam(c, "workspaceId");
 
   // Batch workspace fetch + member count in a single DB round-trip
   const [workspaceResult, memberCountResult] = await db.batch([
@@ -130,7 +133,7 @@ export async function getWorkspace(c: Context<AppEnv>) {
 
   const found = workspaceResult[0];
   if (!found) {
-    return c.json({ error: "Workspace not found" }, 404);
+    return errorResponse(c, "Workspace not found", 404);
   }
 
   return c.json({
@@ -143,8 +146,8 @@ export async function getWorkspace(c: Context<AppEnv>) {
 
 export async function updateWorkspace(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
-  const body = c.req.valid("json" as never) as UpdateWorkspaceInput;
+  const workspaceId = requireParam(c, "workspaceId");
+  const body = validJson(c, updateWorkspaceSchema);
 
   const now = new Date();
 
@@ -162,13 +165,13 @@ export async function updateWorkspace(c: Context<AppEnv>) {
       error instanceof Error &&
       error.message.toLowerCase().includes("unique")
     ) {
-      return c.json({ error: DUPLICATE_SLUG_ERROR }, 409);
+      return errorResponse(c, DUPLICATE_SLUG_ERROR, 409);
     }
-    throw error;
+    throwWithContext(error, "updateWorkspace");
   }
 
   if (!updated) {
-    return c.json({ error: "Workspace not found" }, 404);
+    return errorResponse(c, "Workspace not found", 404);
   }
 
   return c.json({ workspace: updated });
@@ -176,7 +179,7 @@ export async function updateWorkspace(c: Context<AppEnv>) {
 
 export async function deleteWorkspace(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
+  const workspaceId = requireParam(c, "workspaceId");
 
   // Must delete tasks before workspace because task.taskGroupId has
   // onDelete:"restrict", which blocks cascade deletion through
@@ -196,7 +199,7 @@ export async function deleteWorkspace(c: Context<AppEnv>) {
 
 export async function listMembers(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
+  const workspaceId = requireParam(c, "workspaceId");
 
   const rows = await db
     .select({
@@ -230,8 +233,8 @@ export async function listMembers(c: Context<AppEnv>) {
 
 export async function updateMemberRole(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId, userId: targetUserId } = c.req.param();
-  const { role } = c.req.valid("json" as never) as UpdateMemberRoleInput;
+  const { workspaceId, userId: targetUserId } = requireParams(c, "workspaceId", "userId");
+  const { role } = validJson(c, updateMemberRoleSchema);
 
   // Check if target member exists
   const [target] = await db
@@ -246,11 +249,11 @@ export async function updateMemberRole(c: Context<AppEnv>) {
     .limit(1);
 
   if (!target) {
-    return c.json({ error: "Member not found" }, 404);
+    return errorResponse(c, "Member not found", 404);
   }
 
   if (target.role === "owner") {
-    return c.json({ error: "Cannot change the owner's role" }, 403);
+    return errorResponse(c, "Cannot change the owner's role", 403);
   }
 
   const oldRole = target.role;
@@ -277,7 +280,7 @@ export async function updateMemberRole(c: Context<AppEnv>) {
 
 export async function removeMember(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId, userId: targetUserId } = c.req.param();
+  const { workspaceId, userId: targetUserId } = requireParams(c, "workspaceId", "userId");
 
   // Check if target member exists
   const [target] = await db
@@ -292,17 +295,17 @@ export async function removeMember(c: Context<AppEnv>) {
     .limit(1);
 
   if (!target) {
-    return c.json({ error: "Member not found" }, 404);
+    return errorResponse(c, "Member not found", 404);
   }
 
   if (target.role === "owner") {
-    return c.json({ error: "Cannot remove the workspace owner" }, 403);
+    return errorResponse(c, "Cannot remove the workspace owner", 403);
   }
 
   // Prevent members from removing themselves
   const currentUser = c.get("user")!;
   if (targetUserId === currentUser.id) {
-    return c.json({ error: "Cannot remove yourself from the workspace" }, 400);
+    return errorResponse(c, "Cannot remove yourself from the workspace", 400);
   }
 
   await db

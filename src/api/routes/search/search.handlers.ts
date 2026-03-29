@@ -3,8 +3,10 @@ import type { Context } from "hono";
 
 import { project, projectMember } from "../../../db/schema/project";
 import { task } from "../../../db/schema/task";
-import type { SearchQueryInput } from "../../../shared/schemas/search";
+import { searchQuerySchema } from "../../../shared/schemas/search";
 import type { AppEnv } from "../../env";
+import { requireParam } from "../../lib/params";
+import { validQuery } from "../../lib/validated";
 
 /**
  * Escape LIKE-pattern metacharacters in user input so they are matched literally.
@@ -22,10 +24,10 @@ function escapeLike(str: string): string {
  */
 export async function workspaceSearch(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
+  const workspaceId = requireParam(c, "workspaceId");
   const user = c.get("user")!;
   const membership = c.get("workspaceMembership")!;
-  const { q, limit } = c.req.valid("query" as never) as SearchQueryInput;
+  const { q, limit } = validQuery(c, searchQuerySchema);
 
   const pattern = `%${escapeLike(q)}%`;
   const isElevated = membership.role === "owner" || membership.role === "admin";

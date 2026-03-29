@@ -10,10 +10,9 @@ import type { WebhookEventType } from "../../shared/types/webhook";
 
 type WebhookRow = typeof webhook.$inferSelect;
 
-interface ValidateUrlResult {
-  valid: boolean;
-  error?: string;
-}
+type ValidateUrlResult =
+  | { valid: true }
+  | { valid: false; error: string };
 
 // ---------------------------------------------------------------------------
 // Backoff schedule: maps attempt number to delay in seconds

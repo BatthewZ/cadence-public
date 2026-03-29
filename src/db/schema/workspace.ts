@@ -6,6 +6,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import type { WorkspaceRole } from "../../shared/types/roles";
 import { user } from "./auth";
 
 export const workspace = sqliteTable(
@@ -37,7 +38,7 @@ export const workspaceMember = sqliteTable(
     userId: text("userId")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    role: text("role").notNull().default("member"),
+    role: text("role").notNull().default("member").$type<WorkspaceRole>(),
     invitedBy: text("invitedBy").references(() => user.id, {
       onDelete: "set null",
     }),

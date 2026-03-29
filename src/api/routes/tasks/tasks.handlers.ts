@@ -7,17 +7,20 @@ import { label, taskLabel } from "../../../db/schema/label";
 import { comment, subtask, task, taskActivity, taskGroup } from "../../../db/schema/task";
 import { taskAttachment } from "../../../db/schema/task-attachment";
 import { generateKeyBetween } from "../../../shared/lib/fractional-index";
-import type { CreateCommentInput, UpdateCommentInput } from "../../../shared/schemas/comment";
+import { createCommentSchema, updateCommentSchema } from "../../../shared/schemas/comment";
 import type { TaskLabelInfo } from "../../../shared/schemas/label";
-import type { CreateSubtaskInput, UpdateSubtaskInput } from "../../../shared/schemas/subtask";
-import type { CreateTaskInput, MoveTaskInput, UpdateTaskInput } from "../../../shared/schemas/task";
+import { createSubtaskSchema, updateSubtaskSchema } from "../../../shared/schemas/subtask";
+import { createTaskSchema, moveTaskSchema, updateTaskSchema } from "../../../shared/schemas/task";
 import type { AppEnv } from "../../env";
 import { resolveProjectAccess } from "../../lib/access";
 import { handleDeleteCover, handleUploadCover } from "../../lib/cover-image";
 import { deferWork } from "../../lib/defer";
+import { errorResponse, throwWithContext } from "../../lib/error-response";
 import { parseMentions } from "../../lib/mentions";
 import { createNotification, createNotifications } from "../../lib/notifications";
 import { compoundCursorCondition, computeCompoundNextCursor, parseCompoundCursor, parseCursorParams } from "../../lib/pagination";
+import { requireParam } from "../../lib/params";
+import { validJson } from "../../lib/validated";
 import {
   buildTaskEventData,
   computeChanges,
@@ -33,8 +36,8 @@ import { type ActivityEntry, logActivity, logActivityBatch } from "./log-activit
 export async function createTask(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { projectId } = c.req.param();
-  const body = c.req.valid("json" as never) as CreateTaskInput;
+  const projectId = requireParam(c, "projectId");
+  const body = validJson(c, createTaskSchema);
 
   // Batch: taskGroup existence check + last position query (independent — both use upfront IDs)
   const [groupResult, lastTaskResult] = await db.batch([
@@ -56,7 +59,7 @@ export async function createTask(c: Context<AppEnv>) {
 
   const group = groupResult[0];
   if (!group) {
-    return c.json({ error: "Task group not found in this project" }, 404);
+    return errorResponse(c, "Task group not found in this project", 404);
   }
 
   const position = generateKeyBetween(lastTaskResult[0]?.position ?? null, null);
@@ -119,7 +122,7 @@ export async function createTask(c: Context<AppEnv>) {
 
 export async function listTasks(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { projectId } = c.req.param();
+  const projectId = requireParam(c, "projectId");
 
   // Query filters from query params
   const taskGroupIdFilter = c.req.query("taskGroupId");
@@ -237,7 +240,7 @@ export async function listTasks(c: Context<AppEnv>) {
 
 export async function getTask(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { taskId } = c.req.param();
+  const taskId = requireParam(c, "taskId");
 
   const [taskResult, subtasks, [{ value: commentCount }], taskLabels] = await db.batch([
     db.select().from(task).where(eq(task.id, taskId)).limit(1),
@@ -255,7 +258,7 @@ export async function getTask(c: Context<AppEnv>) {
 
   const foundTask = taskResult[0];
   if (!foundTask) {
-    return c.json({ error: "Task not found" }, 404);
+    return errorResponse(c, "Task not found", 404);
   }
 
   return c.json({
@@ -271,8 +274,8 @@ export async function getTask(c: Context<AppEnv>) {
 export async function updateTask(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { taskId } = c.req.param();
-  const body = c.req.valid("json" as never) as UpdateTaskInput;
+  const taskId = requireParam(c, "taskId");
+  const body = validJson(c, updateTaskSchema);
 
   // Fetch current task for activity logging
   const [currentTask] = await db
@@ -282,7 +285,7 @@ export async function updateTask(c: Context<AppEnv>) {
     .limit(1);
 
   if (!currentTask) {
-    return c.json({ error: "Task not found" }, 404);
+    return errorResponse(c, "Task not found", 404);
   }
 
   const now = new Date();
@@ -416,7 +419,7 @@ export async function updateTask(c: Context<AppEnv>) {
 export async function deleteTask(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { taskId } = c.req.param();
+  const taskId = requireParam(c, "taskId");
 
   // Fetch full task before deletion for webhook payload
   const [found] = await db
@@ -426,7 +429,7 @@ export async function deleteTask(c: Context<AppEnv>) {
     .limit(1);
 
   if (!found) {
-    return c.json({ error: "Task not found" }, 404);
+    return errorResponse(c, "Task not found", 404);
   }
 
   await db.delete(task).where(eq(task.id, taskId));
@@ -445,8 +448,8 @@ export async function deleteTask(c: Context<AppEnv>) {
 export async function moveTask(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { taskId } = c.req.param();
-  const body = c.req.valid("json" as never) as MoveTaskInput;
+  const taskId = requireParam(c, "taskId");
+  const body = validJson(c, moveTaskSchema);
 
   // Batch task + target group lookup in a single round-trip
   const [taskResult, groupResult] = await db.batch([
@@ -456,12 +459,12 @@ export async function moveTask(c: Context<AppEnv>) {
 
   const foundTask = taskResult[0];
   if (!foundTask) {
-    return c.json({ error: "Task not found" }, 404);
+    return errorResponse(c, "Task not found", 404);
   }
 
   const targetGroup = groupResult[0];
   if (!targetGroup || targetGroup.projectId !== foundTask.projectId) {
-    return c.json({ error: "Target task group not found in this project" }, 404);
+    return errorResponse(c, "Target task group not found in this project", 404);
   }
 
   const now = new Date();
@@ -549,7 +552,7 @@ export async function moveTask(c: Context<AppEnv>) {
 export async function duplicateTask(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { taskId } = c.req.param();
+  const taskId = requireParam(c, "taskId");
 
   // Batch: source task + subtasks + source labels (all independent — only need taskId)
   const [sourceTaskResult, sourceSubtasks, sourceLabels] = await db.batch([
@@ -567,7 +570,7 @@ export async function duplicateTask(c: Context<AppEnv>) {
 
   const sourceTask = sourceTaskResult[0];
   if (!sourceTask) {
-    return c.json({ error: "Task not found" }, 404);
+    return errorResponse(c, "Task not found", 404);
   }
 
   // Determine new task position: place at end of the same task group (depends on sourceTask.taskGroupId)
@@ -624,7 +627,7 @@ export async function duplicateTask(c: Context<AppEnv>) {
       await db.delete(task).where(eq(task.id, newTaskId)).catch((cleanupError) =>
         console.error("Failed to clean up duplicated task after subtask insert failure:", cleanupError),
       );
-      throw error;
+      throwWithContext(error, "duplicateTask.subtasks");
     }
   }
 
@@ -643,7 +646,7 @@ export async function duplicateTask(c: Context<AppEnv>) {
       await db.delete(task).where(eq(task.id, newTaskId)).catch((cleanupError) =>
         console.error("Failed to clean up duplicated task after label insert failure:", cleanupError),
       );
-      throw error;
+      throwWithContext(error, "duplicateTask.labels");
     }
   }
 
@@ -709,8 +712,8 @@ export async function duplicateTask(c: Context<AppEnv>) {
 
 export async function createSubtask(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { taskId } = c.req.param();
-  const body = c.req.valid("json" as never) as CreateSubtaskInput;
+  const taskId = requireParam(c, "taskId");
+  const body = validJson(c, createSubtaskSchema);
 
   // Generate position: place at end
   const [lastSubtask] = await db
@@ -742,8 +745,8 @@ export async function createSubtask(c: Context<AppEnv>) {
 export async function updateSubtask(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { subtaskId } = c.req.param();
-  const body = c.req.valid("json" as never) as UpdateSubtaskInput;
+  const subtaskId = requireParam(c, "subtaskId");
+  const body = validJson(c, updateSubtaskSchema);
 
   // Look up the subtask and verify project access
   const [found] = await db
@@ -753,7 +756,7 @@ export async function updateSubtask(c: Context<AppEnv>) {
     .limit(1);
 
   if (!found) {
-    return c.json({ error: "Subtask not found" }, 404);
+    return errorResponse(c, "Subtask not found", 404);
   }
 
   // Look up the parent task to get projectId
@@ -764,19 +767,19 @@ export async function updateSubtask(c: Context<AppEnv>) {
     .limit(1);
 
   if (!parentTask) {
-    return c.json({ error: "Parent task not found" }, 404);
+    return errorResponse(c, "Parent task not found", 404);
   }
 
   // Verify project access
   const accessResult = await resolveProjectAccess(db, parentTask.projectId, user.id);
 
   if (!accessResult) {
-    return c.json({ error: "Forbidden" }, 403);
+    return errorResponse(c, "Forbidden", 403);
   }
 
   // Viewers cannot modify subtasks
   if (accessResult.role === "viewer") {
-    return c.json({ error: "Forbidden" }, 403);
+    return errorResponse(c, "Forbidden", 403);
   }
 
   const updateData: Record<string, unknown> = {};
@@ -796,7 +799,7 @@ export async function updateSubtask(c: Context<AppEnv>) {
 export async function deleteSubtask(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { subtaskId } = c.req.param();
+  const subtaskId = requireParam(c, "subtaskId");
 
   // Look up the subtask
   const [found] = await db
@@ -806,7 +809,7 @@ export async function deleteSubtask(c: Context<AppEnv>) {
     .limit(1);
 
   if (!found) {
-    return c.json({ error: "Subtask not found" }, 404);
+    return errorResponse(c, "Subtask not found", 404);
   }
 
   // Look up the parent task to get projectId
@@ -817,19 +820,19 @@ export async function deleteSubtask(c: Context<AppEnv>) {
     .limit(1);
 
   if (!parentTask) {
-    return c.json({ error: "Parent task not found" }, 404);
+    return errorResponse(c, "Parent task not found", 404);
   }
 
   // Verify project access
   const accessResult = await resolveProjectAccess(db, parentTask.projectId, user.id);
 
   if (!accessResult) {
-    return c.json({ error: "Forbidden" }, 403);
+    return errorResponse(c, "Forbidden", 403);
   }
 
   // Viewers cannot delete subtasks
   if (accessResult.role === "viewer") {
-    return c.json({ error: "Forbidden" }, 403);
+    return errorResponse(c, "Forbidden", 403);
   }
 
   await db.delete(subtask).where(eq(subtask.id, subtaskId));
@@ -844,8 +847,8 @@ export async function deleteSubtask(c: Context<AppEnv>) {
 export async function createComment(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { taskId } = c.req.param();
-  const body = c.req.valid("json" as never) as CreateCommentInput;
+  const taskId = requireParam(c, "taskId");
+  const body = validJson(c, createCommentSchema);
 
   const id = crypto.randomUUID();
   const now = new Date();
@@ -923,8 +926,8 @@ export async function createComment(c: Context<AppEnv>) {
 export async function updateComment(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { commentId } = c.req.param();
-  const body = c.req.valid("json" as never) as UpdateCommentInput;
+  const commentId = requireParam(c, "commentId");
+  const body = validJson(c, updateCommentSchema);
 
   // Look up the comment
   const [found] = await db
@@ -934,12 +937,12 @@ export async function updateComment(c: Context<AppEnv>) {
     .limit(1);
 
   if (!found) {
-    return c.json({ error: "Comment not found" }, 404);
+    return errorResponse(c, "Comment not found", 404);
   }
 
   // Only the author can edit their own comment
   if (found.authorId !== user.id) {
-    return c.json({ error: "Forbidden" }, 403);
+    return errorResponse(c, "Forbidden", 403);
   }
 
   // Verify the user still has access to the project
@@ -950,13 +953,13 @@ export async function updateComment(c: Context<AppEnv>) {
     .limit(1);
 
   if (!parentTask) {
-    return c.json({ error: "Parent task not found" }, 404);
+    return errorResponse(c, "Parent task not found", 404);
   }
 
   const accessResult = await resolveProjectAccess(db, parentTask.projectId, user.id);
 
   if (!accessResult) {
-    return c.json({ error: "Forbidden" }, 403);
+    return errorResponse(c, "Forbidden", 403);
   }
 
   const now = new Date();
@@ -984,7 +987,7 @@ export async function updateComment(c: Context<AppEnv>) {
 export async function deleteComment(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { commentId } = c.req.param();
+  const commentId = requireParam(c, "commentId");
 
   // Look up the comment
   const [found] = await db
@@ -994,7 +997,7 @@ export async function deleteComment(c: Context<AppEnv>) {
     .limit(1);
 
   if (!found) {
-    return c.json({ error: "Comment not found" }, 404);
+    return errorResponse(c, "Comment not found", 404);
   }
 
   // Non-authors must be a project admin to delete
@@ -1006,13 +1009,13 @@ export async function deleteComment(c: Context<AppEnv>) {
       .limit(1);
 
     if (!parentTask) {
-      return c.json({ error: "Parent task not found" }, 404);
+      return errorResponse(c, "Parent task not found", 404);
     }
 
     const accessResult = await resolveProjectAccess(db, parentTask.projectId, user.id);
 
     if (!accessResult || accessResult.role !== "admin") {
-      return c.json({ error: "Forbidden" }, 403);
+      return errorResponse(c, "Forbidden", 403);
     }
   }
 
@@ -1038,7 +1041,7 @@ export async function deleteComment(c: Context<AppEnv>) {
 
 export async function listComments(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { taskId } = c.req.param();
+  const taskId = requireParam(c, "taskId");
 
   const { limit, cursor } = parseCursorParams(c, { defaultLimit: 20, maxLimit: 100 });
 
@@ -1082,7 +1085,7 @@ export async function listComments(c: Context<AppEnv>) {
 export async function completeTask(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { taskId } = c.req.param();
+  const taskId = requireParam(c, "taskId");
 
   const [foundTask] = await db
     .select()
@@ -1091,7 +1094,7 @@ export async function completeTask(c: Context<AppEnv>) {
     .limit(1);
 
   if (!foundTask) {
-    return c.json({ error: "Task not found" }, 404);
+    return errorResponse(c, "Task not found", 404);
   }
 
   if (foundTask.completed) {
@@ -1199,7 +1202,7 @@ export async function completeTask(c: Context<AppEnv>) {
 export async function uncompleteTask(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { taskId } = c.req.param();
+  const taskId = requireParam(c, "taskId");
 
   const [foundTask] = await db
     .select()
@@ -1208,7 +1211,7 @@ export async function uncompleteTask(c: Context<AppEnv>) {
     .limit(1);
 
   if (!foundTask) {
-    return c.json({ error: "Task not found" }, 404);
+    return errorResponse(c, "Task not found", 404);
   }
 
   if (!foundTask.completed) {
@@ -1311,7 +1314,7 @@ export async function uncompleteTask(c: Context<AppEnv>) {
 
 export async function getTaskActivity(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { taskId } = c.req.param();
+  const taskId = requireParam(c, "taskId");
 
   const { limit, cursor } = parseCursorParams(c, { defaultLimit: 5, maxLimit: 100 });
 
@@ -1373,7 +1376,7 @@ function taskCoverEntity(c: Context<AppEnv>, taskId: string) {
 }
 
 export async function uploadTaskCover(c: Context<AppEnv>) {
-  const { taskId } = c.req.param();
+  const taskId = requireParam(c, "taskId");
   return handleUploadCover(c, {
     purpose: "task-cover",
     getEntity: taskCoverEntity(c, taskId),
@@ -1387,7 +1390,7 @@ export async function uploadTaskCover(c: Context<AppEnv>) {
 }
 
 export async function deleteTaskCover(c: Context<AppEnv>) {
-  const { taskId } = c.req.param();
+  const taskId = requireParam(c, "taskId");
   return handleDeleteCover(c, {
     purpose: "task-cover",
     entityLabel: "task",

@@ -408,6 +408,28 @@ export function TaskDetailPanelInner({
     }
   }
 
+  async function handleToggleComplete() {
+    if (!task) return;
+    const wasCompleted = task.completed;
+    setLocalTask((prev) => (prev ? { ...prev, completed: !wasCompleted } : prev));
+    updateTaskInContext(taskId, { completed: !wasCompleted });
+    const endpoint = wasCompleted
+      ? `/api/tasks/${taskId}/uncomplete`
+      : `/api/tasks/${taskId}/complete`;
+    try {
+      const res = await api.post<{ task: Task }>(endpoint, {});
+      setLocalTask((prev) => (prev ? { ...prev, ...res.task } : prev));
+      updateTaskInContext(taskId, res.task);
+      void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
+    } catch {
+      setLocalTask((prev) =>
+        prev ? { ...prev, completed: wasCompleted } : prev
+      );
+      updateTaskInContext(taskId, { completed: wasCompleted });
+      toast("Failed to update task", { variant: "error" });
+    }
+  }
+
   return (
     <>
       <div
@@ -429,7 +451,7 @@ export function TaskDetailPanelInner({
             uploading={coverUploading}
             editable={canEditTasks}
             position={task.coverImagePosition}
-            onPositionChange={handleCoverPositionChange}
+            onPositionChange={(pos) => { void handleCoverPositionChange(pos); }}
             roundedTop={false}
           />
         )}
@@ -534,25 +556,7 @@ export function TaskDetailPanelInner({
                   )}
                   disabled={!canEditTasks}
                   onClick={() => {
-                    const wasCompleted = task.completed;
-                    setLocalTask((prev) => (prev ? { ...prev, completed: !wasCompleted } : prev));
-                    updateTaskInContext(taskId, { completed: !wasCompleted });
-                    const endpoint = wasCompleted
-                      ? `/api/tasks/${taskId}/uncomplete`
-                      : `/api/tasks/${taskId}/complete`;
-                    api
-                      .post<{ task: Task }>(endpoint, {})
-                      .then((res) => {
-                        setLocalTask((prev) => (prev ? { ...prev, ...res.task } : prev));
-                        updateTaskInContext(taskId, res.task);
-                      })
-                      .catch(() => {
-                        setLocalTask((prev) =>
-                          prev ? { ...prev, completed: wasCompleted } : prev
-                        );
-                        updateTaskInContext(taskId, { completed: wasCompleted });
-                        toast("Failed to update task", { variant: "error" });
-                      });
+                    void handleToggleComplete();
                   }}
                 >
                   {task.completed ? (

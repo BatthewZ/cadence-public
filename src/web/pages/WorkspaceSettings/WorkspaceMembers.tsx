@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 
 import type { Invitation } from "@/shared/types/invitations";
-import { ROLE_LABELS, type WorkspaceRole } from "@/shared/types/roles";
+import { parseWorkspaceRole, ROLE_LABELS, type WorkspaceRole } from "@/shared/types/roles";
 import { Container, Divider, Row, Stack } from "@/web/components/layout";
 import {
   Badge,
@@ -78,7 +78,7 @@ export default function WorkspaceMembers() {
     canManageWorkspace,
     onChangeRole: (row) => {
       setSelectedMember(row);
-      setNewRole(row.role as WorkspaceRole);
+      setNewRole(parseWorkspaceRole(row.role));
       setRoleDialogOpen(true);
     },
     onRemoveMember: (row) => {

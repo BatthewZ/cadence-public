@@ -4,10 +4,13 @@ import type { Context } from "hono";
 import { user as userTable } from "../../../db/schema/auth";
 import { invitation } from "../../../db/schema/invitation";
 import { workspace, workspaceMember } from "../../../db/schema/workspace";
-import type { AcceptInvitationInput, CreateInvitationInput } from "../../../shared/schemas/invitation";
+import { acceptInvitationSchema, createInvitationSchema } from "../../../shared/schemas/invitation";
 import type { AppEnv } from "../../env";
 import { deferWork } from "../../lib/defer";
+import { errorResponse, throwWithContext } from "../../lib/error-response";
 import { createNotification } from "../../lib/notifications";
+import { requireParam, requireParams } from "../../lib/params";
+import { validJson } from "../../lib/validated";
 import {
   buildInvitationEventData,
   buildMemberEventData,
@@ -21,8 +24,8 @@ import {
 export async function createInvitation(c: Context<AppEnv>) {
   const user = c.get("user")!;
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
-  const body = c.req.valid("json" as never) as CreateInvitationInput;
+  const workspaceId = requireParam(c, "workspaceId");
+  const body = validJson(c, createInvitationSchema);
 
   // Batch: check existing user by email + check existing pending invitation
   // These two lookups are independent (both use body.email / workspaceId).
@@ -62,18 +65,12 @@ export async function createInvitation(c: Context<AppEnv>) {
       .limit(1);
 
     if (existingMember) {
-      return c.json(
-        { error: "User is already a member of this workspace" },
-        400,
-      );
+      return errorResponse(c, "User is already a member of this workspace", 400);
     }
   }
 
   if (existingInvitation) {
-    return c.json(
-      { error: "A pending invitation already exists for this email" },
-      400,
-    );
+    return errorResponse(c, "A pending invitation already exists for this email", 400);
   }
 
   const id = crypto.randomUUID();
@@ -132,7 +129,7 @@ export async function createInvitation(c: Context<AppEnv>) {
 
 export async function listInvitations(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
+  const workspaceId = requireParam(c, "workspaceId");
 
   const invitations = await db
     .select()
@@ -153,7 +150,7 @@ export async function listInvitations(c: Context<AppEnv>) {
 
 export async function revokeInvitation(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId, id } = c.req.param();
+  const { workspaceId, id } = requireParams(c, "workspaceId", "id");
 
   const [existing] = await db
     .select()
@@ -167,7 +164,7 @@ export async function revokeInvitation(c: Context<AppEnv>) {
     .limit(1);
 
   if (!existing) {
-    return c.json({ error: "Invitation not found" }, 404);
+    return errorResponse(c, "Invitation not found", 404);
   }
 
   await db
@@ -240,7 +237,7 @@ export async function listMyPendingInvitations(c: Context<AppEnv>) {
 
 export async function getInvitation(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { token } = c.req.param();
+  const token = requireParam(c, "token");
 
   const [inv] = await db
     .select()
@@ -249,15 +246,15 @@ export async function getInvitation(c: Context<AppEnv>) {
     .limit(1);
 
   if (!inv) {
-    return c.json({ error: "Invitation not found" }, 404);
+    return errorResponse(c, "Invitation not found", 404);
   }
 
   if (inv.status !== "pending") {
-    return c.json({ error: `Invitation is ${inv.status}` }, 400);
+    return errorResponse(c, `Invitation is ${inv.status}`, 400);
   }
 
   if (inv.expiresAt < new Date()) {
-    return c.json({ error: "Invitation has expired" }, 400);
+    return errorResponse(c, "Invitation has expired", 400);
   }
 
   // Batch workspace + inviter lookups (both independent, both only need IDs from inv)
@@ -309,7 +306,7 @@ export async function getInvitation(c: Context<AppEnv>) {
 export async function acceptInvitation(c: Context<AppEnv>) {
   const user = c.get("user")!;
   const db = c.get("db");
-  const body = c.req.valid("json" as never) as AcceptInvitationInput;
+  const body = validJson(c, acceptInvitationSchema);
 
   const [inv] = await db
     .select()
@@ -318,20 +315,20 @@ export async function acceptInvitation(c: Context<AppEnv>) {
     .limit(1);
 
   if (!inv) {
-    return c.json({ error: "Invitation not found" }, 404);
+    return errorResponse(c, "Invitation not found", 404);
   }
 
   if (inv.status !== "pending") {
-    return c.json({ error: `Invitation is ${inv.status}` }, 409);
+    return errorResponse(c, `Invitation is ${inv.status}`, 409);
   }
 
   if (inv.expiresAt < new Date()) {
-    return c.json({ error: "Invitation has expired" }, 400);
+    return errorResponse(c, "Invitation has expired", 400);
   }
 
   // Verify the accepting user's email matches the invitation
   if (inv.email.toLowerCase() !== user.email.toLowerCase()) {
-    return c.json({ error: "This invitation was sent to a different email address" }, 403);
+    return errorResponse(c, "This invitation was sent to a different email address", 403);
   }
 
   // Check if user is already a workspace member
@@ -347,10 +344,7 @@ export async function acceptInvitation(c: Context<AppEnv>) {
     .limit(1);
 
   if (existingMember) {
-    return c.json(
-      { error: "You are already a member of this workspace" },
-      400,
-    );
+    return errorResponse(c, "You are already a member of this workspace", 400);
   }
 
   const now = new Date();
@@ -380,7 +374,7 @@ export async function acceptInvitation(c: Context<AppEnv>) {
       .catch((cleanupErr) =>
         console.error("Failed to clean up orphaned workspace member after invitation status update failure:", cleanupErr),
       );
-    throw error;
+    throwWithContext(error, "acceptInvitation");
   }
 
   // Non-blocking webhook dispatch for invitation.accepted and workspace.member_joined

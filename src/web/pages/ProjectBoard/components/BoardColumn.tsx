@@ -185,6 +185,17 @@ export function SortableColumn({
     }
   };
 
+  const handleToggleCompletionGroup = async () => {
+    const newValue = !group.isCompletionGroup;
+    updateTaskGroup(group.id, { isCompletionGroup: newValue });
+    try {
+      await api.patch(`/api/task-groups/${group.id}`, { isCompletionGroup: newValue });
+    } catch {
+      updateTaskGroup(group.id, { isCompletionGroup: !newValue });
+      toast("Failed to update section", { variant: "error" });
+    }
+  };
+
   return (
     <>
       <div
@@ -305,16 +316,7 @@ export function SortableColumn({
                 <DropdownMenu.Item
                   index={2}
                   icon={<CircleCheckBig size={14} />}
-                  onSelect={() => {
-                    const newValue = !group.isCompletionGroup;
-                    updateTaskGroup(group.id, { isCompletionGroup: newValue });
-                    void api
-                      .patch(`/api/task-groups/${group.id}`, { isCompletionGroup: newValue })
-                      .catch(() => {
-                        updateTaskGroup(group.id, { isCompletionGroup: !newValue });
-                        toast("Failed to update section", { variant: "error" });
-                      });
-                  }}
+                  onSelect={() => { void handleToggleCompletionGroup(); }}
                 >
                   {group.isCompletionGroup ? "Unmark as done column" : "Set as done column"}
                 </DropdownMenu.Item>

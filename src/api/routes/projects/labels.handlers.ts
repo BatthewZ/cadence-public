@@ -2,14 +2,17 @@ import { and, count, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 
 import { label, taskLabel } from "../../../db/schema/label";
-import type { CreateLabelInput, UpdateLabelInput } from "../../../shared/schemas/label";
+import { createLabelSchema, updateLabelSchema } from "../../../shared/schemas/label";
 import { MAX_LABELS_PER_PROJECT } from "../../../shared/schemas/label";
 import type { AppEnv } from "../../env";
+import { errorResponse } from "../../lib/error-response";
+import { requireParam, requireParams } from "../../lib/params";
+import { validJson } from "../../lib/validated";
 
 export async function createLabel(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { projectId } = c.req.param();
-  const body = c.req.valid("json" as never) as CreateLabelInput;
+  const projectId = requireParam(c, "projectId");
+  const body = validJson(c, createLabelSchema);
 
   // Batch label count + name uniqueness check in a single round-trip
   const [countResult, duplicateResult] = await db.batch([
@@ -28,14 +31,11 @@ export async function createLabel(c: Context<AppEnv>) {
   ] as const);
 
   if (countResult[0].value >= MAX_LABELS_PER_PROJECT) {
-    return c.json(
-      { error: `Maximum of ${MAX_LABELS_PER_PROJECT} labels per project reached` },
-      400,
-    );
+    return errorResponse(c, `Maximum of ${MAX_LABELS_PER_PROJECT} labels per project reached`, 400);
   }
 
   if (duplicateResult[0]) {
-    return c.json({ error: "A label with this name already exists in the project" }, 409);
+    return errorResponse(c, "A label with this name already exists in the project", 409);
   }
 
   const id = crypto.randomUUID();
@@ -56,7 +56,7 @@ export async function createLabel(c: Context<AppEnv>) {
 
 export async function listLabels(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { projectId } = c.req.param();
+  const projectId = requireParam(c, "projectId");
 
   const labels = await db
     .select({
@@ -81,8 +81,8 @@ export async function listLabels(c: Context<AppEnv>) {
 
 export async function updateLabel(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { projectId, labelId } = c.req.param();
-  const body = c.req.valid("json" as never) as UpdateLabelInput;
+  const { projectId, labelId } = requireParams(c, "projectId", "labelId");
+  const body = validJson(c, updateLabelSchema);
 
   // Batch label existence + name uniqueness check in a single round-trip
   const [existingResult, duplicateResult] = await db.batch([
@@ -103,12 +103,12 @@ export async function updateLabel(c: Context<AppEnv>) {
 
   const existing = existingResult[0];
   if (!existing) {
-    return c.json({ error: "Label not found" }, 404);
+    return errorResponse(c, "Label not found", 404);
   }
 
   // Only flag as duplicate if the name actually changed (case-insensitive)
   if (body.name && body.name.toLowerCase() !== existing.name.toLowerCase() && duplicateResult[0]) {
-    return c.json({ error: "A label with this name already exists in the project" }, 409);
+    return errorResponse(c, "A label with this name already exists in the project", 409);
   }
 
   const updates: Record<string, unknown> = {};
@@ -130,7 +130,7 @@ export async function updateLabel(c: Context<AppEnv>) {
 
 export async function deleteLabel(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { projectId, labelId } = c.req.param();
+  const { projectId, labelId } = requireParams(c, "projectId", "labelId");
 
   // CASCADE removes all taskLabel references.
   // .returning() lets us detect non-existence (404) in the same round-trip.
@@ -140,7 +140,7 @@ export async function deleteLabel(c: Context<AppEnv>) {
     .returning({ id: label.id });
 
   if (!deleted) {
-    return c.json({ error: "Label not found" }, 404);
+    return errorResponse(c, "Label not found", 404);
   }
 
   return c.json({ ok: true, deletedId: labelId });

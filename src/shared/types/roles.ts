@@ -32,3 +32,24 @@ export const ROLE_LABELS: Record<string, string> = {
   viewer: "Viewer",
   lead: "Lead",
 };
+
+export function parseWorkspaceRole(value: string): WorkspaceRole {
+  if (!WORKSPACE_ROLES.includes(value as WorkspaceRole)) {
+    throw new Error(`Invalid workspace role: ${value}`);
+  }
+  return value as WorkspaceRole;
+}
+
+export function parseProjectRole(value: string): ProjectRole {
+  if (!PROJECT_ROLES.includes(value as ProjectRole)) {
+    throw new Error(`Invalid project role: ${value}`);
+  }
+  return value as ProjectRole;
+}
+
+export function parseTeamRole(value: string): TeamRole {
+  if (!TEAM_ROLES.includes(value as TeamRole)) {
+    throw new Error(`Invalid team role: ${value}`);
+  }
+  return value as TeamRole;
+}

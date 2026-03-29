@@ -128,7 +128,7 @@ function ProjectLayoutInner() {
   const [titleValue, setTitleValue] = useState("");
   const titleDirty = useRef(false);
 
-  const handleTitleSave = useCallback(() => {
+  const handleTitleSave = useCallback(async () => {
     if (!titleDirty.current) return;
     setEditingTitle(false);
     titleDirty.current = false;
@@ -142,11 +142,13 @@ function ProjectLayoutInner() {
           ? { projects: old.projects.map((p) => (p.id === project.id ? { ...p, name: trimmed } : p)) }
           : old,
       );
-      void api.patch(`/api/projects/${project.id}`, { name: trimmed }).catch(() => {
+      try {
+        await api.patch(`/api/projects/${project.id}`, { name: trimmed });
+      } catch {
         toast("Failed to update project name.", { variant: "error" });
         refetch();
         void qc.invalidateQueries({ queryKey: wpKey });
-      });
+      }
     }
   }, [titleValue, project.name, project.id, project.workspaceId, updateProject, qc, toast, refetch]);
 
@@ -154,7 +156,7 @@ function ProjectLayoutInner() {
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
 
   const handleIconChange = useCallback(
-    (newIcon: string | null) => {
+    async (newIcon: string | null) => {
       setIconPickerOpen(false);
       updateProject({ icon: newIcon });
       // Also optimistically update the workspace projects cache (drives sidebar)
@@ -164,11 +166,13 @@ function ProjectLayoutInner() {
           ? { projects: old.projects.map((p) => (p.id === project.id ? { ...p, icon: newIcon } : p)) }
           : old,
       );
-      void api.patch(`/api/projects/${project.id}`, { icon: newIcon }).catch(() => {
+      try {
+        await api.patch(`/api/projects/${project.id}`, { icon: newIcon });
+      } catch {
         toast("Failed to update icon.", { variant: "error" });
         refetch();
         void qc.invalidateQueries({ queryKey: wpKey });
-      });
+      }
     },
     [project.id, project.workspaceId, updateProject, qc, toast, refetch]
   );
@@ -199,7 +203,7 @@ function ProjectLayoutInner() {
       <CoverImage
         coverUrl={coverUrl}
         onUpload={handleCoverUpload}
-        onRemove={handleCoverRemove}
+        onRemove={() => { void handleCoverRemove(); }}
         uploading={uploading}
         editable={isProjectAdmin}
         position={project.coverImagePosition}
@@ -237,7 +241,7 @@ function ProjectLayoutInner() {
                   <IconPicker
                     value={project.icon ?? null}
                     onChange={(newIcon) => {
-                      handleIconChange(newIcon);
+                      void handleIconChange(newIcon);
                       if (newIcon !== null) {
                         setIconPickerOpen(false);
                       }
@@ -250,7 +254,7 @@ function ProjectLayoutInner() {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        handleIconChange(null);
+                        void handleIconChange(null);
                         setIconPickerOpen(false);
                       }}
                     >
@@ -279,9 +283,9 @@ function ProjectLayoutInner() {
               value={titleValue}
               onChange={(e) => setTitleValue(e.target.value)}
               onFocus={() => { titleDirty.current = true; }}
-              onBlur={() => { handleTitleSave(); }}
+              onBlur={() => { void handleTitleSave(); }}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleTitleSave();
+                if (e.key === "Enter") void handleTitleSave();
                 if (e.key === "Escape") { setEditingTitle(false); titleDirty.current = false; }
               }}
               className="text-h3 font-bold bg-transparent px-r6 py-0 rounded border-none"

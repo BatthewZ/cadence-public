@@ -55,6 +55,7 @@ General-purpose interactive and display primitives.
 | [Toast](toast.md)                  | Toast notifications via `ToastContext` with optional action buttons |
 | [ThemeSwitcher](theme-switcher.md) | Theme toggle component                                 |
 | [ErrorBoundary](error-boundary.md) | React error boundary with fallback                     |
+| QueryErrorRetry                    | Standardized error + retry UI for failed query states  |
 | [Portal](portal.md)               | Renders children into a DOM node via `createPortal`    |
 | [FileUpload](file-upload.md)      | Drag-and-drop file upload dropzone                     |
 | [AvatarUpload](avatar-upload.md)  | Circular avatar upload with optimistic preview         |

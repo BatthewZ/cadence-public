@@ -980,7 +980,7 @@ A family of React Query hooks for project label CRUD and task-label assignment. 
 | Hook | Params | Description |
 | --- | --- | --- |
 | `useLabels(projectId, options?)` | `projectId: string`, `options?: { enabled?: boolean }` | Fetches all labels for a project via `GET /api/projects/:projectId/labels`. Returns `{ labels: Label[] }` (each label includes `taskCount`). |
-| `useCreateLabel(projectId)` | `projectId: string` | Creates a label. Mutation input: `{ name: string; color: string }`. |
+| `useCreateLabel(projectId)` | `projectId: string` | Creates a label. Mutation input: `{ name: string; color: string }`. Also invalidates the tasks list (since tasks embed label info). |
 | `useUpdateLabel(projectId)` | `projectId: string` | Updates a label. Mutation input: `{ labelId: string; name?: string; color?: string }`. Optimistic update on the labels list. |
 | `useDeleteLabel(projectId)` | `projectId: string` | Deletes a label. Optimistic removal from the labels list. Also invalidates the tasks list (since tasks embed label info). |
 | `useAssignLabel(taskId, projectId)` | `taskId: string, projectId: string` | Assigns a label to a task. Mutation input: `labelId: string`. Optimistic update on task detail, task list, and label `taskCount`; rolls back on error. |
@@ -1218,7 +1218,7 @@ Encapsulates cover image upload, removal, and position-change logic for a task's
 | `coverUploading` | `boolean` | Whether a cover upload is in progress. |
 | `handleCoverUpload` | `(file: File) => Promise<void>` | Upload a new cover image. |
 | `handleCoverRemove` | `() => Promise<void>` | Optimistically remove the cover image with rollback on failure. |
-| `handleCoverPositionChange` | `(pos: number) => void` | Update the cover image vertical focal-point position. |
+| `handleCoverPositionChange` | `(pos: number) => Promise<void>` | Update the cover image vertical focal-point position. |
 
 ### Usage
 

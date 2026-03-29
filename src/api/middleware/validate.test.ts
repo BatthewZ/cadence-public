@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
+import { validJson, validQuery } from "../lib/validated";
 import { validateBody, validateQuery } from "./validate";
 
 interface ValidationErrorBody {
@@ -42,22 +43,22 @@ function createApp() {
   });
 
   app.post("/body", validateBody(bodySchema), (c) => {
-    const data = c.req.valid("json" as never);
+    const data = validJson(c, bodySchema);
     return c.json({ ok: true, data });
   });
 
   app.post("/nested", validateBody(nestedSchema), (c) => {
-    const data = c.req.valid("json" as never);
+    const data = validJson(c, nestedSchema);
     return c.json({ ok: true, data });
   });
 
   app.get("/query", validateQuery(querySchema), (c) => {
-    const data = c.req.valid("query" as never);
+    const data = validQuery(c, querySchema);
     return c.json({ ok: true, data });
   });
 
   app.get("/coerce", validateQuery(coerceSchema), (c) => {
-    const data = c.req.valid("query" as never);
+    const data = validQuery(c, coerceSchema);
     return c.json({ ok: true, data });
   });
 

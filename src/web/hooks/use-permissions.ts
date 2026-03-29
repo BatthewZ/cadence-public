@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 
 import type { ProjectRole, WorkspaceRole } from "@/shared/types/roles";
+import { parseProjectRole, parseWorkspaceRole } from "@/shared/types/roles";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useSession } from "@/web/lib/auth/auth-client";
 
@@ -47,7 +48,7 @@ export function useWorkspacePermissions(): WorkspacePermissions {
     const membership = userId
       ? members.find((m) => m.userId === userId)
       : undefined;
-    const role = (membership?.role ?? null) as WorkspaceRole | null;
+    const role = membership?.role ? parseWorkspaceRole(membership.role) : null;
 
     return {
       workspaceRole: role,
@@ -84,7 +85,7 @@ export function useProjectPermissions(
     if (wsPerms.isWorkspaceAdmin) {
       return {
         ...wsPerms,
-        projectRole: "admin" as ProjectRole,
+        projectRole: "admin" satisfies ProjectRole,
         isProjectAdmin: true,
         canEditTasks: true,
         canViewProject: true,
@@ -107,7 +108,7 @@ export function useProjectPermissions(
     const projectMembership = userId
       ? projectMembers.find((m) => m.userId === userId)
       : undefined;
-    const projectRole = (projectMembership?.role ?? null) as ProjectRole | null;
+    const projectRole = projectMembership?.role ? parseProjectRole(projectMembership.role) : null;
 
     return {
       ...wsPerms,

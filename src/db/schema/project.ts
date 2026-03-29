@@ -6,6 +6,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import type { ProjectRole } from "../../shared/types/roles";
 import { user } from "./auth";
 import { workspace } from "./workspace";
 
@@ -40,7 +41,7 @@ export const projectMember = sqliteTable(
     userId: text("userId")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    role: text("role").notNull().default("member"),
+    role: text("role").notNull().default("member").$type<ProjectRole>(),
     addedAt: integer("addedAt", { mode: "timestamp" }).notNull(),
   },
   (table) => [

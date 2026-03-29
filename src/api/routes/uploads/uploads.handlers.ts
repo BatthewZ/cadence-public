@@ -5,12 +5,14 @@ import { user as userTable } from "../../../db/schema/auth";
 import { upload } from "../../../db/schema/uploads";
 import { ALLOWED_IMAGE_TYPES, MAX_AVATAR_SIZE } from "../../../shared/schemas/upload";
 import type { AppEnv } from "../../env";
+import { errorResponse } from "../../lib/error-response";
 import { detectMimeType } from "../../lib/mime-detect";
+import { requireParam, requireParams } from "../../lib/params";
 import { deleteObject, generateObjectKey, getObject, putObject } from "../../lib/storage";
 
 export async function uploadAvatar(c: Context<AppEnv>) {
   const storage = c.env.STORAGE;
-  if (!storage) return c.json({ error: "File storage is not configured" }, 503);
+  if (!storage) return errorResponse(c, "File storage is not configured", 503);
 
   const user = c.get("user")!;
 
@@ -18,18 +20,15 @@ export async function uploadAvatar(c: Context<AppEnv>) {
   const file = formData["file"];
 
   if (!(file instanceof File)) {
-    return c.json({ error: "No file provided" }, 400);
+    return errorResponse(c, "No file provided", 400);
   }
 
   if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(file.type)) {
-    return c.json(
-      { error: "Invalid file type. Allowed: JPEG, PNG, GIF, WebP" },
-      400,
-    );
+    return errorResponse(c, "Invalid file type. Allowed: JPEG, PNG, GIF, WebP", 400);
   }
 
   if (file.size > MAX_AVATAR_SIZE) {
-    return c.json({ error: "File too large. Maximum size is 2MB" }, 400);
+    return errorResponse(c, "File too large. Maximum size is 2MB", 400);
   }
 
   const db = c.get("db");
@@ -48,10 +47,7 @@ export async function uploadAvatar(c: Context<AppEnv>) {
   // Validate file content against magic bytes — don't trust client-provided MIME type
   const detectedMime = detectMimeType(arrayBuffer, file.type);
   if (!detectedMime) {
-    return c.json(
-      { error: "File content does not match its declared type" },
-      400,
-    );
+    return errorResponse(c, "File content does not match its declared type", 400);
   }
 
   const verifiedMimeType = detectedMime;
@@ -63,7 +59,7 @@ export async function uploadAvatar(c: Context<AppEnv>) {
     });
   } catch (error) {
     console.error("Failed to upload file to R2:", error);
-    return c.json({ error: "Failed to upload file" }, 500);
+    return errorResponse(c, "Failed to upload file", 500);
   }
 
   const id = crypto.randomUUID();
@@ -95,7 +91,7 @@ export async function uploadAvatar(c: Context<AppEnv>) {
     await deleteObject(storage, key).catch((err) => console.error("Failed to clean up orphaned avatar R2 object:", err));
     await db.delete(upload).where(eq(upload.id, id)).catch((err) => console.error("Failed to clean up orphaned avatar upload record:", err));
     console.error("Failed to save upload record:", error);
-    return c.json({ error: "Failed to save upload" }, 500);
+    return errorResponse(c, "Failed to save upload", 500);
   }
 
   // Clean up old avatar AFTER new one is fully saved
@@ -117,14 +113,14 @@ export async function uploadAvatar(c: Context<AppEnv>) {
 
 export async function serveUpload(c: Context<AppEnv>) {
   const storage = c.env.STORAGE;
-  if (!storage) return c.json({ error: "File storage is not configured" }, 503);
+  if (!storage) return errorResponse(c, "File storage is not configured", 503);
 
-  const { purpose, userId, filename } = c.req.param();
+  const { purpose, userId, filename } = requireParams(c, "purpose", "userId", "filename");
   const key = `${purpose}/${userId}/${filename}`;
 
   const object = await getObject(storage, key);
   if (!object) {
-    return c.json({ error: "File not found" }, 404);
+    return errorResponse(c, "File not found", 404);
   }
 
   c.header("Cache-Control", "public, max-age=31536000, immutable");
@@ -145,10 +141,10 @@ export async function serveUpload(c: Context<AppEnv>) {
 
 export async function deleteUpload(c: Context<AppEnv>) {
   const storage = c.env.STORAGE;
-  if (!storage) return c.json({ error: "File storage is not configured" }, 503);
+  if (!storage) return errorResponse(c, "File storage is not configured", 503);
 
   const user = c.get("user")!;
-  const { id } = c.req.param();
+  const id = requireParam(c, "id");
   const db = c.get("db");
 
   // Batch the lookup and ownership-scoped delete in a single DB round-trip.
@@ -161,11 +157,11 @@ export async function deleteUpload(c: Context<AppEnv>) {
   const record = selectResult[0];
 
   if (!record) {
-    return c.json({ error: "Upload not found" }, 404);
+    return errorResponse(c, "Upload not found", 404);
   }
 
   if (record.userId !== user.id) {
-    return c.json({ error: "Forbidden" }, 403);
+    return errorResponse(c, "Forbidden", 403);
   }
 
   await deleteObject(storage, record.key).catch((err) => {

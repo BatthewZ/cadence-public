@@ -23,6 +23,7 @@ export { Pagination } from "./Pagination";
 export { Popover } from "./Popover";
 export { Portal } from "./Portal";
 export { ProgressBar } from "./ProgressBar";
+export { QueryErrorRetry } from "./QueryErrorRetry";
 export { CommentSkeletonList, Skeleton } from "./Skeleton";
 export { Spinner } from "./Spinner";
 export { Spotlight } from "./Spotlight";

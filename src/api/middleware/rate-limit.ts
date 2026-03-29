@@ -1,6 +1,7 @@
 import type { Context, MiddlewareHandler } from "hono";
 
 import type { AppEnv } from "../env";
+import { errorResponse } from "../lib/error-response";
 
 type RateLimitOptions = {
   /** Maximum requests allowed in the window */
@@ -64,7 +65,7 @@ export function rateLimit(
         const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
         c.header("Retry-After", String(retryAfter));
         setRateLimitHeaders(c, max, 0, entry.resetAt);
-        return c.json({ error: "Too many requests", retryAfter }, 429);
+        return errorResponse(c, "Too many requests", 429, { retryAfter });
       }
       entry.count++;
       setRateLimitHeaders(c, max, max - entry.count, entry.resetAt);

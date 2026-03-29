@@ -322,12 +322,14 @@ export function TaskDetailDialog({
 
   // Cover image position handler (needs patchTask declared above)
   const handleCoverPositionChange = useCallback(
-    (pos: number) => {
+    async (pos: number) => {
       setLocalTask((prev) => (prev ? { ...prev, coverImagePosition: pos } : prev));
-      void patchTask.mutateAsync({ coverImagePosition: pos }).catch(() => {
+      try {
+        await patchTask.mutateAsync({ coverImagePosition: pos });
+      } catch {
         toast("Failed to update cover position", { variant: "error" });
         void refetch();
-      });
+      }
     },
     [patchTask, toast, refetch]
   );
@@ -707,7 +709,7 @@ export function TaskDetailDialog({
                 uploading={coverUploading}
                 editable={canEditTasks}
                 position={task.coverImagePosition}
-                onPositionChange={handleCoverPositionChange}
+                onPositionChange={(pos) => { void handleCoverPositionChange(pos); }}
               />
 
               <Stack gap="r4" className="p-r3">

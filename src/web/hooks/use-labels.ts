@@ -32,6 +32,9 @@ export function useCreateLabel(projectId: string) {
       void qc.invalidateQueries({
         queryKey: queryKeys.projects.labels(projectId),
       });
+      void qc.invalidateQueries({
+        queryKey: queryKeys.projects.tasks(projectId),
+      });
     },
   });
 }

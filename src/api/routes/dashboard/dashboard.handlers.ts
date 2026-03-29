@@ -11,6 +11,7 @@ import {
   parseCompoundCursor,
   parseCursorParams,
 } from "../../lib/pagination";
+import { requireParam } from "../../lib/params";
 
 /** Sentinel Unix timestamp (seconds) to push tasks without a due date to the end of the list. */
 const DUE_DATE_SENTINEL = 253402300799; // 9999-12-31T23:59:59Z
@@ -80,7 +81,7 @@ function getPeriodCutoff(period: string): Date | null {
  */
 export async function workspaceDashboard(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
+  const workspaceId = requireParam(c, "workspaceId");
   const user = c.get("user")!;
   const membership = c.get("workspaceMembership")!;
   const isElevated = membership.role === "owner" || membership.role === "admin";
@@ -320,7 +321,7 @@ export async function workspaceDashboard(c: Context<AppEnv>) {
  */
 export async function myTasks(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
+  const workspaceId = requireParam(c, "workspaceId");
   const user = c.get("user")!;
   const period = c.req.query("period");
 
@@ -393,7 +394,7 @@ export async function myTasks(c: Context<AppEnv>) {
  */
 export async function upcomingTasks(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
+  const workspaceId = requireParam(c, "workspaceId");
   const user = c.get("user")!;
   const membership = c.get("workspaceMembership")!;
   const isElevated = membership.role === "owner" || membership.role === "admin";
@@ -483,7 +484,7 @@ export async function upcomingTasks(c: Context<AppEnv>) {
  */
 export async function projectDashboard(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { projectId } = c.req.param();
+  const projectId = requireParam(c, "projectId");
 
   const now = new Date();
   const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -650,7 +651,7 @@ export async function projectDashboard(c: Context<AppEnv>) {
  */
 export async function projectActivity(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { projectId } = c.req.param();
+  const projectId = requireParam(c, "projectId");
 
   const { limit, cursor } = parseCursorParams(c, { defaultLimit: 15, maxLimit: 50 });
 
@@ -702,7 +703,7 @@ export async function projectActivity(c: Context<AppEnv>) {
  */
 export async function workspaceActivity(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
+  const workspaceId = requireParam(c, "workspaceId");
   const user = c.get("user")!;
   const membership = c.get("workspaceMembership")!;
   const isElevated = membership.role === "owner" || membership.role === "admin";

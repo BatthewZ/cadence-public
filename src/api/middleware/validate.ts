@@ -2,12 +2,19 @@ import { zValidator } from "@hono/zod-validator";
 import type { Context } from "hono";
 import type { ZodSchema } from "zod";
 
+/**
+ * Validation hook for zValidator.
+ *
+ * Note: we inline c.json() instead of using errorResponse() because
+ * zValidator provides a generic Context<Env> that is incompatible with
+ * our Context<AppEnv>-typed errorResponse helper.
+ */
 function validationHook(
   result: {
     success: boolean;
     error?: { issues: { path: (string | number)[]; message: string }[] };
   },
-  c: Context
+  c: Context,
 ) {
   if (!result.success) {
     return c.json(
@@ -18,7 +25,7 @@ function validationHook(
           message: i.message,
         })),
       },
-      400
+      400,
     );
   }
 }

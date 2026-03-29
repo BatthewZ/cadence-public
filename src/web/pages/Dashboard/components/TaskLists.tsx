@@ -8,6 +8,7 @@ import {
   EmptyState,
   EmptyStateDescription,
   EmptyStateTitle,
+  QueryErrorRetry,
   Skeleton,
   Text,
 } from "@/web/components/ui";
@@ -76,6 +77,7 @@ function TimeGroupedTaskList({ onTaskClick }: { onTaskClick: (taskId: string) =>
     data,
     isLoading: loading,
     error,
+    refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -113,9 +115,7 @@ function TimeGroupedTaskList({ onTaskClick }: { onTaskClick: (taskId: string) =>
 
   if (error) {
     return (
-      <Text variant="body-2" color="secondary">
-        Failed to load upcoming tasks.
-      </Text>
+      <QueryErrorRetry message="Failed to load upcoming tasks." onRetry={refetch} />
     );
   }
 
@@ -212,7 +212,7 @@ const MY_TASKS_PREVIEW_LIMIT = 5;
 
 function MyTasksPreview({ onTaskClick }: { onTaskClick: (taskId: string) => void }) {
   const { workspace } = useWorkspace();
-  const { data, isLoading: loading, error } = useQuery({
+  const { data, isLoading: loading, error, refetch } = useQuery({
     queryKey: queryKeys.workspaces.dashboardMyTasksPreview(workspace.id),
     queryFn: () => api.get<MyTasksResponse>(`/api/workspaces/${workspace.id}/dashboard/my-tasks`),
   });
@@ -234,9 +234,7 @@ function MyTasksPreview({ onTaskClick }: { onTaskClick: (taskId: string) => void
 
   if (error) {
     return (
-      <Text variant="body-2" color="secondary">
-        Failed to load tasks.
-      </Text>
+      <QueryErrorRetry message="Failed to load tasks." onRetry={refetch} />
     );
   }
 

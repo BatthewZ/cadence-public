@@ -2,8 +2,11 @@ import { and,desc, eq } from "drizzle-orm";
 import type { Context } from "hono";
 
 import { webhook, webhookDelivery } from "../../../db/schema/webhook";
-import type { CreateWebhookInput, UpdateWebhookInput } from "../../../shared/schemas/webhook";
+import { createWebhookSchema, updateWebhookSchema } from "../../../shared/schemas/webhook";
 import type { AppEnv } from "../../env";
+import { errorResponse } from "../../lib/error-response";
+import { requireParam, requireParams } from "../../lib/params";
+import { validJson } from "../../lib/validated";
 import {
   deliverWebhook,
   generateWebhookSecret,
@@ -43,13 +46,13 @@ function omitSecret<T extends Record<string, unknown> & { secret: string }>(
 
 export async function createWebhook(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
-  const body = c.req.valid("json" as never) as CreateWebhookInput;
+  const workspaceId = requireParam(c, "workspaceId");
+  const body = validJson(c, createWebhookSchema);
 
   // Validate the target URL against SSRF rules (relaxed in dev mode for localhost testing)
   const urlValidation = validateWebhookUrl(body.url, { allowInsecure: isDevMode(c) });
   if (!urlValidation.valid) {
-    return c.json({ error: urlValidation.error }, 400);
+    return errorResponse(c, urlValidation.error, 400);
   }
 
   // Enforce per-workspace webhook limit
@@ -59,10 +62,7 @@ export async function createWebhook(c: Context<AppEnv>) {
     .where(eq(webhook.workspaceId, workspaceId));
 
   if (existing.length >= MAX_WEBHOOKS_PER_WORKSPACE) {
-    return c.json(
-      { error: `Maximum of ${MAX_WEBHOOKS_PER_WORKSPACE} webhooks per workspace exceeded` },
-      409,
-    );
+    return errorResponse(c, `Maximum of ${MAX_WEBHOOKS_PER_WORKSPACE} webhooks per workspace exceeded`, 409);
   }
 
   const id = crypto.randomUUID();
@@ -95,7 +95,7 @@ export async function createWebhook(c: Context<AppEnv>) {
 
 export async function listWebhooks(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
+  const workspaceId = requireParam(c, "workspaceId");
 
   const rows = await db
     .select()
@@ -111,7 +111,7 @@ export async function listWebhooks(c: Context<AppEnv>) {
 
 export async function getWebhook(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId, webhookId } = c.req.param();
+  const { workspaceId, webhookId } = requireParams(c, "workspaceId", "webhookId");
 
   // Fetch webhook and recent deliveries in a single DB round-trip.
   // The two queries are independent so we batch them to cut latency.
@@ -137,7 +137,7 @@ export async function getWebhook(c: Context<AppEnv>) {
   const row = webhookRows[0];
 
   if (!row) {
-    return c.json({ error: "Webhook not found" }, 404);
+    return errorResponse(c, "Webhook not found", 404);
   }
 
   return c.json({ webhook: omitSecret(row), deliveries });
@@ -149,8 +149,8 @@ export async function getWebhook(c: Context<AppEnv>) {
 
 export async function updateWebhook(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId, webhookId } = c.req.param();
-  const body = c.req.valid("json" as never) as UpdateWebhookInput;
+  const { workspaceId, webhookId } = requireParams(c, "workspaceId", "webhookId");
+  const body = validJson(c, updateWebhookSchema);
 
   const [existing] = await db
     .select()
@@ -164,14 +164,14 @@ export async function updateWebhook(c: Context<AppEnv>) {
     .limit(1);
 
   if (!existing) {
-    return c.json({ error: "Webhook not found" }, 404);
+    return errorResponse(c, "Webhook not found", 404);
   }
 
   // If URL is being changed, re-validate it
   if (body.url !== undefined && body.url !== existing.url) {
     const urlValidation = validateWebhookUrl(body.url, { allowInsecure: isDevMode(c) });
     if (!urlValidation.valid) {
-      return c.json({ error: urlValidation.error }, 400);
+      return errorResponse(c, urlValidation.error, 400);
     }
   }
 
@@ -222,7 +222,7 @@ export async function updateWebhook(c: Context<AppEnv>) {
 
 export async function deleteWebhook(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId, webhookId } = c.req.param();
+  const { workspaceId, webhookId } = requireParams(c, "workspaceId", "webhookId");
 
   const [existing] = await db
     .select({ id: webhook.id })
@@ -236,7 +236,7 @@ export async function deleteWebhook(c: Context<AppEnv>) {
     .limit(1);
 
   if (!existing) {
-    return c.json({ error: "Webhook not found" }, 404);
+    return errorResponse(c, "Webhook not found", 404);
   }
 
   // Cascade delete handles associated webhook_delivery rows
@@ -251,7 +251,7 @@ export async function deleteWebhook(c: Context<AppEnv>) {
 
 export async function testWebhook(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId, webhookId } = c.req.param();
+  const { workspaceId, webhookId } = requireParams(c, "workspaceId", "webhookId");
 
   const [row] = await db
     .select()
@@ -265,7 +265,7 @@ export async function testWebhook(c: Context<AppEnv>) {
     .limit(1);
 
   if (!row) {
-    return c.json({ error: "Webhook not found" }, 404);
+    return errorResponse(c, "Webhook not found", 404);
   }
 
   const deliveryId = crypto.randomUUID();

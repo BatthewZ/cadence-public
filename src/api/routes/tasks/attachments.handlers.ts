@@ -11,39 +11,36 @@ import {
 } from "../../../shared/schemas/attachment";
 import type { AppEnv } from "../../env";
 import { deferWork } from "../../lib/defer";
+import { errorResponse } from "../../lib/error-response";
 import { detectMimeType } from "../../lib/mime-detect";
+import { requireParam, requireParams } from "../../lib/params";
 import { deleteObject, generateObjectKey, putObject } from "../../lib/storage";
 import { logActivity } from "./log-activity";
 
 export async function uploadAttachment(c: Context<AppEnv>) {
   const storage = c.env.STORAGE;
-  if (!storage) return c.json({ error: "File storage is not configured" }, 503);
+  if (!storage) return errorResponse(c, "File storage is not configured", 503);
 
   const user = c.get("user")!;
-  const { taskId } = c.req.param();
+  const taskId = requireParam(c, "taskId");
   const db = c.get("db");
 
   const formData = await c.req.parseBody();
   const file = formData["file"];
 
   if (!(file instanceof File)) {
-    return c.json({ error: "No file provided" }, 400);
+    return errorResponse(c, "No file provided", 400);
   }
 
   // Strip MIME parameters (e.g. "text/plain;charset=utf-8" → "text/plain")
   const baseMimeType = file.type.split(";")[0].trim().toLowerCase();
 
   if (!(ALLOWED_ATTACHMENT_TYPES as readonly string[]).includes(baseMimeType)) {
-    return c.json(
-      {
-        error: `Invalid file type. Allowed types: images, PDFs, documents, text, CSV, ZIP`,
-      },
-      400,
-    );
+    return errorResponse(c, "Invalid file type. Allowed types: images, PDFs, documents, text, CSV, ZIP", 400);
   }
 
   if (file.size > MAX_ATTACHMENT_SIZE) {
-    return c.json({ error: "File too large. Maximum size is 10MB" }, 400);
+    return errorResponse(c, "File too large. Maximum size is 10MB", 400);
   }
 
   // Check attachment count limit
@@ -53,10 +50,7 @@ export async function uploadAttachment(c: Context<AppEnv>) {
     .where(eq(taskAttachment.taskId, taskId));
 
   if (cnt >= MAX_ATTACHMENTS_PER_TASK) {
-    return c.json(
-      { error: `Maximum of ${MAX_ATTACHMENTS_PER_TASK} attachments per task reached` },
-      400,
-    );
+    return errorResponse(c, `Maximum of ${MAX_ATTACHMENTS_PER_TASK} attachments per task reached`, 400);
   }
 
   // Upload to R2 first — if this fails, no DB records to clean up
@@ -66,10 +60,7 @@ export async function uploadAttachment(c: Context<AppEnv>) {
   // Validate file content against magic bytes — don't trust client-provided MIME type
   const detectedMime = detectMimeType(arrayBuffer, baseMimeType);
   if (!detectedMime) {
-    return c.json(
-      { error: "File content does not match its declared type" },
-      400,
-    );
+    return errorResponse(c, "File content does not match its declared type", 400);
   }
 
   // Use the server-detected MIME type for storage, not the client-provided one
@@ -82,7 +73,7 @@ export async function uploadAttachment(c: Context<AppEnv>) {
     });
   } catch (error) {
     console.error("Failed to upload attachment to R2:", error);
-    return c.json({ error: "Failed to upload file" }, 500);
+    return errorResponse(c, "Failed to upload file", 500);
   }
 
   const uploadId = crypto.randomUUID();
@@ -117,7 +108,7 @@ export async function uploadAttachment(c: Context<AppEnv>) {
       console.error("Failed to clean up orphaned upload record:", err),
     );
     console.error("Failed to save attachment records:", error);
-    return c.json({ error: "Failed to save attachment" }, 500);
+    return errorResponse(c, "Failed to save attachment", 500);
   }
 
   deferWork(c, () => logActivity(db, {
@@ -146,7 +137,7 @@ export async function uploadAttachment(c: Context<AppEnv>) {
 }
 
 export async function listAttachments(c: Context<AppEnv>) {
-  const { taskId } = c.req.param();
+  const taskId = requireParam(c, "taskId");
   const db = c.get("db");
 
   const attachments = await db
@@ -184,10 +175,10 @@ export async function listAttachments(c: Context<AppEnv>) {
 
 export async function deleteAttachment(c: Context<AppEnv>) {
   const storage = c.env.STORAGE;
-  if (!storage) return c.json({ error: "File storage is not configured" }, 503);
+  if (!storage) return errorResponse(c, "File storage is not configured", 503);
 
   const user = c.get("user")!;
-  const { taskId, attachmentId } = c.req.param();
+  const { taskId, attachmentId } = requireParams(c, "taskId", "attachmentId");
   const db = c.get("db");
 
   // Verify attachment belongs to this task and get upload info
@@ -210,7 +201,7 @@ export async function deleteAttachment(c: Context<AppEnv>) {
     .limit(1);
 
   if (!record) {
-    return c.json({ error: "Attachment not found" }, 404);
+    return errorResponse(c, "Attachment not found", 404);
   }
 
   // Authorization: allow if user is uploader OR has admin/member role
@@ -218,7 +209,7 @@ export async function deleteAttachment(c: Context<AppEnv>) {
   const projectAccess = c.get("projectAccess");
   const hasEditRole = projectAccess != null && ["admin", "member"].includes(projectAccess.role);
   if (!isUploader && !hasEditRole) {
-    return c.json({ error: "Not authorized to delete this attachment" }, 403);
+    return errorResponse(c, "Not authorized to delete this attachment", 403);
   }
 
   // Delete DB records (batch) and R2 object (best-effort) concurrently

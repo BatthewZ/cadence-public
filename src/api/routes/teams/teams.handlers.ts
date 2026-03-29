@@ -4,8 +4,11 @@ import type { Context } from "hono";
 import { user } from "../../../db/schema/auth";
 import { team, teamMember } from "../../../db/schema/team";
 import { workspaceMember } from "../../../db/schema/workspace";
-import type { AddTeamMemberInput, CreateTeamInput, UpdateTeamInput } from "../../../shared/schemas/team";
+import { addTeamMemberSchema, createTeamSchema, updateTeamSchema } from "../../../shared/schemas/team";
 import type { AppEnv } from "../../env";
+import { errorResponse } from "../../lib/error-response";
+import { requireParam, requireParams } from "../../lib/params";
+import { validJson } from "../../lib/validated";
 
 // ---------------------------------------------------------------------------
 // createTeam
@@ -13,8 +16,8 @@ import type { AppEnv } from "../../env";
 
 export async function createTeam(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
-  const body = c.req.valid("json" as never) as CreateTeamInput;
+  const workspaceId = requireParam(c, "workspaceId");
+  const body = validJson(c, createTeamSchema);
 
   const id = crypto.randomUUID();
   const now = new Date();
@@ -40,7 +43,7 @@ export async function createTeam(c: Context<AppEnv>) {
 
 export async function listTeams(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId } = c.req.param();
+  const workspaceId = requireParam(c, "workspaceId");
 
   const teams = await db
     .select({
@@ -66,7 +69,7 @@ export async function listTeams(c: Context<AppEnv>) {
 
 export async function getTeamDetail(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId, teamId } = c.req.param();
+  const { workspaceId, teamId } = requireParams(c, "workspaceId", "teamId");
 
   const [existing] = await db
     .select()
@@ -75,7 +78,7 @@ export async function getTeamDetail(c: Context<AppEnv>) {
     .limit(1);
 
   if (!existing) {
-    return c.json({ error: "Team not found" }, 404);
+    return errorResponse(c, "Team not found", 404);
   }
 
   const members = await db
@@ -104,8 +107,8 @@ export async function getTeamDetail(c: Context<AppEnv>) {
 
 export async function updateTeam(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId, teamId } = c.req.param();
-  const body = c.req.valid("json" as never) as UpdateTeamInput;
+  const { workspaceId, teamId } = requireParams(c, "workspaceId", "teamId");
+  const body = validJson(c, updateTeamSchema);
 
   const [existing] = await db
     .select()
@@ -114,7 +117,7 @@ export async function updateTeam(c: Context<AppEnv>) {
     .limit(1);
 
   if (!existing) {
-    return c.json({ error: "Team not found" }, 404);
+    return errorResponse(c, "Team not found", 404);
   }
 
   const now = new Date();
@@ -138,7 +141,7 @@ export async function updateTeam(c: Context<AppEnv>) {
 
 export async function deleteTeam(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId, teamId } = c.req.param();
+  const { workspaceId, teamId } = requireParams(c, "workspaceId", "teamId");
 
   const [existing] = await db
     .select()
@@ -147,7 +150,7 @@ export async function deleteTeam(c: Context<AppEnv>) {
     .limit(1);
 
   if (!existing) {
-    return c.json({ error: "Team not found" }, 404);
+    return errorResponse(c, "Team not found", 404);
   }
 
   await db.delete(team).where(eq(team.id, teamId));
@@ -161,8 +164,8 @@ export async function deleteTeam(c: Context<AppEnv>) {
 
 export async function addTeamMember(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId, teamId } = c.req.param();
-  const body = c.req.valid("json" as never) as AddTeamMemberInput;
+  const { workspaceId, teamId } = requireParams(c, "workspaceId", "teamId");
+  const body = validJson(c, addTeamMemberSchema);
   const { userId, role } = body;
 
   // Batch all 3 validation queries in a single round-trip
@@ -179,13 +182,13 @@ export async function addTeamMember(c: Context<AppEnv>) {
   ] as const);
 
   if (!teamResult[0]) {
-    return c.json({ error: "Team not found" }, 404);
+    return errorResponse(c, "Team not found", 404);
   }
   if (!wsMemberResult[0]) {
-    return c.json({ error: "User is not a member of this workspace" }, 400);
+    return errorResponse(c, "User is not a member of this workspace", 400);
   }
   if (existingResult[0]) {
-    return c.json({ error: "User is already a member of this team" }, 409);
+    return errorResponse(c, "User is already a member of this team", 409);
   }
 
   const id = crypto.randomUUID();
@@ -211,7 +214,7 @@ export async function addTeamMember(c: Context<AppEnv>) {
 
 export async function removeTeamMember(c: Context<AppEnv>) {
   const db = c.get("db");
-  const { workspaceId, teamId, userId } = c.req.param();
+  const { workspaceId, teamId, userId } = requireParams(c, "workspaceId", "teamId", "userId");
 
   // Batch both verification queries in a single round-trip (both are independent)
   const [teamResult, memberResult] = await db.batch([
@@ -224,11 +227,11 @@ export async function removeTeamMember(c: Context<AppEnv>) {
   ] as const);
 
   if (!teamResult[0]) {
-    return c.json({ error: "Team not found" }, 404);
+    return errorResponse(c, "Team not found", 404);
   }
 
   if (!memberResult[0]) {
-    return c.json({ error: "Member not found" }, 404);
+    return errorResponse(c, "Member not found", 404);
   }
 
   await db

@@ -5,11 +5,7 @@ import { OverdueTasksSection } from "@/web/components/dashboard/OverdueTasksSect
 import { PriorityBreakdownSection } from "@/web/components/dashboard/PriorityBreakdown";
 import { TeamWorkloadSection } from "@/web/components/dashboard/TeamWorkload";
 import { Stack } from "@/web/components/layout";
-import {
-  EmptyState,
-  EmptyStateDescription,
-  EmptyStateTitle,
-} from "@/web/components/ui";
+import { QueryErrorRetry } from "@/web/components/ui";
 import { TaskDetailDialog } from "@/web/components/ui/TaskDetailDialog";
 import { useProject } from "@/web/contexts/ProjectContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
@@ -31,7 +27,7 @@ import { UpcomingTasksSection } from "./components/UpcomingTasks";
 export default function ProjectDashboard() {
   const { project } = useProject();
   const { workspace, members } = useWorkspace();
-  const { data, isLoading, isError } = useProjectDashboard(project.id);
+  const { data, isLoading, isError, refetch } = useProjectDashboard(project.id);
   const activityQuery = useProjectActivity(project.id);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
@@ -58,13 +54,7 @@ export default function ProjectDashboard() {
 
   if (isError || !data) {
     return (
-      <EmptyState size="md">
-        <EmptyStateTitle>Failed to load dashboard</EmptyStateTitle>
-        <EmptyStateDescription>
-          Something went wrong loading the project dashboard. Please try
-          refreshing the page.
-        </EmptyStateDescription>
-      </EmptyState>
+      <QueryErrorRetry message="Failed to load project dashboard." onRetry={refetch} />
     );
   }
 

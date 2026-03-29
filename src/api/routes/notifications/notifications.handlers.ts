@@ -4,7 +4,9 @@ import type { Context } from "hono";
 import { user as userTable } from "../../../db/schema/auth";
 import { notification } from "../../../db/schema/notification";
 import type { AppEnv } from "../../env";
+import { errorResponse } from "../../lib/error-response";
 import { computeNextCursor, parseCursorDate, parseCursorParams } from "../../lib/pagination";
+import { requireParam } from "../../lib/params";
 
 // ---------------------------------------------------------------------------
 // listNotifications
@@ -80,7 +82,7 @@ export async function getUnreadCount(c: Context<AppEnv>) {
 export async function markAsRead(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { id } = c.req.param();
+  const id = requireParam(c, "id");
 
   const [updated] = await db
     .update(notification)
@@ -89,7 +91,7 @@ export async function markAsRead(c: Context<AppEnv>) {
     .returning({ id: notification.id });
 
   if (!updated) {
-    return c.json({ error: "Notification not found" }, 404);
+    return errorResponse(c, "Notification not found", 404);
   }
 
   return c.json({ ok: true });
@@ -120,7 +122,7 @@ export async function markAllAsRead(c: Context<AppEnv>) {
 export async function deleteNotification(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
-  const { id } = c.req.param();
+  const id = requireParam(c, "id");
 
   const [deleted] = await db
     .delete(notification)
@@ -128,7 +130,7 @@ export async function deleteNotification(c: Context<AppEnv>) {
     .returning({ id: notification.id });
 
   if (!deleted) {
-    return c.json({ error: "Notification not found" }, 404);
+    return errorResponse(c, "Notification not found", 404);
   }
 
   return c.json({ ok: true });

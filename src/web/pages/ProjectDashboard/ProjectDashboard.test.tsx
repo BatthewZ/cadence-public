@@ -262,6 +262,7 @@ function setupDashboardMock(
     data: data,
     isLoading: opts.isLoading ?? false,
     isError: opts.isError ?? false,
+    refetch: vi.fn(),
   });
 }
 
@@ -350,19 +351,16 @@ describe("ProjectDashboard", () => {
       setupDashboardMock(null, { isError: true });
       renderDashboard();
 
-      expect(screen.getByText("Failed to load dashboard")).toBeInTheDocument();
-      expect(
-        screen.getByText(
-          "Something went wrong loading the project dashboard. Please try refreshing the page.",
-        ),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Failed to load project dashboard.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
     });
 
     it("shows error empty state when data is null", () => {
       setupDashboardMock(null);
       renderDashboard();
 
-      expect(screen.getByText("Failed to load dashboard")).toBeInTheDocument();
+      expect(screen.getByText("Failed to load project dashboard.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
     });
   });
 

@@ -7,6 +7,8 @@ import { workspaceMember } from "../../db/schema/workspace";
 import type { ProjectRole, WorkspaceRole } from "../../shared/types/roles";
 import type { AppEnv } from "../env";
 import { resolveProjectAccess, resolveTaskAccess } from "../lib/access";
+import { errorResponse } from "../lib/error-response";
+import { requireParam } from "../lib/params";
 
 // ---------------------------------------------------------------------------
 // Shared helpers (keep middleware functions DRY)
@@ -47,7 +49,7 @@ async function getOrResolveWorkspaceMembership(
   const membership = await lookupWorkspaceMembership(db, workspaceId, userId);
   if (!membership) return null;
 
-  const result = { id: membership.id, workspaceId, role: membership.role as WorkspaceRole };
+  const result = { id: membership.id, workspaceId, role: membership.role };
   c.set("workspaceMembership", result);
   return result;
 }
@@ -98,11 +100,11 @@ async function getOrResolveProjectAccess(
 export function requireWorkspaceMember(): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const user = c.get("user");
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
+    if (!user) return errorResponse(c, "Unauthorized", 401);
 
-    const workspaceId = c.req.param("workspaceId") as string;
+    const workspaceId = requireParam(c, "workspaceId");
     const membership = await getOrResolveWorkspaceMembership(c, workspaceId, user.id);
-    if (!membership) return c.json({ error: "Forbidden" }, 403);
+    if (!membership) return errorResponse(c, "Forbidden", 403);
 
     await next();
   };
@@ -120,12 +122,12 @@ export function requireWorkspaceRole(
 ): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const user = c.get("user");
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
+    if (!user) return errorResponse(c, "Unauthorized", 401);
 
-    const workspaceId = c.req.param("workspaceId") as string;
+    const workspaceId = requireParam(c, "workspaceId");
     const membership = await getOrResolveWorkspaceMembership(c, workspaceId, user.id);
-    if (!membership) return c.json({ error: "Forbidden" }, 403);
-    if (!allowedRoles.includes(membership.role)) return c.json({ error: "Forbidden" }, 403);
+    if (!membership) return errorResponse(c, "Forbidden", 403);
+    if (!allowedRoles.includes(membership.role)) return errorResponse(c, "Forbidden", 403);
 
     await next();
   };
@@ -144,12 +146,12 @@ export function requireWorkspaceRole(
 export function requireProjectAccess(): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const user = c.get("user");
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
+    if (!user) return errorResponse(c, "Unauthorized", 401);
 
-    const projectId = c.req.param("projectId") as string;
+    const projectId = requireParam(c, "projectId");
     const access = await getOrResolveProjectAccess(c, projectId, user.id);
-    if (access === "not_found") return c.json({ error: "Not found" }, 404);
-    if (!access) return c.json({ error: "Forbidden" }, 403);
+    if (access === "not_found") return errorResponse(c, "Not found", 404);
+    if (!access) return errorResponse(c, "Forbidden", 403);
 
     await next();
   };
@@ -167,13 +169,13 @@ export function requireProjectRole(
 ): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const user = c.get("user");
-    if (!user) return c.json({ error: "Unauthorized" }, 401);
+    if (!user) return errorResponse(c, "Unauthorized", 401);
 
-    const projectId = c.req.param("projectId") as string;
+    const projectId = requireParam(c, "projectId");
     const access = await getOrResolveProjectAccess(c, projectId, user.id);
-    if (access === "not_found") return c.json({ error: "Not found" }, 404);
-    if (!access) return c.json({ error: "Forbidden" }, 403);
-    if (!allowedRoles.includes(access.role)) return c.json({ error: "Forbidden" }, 403);
+    if (access === "not_found") return errorResponse(c, "Not found", 404);
+    if (!access) return errorResponse(c, "Forbidden", 403);
+    if (!allowedRoles.includes(access.role)) return errorResponse(c, "Forbidden", 403);
 
     await next();
   };
@@ -193,20 +195,20 @@ export function requireTaskAccess(): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const user = c.get("user");
     if (!user) {
-      return c.json({ error: "Unauthorized" }, 401);
+      return errorResponse(c, "Unauthorized", 401);
     }
 
-    const taskId = c.req.param("taskId") as string;
+    const taskId = requireParam(c, "taskId");
     const db = c.get("db");
 
     const result = await resolveTaskAccess(db, taskId, user.id);
 
     if (!result.found) {
-      return c.json({ error: "Not found" }, 404);
+      return errorResponse(c, "Not found", 404);
     }
 
     if (!result.access) {
-      return c.json({ error: "Forbidden" }, 403);
+      return errorResponse(c, "Forbidden", 403);
     }
 
     c.set("projectAccess", { role: result.access.role, source: result.access.source });
@@ -233,24 +235,24 @@ export function requireTaskRole(
   return async (c, next) => {
     const user = c.get("user");
     if (!user) {
-      return c.json({ error: "Unauthorized" }, 401);
+      return errorResponse(c, "Unauthorized", 401);
     }
 
-    const taskId = c.req.param("taskId") as string;
+    const taskId = requireParam(c, "taskId");
     const db = c.get("db");
 
     const result = await resolveTaskAccess(db, taskId, user.id);
 
     if (!result.found) {
-      return c.json({ error: "Not found" }, 404);
+      return errorResponse(c, "Not found", 404);
     }
 
     if (!result.access) {
-      return c.json({ error: "Forbidden" }, 403);
+      return errorResponse(c, "Forbidden", 403);
     }
 
     if (!allowedRoles.includes(result.access.role)) {
-      return c.json({ error: "Forbidden" }, 403);
+      return errorResponse(c, "Forbidden", 403);
     }
 
     c.set("projectAccess", { role: result.access.role, source: result.access.source });

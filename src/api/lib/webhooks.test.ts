@@ -105,6 +105,13 @@ describe("generateWebhookSecret", () => {
 // ---------------------------------------------------------------------------
 
 describe("validateWebhookUrl", () => {
+  /** Asserts the result is invalid and returns the narrowed type for further checks. */
+  function expectInvalid(result: ReturnType<typeof validateWebhookUrl>): { valid: false; error: string } {
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("Expected invalid result");
+    return result;
+  }
+
   it("accepts valid HTTPS URLs", () => {
     const result = validateWebhookUrl("https://example.com/webhook");
     expect(result).toEqual({ valid: true });
@@ -116,74 +123,62 @@ describe("validateWebhookUrl", () => {
   });
 
   it("rejects HTTP URLs", () => {
-    const result = validateWebhookUrl("http://example.com/webhook");
-    expect(result.valid).toBe(false);
+    const result = expectInvalid(validateWebhookUrl("http://example.com/webhook"));
     expect(result.error).toContain("HTTPS");
   });
 
   it("rejects localhost hostname", () => {
-    const result = validateWebhookUrl("https://localhost/webhook");
-    expect(result.valid).toBe(false);
+    const result = expectInvalid(validateWebhookUrl("https://localhost/webhook"));
     expect(result.error).toContain("local");
   });
 
   it("rejects 127.0.0.1", () => {
-    const result = validateWebhookUrl("https://127.0.0.1/webhook");
-    expect(result.valid).toBe(false);
+    const result = expectInvalid(validateWebhookUrl("https://127.0.0.1/webhook"));
     expect(result.error).toContain("local");
   });
 
   it("rejects [::1] (IPv6 loopback)", () => {
-    const result = validateWebhookUrl("https://[::1]/webhook");
-    expect(result.valid).toBe(false);
+    const result = expectInvalid(validateWebhookUrl("https://[::1]/webhook"));
     expect(result.error).toContain("local");
   });
 
   it("rejects private IP 10.0.0.1", () => {
-    const result = validateWebhookUrl("https://10.0.0.1/webhook");
-    expect(result.valid).toBe(false);
+    const result = expectInvalid(validateWebhookUrl("https://10.0.0.1/webhook"));
     expect(result.error).toContain("private");
   });
 
   it("rejects private IP 172.16.0.1", () => {
-    const result = validateWebhookUrl("https://172.16.0.1/webhook");
-    expect(result.valid).toBe(false);
+    const result = expectInvalid(validateWebhookUrl("https://172.16.0.1/webhook"));
     expect(result.error).toContain("private");
   });
 
   it("rejects private IP 192.168.1.1", () => {
-    const result = validateWebhookUrl("https://192.168.1.1/webhook");
-    expect(result.valid).toBe(false);
+    const result = expectInvalid(validateWebhookUrl("https://192.168.1.1/webhook"));
     expect(result.error).toContain("private");
   });
 
   it("rejects cloud metadata IP 169.254.169.254", () => {
-    const result = validateWebhookUrl("https://169.254.169.254/latest/meta-data/");
-    expect(result.valid).toBe(false);
+    const result = expectInvalid(validateWebhookUrl("https://169.254.169.254/latest/meta-data/"));
     expect(result.error).toContain("private");
   });
 
   it("rejects 0.0.0.0", () => {
-    const result = validateWebhookUrl("https://0.0.0.0/webhook");
-    expect(result.valid).toBe(false);
+    const result = expectInvalid(validateWebhookUrl("https://0.0.0.0/webhook"));
     expect(result.error).toContain("local");
   });
 
   it("rejects .local domains (mDNS)", () => {
-    const result = validateWebhookUrl("https://myprinter.local/webhook");
-    expect(result.valid).toBe(false);
+    const result = expectInvalid(validateWebhookUrl("https://myprinter.local/webhook"));
     expect(result.error).toContain(".local");
   });
 
   it("rejects invalid URL strings", () => {
-    const result = validateWebhookUrl("not-a-url");
-    expect(result.valid).toBe(false);
+    const result = expectInvalid(validateWebhookUrl("not-a-url"));
     expect(result.error).toContain("Invalid URL");
   });
 
   it("rejects empty string", () => {
-    const result = validateWebhookUrl("");
-    expect(result.valid).toBe(false);
+    const result = expectInvalid(validateWebhookUrl(""));
     expect(result.error).toContain("Invalid URL");
   });
 });

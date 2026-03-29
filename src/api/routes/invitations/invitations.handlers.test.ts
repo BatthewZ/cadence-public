@@ -7,6 +7,7 @@ import {
   createInvitationSchema,
 } from "../../../shared/schemas/invitation";
 import type { AppBindings, AppEnv } from "../../env";
+import { rateLimit } from "../../middleware/rate-limit";
 import { validateBody } from "../../middleware/validate";
 import {
   createTestD1,
@@ -471,6 +472,31 @@ describe("getInvitation", () => {
     expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
     expect(body.error).toBe("Invitation is revoked");
+  });
+
+  it("returns invitation details with rate limit headers", async () => {
+    const app = new Hono<AppEnv>();
+    app.use("/*", fakeEnv(d1));
+    app.get(
+      "/invitations/:token",
+      rateLimit({ max: 10, windowSeconds: 60, prefix: "invitation-lookup-test" }),
+      getInvitation,
+    );
+
+    const res = await app.request(
+      `/invitations/${knownToken}`,
+      undefined,
+      env,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ invitation: { email: string; workspace?: { id: string; name: string } } }>();
+    expect(body.invitation).toBeDefined();
+    expect(body.invitation.email).toBe("get-inv@example.com");
+    expect(body.invitation.workspace?.id).toBe(getInvWsId);
+    expect(res.headers.get("X-RateLimit-Limit")).toBe("10");
+    expect(res.headers.get("X-RateLimit-Remaining")).toBe("9");
+    expect(res.headers.get("X-RateLimit-Reset")).toBeTruthy();
   });
 });
 

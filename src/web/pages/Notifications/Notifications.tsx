@@ -10,7 +10,7 @@ import type { Invitation } from "@/shared/types/invitations";
 import { Container, Row, Stack } from "@/web/components/layout";
 import { NotificationItem } from "@/web/components/layout/NotificationItem";
 import { type Notification } from "@/web/components/layout/NotificationPanel";
-import { Avatar, Button, Spinner, Text } from "@/web/components/ui";
+import { Avatar, Button, QueryErrorRetry, Spinner, Text } from "@/web/components/ui";
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { useOptionalWorkspace, type WorkspacesResponse } from "@/web/contexts/WorkspaceContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
@@ -53,6 +53,8 @@ export default function Notifications() {
   const {
     data,
     isLoading,
+    isError,
+    refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -180,6 +182,8 @@ export default function Notifications() {
             <div className="flex justify-center py-r1">
               <Spinner size="lg" />
             </div>
+          ) : isError ? (
+            <QueryErrorRetry message="Failed to load notifications." onRetry={refetch} />
           ) : notifications.length === 0 ? (
             <Stack gap="r5" className="items-center py-r1">
               <Bell size={32} className="text-fg-muted" />

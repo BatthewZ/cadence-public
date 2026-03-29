@@ -1,14 +1,37 @@
 # Error Handling
 
+## `errorResponse()` Helper (`src/api/lib/error-response.ts`)
+
+All error responses across middleware and route handlers use the `errorResponse()` helper. This guarantees a consistent error envelope that always includes `requestId`.
+
+```ts
+import { errorResponse } from "../lib/error-response";
+
+// Usage in a handler:
+return errorResponse(c, "Not found", 404);
+
+// With extra fields:
+return errorResponse(c, "Validation failed", 400, { details: [...] });
+```
+
+Every error response has this shape:
+
+```json
+{
+  "error": "Not found",
+  "requestId": "a1b2c3d4-..."
+}
+```
+
+A second helper, `throwWithContext(error, context)`, re-throws an error with a contextual prefix on the message (e.g. `[createTask] original message`) while preserving the stack trace. This is used in `try/catch` blocks to add handler context to unexpected errors before they reach the global handler.
+
+## Global Error Handler
+
 The global error handler is defined in `src/api/index.ts`:
 
 ```ts
 app.onError((err, c) => {
   const requestId = c.get("requestId") ?? "unknown";
-
-  if (err instanceof HTTPException) {
-    return c.json({ error: err.message, requestId }, err.status);
-  }
 
   console.error(
     JSON.stringify({
@@ -26,11 +49,11 @@ app.onError((err, c) => {
 
 ## Behavior
 
-1. **`HTTPException`**: If the error is a Hono `HTTPException` (e.g., thrown by middleware or handlers), the response uses the exception's status code and message. The `requestId` is always included.
+1. **Unexpected errors**: Any unhandled error is logged as a structured JSON object (with the full stack trace) and returns a generic `500 Internal Server Error` response. The error details are never leaked to the client.
 
-2. **Unexpected errors**: Any other error is logged as a structured JSON object (with the full stack trace) and returns a generic `500 Internal Server Error` response. The error details are never leaked to the client.
+2. **Request ID**: Every error response includes the `requestId`, making it possible to correlate client-side errors with server-side logs.
 
-3. **Request ID**: Every error response includes the `requestId`, making it possible to correlate client-side errors with server-side logs.
+3. **No `HTTPException` handling**: The global handler does not catch `HTTPException`. All error paths use `errorResponse()` directly, returning structured JSON responses from middleware and handlers before errors reach the global handler. No middleware in the app throws `HTTPException` — Better Auth catches errors internally, `zValidator` returns responses from its hook, and CORS doesn't throw.
 
 ## Non-Fatal Error Handling
 

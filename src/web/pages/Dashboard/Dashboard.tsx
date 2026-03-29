@@ -16,6 +16,7 @@ import {
   EmptyStateDescription,
   EmptyStateIcon,
   EmptyStateTitle,
+  QueryErrorRetry,
   Text,
 } from "@/web/components/ui";
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
@@ -47,7 +48,7 @@ export default function Dashboard() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
 
-  const { data: statsData, isLoading: statsLoading } = useQuery({
+  const { data: statsData, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useQuery({
     queryKey: queryKeys.workspaces.dashboard(workspace.id),
     queryFn: () => api.get<DashboardStatsResponse>(`/api/workspaces/${workspace.id}/dashboard`),
     staleTime: 30_000,
@@ -85,6 +86,21 @@ export default function Dashboard() {
           </Breadcrumbs>
           <Text variant="h3">Dashboard</Text>
           <DashboardSkeleton />
+        </Stack>
+      </Container>
+    );
+  }
+
+  if (statsError) {
+    return (
+      <Container size="xl" className="py-r2">
+        <Stack gap="r3">
+          <Breadcrumbs>
+            <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>{workspace.name}</Breadcrumbs.Item>
+            <Breadcrumbs.Item current>Dashboard</Breadcrumbs.Item>
+          </Breadcrumbs>
+          <Text variant="h3">Dashboard</Text>
+          <QueryErrorRetry message="Failed to load dashboard data." onRetry={refetchStats} />
         </Stack>
       </Container>
     );
