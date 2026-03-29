@@ -5,4 +5,7 @@ dist/
 .env
 .playwright-cli
 .claude/worktrees/
+.tip-images
 wrangler.toml
+auth.json
+auth-state.json
