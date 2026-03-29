@@ -37,7 +37,7 @@ Read the [project philosophy](docs/ethos.md) to understand the principles behind
 
 ```bash
 # Clone the repo
-git clone <your-repo-url>
+git clone https://github.com/BatthewZ/cadence-public
 cd cadence
 
 # Install dependencies
