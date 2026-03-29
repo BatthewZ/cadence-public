@@ -6,5 +6,6 @@ dist/
 .playwright-cli
 .claude/worktrees/
 .tip-images
-auth-state.json
+wrangler.toml
 auth.json
+auth-state.json
