@@ -1,6 +1,6 @@
 # Deployment Checklist
 
-1. [ ] D1 database created (`wrangler d1 create cadence_au`)
+1. [ ] D1 database created (`wrangler d1 create cadence`)
 2. [ ] `database_id` in `wrangler.toml` set to the real UUID
 3. [ ] `BETTER_AUTH_SECRET` secret set (`wrangler secret put BETTER_AUTH_SECRET`)
 4. [ ] `BETTER_AUTH_URL` secret set (`wrangler secret put BETTER_AUTH_URL`)

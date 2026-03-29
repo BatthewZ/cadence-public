@@ -39,7 +39,7 @@ export default defineConfig({
 ```toml
 [[d1_databases]]
 binding = "DB"
-database_name = "cadence_au"
+database_name = "cadence"
 database_id = "placeholder"
 ```
 
