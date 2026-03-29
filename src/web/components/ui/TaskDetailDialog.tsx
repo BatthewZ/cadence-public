@@ -673,7 +673,7 @@ export function TaskDetailDialog({
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} className="max-w-[640px]">
+      <Dialog open={open} onClose={onClose} className="max-w-[640px] p-0 overflow-hidden">
         <div className="max-h-[80vh] overflow-y-auto">
           {loading && (
             <Stack gap="r5" className="p-r3">
