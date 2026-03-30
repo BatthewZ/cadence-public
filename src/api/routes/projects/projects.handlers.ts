@@ -1,11 +1,14 @@
 import { and, count, eq, getTableColumns, sql } from "drizzle-orm";
+import type { BatchItem } from "drizzle-orm/batch";
 import type { Context } from "hono";
 
 import { user as userTable } from "../../../db/schema/auth";
+import { label } from "../../../db/schema/label";
 import { project, projectMember } from "../../../db/schema/project";
 import { task, taskGroup } from "../../../db/schema/task";
 import { workspaceMember } from "../../../db/schema/workspace";
-import { addProjectMemberSchema, createProjectSchema, updateProjectSchema } from "../../../shared/schemas/project";
+import { addProjectMemberSchema, createProjectSchema, duplicateProjectSchema, updateProjectSchema } from "../../../shared/schemas/project";
+import type { ProjectRole } from "../../../shared/types/roles";
 import type { AppEnv } from "../../env";
 import { handleDeleteCover, handleUploadCover } from "../../lib/cover-image";
 import { deferWork } from "../../lib/defer";
@@ -239,6 +242,114 @@ export async function deleteProject(c: Context<AppEnv>) {
   ]);
 
   return c.json({ ok: true });
+}
+
+export async function duplicateProject(c: Context<AppEnv>) {
+  const user = c.get("user")!;
+  const projectId = requireParam(c, "projectId");
+  const body = validJson(c, duplicateProjectSchema);
+  const db = c.get("db");
+
+  // Batch-read source project, task groups, labels, and members in one round-trip
+  const [sourceResult, sourceGroups, sourceLabels, sourceMembers] = await db.batch([
+    db.select().from(project).where(eq(project.id, projectId)).limit(1),
+    db.select().from(taskGroup).where(eq(taskGroup.projectId, projectId)),
+    db.select().from(label).where(eq(label.projectId, projectId)),
+    db.select().from(projectMember).where(eq(projectMember.projectId, projectId)),
+  ] as const);
+
+  const source = sourceResult[0];
+  if (!source) {
+    return errorResponse(c, "Project not found", 404);
+  }
+
+  const now = new Date();
+  const newProjectId = crypto.randomUUID();
+
+  // Truncate name so "name (copy)" fits within 100 chars
+  const suffix = " (copy)";
+  const maxBaseLength = 100 - suffix.length;
+  const baseName = source.name.length > maxBaseLength
+    ? source.name.slice(0, maxBaseLength)
+    : source.name;
+
+  const newProject = {
+    id: newProjectId,
+    workspaceId: source.workspaceId,
+    name: baseName + suffix,
+    description: source.description,
+    icon: source.icon,
+    status: "active" as const,
+    budget: source.budget,
+    theme: source.theme,
+    autoAssignCreator: source.autoAssignCreator,
+    coverImageKey: null,
+    coverImagePosition: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  // Build member records — duplicating user is always admin
+  const memberRecords: { id: string; projectId: string; userId: string; role: ProjectRole; addedAt: Date }[] = [];
+
+  if (body.includeMembers) {
+    for (const m of sourceMembers) {
+      if (m.userId === user.id) continue; // skip — will be added as admin below
+      memberRecords.push({
+        id: crypto.randomUUID(),
+        projectId: newProjectId,
+        userId: m.userId,
+        role: m.role,
+        addedAt: now,
+      });
+    }
+  }
+
+  // Always add duplicating user as admin
+  memberRecords.push({
+    id: crypto.randomUUID(),
+    projectId: newProjectId,
+    userId: user.id,
+    role: "admin",
+    addedAt: now,
+  });
+
+  // Build task group records
+  const newGroups = sourceGroups.map((g) => ({
+    id: crypto.randomUUID(),
+    projectId: newProjectId,
+    name: g.name,
+    color: g.color,
+    isCompletionGroup: g.isCompletionGroup,
+    position: g.position,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  // Build label records
+  const newLabels = sourceLabels.map((l) => ({
+    id: crypto.randomUUID(),
+    projectId: newProjectId,
+    name: l.name,
+    color: l.color,
+    createdAt: now,
+  }));
+
+  // Atomic batch write
+  const batchOps: BatchItem<"sqlite">[] = [
+    db.insert(project).values(newProject),
+    db.insert(projectMember).values(memberRecords),
+  ];
+  if (newGroups.length > 0) batchOps.push(db.insert(taskGroup).values(newGroups));
+  if (newLabels.length > 0) batchOps.push(db.insert(label).values(newLabels));
+  await db.batch(batchOps as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
+
+  // Non-blocking webhook dispatch for project.created
+  fireWebhookEvent(db, () => c.executionCtx, { workspaceId: source.workspaceId, actorId: user.id, projectId: newProjectId }, [
+    { event: "project.created", data: buildProjectEventData(newProject as Parameters<typeof buildProjectEventData>[0]) },
+  ]);
+
+  return c.json({ project: newProject }, 201);
 }
 
 export async function listMembers(c: Context<AppEnv>) {

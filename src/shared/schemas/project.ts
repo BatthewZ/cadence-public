@@ -25,6 +25,10 @@ export const updateProjectSchema = z.object({
   autoAssignCreator: z.boolean().optional(),
 });
 
+export const duplicateProjectSchema = z.object({
+  includeMembers: z.boolean().optional().default(false),
+});
+
 export const addProjectMemberSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   role: z.enum(PROJECT_ROLES, { message: "Invalid role" }),
@@ -32,4 +36,5 @@ export const addProjectMemberSchema = z.object({
 
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
+export type DuplicateProjectInput = z.infer<typeof duplicateProjectSchema>;
 export type AddProjectMemberInput = z.infer<typeof addProjectMemberSchema>;

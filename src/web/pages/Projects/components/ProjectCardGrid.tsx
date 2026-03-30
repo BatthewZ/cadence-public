@@ -2,6 +2,7 @@ import {
   Archive,
   ArchiveRestore,
   CheckCircle2,
+  Copy,
   FolderKanban,
   FolderOpen,
   MoreHorizontal,
@@ -37,6 +38,7 @@ export function ProjectCardGrid({
   onNavigateToSettings,
   onChangeProjectStatus,
   onDeleteProject,
+  onDuplicateProject,
   isFavorite,
   toggleFavorite,
 }: {
@@ -52,6 +54,7 @@ export function ProjectCardGrid({
     failureMessage: string,
   ) => void;
   onDeleteProject: (project: WorkspaceProject) => void;
+  onDuplicateProject: (project: WorkspaceProject) => void;
   isFavorite: (projectId: string) => boolean;
   toggleFavorite: (projectId: string) => void;
 }) {
@@ -119,18 +122,25 @@ export function ProjectCardGrid({
                 >
                   Project settings
                 </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  index={3}
+                  icon={<Copy size={14} />}
+                  onSelect={() => onDuplicateProject(project)}
+                >
+                  Duplicate project
+                </DropdownMenu.Item>
                 <DropdownMenu.Divider />
                 {tab === "active" && (
                   <>
                     <DropdownMenu.Item
-                      index={3}
+                      index={4}
                       icon={<CheckCircle2 size={14} />}
                       onSelect={() => void onChangeProjectStatus(project.id, "completed", "Project marked as completed", "Failed to complete project")}
                     >
                       Mark as completed
                     </DropdownMenu.Item>
                     <DropdownMenu.Item
-                      index={4}
+                      index={5}
                       icon={<Archive size={14} />}
                       onSelect={() => void onChangeProjectStatus(project.id, "archived", "Project archived", "Failed to archive project")}
                     >
@@ -141,14 +151,14 @@ export function ProjectCardGrid({
                 {tab === "completed" && (
                   <>
                     <DropdownMenu.Item
-                      index={3}
+                      index={4}
                       icon={<RotateCcw size={14} />}
                       onSelect={() => void onChangeProjectStatus(project.id, "active", "Project restored", "Failed to restore project")}
                     >
                       Reopen project
                     </DropdownMenu.Item>
                     <DropdownMenu.Item
-                      index={4}
+                      index={5}
                       icon={<Archive size={14} />}
                       onSelect={() => void onChangeProjectStatus(project.id, "archived", "Project archived", "Failed to archive project")}
                     >
@@ -158,7 +168,7 @@ export function ProjectCardGrid({
                 )}
                 {tab === "archived" && (
                   <DropdownMenu.Item
-                    index={3}
+                    index={4}
                     icon={<ArchiveRestore size={14} />}
                     onSelect={() => void onChangeProjectStatus(project.id, "active", "Project restored", "Failed to restore project")}
                   >
@@ -166,7 +176,7 @@ export function ProjectCardGrid({
                   </DropdownMenu.Item>
                 )}
                 <DropdownMenu.Item
-                  index={tab === "archived" ? 4 : 5}
+                  index={tab === "archived" ? 5 : 6}
                   variant="danger"
                   icon={<Trash2 size={14} />}
                   onSelect={() => onDeleteProject(project)}

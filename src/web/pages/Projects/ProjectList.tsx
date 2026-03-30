@@ -25,6 +25,7 @@ import { useFavorites } from "@/web/hooks/use-favorites";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 
+import { DuplicateProjectDialog } from "./components/DuplicateProjectDialog";
 import { ProjectCardGrid } from "./components/ProjectCardGrid";
 import { RenameProjectDialog } from "./components/RenameProjectDialog";
 
@@ -40,6 +41,7 @@ export default function ProjectList() {
   const [deleting, setDeleting] = useState(false);
   const [hiddenProjectIds, setHiddenProjectIds] = useState<Set<string>>(new Set());
   const [renameTarget, setRenameTarget] = useState<WorkspaceProject | null>(null);
+  const [duplicateTarget, setDuplicateTarget] = useState<WorkspaceProject | null>(null);
   const { isFavorite, toggleFavorite } = useFavorites(workspace?.id ?? "");
   const [activeTab, setActiveTab] = useState<string>("active");
 
@@ -140,6 +142,7 @@ export default function ProjectList() {
     },
     onChangeProjectStatus: handleChangeProjectStatus,
     onDeleteProject: setDeleteTarget,
+    onDuplicateProject: setDuplicateTarget,
     isFavorite,
     toggleFavorite,
   };
@@ -224,6 +227,16 @@ export default function ProjectList() {
           }}
         />
       )}
+
+      <DuplicateProjectDialog
+        duplicateTarget={duplicateTarget}
+        onClose={() => setDuplicateTarget(null)}
+        onDuplicated={(projectId) => {
+          setDuplicateTarget(null);
+          void refetchProjects();
+          void navigate(`/w/${workspace.slug}/projects/${projectId}/board`);
+        }}
+      />
 
       <RenameProjectDialog
         renameTarget={renameTarget}

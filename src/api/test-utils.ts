@@ -4,6 +4,7 @@ export { jsonRequest } from "./test-utils/request-helpers";
 export {
   seedComment,
   seedInvitation,
+  seedLabel,
   seedNotification,
   seedProject,
   seedProjectMember,

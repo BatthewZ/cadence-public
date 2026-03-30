@@ -84,15 +84,15 @@ export async function seedWorkspaceMember(
 export async function seedProject(
   d1: D1Database,
   workspaceId: string,
-  opts?: { id?: string; name?: string; budget?: number; autoAssignCreator?: boolean },
+  opts?: { id?: string; name?: string; description?: string; icon?: string; theme?: string; budget?: number; autoAssignCreator?: boolean; status?: string },
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = toSec(Date.now());
   await d1
     .prepare(
-      "INSERT INTO project (id, workspaceId, name, status, budget, auto_assign_creator, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO project (id, workspaceId, name, description, icon, theme, status, budget, auto_assign_creator, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
-    .bind(id, workspaceId, opts?.name ?? "Test Project", "active", opts?.budget ?? null, opts?.autoAssignCreator ? 1 : 0, now, now)
+    .bind(id, workspaceId, opts?.name ?? "Test Project", opts?.description ?? null, opts?.icon ?? null, opts?.theme ?? null, opts?.status ?? "active", opts?.budget ?? null, opts?.autoAssignCreator ? 1 : 0, now, now)
     .run();
   return id;
 }
@@ -110,6 +110,23 @@ export async function seedProjectMember(
       "INSERT INTO project_member (id, projectId, userId, role, addedAt) VALUES (?, ?, ?, ?, ?)",
     )
     .bind(id, projectId, userId, role, toSec(Date.now()))
+    .run();
+  return id;
+}
+
+/** Create a label within a project. Returns the label id. */
+export async function seedLabel(
+  d1: D1Database,
+  projectId: string,
+  name: string,
+  color = "#3b82f6",
+): Promise<string> {
+  const id = crypto.randomUUID();
+  await d1
+    .prepare(
+      "INSERT INTO label (id, projectId, name, color, createdAt) VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(id, projectId, name, color, toSec(Date.now()))
     .run();
   return id;
 }

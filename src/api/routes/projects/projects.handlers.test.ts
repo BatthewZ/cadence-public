@@ -20,6 +20,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   addProjectMemberSchema,
   createProjectSchema,
+  duplicateProjectSchema,
   updateProjectSchema,
 } from "../../../shared/schemas/project";
 import type { AppEnv } from "../../env";
@@ -28,8 +29,10 @@ import {
   createTestD1,
   fakeAuth,
   jsonRequest,
+  seedLabel,
   seedProject,
   seedProjectMember,
+  seedTaskGroup,
   seedUser,
   seedWorkspace,
   seedWorkspaceMember,
@@ -40,6 +43,7 @@ import {
   addMember,
   createProject,
   deleteProject,
+  duplicateProject,
   getProject,
   listMembers,
   listProjects,
@@ -566,6 +570,235 @@ describe("deleteProject", () => {
     expect(res.status).toBe(200);
     const body = await res.json<{ ok: boolean }>();
     expect(body.ok).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// duplicateProject
+// ---------------------------------------------------------------------------
+
+describe("duplicateProject", () => {
+  function createApp(authUser = TEST_USER) {
+    const app = new Hono<AppEnv>();
+    app.post(
+      "/projects/:projectId/duplicate",
+      fakeAuth(d1, authUser, {
+        workspaceMembership: { id: "wm-dup", role: "owner" },
+      }),
+      validateBody(duplicateProjectSchema),
+      duplicateProject,
+    );
+    return app;
+  }
+
+  it("duplicates project settings with correct defaults", async () => {
+    const projId = await seedProject(d1, workspaceId, {
+      name: "Original",
+      description: "A test description",
+      icon: "rocket",
+      theme: "blue",
+      budget: 50000,
+      autoAssignCreator: true,
+      status: "archived",
+    });
+
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projId}/duplicate`,
+      jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json<{ project: Record<string, unknown> }>();
+    const p = body.project;
+    expect(p.name).toBe("Original (copy)");
+    expect(p.description).toBe("A test description");
+    expect(p.icon).toBe("rocket");
+    expect(p.theme).toBe("blue");
+    expect(p.budget).toBe(50000);
+    expect(p.autoAssignCreator).toBe(true);
+    expect(p.status).toBe("active"); // always active regardless of source
+    expect(p.coverImageKey).toBeNull();
+    expect(p.coverImagePosition).toBeNull();
+    expect(p.id).not.toBe(projId);
+  });
+
+  it("duplicates task groups with attributes preserved", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "Group Source" });
+    await seedTaskGroup(d1, projId, { name: "Backlog", position: "a0" });
+    await seedTaskGroup(d1, projId, { name: "In Progress", position: "a1" });
+    await seedTaskGroup(d1, projId, { name: "Done", position: "a2", isCompletionGroup: true });
+
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projId}/duplicate`,
+      jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json<{ project: { id: string } }>();
+    const newProjId = body.project.id;
+
+    const groups = await d1
+      .prepare("SELECT name, position, is_completion_group FROM task_group WHERE projectId = ? ORDER BY position")
+      .bind(newProjId)
+      .all();
+
+    expect(groups.results).toHaveLength(3);
+    expect(groups.results[0]).toMatchObject({ name: "Backlog", position: "a0", is_completion_group: 0 });
+    expect(groups.results[1]).toMatchObject({ name: "In Progress", position: "a1", is_completion_group: 0 });
+    expect(groups.results[2]).toMatchObject({ name: "Done", position: "a2", is_completion_group: 1 });
+  });
+
+  it("duplicates labels with name and color", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "Label Source" });
+    await seedLabel(d1, projId, "Bug", "#ef4444");
+    await seedLabel(d1, projId, "Feature", "#22c55e");
+
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projId}/duplicate`,
+      jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json<{ project: { id: string } }>();
+
+    const labels = await d1
+      .prepare("SELECT name, color FROM label WHERE projectId = ? ORDER BY name")
+      .bind(body.project.id)
+      .all();
+
+    expect(labels.results).toHaveLength(2);
+    expect(labels.results[0]).toMatchObject({ name: "Bug", color: "#ef4444" });
+    expect(labels.results[1]).toMatchObject({ name: "Feature", color: "#22c55e" });
+  });
+
+  it("adds duplicating user as admin by default (no members copied)", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "No Members" });
+    await seedProjectMember(d1, projId, TEST_USER.id, "admin");
+    await seedProjectMember(d1, projId, TEST_USER_2.id, "member");
+
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projId}/duplicate`,
+      jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json<{ project: { id: string } }>();
+
+    const members = await d1
+      .prepare("SELECT userId, role FROM project_member WHERE projectId = ?")
+      .bind(body.project.id)
+      .all();
+
+    expect(members.results).toHaveLength(1);
+    expect(members.results[0]).toMatchObject({ userId: TEST_USER.id, role: "admin" });
+  });
+
+  it("copies members when includeMembers is true", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "With Members" });
+    await seedProjectMember(d1, projId, TEST_USER.id, "admin");
+    await seedProjectMember(d1, projId, TEST_USER_2.id, "viewer");
+
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projId}/duplicate`,
+      jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true }),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json<{ project: { id: string } }>();
+
+    const members = await d1
+      .prepare("SELECT userId, role FROM project_member WHERE projectId = ? ORDER BY role")
+      .bind(body.project.id)
+      .all();
+
+    expect(members.results).toHaveLength(2);
+    // duplicating user is always admin, not duplicated
+    expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER.id, role: "admin" }));
+    expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER_2.id, role: "viewer" }));
+  });
+
+  it("duplicating user is promoted to admin even if they were member in source", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "Promote Admin" });
+    await seedProjectMember(d1, projId, TEST_USER.id, "member");
+    await seedProjectMember(d1, projId, TEST_USER_2.id, "admin");
+
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projId}/duplicate`,
+      jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true }),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json<{ project: { id: string } }>();
+
+    const members = await d1
+      .prepare("SELECT userId, role FROM project_member WHERE projectId = ?")
+      .bind(body.project.id)
+      .all();
+
+    // duplicating user should appear exactly once as admin
+    const userEntries = members.results.filter((m: Record<string, unknown>) => m.userId === TEST_USER.id);
+    expect(userEntries).toHaveLength(1);
+    expect(userEntries[0]).toMatchObject({ role: "admin" });
+  });
+
+  it("returns 404 for a nonexistent project", async () => {
+    const app = createApp();
+    const res = await app.request(
+      "/projects/nonexistent-id/duplicate",
+      jsonRequest("POST", "/projects/nonexistent-id/duplicate", {}),
+    );
+
+    expect(res.status).toBe(404);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("Project not found");
+  });
+
+  it("truncates name when source name is near max length", async () => {
+    const longName = "A".repeat(100);
+    const projId = await seedProject(d1, workspaceId, { name: longName });
+
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projId}/duplicate`,
+      jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json<{ project: { name: string } }>();
+    expect(body.project.name).toBe("A".repeat(93) + " (copy)");
+    expect(body.project.name.length).toBeLessThanOrEqual(100);
+  });
+
+  it("duplicates project with no task groups or labels", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "Empty Project" });
+
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projId}/duplicate`,
+      jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json<{ project: { id: string; name: string } }>();
+    expect(body.project.name).toBe("Empty Project (copy)");
+
+    const groups = await d1
+      .prepare("SELECT id FROM task_group WHERE projectId = ?")
+      .bind(body.project.id)
+      .all();
+    expect(groups.results).toHaveLength(0);
+
+    const labels = await d1
+      .prepare("SELECT id FROM label WHERE projectId = ?")
+      .bind(body.project.id)
+      .all();
+    expect(labels.results).toHaveLength(0);
   });
 });
 

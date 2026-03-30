@@ -7,7 +7,7 @@ The API is a Hono application running inside a Cloudflare Worker. All API endpoi
 ## Documentation
 
 - [Middleware](./middleware.md) -- middleware stack, order, and details for each middleware
-- [Endpoints](./endpoints.md) -- available API endpoints and request/response formats (labels, task labels, and more)
+- [Endpoints](./endpoints.md) -- available API endpoints and request/response formats (labels, task labels, project duplication, and more)
 - [Error Handling](./error-handling.md) -- global error handler behavior
 - [Rate Limiting](./rate-limiting.md) -- rate limit configuration and behavior
 - [Validation](./validation.md) -- request validation middleware

@@ -81,6 +81,12 @@ Use the project card's context menu (three-dot icon) to change status:
 - **Completed** projects can be reopened (→ active) or archived
 - **Archived** projects can be restored (→ active)
 
+### Duplicating a Project
+
+Use the **Duplicate project** option in the project card's context menu to create a copy of an existing project. The duplicate includes the project's settings, task groups, and labels. Tasks, comments, and attachments are not copied.
+
+A confirmation dialog lets you optionally **include members and their roles**. The duplicated project is set to active status and named `"{original name} (copy)"`. You are automatically added as an admin on the new project and navigated to it after creation.
+
 The workspace sidebar only shows active projects. Completed and archived projects do not appear in the sidebar, My Tasks, or dashboard statistics — they are accessible from the **Projects** page tabs.
 
 ---

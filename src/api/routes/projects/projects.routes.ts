@@ -4,6 +4,7 @@ import { createLabelSchema, updateLabelSchema } from "../../../shared/schemas/la
 import {
   addProjectMemberSchema,
   createProjectSchema,
+  duplicateProjectSchema,
   updateProjectSchema,
 } from "../../../shared/schemas/project";
 import type { AppEnv } from "../../env";
@@ -26,6 +27,7 @@ import {
   createProject,
   deleteProject,
   deleteProjectCover,
+  duplicateProject,
   getProject,
   listMembers,
   listProjects,
@@ -68,6 +70,14 @@ app.delete(
   requireAuth,
   requireProjectRole("admin"),
   deleteProject,
+);
+
+app.post(
+  "/projects/:projectId/duplicate",
+  requireAuth,
+  requireProjectRole("admin", "member"),
+  validateBody(duplicateProjectSchema),
+  duplicateProject,
 );
 
 // Project cover image routes

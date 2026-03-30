@@ -400,6 +400,58 @@ Deletes a project and all associated data.
 { "ok": true }
 ```
 
+### `POST /api/projects/:projectId/duplicate`
+
+Duplicates a project, creating a new copy with the name `"{original name} (copy)"`. Copies the project's settings (description, icon, budget, theme, autoAssignCreator), task groups (with positions and colors), and labels. Optionally includes members and their roles. Tasks, comments, attachments, and cover images are not copied. The duplicating user is always added as an admin on the new project.
+
+**Auth:** Required.
+**Authorization:** Project admin or member.
+
+**Request body** (JSON, validated via `duplicateProjectSchema`):
+
+| Field | Type | Description | Required |
+| --- | --- | --- | --- |
+| `includeMembers` | `boolean` | Whether to copy project members and their roles | No (defaults to `false`) |
+
+**Behavior:**
+1. Batch-reads the source project, task groups, labels, and members in one round-trip.
+2. Creates a new project with copied settings and status set to `"active"`.
+3. Copies all task groups with their positions, colors, and completion-group flags.
+4. Copies all labels with their names and colors.
+5. If `includeMembers` is `true`, copies all members with their roles (the duplicating user is always admin regardless).
+6. Writes all records in an atomic batch operation.
+7. Fires a `project.created` webhook event.
+
+**Response** (201):
+
+```json
+{
+  "project": {
+    "id": "new-uuid",
+    "workspaceId": "...",
+    "name": "Original Name (copy)",
+    "description": "...",
+    "icon": "...",
+    "status": "active",
+    "budget": 50000,
+    "theme": "...",
+    "autoAssignCreator": false,
+    "coverImageKey": null,
+    "coverImagePosition": null,
+    "createdAt": "...",
+    "updatedAt": "..."
+  }
+}
+```
+
+**Error responses:**
+
+| Status | Condition |
+| --- | --- |
+| 401 | Not authenticated |
+| 403 | Not a project admin or member |
+| 404 | Source project not found |
+
 ### `PUT /api/projects/:projectId/cover`
 
 Uploads a cover image for a project. Replaces any existing cover. Rate-limited to 10 requests per minute.
