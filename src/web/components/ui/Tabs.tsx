@@ -191,6 +191,11 @@ const TabsList = forwardRef<HTMLDivElement, TabsListProps>(function TabsList(
       updateScrollState();
     });
     observer.observe(list);
+    // Observe individual tab buttons so the indicator repositions when
+    // their content changes size (e.g., count badges loading in async).
+    for (const tab of list.querySelectorAll('[role="tab"]')) {
+      observer.observe(tab);
+    }
 
     list.addEventListener("scroll", updateScrollState, { passive: true });
 
