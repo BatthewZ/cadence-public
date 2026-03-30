@@ -75,7 +75,7 @@ app.delete(
 app.post(
   "/projects/:projectId/duplicate",
   requireAuth,
-  requireProjectRole("admin", "member"),
+  requireProjectRole("admin"),
   validateBody(duplicateProjectSchema),
   duplicateProject,
 );

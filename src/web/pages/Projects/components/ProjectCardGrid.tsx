@@ -94,10 +94,10 @@ export function ProjectCardGrid({
               <DropdownMenu.Trigger asChild>
                 <IconButton
                   aria-label="Project actions"
-                  className="size-7"
+                  className="size-9"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <MoreHorizontal size={16} />
+                  <MoreHorizontal size={22} />
                 </IconButton>
               </DropdownMenu.Trigger>
               <DropdownMenu.Content>
