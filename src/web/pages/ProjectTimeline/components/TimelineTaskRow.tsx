@@ -70,7 +70,7 @@ export function TimelineTaskRow({
       <Row
         gap="r4"
         align="center"
-        className={`group relative px-r4 py-r5 hover:bg-surface-1 rounded-md transition-colors cursor-pointer ${
+        className={`group relative px-r4 py-r5 hover:bg-surface-2 rounded-md transition-colors cursor-pointer ${
           selected ? "ring-2 ring-accent bg-accent/5" : ""
         }`}
         onClick={handleRowClick}
@@ -222,9 +222,9 @@ export function TimelineTaskRow({
             <DropdownMenu.Trigger asChild>
               <IconButton
                 aria-label="Task actions"
-                className="size-6 shrink-0 bg-surface-1/80 hover:bg-surface-2 backdrop-blur-sm"
+                className="size-9 shrink-0 bg-surface-1/80 hover:bg-surface-2 backdrop-blur-sm"
               >
-                <MoreHorizontal size={14} />
+                <MoreHorizontal size={22} />
               </IconButton>
             </DropdownMenu.Trigger>
             <DropdownMenu.Content className="min-w-[180px]">

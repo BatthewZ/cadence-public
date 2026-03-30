@@ -311,7 +311,7 @@ export const CoverImage = forwardRef<HTMLDivElement, CoverImageProps>(
             !displayUrl &&
               editable &&
               !repositioning &&
-              "border border-dashed border-border-secondary hover:border-accent/40 hover:bg-accent-subtle/30 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
+              "border border-dashed border-transparent hover:border-accent/40 hover:bg-accent-subtle/30 focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2",
             editable && !repositioning && "group cursor-pointer",
             repositioning && "cursor-grab active:cursor-grabbing"
           )}
