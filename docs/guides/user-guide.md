@@ -126,10 +126,11 @@ Upload files from the detail panel. Attachments are stored in Cloudflare R2.
 
 ### Completing Tasks
 
-Three ways to complete a task:
-1. Click the checkbox on the task card
+Four ways to complete a task:
+1. Click the checkbox on the task card (Board / Timeline)
 2. Use the **Mark complete** button in the detail panel
 3. Drag the task to a column marked as a completion group
+4. Click the completion checkbox in the **My Tasks** list
 
 ### Bulk Actions
 
@@ -140,6 +141,8 @@ Select multiple tasks using checkboxes, then use the bulk action bar to change s
 ## My Tasks
 
 The **My Tasks** page (`/w/{slug}/my-tasks`) shows all tasks assigned to you across every **active** project in the workspace.
+
+Each task row includes a **completion checkbox** on the left. Clicking it marks the task as complete with a fade-out animation and optimistically removes it from the list. If the API call fails, the task reappears and an error toast is shown. Clicking the checkbox does not open the task detail dialog.
 
 Filter by time period:
 - **All** — Everything assigned to you

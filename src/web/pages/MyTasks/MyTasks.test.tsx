@@ -48,6 +48,15 @@ vi.mock("@/web/hooks/use-document-title", () => ({
   useDocumentTitle: vi.fn(),
 }));
 
+const mockToast = vi.fn();
+vi.mock("@/web/components/ui/ToastContext", () => ({
+  useToast: () => ({ toast: mockToast }),
+}));
+
+vi.mock("@/web/hooks/use-reduced-motion", () => ({
+  usePrefersReducedMotion: () => true,
+}));
+
 // Mock TaskDetailDialog so we can verify it opens without rendering the full
 // dialog tree (which pulls in many heavy dependencies like dnd-kit, file upload, etc.)
 vi.mock("@/web/components/ui/TaskDetailDialog", () => ({
@@ -61,6 +70,7 @@ vi.mock("@/web/components/ui/TaskDetailDialog", () => ({
 
 import { api } from "@/web/lib/api/client";
 const mockGet = api.get as ReturnType<typeof vi.fn>;
+const mockPost = api.post as ReturnType<typeof vi.fn>;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -747,6 +757,145 @@ describe("MyTasks", () => {
       await waitFor(() => {
         expect(screen.getByText("Failed to load tasks.")).toBeInTheDocument();
       });
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Inline completion checkbox
+  // -------------------------------------------------------------------------
+
+  describe("inline completion checkbox", () => {
+    it("renders a checkbox in each task row", async () => {
+      const tasks = [
+        makeTask({ id: "t1", title: "Task One" }),
+        makeTask({ id: "t2", title: "Task Two" }),
+      ];
+      setupMockGet(tasks);
+
+      const Wrapper = createWrapper();
+      render(
+        <Wrapper>
+          <MyTasks />
+        </Wrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Task One")).toBeInTheDocument();
+      });
+
+      const checkboxes = screen.getAllByRole("checkbox");
+      expect(checkboxes).toHaveLength(2);
+      expect(checkboxes[0]).toHaveAttribute("aria-label", "Complete task: Task One");
+      expect(checkboxes[1]).toHaveAttribute("aria-label", "Complete task: Task Two");
+    });
+
+    it("calls POST /api/tasks/:id/complete when checkbox is clicked", async () => {
+      const user = userEvent.setup();
+      const tasks = [makeTask({ id: "t1", title: "Complete me" })];
+      setupMockGet(tasks);
+      mockPost.mockResolvedValue({ task: { id: "t1", completed: true } });
+
+      const Wrapper = createWrapper();
+      render(
+        <Wrapper>
+          <MyTasks />
+        </Wrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Complete me")).toBeInTheDocument();
+      });
+
+      const checkbox = screen.getByRole("checkbox");
+      await user.click(checkbox);
+
+      await waitFor(() => {
+        expect(mockPost).toHaveBeenCalledWith("/api/tasks/t1/complete", {});
+      });
+    });
+
+    it("removes task from list after successful completion", async () => {
+      const user = userEvent.setup();
+      const task1 = makeTask({ id: "t1", title: "Will complete" });
+      const task2 = makeTask({ id: "t2", title: "Will stay" });
+      setupMockGet([task1, task2]);
+      mockPost.mockImplementation((): unknown => {
+        // After completion, subsequent fetches should exclude the completed task
+        setupMockGet([task2]);
+        return Promise.resolve({ task: { id: "t1", completed: true } });
+      });
+
+      const Wrapper = createWrapper();
+      render(
+        <Wrapper>
+          <MyTasks />
+        </Wrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Will complete")).toBeInTheDocument();
+        expect(screen.getByText("Will stay")).toBeInTheDocument();
+      });
+
+      const checkboxes = screen.getAllByRole("checkbox");
+      await user.click(checkboxes[0]);
+
+      await waitFor(() => {
+        expect(screen.queryByText("Will complete")).not.toBeInTheDocument();
+      });
+      expect(screen.getByText("Will stay")).toBeInTheDocument();
+    });
+
+    it("shows error toast and keeps task on API failure", async () => {
+      const user = userEvent.setup();
+      const tasks = [makeTask({ id: "t1", title: "Fail to complete" })];
+      setupMockGet(tasks);
+      mockPost.mockRejectedValue(new Error("Network error"));
+
+      const Wrapper = createWrapper();
+      render(
+        <Wrapper>
+          <MyTasks />
+        </Wrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Fail to complete")).toBeInTheDocument();
+      });
+
+      const checkbox = screen.getByRole("checkbox");
+      await user.click(checkbox);
+
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledWith("Failed to complete task", { variant: "error" });
+      });
+
+      // Task should still be visible after rollback
+      expect(screen.getByText("Fail to complete")).toBeInTheDocument();
+    });
+
+    it("does not open TaskDetailDialog when checkbox is clicked", async () => {
+      const user = userEvent.setup();
+      const tasks = [makeTask({ id: "t1", title: "Checkbox only" })];
+      setupMockGet(tasks);
+      mockPost.mockResolvedValue({ task: { id: "t1", completed: true } });
+
+      const Wrapper = createWrapper();
+      render(
+        <Wrapper>
+          <MyTasks />
+        </Wrapper>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Checkbox only")).toBeInTheDocument();
+      });
+
+      const checkbox = screen.getByRole("checkbox");
+      await user.click(checkbox);
+
+      // Dialog should NOT open
+      expect(screen.queryByTestId("task-detail-dialog")).not.toBeInTheDocument();
     });
   });
 

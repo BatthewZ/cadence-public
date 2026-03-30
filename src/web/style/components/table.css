@@ -91,6 +91,7 @@
 /* Cell */
 .table-cell {
   color: var(--C-TEXT-PRIMARY);
+  vertical-align: middle;
 }
 
 /* Density: dense */

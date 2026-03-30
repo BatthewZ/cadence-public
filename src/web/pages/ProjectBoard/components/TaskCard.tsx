@@ -135,6 +135,7 @@ export function SortableTaskCard({
       ctxUpdateTask(task.id, res.task);
       void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(task.id) });
       void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
+      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(project.workspaceId) });
     } catch {
       // Revert
       ctxUpdateTask(task.id, { completed: !checked });

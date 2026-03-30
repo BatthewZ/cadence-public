@@ -1,7 +1,8 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
+import { TaskCheckbox } from "@/web/components/form/TaskCheckbox";
 import { Container, Row, Stack } from "@/web/components/layout";
 import {
   Badge,
@@ -17,8 +18,10 @@ import {
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { TaskDetailDialog } from "@/web/components/ui/TaskDetailDialog";
+import { useToast } from "@/web/components/ui/ToastContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
+import { usePrefersReducedMotion } from "@/web/hooks/use-reduced-motion";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 import { formatDueDate, isDueToday, isOverdue } from "@/web/util/date";
@@ -92,9 +95,13 @@ function getApiPeriod(tab: FilterTab): string | undefined {
 export default function MyTasks() {
   useDocumentTitle("My Tasks");
   const { workspace, members } = useWorkspace();
+  const qc = useQueryClient();
+  const { toast } = useToast();
+  const reducedMotion = usePrefersReducedMotion();
 
   const [activeTab, setActiveTab] = useState<FilterTab>("week");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
 
   const apiPeriod = getApiPeriod(activeTab);
   const {
@@ -177,8 +184,78 @@ export default function MyTasks() {
     [],
   );
 
+  const handleCompleteTask = useCallback(
+    async (taskId: string) => {
+      if (completingIds.has(taskId)) return;
+
+      // Start fade-out animation + checkbox check
+      setCompletingIds((prev) => new Set(prev).add(taskId));
+
+      // Wait for animation before removing from list
+      const delay = reducedMotion ? 0 : 250;
+      if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+
+      // Snapshot for rollback
+      const queryKey = queryKeys.workspaces.dashboardMyTasks(workspace.id, apiPeriod ?? "all");
+      const previousData = qc.getQueryData(queryKey);
+
+      // Optimistically remove from all pages
+      qc.setQueryData<{ pages: MyTasksResponse[]; pageParams: unknown[] }>(
+        queryKey,
+        (old) => {
+          if (!old) return old;
+          return {
+            ...old,
+            pages: old.pages.map((page) => ({
+              ...page,
+              tasks: page.tasks.filter((t) => t.id !== taskId),
+            })),
+          };
+        },
+      );
+
+      setCompletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(taskId);
+        return next;
+      });
+
+      try {
+        await api.post(`/api/tasks/${taskId}/complete`, {});
+        void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
+        void qc.invalidateQueries({
+          queryKey: queryKeys.workspaces.dashboard(workspace.id),
+        });
+      } catch {
+        qc.setQueryData(queryKey, previousData);
+        toast("Failed to complete task", { variant: "error" });
+      }
+    },
+    [completingIds, reducedMotion, workspace.id, apiPeriod, qc, toast],
+  );
+
   const columns = useMemo<ColumnDef<MyTask>[]>(
     () => [
+      {
+        key: "complete",
+        header: "",
+        width: "40px",
+        render: (row) => (
+          <div
+            className="flex items-center"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <TaskCheckbox
+              size="sm"
+              checked={completingIds.has(row.id)}
+              disabled={completingIds.has(row.id)}
+              onChange={() => void handleCompleteTask(row.id)}
+              aria-label={`Complete task: ${row.title}`}
+            />
+          </div>
+        ),
+      },
       {
         key: "title",
         header: "Task",
@@ -227,7 +304,7 @@ export default function MyTasks() {
         ),
       },
     ],
-    [setSelectedTaskId],
+    [setSelectedTaskId, completingIds, handleCompleteTask],
   );
 
   return (
@@ -297,6 +374,11 @@ export default function MyTasks() {
             rowKey={(row) => row.id}
             loading={loading}
             sortComparator={sortComparator}
+            rowClassName={(row) =>
+              completingIds.has(row.id)
+                ? "opacity-0 transition-all duration-200 ease-out"
+                : "transition-all duration-200"
+            }
             emptyContent={
               <EmptyState size="md">
                 <EmptyStateTitle>No tasks assigned to you</EmptyStateTitle>

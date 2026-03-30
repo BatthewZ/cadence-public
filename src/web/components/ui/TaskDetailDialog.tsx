@@ -625,6 +625,7 @@ export function TaskDetailDialog({
       await api.post(endpoint, {});
       invalidateTaskQueries();
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
+      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id) });
     } catch {
       setLocalTask((prev) => (prev ? { ...prev, completed: wasCompleted } : prev));
       toast("Failed to update task", { variant: "error" });

@@ -156,6 +156,7 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
         )
       );
       invalidateSelectedTasks();
+      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id) });
       toast(pluralTasks("Moved"), { variant: "success" });
       onClearSelection();
     } catch {

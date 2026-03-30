@@ -29,6 +29,7 @@ High-level data table built on [Table](table.md). Accepts a typed data array and
 | `loading` | `boolean` | `false` | Shows skeleton rows instead of data. |
 | `loadingRowCount` | `number` | `5` | Number of skeleton rows to display when loading. |
 | `emptyContent` | `ReactNode` | Default `EmptyState` | Custom content shown when `data` is empty. |
+| `rowClassName` | `(row: T, index: number) => string` | -- | Dynamic CSS class for each `Table.Row`, useful for per-row animations or conditional styling. |
 
 ### ColumnDef\<T\>
 

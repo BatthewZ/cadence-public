@@ -421,6 +421,7 @@ export function TaskDetailPanelInner({
       setLocalTask((prev) => (prev ? { ...prev, ...res.task } : prev));
       updateTaskInContext(taskId, res.task);
       void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
+      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id) });
     } catch {
       setLocalTask((prev) =>
         prev ? { ...prev, completed: wasCompleted } : prev

@@ -137,12 +137,21 @@ describe("queryKeys", () => {
     it("shares a common prefix for invalidation", () => {
       const allKey = queryKeys.workspaces.dashboardMyTasks("ws-1");
       const weekKey = queryKeys.workspaces.dashboardMyTasks("ws-1", "week");
-      const prefix = ["workspaces", "ws-1", "dashboard", "my-tasks"];
+      const prefix = queryKeys.workspaces.dashboardMyTasksPrefix("ws-1");
 
       // Both keys start with the same prefix — react-query invalidation
       // with this prefix will clear all dashboardMyTasks caches
       expect(allKey.slice(0, 4)).toEqual(prefix);
       expect(weekKey.slice(0, 4)).toEqual(prefix);
+    });
+
+    it("dashboardMyTasksPrefix returns the 4-segment key without period", () => {
+      expect(queryKeys.workspaces.dashboardMyTasksPrefix("ws-1")).toEqual([
+        "workspaces",
+        "ws-1",
+        "dashboard",
+        "my-tasks",
+      ]);
     });
   });
 });

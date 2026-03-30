@@ -55,6 +55,9 @@ type DataTableProps<T> = {
 
   // Empty state
   emptyContent?: ReactNode;
+
+  // Row customization
+  rowClassName?: (row: T, index: number) => string;
 };
 
 /* ------------------------------------------------------------------ */
@@ -115,6 +118,7 @@ export function DataTable<T>({
   loading = false,
   loadingRowCount = 5,
   emptyContent,
+  rowClassName,
 }: DataTableProps<T>) {
   // Uncontrolled sort state
   const [internalSort, setInternalSort] = useState<SortState | null>(null);
@@ -295,7 +299,7 @@ export function DataTable<T>({
           {sortedData.map((row, i) => {
             const key = rowKey(row, i);
             return (
-              <Table.Row key={key} selected={selectedKeys?.has(key)}>
+              <Table.Row key={key} selected={selectedKeys?.has(key)} className={rowClassName?.(row, i)}>
                 {selectable && (
                   <Table.Cell>
                     <Checkbox

@@ -9,6 +9,8 @@ export const queryKeys = {
     teamDetail: (workspaceId: string, teamId: string) =>
       ["workspaces", workspaceId, "teams", teamId] as const,
     dashboard: (id: string) => ["workspaces", id, "dashboard"] as const,
+    dashboardMyTasksPrefix: (id: string) =>
+      ["workspaces", id, "dashboard", "my-tasks"] as const,
     dashboardMyTasks: (id: string, period?: string) =>
       ["workspaces", id, "dashboard", "my-tasks", period ?? "all"] as const,
     dashboardMyTasksPreview: (id: string) =>

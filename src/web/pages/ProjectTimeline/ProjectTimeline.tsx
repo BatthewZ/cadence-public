@@ -81,6 +81,7 @@ export default function ProjectTimeline() {
         updateTask(taskId, res.task);
         if (project) {
           void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
+          void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(project.workspaceId) });
         }
       } catch {
         // Revert on failure
