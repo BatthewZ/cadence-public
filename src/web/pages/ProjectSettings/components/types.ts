@@ -5,6 +5,7 @@ interface UpdateProjectInput {
   description: string;
   status: "active" | "archived" | "completed";
   budget: number | null;
+  autoAssignCreator?: boolean;
 }
 
 interface AddProjectMemberInput {

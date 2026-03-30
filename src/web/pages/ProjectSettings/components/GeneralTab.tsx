@@ -4,7 +4,7 @@ import { type FormEvent, useCallback, useRef, useState } from "react";
 import type { useNavigate } from "react-router-dom";
 
 import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_SIZE } from "@/shared/schemas/upload";
-import { Field, Input, Label, Select, Textarea } from "@/web/components/form";
+import { Checkbox, Field, Input, Label, Select, Textarea } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
 import {
   Alert,
@@ -45,6 +45,7 @@ export function GeneralTab({
   const [status, setStatus] = useState<"active" | "archived" | "completed">("active");
   const [budget, setBudget] = useState<string>("");
   const [icon, setIcon] = useState<string | null>(null);
+  const [autoAssignCreator, setAutoAssignCreator] = useState(false);
   const [iconDialogOpen, setIconDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -76,7 +77,7 @@ export function GeneralTab({
       await qc.cancelQueries({ queryKey: wpKey });
       const previousData = qc.getQueryData(key);
       const previousWorkspaceProjects = qc.getQueryData(wpKey);
-      updateProject({ name: input.name, description: input.description, status: input.status, budget: input.budget });
+      updateProject(input);
       // Optimistically update sidebar project list
       if (input.name) {
         qc.setQueryData(wpKey, (old: { projects: Array<{ id: string; name: string }> } | undefined) =>
@@ -121,6 +122,7 @@ export function GeneralTab({
     setStatus(project.status);
     setBudget(project.budget != null ? String(project.budget / 100) : "");
     setIcon(project.icon ?? null);
+    setAutoAssignCreator(project.autoAssignCreator ?? false);
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -136,6 +138,7 @@ export function GeneralTab({
         description: description.trim(),
         status,
         budget: budgetCents,
+        autoAssignCreator,
       });
       toast("Project settings updated.", { variant: "success" });
       refetch();
@@ -282,6 +285,22 @@ export function GeneralTab({
               </Row>
               <Text variant="body-3" color="muted">
                 Set a budget to track spending against task costs. Leave empty for no budget.
+              </Text>
+            </Field>
+
+            <Field>
+              <Row gap="r4" align="center">
+                <Checkbox
+                  id="proj-auto-assign"
+                  checked={autoAssignCreator}
+                  onChange={(e) => setAutoAssignCreator(e.target.checked)}
+                />
+                <Label htmlFor="proj-auto-assign" className="mb-0 cursor-pointer">
+                  Auto-assign tasks to creator
+                </Label>
+              </Row>
+              <Text variant="body-3" color="muted">
+                When enabled, new tasks are automatically assigned to whoever creates them.
               </Text>
             </Field>
 

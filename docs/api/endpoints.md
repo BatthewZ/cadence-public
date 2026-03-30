@@ -297,6 +297,7 @@ Creates a new project within a workspace. The creator is automatically added as 
 | `status` | `string` | One of `PROJECT_STATUSES` enum values | No (defaults to `"active"`) |
 | `budget` | `number \| null` | Integer >= 0 (cents) | No (defaults to `null`) |
 | `theme` | `string \| null` | One of `THEMES` enum values | No (defaults to `null`) |
+| `autoAssignCreator` | `boolean` | | No (defaults to `false`) |
 
 **Response** (201):
 
@@ -311,6 +312,7 @@ Creates a new project within a workspace. The creator is automatically added as 
     "icon": null,
     "budget": null,
     "theme": null,
+    "autoAssignCreator": false,
     "coverImageKey": null,
     "createdAt": "...",
     "updatedAt": "..."
@@ -377,6 +379,7 @@ Updates project details.
 | `coverImagePosition` | `number \| null` | 0–100, vertical position of cover image |
 | `theme` | `string \| null` | One of the supported theme names |
 | `budget` | `number \| null` | Project budget in cents (integer, >= 0) |
+| `autoAssignCreator` | `boolean` | Auto-assign new tasks to their creator |
 
 **Response** (200):
 
@@ -791,7 +794,7 @@ Updates the position of a task group for drag-and-drop reordering.
 
 ### `POST /api/projects/:projectId/tasks`
 
-Creates a new task within a project. The task is placed at the end of the specified task group.
+Creates a new task within a project. The task is placed at the end of the specified task group. If the project has `autoAssignCreator` enabled and no `assigneeId` is provided, the task is automatically assigned to the authenticated user.
 
 **Auth:** Required.
 **Authorization:** Project admin or member.

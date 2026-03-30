@@ -3,6 +3,7 @@ import type { Context } from "hono";
 
 import { user as userTable } from "../../../../db/schema/auth";
 import { label, taskLabel } from "../../../../db/schema/label";
+import { project } from "../../../../db/schema/project";
 import { comment, subtask, task, taskGroup } from "../../../../db/schema/task";
 import { taskAttachment } from "../../../../db/schema/task-attachment";
 import { generateKeyBetween } from "../../../../shared/lib/fractional-index";
@@ -32,8 +33,8 @@ export async function createTask(c: Context<AppEnv>) {
   const projectId = requireParam(c, "projectId");
   const body = validJson(c, createTaskSchema);
 
-  // Batch: taskGroup existence check + last position query (independent — both use upfront IDs)
-  const [groupResult, lastTaskResult] = await db.batch([
+  // Batch: taskGroup existence + last position + project settings (independent — all use upfront IDs)
+  const [groupResult, lastTaskResult, projectResult] = await db.batch([
     db.select()
       .from(taskGroup)
       .where(
@@ -47,6 +48,10 @@ export async function createTask(c: Context<AppEnv>) {
       .from(task)
       .where(eq(task.taskGroupId, body.taskGroupId))
       .orderBy(desc(task.position))
+      .limit(1),
+    db.select({ autoAssignCreator: project.autoAssignCreator })
+      .from(project)
+      .where(eq(project.id, projectId))
       .limit(1),
   ] as const);
 
@@ -62,13 +67,17 @@ export async function createTask(c: Context<AppEnv>) {
 
   const isCompleted = group.isCompletionGroup;
 
+  const assigneeId = body.assigneeId !== undefined
+    ? (body.assigneeId ?? null)
+    : (projectResult[0]?.autoAssignCreator ? user.id : null);
+
   const newTask = {
     id,
     projectId,
     taskGroupId: body.taskGroupId,
     title: body.title,
     description: body.description ?? null,
-    assigneeId: body.assigneeId ?? null,
+    assigneeId,
     priority: body.priority ?? "none",
     completed: isCompleted,
     completedAt: isCompleted ? now : null,
@@ -90,9 +99,9 @@ export async function createTask(c: Context<AppEnv>) {
       actorId: user.id,
       action: "created",
     });
-    if (body.assigneeId) {
+    if (newTask.assigneeId && newTask.assigneeId !== user.id) {
       await createNotification(db, {
-        userId: body.assigneeId,
+        userId: newTask.assigneeId,
         type: "task_assigned",
         title: `You were assigned to "${body.title}"`,
         actorId: user.id,

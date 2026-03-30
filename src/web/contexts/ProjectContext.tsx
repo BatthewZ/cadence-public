@@ -47,6 +47,7 @@ interface Project {
   coverImageKey?: string | null;
   coverImagePosition?: number | null;
   budget?: number | null;
+  autoAssignCreator?: boolean;
   members?: ProjectMember[];
   taskGroups?: TaskGroup[];
 }

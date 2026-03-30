@@ -38,6 +38,7 @@ export async function createProject(c: Context<AppEnv>) {
     status: body.status ?? "active",
     budget: body.budget ?? null,
     theme: body.theme ?? null,
+    autoAssignCreator: body.autoAssignCreator ?? false,
     createdAt: now,
     updatedAt: now,
   };
@@ -197,7 +198,7 @@ export async function updateProject(c: Context<AppEnv>) {
   if (beforeUpdate) {
     const workspaceId = updated.workspaceId;
     const data = buildProjectEventData(updated);
-    const changes = computeChanges(beforeUpdate, updated, ["name", "description", "status", "icon", "budget"]);
+    const changes = computeChanges(beforeUpdate, updated, ["name", "description", "status", "icon", "budget", "autoAssignCreator"]);
     const webhookEvents: Parameters<typeof fireWebhookEvent>[3] = [
       { event: "project.updated", data, changes },
     ];

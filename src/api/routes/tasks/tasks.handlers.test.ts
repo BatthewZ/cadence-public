@@ -195,6 +195,69 @@ describe("createTask", () => {
 
     expect(res.status).toBe(400);
   });
+
+  describe("autoAssignCreator", () => {
+    let autoAssignProjectId: string;
+    let autoAssignGroupId: string;
+
+    beforeAll(async () => {
+      autoAssignProjectId = await seedProject(d1, workspaceId, { autoAssignCreator: true });
+      await seedProjectMember(d1, autoAssignProjectId, TEST_USER.id, "admin");
+      autoAssignGroupId = await seedTaskGroup(d1, autoAssignProjectId, { name: "To Do" });
+    });
+
+    it("auto-assigns task to creator when enabled and no assignee provided", async () => {
+      const app = new Hono<AppEnv>();
+      app.post("/projects/:projectId/tasks", auth(), validateBody(createTaskSchema), createTask);
+
+      const res = await app.request(
+        `/projects/${autoAssignProjectId}/tasks`,
+        jsonRequest("POST", `/projects/${autoAssignProjectId}/tasks`, {
+          title: "Auto-assigned task",
+          taskGroupId: autoAssignGroupId,
+        }),
+      );
+
+      expect(res.status).toBe(201);
+      const body = await res.json<{ task: { assigneeId: string | null } }>();
+      expect(body.task.assigneeId).toBe(TEST_USER.id);
+    });
+
+    it("respects explicit assigneeId even when auto-assign is enabled", async () => {
+      const app = new Hono<AppEnv>();
+      app.post("/projects/:projectId/tasks", auth(), validateBody(createTaskSchema), createTask);
+
+      const res = await app.request(
+        `/projects/${autoAssignProjectId}/tasks`,
+        jsonRequest("POST", `/projects/${autoAssignProjectId}/tasks`, {
+          title: "Explicitly assigned",
+          taskGroupId: autoAssignGroupId,
+          assigneeId: TEST_USER_2.id,
+        }),
+      );
+
+      expect(res.status).toBe(201);
+      const body = await res.json<{ task: { assigneeId: string | null } }>();
+      expect(body.task.assigneeId).toBe(TEST_USER_2.id);
+    });
+
+    it("does not auto-assign when setting is disabled (default)", async () => {
+      const app = new Hono<AppEnv>();
+      app.post("/projects/:projectId/tasks", auth(), validateBody(createTaskSchema), createTask);
+
+      const res = await app.request(
+        `/projects/${projectId}/tasks`,
+        jsonRequest("POST", `/projects/${projectId}/tasks`, {
+          title: "No auto-assign",
+          taskGroupId,
+        }),
+      );
+
+      expect(res.status).toBe(201);
+      const body = await res.json<{ task: { assigneeId: string | null } }>();
+      expect(body.task.assigneeId).toBeNull();
+    });
+  });
 });
 
 // =========================================================================

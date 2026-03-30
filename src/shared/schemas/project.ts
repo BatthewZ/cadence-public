@@ -10,6 +10,7 @@ export const createProjectSchema = z.object({
   status: z.enum(PROJECT_STATUSES).optional(),
   budget: z.number().int().min(0).nullable().optional(),
   theme: z.enum(THEMES).nullable().optional(),
+  autoAssignCreator: z.boolean().optional(),
 });
 
 export const updateProjectSchema = z.object({
@@ -21,6 +22,7 @@ export const updateProjectSchema = z.object({
   coverImagePosition: z.number().int().min(0).max(100).optional().nullable(),
   theme: z.enum(THEMES).nullable().optional(),
   budget: z.number().int().min(0).nullable().optional(),
+  autoAssignCreator: z.boolean().optional(),
 });
 
 export const addProjectMemberSchema = z.object({

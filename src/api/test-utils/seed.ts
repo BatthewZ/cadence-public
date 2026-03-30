@@ -84,15 +84,15 @@ export async function seedWorkspaceMember(
 export async function seedProject(
   d1: D1Database,
   workspaceId: string,
-  opts?: { id?: string; name?: string; budget?: number },
+  opts?: { id?: string; name?: string; budget?: number; autoAssignCreator?: boolean },
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = toSec(Date.now());
   await d1
     .prepare(
-      "INSERT INTO project (id, workspaceId, name, status, budget, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO project (id, workspaceId, name, status, budget, auto_assign_creator, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
     )
-    .bind(id, workspaceId, opts?.name ?? "Test Project", "active", opts?.budget ?? null, now, now)
+    .bind(id, workspaceId, opts?.name ?? "Test Project", "active", opts?.budget ?? null, opts?.autoAssignCreator ? 1 : 0, now, now)
     .run();
   return id;
 }

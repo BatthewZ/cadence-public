@@ -58,7 +58,7 @@ Each project has four views, accessible from the tab bar:
 
 Access via the **Settings** tab on a project:
 
-- **General** — Name, description, status (active/archived), budget
+- **General** — Name, description, status (active/archived), budget, auto-assign tasks to creator
 - **Appearance** — Icon (emoji picker), cover image, project theme
 - **Task Groups** — Define your workflow columns. Mark a group as a "completion group" to auto-complete tasks moved there. Drag to reorder.
 - **Members** — Add workspace members with project-specific roles (admin, member, viewer)

@@ -177,6 +177,7 @@ export * from "./workspace";
 | `updatedAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                     | Last update timestamp                    |
 | `theme`       | `text`                        |                                                | Project theme name                       |
 | `budget`      | `integer`                     |                                                | Project budget in cents (nullable)       |
+| `autoAssignCreator` | `integer` (mode: `boolean`) | `NOT NULL`, default `false`              | Auto-assign new tasks to their creator   |
 
 **Indexes:** index on `workspaceId`
 
