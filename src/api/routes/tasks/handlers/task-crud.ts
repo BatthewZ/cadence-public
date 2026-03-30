@@ -116,7 +116,28 @@ export async function createTask(c: Context<AppEnv>) {
     { event: "task.created", data: buildTaskEventData(newTask as Parameters<typeof buildTaskEventData>[0]) },
   ]);
 
-  return c.json({ task: newTask }, 201);
+  // Enrich response with assignee display fields so the frontend can render
+  // the avatar immediately without waiting for a full task list refetch.
+  let assigneeName: string | null = null;
+  let assigneeAvatarUrl: string | null = null;
+  if (newTask.assigneeId) {
+    if (newTask.assigneeId === user.id) {
+      assigneeName = user.name;
+      assigneeAvatarUrl = user.image ?? null;
+    } else {
+      const [assignee] = await db
+        .select({ name: userTable.name, image: userTable.image })
+        .from(userTable)
+        .where(eq(userTable.id, newTask.assigneeId))
+        .limit(1);
+      if (assignee) {
+        assigneeName = assignee.name;
+        assigneeAvatarUrl = assignee.image ?? null;
+      }
+    }
+  }
+
+  return c.json({ task: { ...newTask, assigneeName, assigneeAvatarUrl } }, 201);
 }
 
 export async function listTasks(c: Context<AppEnv>) {

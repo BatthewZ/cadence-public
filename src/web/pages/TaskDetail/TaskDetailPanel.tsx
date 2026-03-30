@@ -14,6 +14,7 @@ export function TaskDetailPanel() {
   const { toast } = useToast();
   const { members } = useWorkspace();
   const [visible, setVisible] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const close = useCallback(() => {
     const currentTask = new URLSearchParams(window.location.search).get("task");
@@ -21,7 +22,7 @@ export function TaskDetailPanel() {
 
     setVisible(false);
     // Wait for slide-out animation before removing from DOM
-    setTimeout(() => {
+    closeTimerRef.current = setTimeout(() => {
       setSearchParams((prev) => {
         const next = new URLSearchParams(prev);
         next.delete("task");
@@ -29,6 +30,15 @@ export function TaskDetailPanel() {
       });
     }, 200);
   }, [setSearchParams, taskId]);
+
+  // Clear pending close timer when taskId changes or on unmount.
+  // If navigation already removed the ?task param, the delayed
+  // setSearchParams call is stale and would corrupt the history stack.
+  useEffect(() => {
+    return () => {
+      clearTimeout(closeTimerRef.current);
+    };
+  }, [taskId]);
 
   useClickOutside(panelRef, close, !!taskId);
 
