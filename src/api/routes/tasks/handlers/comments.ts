@@ -37,7 +37,10 @@ export async function createComment(c: Context<AppEnv>) {
     updatedAt: now,
   };
 
-  await db.insert(comment).values(newComment);
+  await db.batch([
+    db.insert(comment).values(newComment),
+    db.update(task).set({ updatedAt: now }).where(eq(task.id, taskId)),
+  ] as const);
 
   try {
     const [parentTask] = await db
@@ -139,11 +142,10 @@ export async function updateComment(c: Context<AppEnv>) {
 
   const now = new Date();
 
-  const [updated] = await db
-    .update(comment)
-    .set({ body: body.body, updatedAt: now })
-    .where(eq(comment.id, commentId))
-    .returning();
+  const [[updated]] = await db.batch([
+    db.update(comment).set({ body: body.body, updatedAt: now }).where(eq(comment.id, commentId)).returning(),
+    db.update(task).set({ updatedAt: now }).where(eq(task.id, found.taskId)),
+  ] as const);
 
   try {
     await logActivity(db, {
@@ -194,7 +196,11 @@ export async function deleteComment(c: Context<AppEnv>) {
     }
   }
 
-  await db.delete(comment).where(eq(comment.id, commentId));
+  const now = new Date();
+  await db.batch([
+    db.delete(comment).where(eq(comment.id, commentId)),
+    db.update(task).set({ updatedAt: now }).where(eq(task.id, found.taskId)),
+  ] as const);
 
   try {
     await logActivity(db, {

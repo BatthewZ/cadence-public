@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TaskLabelInfo } from "@/shared/schemas/label";
 import type { Task } from "@/web/contexts/ProjectContext";
 import { api } from "@/web/lib/api/client";
+import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import { queryKeys } from "@/web/lib/query-keys";
 
 export interface Label {
@@ -29,6 +30,7 @@ export function useCreateLabel(projectId: string) {
     mutationFn: (input: { name: string; color: string }) =>
       api.post<{ label: Label }>(`/api/projects/${projectId}/labels`, input),
     onSuccess: () => {
+      freshnessTracker.recordMutation("project");
       void qc.invalidateQueries({
         queryKey: queryKeys.projects.labels(projectId),
       });
@@ -46,6 +48,7 @@ export function useUpdateLabel(projectId: string) {
     mutationFn: ({ labelId, ...input }: { labelId: string; name?: string; color?: string }) =>
       api.patch<{ label: Label }>(`/api/projects/${projectId}/labels/${labelId}`, input),
     onMutate: async ({ labelId, ...input }) => {
+      freshnessTracker.recordMutation("project");
       await Promise.all([
         qc.cancelQueries({ queryKey: queryKeys.projects.labels(projectId) }),
         qc.cancelQueries({ queryKey: queryKeys.projects.tasks(projectId) }),
@@ -130,6 +133,7 @@ export function useDeleteLabel(projectId: string) {
   return useMutation({
     mutationFn: (labelId: string) => api.delete(`/api/projects/${projectId}/labels/${labelId}`),
     onMutate: async (labelId) => {
+      freshnessTracker.recordMutation("project");
       await qc.cancelQueries({
         queryKey: queryKeys.projects.labels(projectId),
       });
@@ -227,6 +231,7 @@ export function useAssignLabel(taskId: string, projectId: string) {
   return useMutation({
     mutationFn: (labelId: string) => api.post(`/api/tasks/${taskId}/labels`, { labelId }),
     onMutate: async (labelId): Promise<AssignSnapshot> => {
+      freshnessTracker.recordMutation("tasks");
       const labelsData = qc.getQueryData<{ labels: Label[] }>(queryKeys.projects.labels(projectId));
       const labelInfo = labelsData?.labels.find((l) => l.id === labelId);
       if (!labelInfo)
@@ -275,6 +280,7 @@ export function useUnassignLabel(taskId: string, projectId: string) {
   return useMutation({
     mutationFn: (labelId: string) => api.delete(`/api/tasks/${taskId}/labels/${labelId}`),
     onMutate: async (labelId): Promise<AssignSnapshot> => {
+      freshnessTracker.recordMutation("tasks");
       const snapshot = await cancelAndSnapshot(qc, taskId, projectId);
 
       qc.setQueryData<TaskDetailData>(queryKeys.tasks.detail(taskId), (old) => {

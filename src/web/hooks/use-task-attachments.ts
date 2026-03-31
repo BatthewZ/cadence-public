@@ -1,6 +1,7 @@
 import { type QueryClient, useQuery } from "@tanstack/react-query";
 
 import { api } from "@/web/lib/api/client";
+import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import { queryKeys } from "@/web/lib/query-keys";
 
 export interface Attachment {
@@ -29,6 +30,7 @@ export function optimisticAddAttachment(
   taskId: string,
   attachment: Attachment,
 ): void {
+  freshnessTracker.recordMutation("tasks");
   qc.setQueryData<AttachmentsResponse>(
     queryKeys.tasks.attachments(taskId),
     (old) => {
@@ -64,6 +66,7 @@ export function optimisticRemoveAttachment(
   taskId: string,
   attachmentId: string,
 ): Attachment | undefined {
+  freshnessTracker.recordMutation("tasks");
   let removed: Attachment | undefined;
   qc.setQueryData<AttachmentsResponse>(
     queryKeys.tasks.attachments(taskId),

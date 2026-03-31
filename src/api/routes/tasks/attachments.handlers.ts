@@ -2,6 +2,7 @@ import { and, asc, count, eq } from "drizzle-orm";
 import type { Context } from "hono";
 
 import { user as userTable } from "../../../db/schema/auth";
+import { task } from "../../../db/schema/task";
 import { taskAttachment } from "../../../db/schema/task-attachment";
 import { upload } from "../../../db/schema/uploads";
 import {
@@ -98,6 +99,7 @@ export async function uploadAttachment(c: Context<AppEnv>) {
         uploadId,
         createdAt: now,
       }),
+      db.update(task).set({ updatedAt: now }).where(eq(task.id, taskId)),
     ] as const);
   } catch (error) {
     // Clean up R2 object and any partially-inserted records
@@ -217,6 +219,7 @@ export async function deleteAttachment(c: Context<AppEnv>) {
     db.batch([
       db.delete(taskAttachment).where(eq(taskAttachment.id, attachmentId)),
       db.delete(upload).where(eq(upload.id, record.uploadId)),
+      db.update(task).set({ updatedAt: new Date() }).where(eq(task.id, taskId)),
     ] as const),
     deleteObject(storage, record.key).catch((err) =>
       console.error(`Failed to delete attachment R2 object ${record.key}:`, err),

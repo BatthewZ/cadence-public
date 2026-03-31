@@ -16,6 +16,7 @@ import {
 import { rateLimit } from "../../middleware/rate-limit";
 import { requireAuth } from "../../middleware/require-auth";
 import { validateBody } from "../../middleware/validate";
+import { getProjectFreshness } from "./freshness.handler";
 import {
   createLabel,
   deleteLabel,
@@ -53,6 +54,9 @@ app.get(
   requireWorkspaceMember(),
   listProjects,
 );
+
+// Project freshness polling endpoint
+app.get("/projects/:projectId/freshness", requireAuth, requireProjectAccess(), getProjectFreshness);
 
 // Project-scoped routes
 app.get("/projects/:projectId", requireAuth, requireProjectAccess(), getProject);

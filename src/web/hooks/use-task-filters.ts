@@ -65,16 +65,11 @@ function applyFilters(tasks: Task[], filters: TaskFilters): Task[] {
       return false;
     }
 
-    if (filters.dueDateFrom) {
-      if (!task.dueDate || task.dueDate < filters.dueDateFrom) {
-        return false;
-      }
-    }
-
-    if (filters.dueDateTo) {
-      if (!task.dueDate || task.dueDate > filters.dueDateTo) {
-        return false;
-      }
+    if (filters.dueDateFrom || filters.dueDateTo) {
+      if (!task.dueDate) return false;
+      const taskDate = task.dueDate.slice(0, 10);
+      if (filters.dueDateFrom && taskDate < filters.dueDateFrom) return false;
+      if (filters.dueDateTo && taskDate > filters.dueDateTo) return false;
     }
 
     if (filters.labelIds.length > 0) {

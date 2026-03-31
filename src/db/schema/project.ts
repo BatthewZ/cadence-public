@@ -29,7 +29,10 @@ export const project = sqliteTable(
     budget: integer("budget"),
     autoAssignCreator: integer("auto_assign_creator", { mode: "boolean" }).notNull().default(false),
   },
-  (table) => [index("project_workspace_idx").on(table.workspaceId)],
+  (table) => [
+    index("project_workspace_idx").on(table.workspaceId),
+    index("project_workspace_updated_idx").on(table.workspaceId, table.updatedAt),
+  ],
 );
 
 export const projectMember = sqliteTable(

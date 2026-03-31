@@ -179,7 +179,7 @@ export * from "./workspace";
 | `budget`      | `integer`                     |                                                | Project budget in cents (nullable)       |
 | `autoAssignCreator` | `integer` (mode: `boolean`) | `NOT NULL`, default `false`              | Auto-assign new tasks to their creator   |
 
-**Indexes:** index on `workspaceId`
+**Indexes:** index on `workspaceId`, composite index on (`workspaceId`, `updatedAt`)
 
 #### `projectMember`
 
@@ -210,7 +210,7 @@ export * from "./workspace";
 | `createdAt` | `integer` (mode: `timestamp`) | `NOT NULL`                                   | Creation timestamp                             |
 | `updatedAt` | `integer` (mode: `timestamp`) | `NOT NULL`                                   | Last update timestamp                          |
 
-**Indexes:** index on `projectId`
+**Indexes:** index on `projectId`, composite index on (`projectId`, `updatedAt`)
 
 #### `task`
 
@@ -237,7 +237,7 @@ export * from "./workspace";
 | `createdAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                        | Creation timestamp                               |
 | `updatedAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                        | Last update timestamp                            |
 
-**Indexes:** index on (`assigneeId`, `dueDate`), index on (`taskGroupId`, `position`), index on (`projectId`, `completed`)
+**Indexes:** index on (`assigneeId`, `dueDate`), index on (`taskGroupId`, `position`), index on (`projectId`, `completed`), composite index on (`projectId`, `assigneeId`), composite index on (`projectId`, `dueDate`, `completed`), composite index on (`projectId`, `updatedAt`)
 
 #### `subtask`
 

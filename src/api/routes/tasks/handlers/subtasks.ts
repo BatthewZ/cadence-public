@@ -41,7 +41,10 @@ export async function createSubtask(c: Context<AppEnv>) {
     createdAt: now,
   };
 
-  await db.insert(subtask).values(newSubtask);
+  await db.batch([
+    db.insert(subtask).values(newSubtask),
+    db.update(task).set({ updatedAt: now }).where(eq(task.id, taskId)),
+  ] as const);
 
   return c.json({ subtask: newSubtask }, 201);
 }
@@ -92,11 +95,11 @@ export async function updateSubtask(c: Context<AppEnv>) {
     ...(body.position !== undefined && { position: body.position }),
   };
 
-  const [updated] = await db
-    .update(subtask)
-    .set(updateData)
-    .where(eq(subtask.id, subtaskId))
-    .returning();
+  const now = new Date();
+  const [[updated]] = await db.batch([
+    db.update(subtask).set(updateData).where(eq(subtask.id, subtaskId)).returning(),
+    db.update(task).set({ updatedAt: now }).where(eq(task.id, found.taskId)),
+  ] as const);
 
   return c.json({ subtask: updated });
 }
@@ -140,7 +143,11 @@ export async function deleteSubtask(c: Context<AppEnv>) {
     return errorResponse(c, "Forbidden", 403);
   }
 
-  await db.delete(subtask).where(eq(subtask.id, subtaskId));
+  const now = new Date();
+  await db.batch([
+    db.delete(subtask).where(eq(subtask.id, subtaskId)),
+    db.update(task).set({ updatedAt: now }).where(eq(task.id, found.taskId)),
+  ] as const);
 
   return c.json({ ok: true });
 }

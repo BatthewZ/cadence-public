@@ -12,6 +12,7 @@ import { useCallback, useMemo, useState } from "react";
 import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import type { Subtask, Task } from "@/web/contexts/ProjectContext";
 import { api } from "@/web/lib/api/client";
+import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import type { TaskDetail } from "@/web/pages/TaskDetail/types";
 
 interface UseTaskSubtasksOptions {
@@ -78,6 +79,7 @@ export function useTaskSubtasks({
 
   const handleSubtaskToggle = useCallback(
     async (subtask: Subtask) => {
+      freshnessTracker.recordMutation("tasks");
       const completedCount =
         localTask?.subtasks.filter((s) => s.completed).length ?? 0;
       // Optimistic toggle
@@ -127,6 +129,7 @@ export function useTaskSubtasks({
 
   const handleAddSubtask = useCallback(async () => {
     if (!newSubtaskTitle.trim()) return;
+    freshnessTracker.recordMutation("tasks");
     const title = newSubtaskTitle.trim();
     setNewSubtaskTitle("");
 
@@ -192,6 +195,7 @@ export function useTaskSubtasks({
         (s) => s.id === subtaskId,
       );
       if (!removedSubtask) return;
+      freshnessTracker.recordMutation("tasks");
 
       // Remove from local state and update board card counts
       setLocalTask((prev) => {
@@ -240,6 +244,7 @@ export function useTaskSubtasks({
 
   const handleRenameSubtask = useCallback(
     async (subtaskId: string, title: string) => {
+      freshnessTracker.recordMutation("tasks");
       const oldTitle = localTask?.subtasks.find(
         (s) => s.id === subtaskId,
       )?.title;
@@ -280,6 +285,7 @@ export function useTaskSubtasks({
       setActiveSubtaskId(null);
       const { active, over } = event;
       if (!over || active.id === over.id || !localTask) return;
+      freshnessTracker.recordMutation("tasks");
 
       const oldIndex = sortedSubtasks.findIndex((s) => s.id === active.id);
       const newIndex = sortedSubtasks.findIndex((s) => s.id === over.id);

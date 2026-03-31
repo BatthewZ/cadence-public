@@ -5,6 +5,7 @@ import type { TaskPriority } from "@/shared/types/roles";
 import { useToast } from "@/web/components/ui/ToastContext";
 import type { Task, TaskGroup } from "@/web/contexts/ProjectContext";
 import { api } from "@/web/lib/api/client";
+import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import { queryKeys } from "@/web/lib/query-keys";
 
 /* ------------------------------------------------------------------ */
@@ -71,6 +72,7 @@ export function useTaskActions({
   const handlePriorityChange = async (priority: TaskPriority) => {
     const oldPriority = task.priority;
     updateTask(task.id, { priority });
+    freshnessTracker.recordMutation("tasks");
     try {
       await api.patch(`/api/tasks/${task.id}`, { priority });
       invalidateTask();
@@ -84,6 +86,7 @@ export function useTaskActions({
     const oldAssigneeId = task.assigneeId;
     const oldAssigneeName = task.assigneeName;
     updateTask(task.id, { assigneeId, assigneeName: assigneeName ?? undefined });
+    freshnessTracker.recordMutation("tasks");
     try {
       await api.patch(`/api/tasks/${task.id}`, { assigneeId });
       invalidateTask();
@@ -101,6 +104,7 @@ export function useTaskActions({
     const targetGroup = taskGroups.find((g) => g.id === targetGroupId);
     const optimisticCompleted = targetGroup?.isCompletionGroup ?? task.completed;
     updateTask(task.id, { taskGroupId: targetGroupId, completed: optimisticCompleted });
+    freshnessTracker.recordMutation("tasks");
     try {
       const movePayload: Record<string, string> = { taskGroupId: targetGroupId };
       if (oldPosition != null) {
@@ -125,6 +129,7 @@ export function useTaskActions({
   const handleDueDateChange = async (date: string | null) => {
     const oldDueDate = task.dueDate;
     updateTask(task.id, { dueDate: date });
+    freshnessTracker.recordMutation("tasks");
     try {
       await api.patch(`/api/tasks/${task.id}`, { dueDate: date });
       invalidateTask();
@@ -139,6 +144,7 @@ export function useTaskActions({
     try {
       await api.delete(`/api/tasks/${task.id}`);
       removeTask(task.id);
+      freshnessTracker.recordMutation("tasks");
       void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(task.id) });
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspaceId) });
       setShowDeleteDialog(false);

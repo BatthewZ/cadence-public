@@ -3,6 +3,7 @@ import { useMemo } from "react";
 
 import type { Comment } from "@/web/contexts/ProjectContext";
 import { api } from "@/web/lib/api/client";
+import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import { queryKeys } from "@/web/lib/query-keys";
 
 export interface CommentsPage {
@@ -28,6 +29,7 @@ export function optimisticAddComment(
   taskId: string,
   opts: { body: string; authorId: string; authorName: string },
 ): Comment {
+  freshnessTracker.recordMutation("tasks");
   const optimisticComment: Comment = {
     id: `optimistic-${crypto.randomUUID()}`,
     body: opts.body,
@@ -82,6 +84,7 @@ export function optimisticUpdateComment(
   commentId: string,
   newBody: string,
 ): string {
+  freshnessTracker.recordMutation("tasks");
   let oldBody = "";
   qc.setQueryData<InfiniteCommentsData>(
     queryKeys.tasks.comments(taskId),

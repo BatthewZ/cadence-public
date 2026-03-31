@@ -65,12 +65,15 @@ export async function assignLabel(c: Context<AppEnv>) {
   const id = crypto.randomUUID();
   const now = new Date();
 
-  await db.insert(taskLabel).values({
-    id,
-    taskId,
-    labelId: body.labelId,
-    createdAt: now,
-  });
+  await db.batch([
+    db.insert(taskLabel).values({
+      id,
+      taskId,
+      labelId: body.labelId,
+      createdAt: now,
+    }),
+    db.update(task).set({ updatedAt: now }).where(eq(task.id, taskId)),
+  ] as const);
 
   deferWork(c, () => logActivity(db, {
     taskId,
@@ -114,9 +117,11 @@ export async function unassignLabel(c: Context<AppEnv>) {
 
   const foundLabel = labelResult[0];
 
-  await db
-    .delete(taskLabel)
-    .where(and(eq(taskLabel.taskId, taskId), eq(taskLabel.labelId, labelIdParam)));
+  const now = new Date();
+  await db.batch([
+    db.delete(taskLabel).where(and(eq(taskLabel.taskId, taskId), eq(taskLabel.labelId, labelIdParam))),
+    db.update(task).set({ updatedAt: now }).where(eq(task.id, taskId)),
+  ] as const);
 
   deferWork(c, () => logActivity(db, {
     taskId,

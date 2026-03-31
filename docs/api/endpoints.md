@@ -156,6 +156,31 @@ Lists all workspaces the authenticated user is a member of, including their role
 }
 ```
 
+### `GET /api/workspaces/:workspaceId/freshness`
+
+Returns lightweight timestamps indicating when workspace-level data was last modified. Clients poll this at a moderate interval (~3s) to detect changes made by other users and selectively invalidate stale caches. Responses are edge-cached (Cloudflare Cache API, 2s TTL) since freshness data is identical for all workspace members.
+
+**Auth:** Required.
+**Authorization:** Workspace member.
+
+**Response** (200):
+
+```json
+{
+  "freshness": {
+    "workspace": 1711900000000,
+    "projects": 1711900000000,
+    "tasks": 1711900000000
+  }
+}
+```
+
+Each value is a Unix timestamp in milliseconds (`updatedAt` epoch) or `null` if no data exists. `workspace` tracks workspace-level changes (name, settings, members). `projects` is `MAX(project.updatedAt)` across all workspace projects. `tasks` is `MAX(task.updatedAt)` across all tasks in all workspace projects.
+
+**Headers:** `Cache-Control: public, s-maxage=2`
+
+---
+
 ### `GET /api/workspaces/:workspaceId`
 
 Returns a single workspace by ID, including a member count.
@@ -346,6 +371,31 @@ Lists all projects in a workspace, enriched with member and task group counts.
   ]
 }
 ```
+
+### `GET /api/projects/:projectId/freshness`
+
+Returns lightweight timestamps indicating when each entity type in a project was last modified. Clients poll this at short intervals (~1.5s) and selectively refetch only the data that changed. Responses are edge-cached (Cloudflare Cache API, 2s TTL) since freshness data is identical for all project viewers.
+
+**Auth:** Required.
+**Authorization:** Project member, or workspace owner/admin.
+
+**Response** (200):
+
+```json
+{
+  "freshness": {
+    "project": 1711900000000,
+    "tasks": 1711900000000,
+    "taskGroups": 1711900000000
+  }
+}
+```
+
+Each value is a Unix timestamp in milliseconds (`updatedAt` epoch) or `null` if no data exists. `project` tracks project-level changes (name, labels, members). `tasks` is `MAX(task.updatedAt)` across all tasks in the project. `taskGroups` is `MAX(taskGroup.updatedAt)` across all task groups.
+
+**Headers:** `Cache-Control: public, s-maxage=2`
+
+---
 
 ### `GET /api/projects/:projectId`
 

@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import type { Task } from "@/web/contexts/ProjectContext";
 import { useFileUpload } from "@/web/hooks/use-file-upload";
 import { api } from "@/web/lib/api/client";
+import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import type { TaskDetail } from "@/web/pages/TaskDetail/types";
 
 interface UseTaskCoverOptions {
@@ -43,6 +44,7 @@ export function useTaskCover({
 
   const handleCoverUpload = useCallback(
     async (file: File) => {
+      freshnessTracker.recordMutation("tasks");
       const result = await uploadFile(file, {
         endpoint: `/api/tasks/${taskId}/cover`,
         method: "put",
@@ -62,6 +64,7 @@ export function useTaskCover({
   );
 
   const handleCoverRemove = useCallback(async () => {
+    freshnessTracker.recordMutation("tasks");
     setLocalTask((prev) =>
       prev ? { ...prev, coverImageKey: null } : prev,
     );
@@ -77,6 +80,7 @@ export function useTaskCover({
 
   const handleCoverPositionChange = useCallback(
     async (pos: number) => {
+      freshnessTracker.recordMutation("tasks");
       setLocalTask((prev) =>
         prev ? { ...prev, coverImagePosition: pos } : prev,
       );

@@ -419,7 +419,10 @@ export async function addMember(c: Context<AppEnv>) {
     addedAt: now,
   };
 
-  await db.insert(projectMember).values(member);
+  await db.batch([
+    db.insert(projectMember).values(member),
+    db.update(project).set({ updatedAt: now }).where(eq(project.id, projectId)),
+  ] as const);
 
   // Defer notification — runs after response is sent
   deferWork(c, () => createNotification(db, {
@@ -469,14 +472,16 @@ export async function removeMember(c: Context<AppEnv>) {
     return errorResponse(c, "Member not found", 404);
   }
 
-  await db
-    .delete(projectMember)
-    .where(
+  const now = new Date();
+  await db.batch([
+    db.delete(projectMember).where(
       and(
         eq(projectMember.projectId, projectId),
         eq(projectMember.userId, userId),
       ),
-    );
+    ),
+    db.update(project).set({ updatedAt: now }).where(eq(project.id, projectId)),
+  ] as const);
 
   // Non-blocking webhook dispatch for project.member_removed
   const proj = projResult[0];

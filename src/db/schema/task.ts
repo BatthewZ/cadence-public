@@ -19,7 +19,10 @@ export const taskGroup = sqliteTable(
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
   },
-  (table) => [index("task_group_project_idx").on(table.projectId)],
+  (table) => [
+    index("task_group_project_idx").on(table.projectId),
+    index("task_group_project_updated_idx").on(table.projectId, table.updatedAt),
+  ],
 );
 
 export const task = sqliteTable(
@@ -58,6 +61,7 @@ export const task = sqliteTable(
     index("task_project_completed_idx").on(table.projectId, table.completed),
     index("task_project_assignee_idx").on(table.projectId, table.assigneeId),
     index("task_project_due_completed_idx").on(table.projectId, table.dueDate, table.completed),
+    index("task_project_updated_idx").on(table.projectId, table.updatedAt),
   ],
 );
 

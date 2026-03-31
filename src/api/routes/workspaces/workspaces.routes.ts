@@ -12,6 +12,7 @@ import {
 } from "../../middleware/authorize";
 import { requireAuth } from "../../middleware/require-auth";
 import { validateBody } from "../../middleware/validate";
+import { getWorkspaceFreshness } from "./freshness.handler";
 import {
   createWorkspace,
   deleteWorkspace,
@@ -33,6 +34,13 @@ app.post(
 );
 
 app.get("/workspaces", requireAuth, listWorkspaces);
+
+app.get(
+  "/workspaces/:workspaceId/freshness",
+  requireAuth,
+  requireWorkspaceMember(),
+  getWorkspaceFreshness,
+);
 
 app.get(
   "/workspaces/:workspaceId",

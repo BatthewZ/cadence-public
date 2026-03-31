@@ -5,6 +5,7 @@ import type { TaskLabelInfo } from "@/shared/schemas/label";
 import type { ProjectStatus, TaskPriority } from "@/shared/types/roles";
 import { Center } from "@/web/components/layout";
 import { Spinner, Text } from "@/web/components/ui";
+import { useProjectFreshness } from "@/web/hooks/use-project-freshness";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 
@@ -129,6 +130,9 @@ interface ProjectProviderProps {
 
 export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
   const qc = useQueryClient();
+
+  // Poll for changes made by other users and selectively invalidate stale caches
+  useProjectFreshness(projectId);
 
   const {
     data: projectData,

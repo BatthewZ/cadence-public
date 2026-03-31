@@ -49,4 +49,8 @@ export const queryKeys = {
       ["notifications", "list", filters] as const,
     unreadCount: ["notifications", "unread-count"] as const,
   },
+  freshness: {
+    project: (id: string) => ["freshness", "project", id] as const,
+    workspace: (id: string) => ["freshness", "workspace", id] as const,
+  },
 } as const;

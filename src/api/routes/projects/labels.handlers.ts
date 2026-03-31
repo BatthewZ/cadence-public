@@ -2,6 +2,7 @@ import { and, count, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 
 import { label, taskLabel } from "../../../db/schema/label";
+import { project } from "../../../db/schema/project";
 import { createLabelSchema, updateLabelSchema } from "../../../shared/schemas/label";
 import { MAX_LABELS_PER_PROJECT } from "../../../shared/schemas/label";
 import type { AppEnv } from "../../env";
@@ -49,7 +50,10 @@ export async function createLabel(c: Context<AppEnv>) {
     createdAt: now,
   };
 
-  await db.insert(label).values(newLabel);
+  await db.batch([
+    db.insert(label).values(newLabel),
+    db.update(project).set({ updatedAt: now }).where(eq(project.id, projectId)),
+  ] as const);
 
   return c.json({ label: newLabel }, 201);
 }
@@ -116,11 +120,11 @@ export async function updateLabel(c: Context<AppEnv>) {
   if (body.color !== undefined) updates.color = body.color;
 
   if (Object.keys(updates).length > 0) {
-    const [updated] = await db
-      .update(label)
-      .set(updates)
-      .where(eq(label.id, labelId))
-      .returning();
+    const now = new Date();
+    const [[updated]] = await db.batch([
+      db.update(label).set(updates).where(eq(label.id, labelId)).returning(),
+      db.update(project).set({ updatedAt: now }).where(eq(project.id, projectId)),
+    ] as const);
 
     return c.json({ label: updated });
   }
@@ -142,6 +146,8 @@ export async function deleteLabel(c: Context<AppEnv>) {
   if (!deleted) {
     return errorResponse(c, "Label not found", 404);
   }
+
+  await db.update(project).set({ updatedAt: new Date() }).where(eq(project.id, projectId));
 
   return c.json({ ok: true, deletedId: labelId });
 }

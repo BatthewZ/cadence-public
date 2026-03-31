@@ -134,6 +134,13 @@
       "when": 1774864595119,
       "tag": "0018_chilly_changeling",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1774960095105,
+      "tag": "0019_amazing_blizzard",
+      "breakpoints": true
     }
   ]
 }
