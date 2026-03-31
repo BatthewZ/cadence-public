@@ -25,9 +25,12 @@ vi.mock("@/web/contexts/WorkspaceContext", () => ({
   }),
 }));
 
+let mockCompletedFilter: boolean | null = null;
+
 vi.mock("@/web/hooks/use-task-filters", () => ({
   useTaskFilters: (tasks: Task[]) => ({
     filteredTasks: tasks,
+    filters: { assigneeIds: [], priorities: [], get completed() { return mockCompletedFilter; }, dueDateFrom: null, dueDateTo: null, labelIds: [] },
     hasActiveFilters: false,
     clearFilters: vi.fn(),
   }),
@@ -171,6 +174,7 @@ function renderTimeline(initialEntries: string[] = ["/"]) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockCompletedFilter = null;
 });
 
 afterEach(() => {
@@ -403,6 +407,7 @@ describe("ProjectTimeline", () => {
     });
 
     it("applies line-through styling to completed tasks", () => {
+      mockCompletedFilter = true; // show completed tasks via Status filter
       const tasks = [
         makeTask({
           id: "t-1",
@@ -467,6 +472,7 @@ describe("ProjectTimeline", () => {
     });
 
     it("calls the uncomplete endpoint when unchecking a completed task", async () => {
+      mockCompletedFilter = true; // show completed tasks via Status filter
       const user = userEvent.setup();
       const tasks = [
         makeTask({ id: "t-1", title: "Undo me", dueDate: daysFromNow(0), completed: true }),
@@ -561,6 +567,34 @@ describe("ProjectTimeline", () => {
       renderTimeline();
 
       expect(screen.getByLabelText("Task actions")).toBeInTheDocument();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 5b. Completed task exclusion
+  // -----------------------------------------------------------------------
+  describe("completed task exclusion", () => {
+    it("excludes completed tasks from the timeline by default", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Active task", dueDate: daysFromNow(0), completed: false }),
+        makeTask({ id: "t-2", title: "Done task", dueDate: daysFromNow(0), completed: true }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getByText("Active task")).toBeInTheDocument();
+      expect(screen.queryByText("Done task")).not.toBeInTheDocument();
+    });
+
+    it("shows completed tasks when Status filter is set to Completed", () => {
+      mockCompletedFilter = true;
+      const tasks = [
+        makeTask({ id: "t-1", title: "Done task", dueDate: daysFromNow(0), completed: true }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline();
+
+      expect(screen.getByText("Done task")).toBeInTheDocument();
     });
   });
 

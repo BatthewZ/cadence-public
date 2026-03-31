@@ -41,7 +41,7 @@ export default function ProjectTimeline() {
   const { project, tasks, updateTask, members, taskGroups } = useProject();
   const { toast } = useToast();
   const qc = useQueryClient();
-  const { filteredTasks } = useTaskFilters(tasks);
+  const { filteredTasks, filters } = useTaskFilters(tasks);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Grouping mode from URL (defaults to "dueDate")
@@ -65,9 +65,12 @@ export default function ProjectTimeline() {
   // Multi-select state
   const { selectedIds, handleToggleSelect, handleClearSelection } = useMultiSelect();
 
-  // Group filtered tasks based on the active grouping mode
+  // Group filtered tasks based on the active grouping mode.
+  // Completed tasks are excluded unless the user explicitly set the Status filter.
+  const excludeCompleted = filters.completed === null;
   const groups = useMemo(() => {
     const timelineTasks: TimelineTask[] = filteredTasks
+      .filter((t) => !excludeCompleted || !t.completed)
       .map((t) => ({
         id: t.id,
         title: t.title,
@@ -81,7 +84,7 @@ export default function ProjectTimeline() {
       }));
 
     return groupTimelineTasks(groupBy, timelineTasks, taskGroups, members);
-  }, [filteredTasks, groupBy, taskGroups, members]);
+  }, [filteredTasks, excludeCompleted, groupBy, taskGroups, members]);
 
   // Determine which accordion sections to auto-expand
   const defaultOpen = useMemo(

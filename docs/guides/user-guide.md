@@ -50,7 +50,7 @@ Each project has four views, accessible from the tab bar:
 
 **List** — Sortable table with columns for title, status, assignee, due date, and priority. Includes search by task title.
 
-**Timeline** — Tasks grouped by due date buckets (today, this week, next week, later, no date) by default. Use the **Group by** dropdown to switch between grouping by due date, priority, task group, or assignee. The selected grouping mode is persisted in the URL.
+**Timeline** — Tasks grouped by due date buckets (today, this week, next week, later, no date) by default. Use the **Group by** dropdown to switch between grouping by due date, priority, task group, or assignee. The selected grouping mode is persisted in the URL. Completed tasks are hidden by default — use the **Status** filter to view them.
 
 **Dashboard** — Project-level stats: task counts, completion progress, cost summary, team workload, and activity feed.
 
