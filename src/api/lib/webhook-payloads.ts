@@ -365,9 +365,8 @@ export function fireWebhookEvent(
   let ctx: ExecutionContext;
   try {
     ctx = getExecutionCtx();
-  } catch (err) {
-    // No ExecutionContext available (e.g. test environment) — skip webhook dispatch
-    console.warn("[webhooks] No ExecutionContext available, skipping dispatch:", err);
+  } catch {
+    // No ExecutionContext available (e.g. test environment) — skip webhook dispatch silently
     return;
   }
   console.log("[webhooks] Dispatching events:", events.map(e => e.event).join(", "), "for workspace:", contextOpts.workspaceId);

@@ -356,11 +356,12 @@ describe("ProjectList", () => {
       expect(menu).toBeInTheDocument();
 
       const items = within(menu).getAllByRole("menuitem");
-      expect(items).toHaveLength(6);
+      expect(items).toHaveLength(7);
 
       expect(screen.getByRole("menuitem", { name: /Open project/i })).toBeInTheDocument();
       expect(screen.getByRole("menuitem", { name: /Rename/i })).toBeInTheDocument();
       expect(screen.getByRole("menuitem", { name: /Project settings/i })).toBeInTheDocument();
+      expect(screen.getByRole("menuitem", { name: /Duplicate project/i })).toBeInTheDocument();
       expect(screen.getByRole("menuitem", { name: /Mark as completed/i })).toBeInTheDocument();
       expect(screen.getByRole("menuitem", { name: /Archive project/i })).toBeInTheDocument();
       expect(screen.getByRole("menuitem", { name: /Delete project/i })).toBeInTheDocument();
