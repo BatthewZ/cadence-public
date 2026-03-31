@@ -101,7 +101,7 @@ Accepts all `<div>` props. Styled identically to `Content` but positioned relati
 ### Content (`.dropdown-menu-content`)
 - `--C-SURFACE-0` background, `--C-BORDER-DEFAULT` border
 - `--RADIUS-MD` border radius, `--SHADOW-LG` elevation
-- `min-width: 180px`, `z-index: 40`
+- `min-width: 180px`, `overflow-y: auto` (scrolls when content exceeds viewport height), `z-index: 40`
 
 ### Item (`.dropdown-menu-item`)
 - Full-width flex layout with `--R-SIZE-2` gap

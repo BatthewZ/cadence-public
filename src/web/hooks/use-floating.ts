@@ -5,6 +5,7 @@ import {
   offset,
   type Placement,
   shift,
+  size,
   useFloating as useFloatingUI,
 } from "@floating-ui/react";
 
@@ -25,6 +26,14 @@ export function useFloating(config: UseFloatingConfig = {}) {
     offset(offsetPx),
     flip(),
     shift({ padding: 8 }),
+    size({
+      padding: 8,
+      apply({ availableHeight, elements }) {
+        Object.assign(elements.floating.style, {
+          maxHeight: `${availableHeight}px`,
+        });
+      },
+    }),
     ...(arrowRef ? [arrow({ element: arrowRef })] : []),
   ];
 

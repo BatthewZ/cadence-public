@@ -24,7 +24,7 @@ Returns the object from `@floating-ui/react`'s `useFloating` — includes `refs`
 
 ### Middleware
 
-Applied in order: `offset` → `flip` → `shift` (8px padding) → `arrow` (when `arrowRef` provided).
+Applied in order: `offset` → `flip` → `shift` (8px padding) → `size` (constrains floating element height to available viewport space, 8px padding) → `arrow` (when `arrowRef` provided).
 
 ### Re-exports
 

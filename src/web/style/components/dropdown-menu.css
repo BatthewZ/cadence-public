@@ -15,6 +15,7 @@
   box-shadow: var(--SHADOW-LG);
   padding: 4px 0;
   min-width: 180px;
+  overflow-y: auto;
   z-index: 51;
   outline: none;
 }
