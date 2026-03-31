@@ -1,0 +1,139 @@
+/* Forest Theme — Deep woodland canopy
+   Near-black forest green, rich moss primary, amber firefly accent. Moody and ancient.
+   Fonts: Libre Baskerville (headings), Cabin (body) */
+
+:root[data-theme="forest"] {
+  color-scheme: dark;
+
+  /* Fonts — naturalistic serif headings with warm organic body */
+  --DEFAULT-FONT: "Cabin", sans-serif;
+  --DEFAULT-MONO-FONT: "DM Mono", monospace;
+  --HEADING-FONT: "Libre Baskerville", serif;
+  --HEADING-LETTER-SPACING: 0em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas — very dark forest green */
+  --C-CANVAS: #0b130e;
+
+  /* Brand — rich moss emerald */
+  --C-PRIMARY: #2d8a4e;
+  --C-PRIMARY-HOVER: #247a42;
+  --C-PRIMARY-ACTIVE: #389a5c;
+  --C-SECONDARY: #1a2e20;
+  --C-SECONDARY-HOVER: #243828;
+  --C-ACCENT: #c8963a;
+  --C-ACCENT-HOVER: #b8862e;
+
+  /* Surface — dark greens with canopy depth */
+  --C-SURFACE-0: #0e1610;
+  --C-SURFACE-1: #141e16;
+  --C-SURFACE-2: #1c281e;
+  --C-SURFACE-3: #263228;
+
+  /* Text — green-tinted off-whites */
+  --C-TEXT-PRIMARY: #dce6de;
+  --C-TEXT-SECONDARY: #96a89a;
+  --C-TEXT-MUTED: #5a6e5e;
+  --C-TEXT-INVERSE: #0b130e;
+  --C-TEXT-ON-PRIMARY: #e8f0ea;
+  --C-TEXT-ON-ACCENT: #0e1208;
+
+  /* Border */
+  --C-BORDER-DEFAULT: #263228;
+  --C-BORDER-STRONG: #324038;
+  --C-BORDER-FOCUS: #2d8a4e;
+
+  /* Status */
+  --C-STATUS-ERROR: #d46a6a;
+  --C-STATUS-ERROR-BG: #241414;
+  --C-STATUS-SUCCESS: #5aaa6a;
+  --C-STATUS-SUCCESS-BG: #0e1e12;
+  --C-STATUS-WARNING: #d4a840;
+  --C-STATUS-WARNING-BG: #241e0e;
+  --C-STATUS-INFO: #5a9ac0;
+  --C-STATUS-INFO-BG: #0e1a24;
+
+  /* Radius — organic, like rounded tree trunks */
+  --RADIUS-SM: 8px;
+  --RADIUS-MD: 12px;
+  --RADIUS-LG: 16px;
+  --RADIUS-XL: 20px;
+
+  /* Shadows — green-brown tinted, warm where accent touches */
+  --SHADOW-SM: 0 2px 6px 0 rgb(11 19 14 / 0.5), 0 1px 2px 0 rgb(45 138 78 / 0.04);
+  --SHADOW-MD: 0 4px 14px -2px rgb(11 19 14 / 0.6), 0 2px 4px -1px rgb(200 150 58 / 0.05);
+  --SHADOW-LG: 0 12px 28px -6px rgb(11 19 14 / 0.7), 0 4px 8px -4px rgb(200 150 58 / 0.06);
+
+  /* Typography */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 500;
+
+  --BodyText-1-line-height: 30px;
+  --BodyText-2-line-height: 26px;
+
+  /* Page transitions — mist parting */
+  --MOTION-PAGE-TRANSITION-IN: forest-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: forest-page-out;
+
+  /* Motion — slowest, organic, like leaves settling */
+  --MOTION-DURATION-ENTER: 480ms;
+  --MOTION-DURATION-EXIT: 340ms;
+  --MOTION-DURATION-SHIFT: 580ms;
+  --MOTION-DURATION-PAGE: 520ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.2, 0.85, 0.25, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.14, 1, 0.28, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.5, 0, 0.85, 0.35);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.2, 1, 0.4, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.18, 1.08, 0.38, 1);
+  --MOTION-DISTANCE-SM: 10px;
+  --MOTION-DISTANCE-MD: 22px;
+  --MOTION-DISTANCE-LG: 44px;
+  --MOTION-STAGGER-DELAY: 75ms;
+  --MOTION-SCALE-HOVER: 1.02;
+  --MOTION-SCALE-PRESS: 0.98;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay */
+  --OVERLAY-SCRIM-COLOR: rgb(11 19 14 / 0.75);
+  --OVERLAY-GRADIENT-START: rgb(11 19 14 / 0);
+  --OVERLAY-GRADIENT-END: rgb(11 19 14 / 0.88);
+  --OVERLAY-BLUR: 12px;
+  --OVERLAY-BLUR-HEAVY: 26px;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.02;
+  --MEDIA-CARD-HOVER-LIFT: -3px;
+
+  /* Transitions */
+  --DURATION-FAST: 150ms;
+  --DURATION-NORMAL: 300ms;
+  --DURATION-SLOW: 460ms;
+}
+
+@keyframes forest-page-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.97);
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes forest-page-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.98);
+    filter: blur(3px);
+  }
+}

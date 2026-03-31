@@ -17,7 +17,7 @@ describe("useTheme", () => {
   it("returns all available themes", () => {
     const { result } = renderHook(() => useTheme());
     expect(result.current.themes).toBe(THEMES);
-    expect(result.current.themes).toEqual(["default", "noir", "botanical", "sunset", "candy", "cyberpunk", "pastel", "brutalist", "chalk", "ocean", "ember", "luxe", "deco", "sakura"]);
+    expect(result.current.themes).toEqual(["default", "noir", "botanical", "sunset", "candy", "cyberpunk", "pastel", "brutalist", "ocean", "ember", "luxe", "sakura", "melancholy", "storm", "dreamlike", "terminal", "synthwave", "forest"]);
   });
 
   it("reads the current theme from data-theme attribute", () => {

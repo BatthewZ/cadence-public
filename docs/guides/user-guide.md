@@ -235,9 +235,9 @@ Shortcuts are disabled when typing in text inputs.
 
 ## Themes
 
-Cadence includes 14 built-in themes:
+Cadence includes 18 built-in themes:
 
-Minimal, Noir, Botanical, Sunset, Candy, Cyberpunk, Pastel, Brutalist, Chalk, Ocean, Ember, Luxe, Deco, Sakura
+Minimal, Noir, Botanical, Sunset, Candy, Cyberpunk, Pastel, Brutalist, Ocean, Ember, Luxe, Sakura, Melancholy, Storm, Dreamlike, Terminal, Synthwave, Forest
 
 Set a **workspace theme** in Settings > General — it applies across the entire workspace. Set a **project theme** in Project Settings > Appearance — it overrides the workspace theme while viewing that project.
 

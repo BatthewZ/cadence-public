@@ -1,0 +1,135 @@
+/* Terminal Theme — Green phosphor CRT
+   Near-black with green tint, phosphor green primary, amber accent. Pure monospace.
+   Fonts: Space Mono (headings), Fira Code (body) */
+
+:root[data-theme="terminal"] {
+  color-scheme: dark;
+
+  /* Fonts — all monospace, because this IS a terminal */
+  --DEFAULT-FONT: "Fira Code", monospace;
+  --DEFAULT-MONO-FONT: "Fira Code", monospace;
+  --HEADING-FONT: "Space Mono", monospace;
+  --HEADING-LETTER-SPACING: 0.04em;
+  --HEADING-TEXT-TRANSFORM: uppercase;
+
+  /* Canvas — near-black with faint green tint */
+  --C-CANVAS: #0a0f0a;
+
+  /* Brand — phosphor green */
+  --C-PRIMARY: #33ff66;
+  --C-PRIMARY-HOVER: #28dd55;
+  --C-PRIMARY-ACTIVE: #44ff77;
+  --C-SECONDARY: #1a2e1a;
+  --C-SECONDARY-HOVER: #243824;
+  --C-ACCENT: #ffb020;
+  --C-ACCENT-HOVER: #e69e18;
+
+  /* Surface — dark greens */
+  --C-SURFACE-0: #0c120c;
+  --C-SURFACE-1: #101a10;
+  --C-SURFACE-2: #162016;
+  --C-SURFACE-3: #1e2a1e;
+
+  /* Text — green-tinted whites */
+  --C-TEXT-PRIMARY: #d0f0d0;
+  --C-TEXT-SECONDARY: #80b880;
+  --C-TEXT-MUTED: #4a7a4a;
+  --C-TEXT-INVERSE: #0a0f0a;
+  --C-TEXT-ON-PRIMARY: #0a0f0a;
+  --C-TEXT-ON-ACCENT: #0a0f0a;
+
+  /* Border */
+  --C-BORDER-DEFAULT: #1e2a1e;
+  --C-BORDER-STRONG: #2a3a2a;
+  --C-BORDER-FOCUS: #33ff66;
+
+  /* Status */
+  --C-STATUS-ERROR: #ff4444;
+  --C-STATUS-ERROR-BG: #2a0e0e;
+  --C-STATUS-SUCCESS: #33ff66;
+  --C-STATUS-SUCCESS-BG: #0e2a14;
+  --C-STATUS-WARNING: #ffb020;
+  --C-STATUS-WARNING-BG: #2a2210;
+  --C-STATUS-INFO: #44bbff;
+  --C-STATUS-INFO-BG: #0e1e2a;
+
+  /* Radius — terminals are rectangular */
+  --RADIUS-SM: 0px;
+  --RADIUS-MD: 1px;
+  --RADIUS-LG: 2px;
+  --RADIUS-XL: 2px;
+
+  /* Shadows — green phosphor glow */
+  --SHADOW-SM: 0 0 6px 0 rgb(51 255 102 / 0.1), 0 0 2px 0 rgb(51 255 102 / 0.06);
+  --SHADOW-MD: 0 0 14px -2px rgb(51 255 102 / 0.15), 0 0 6px -1px rgb(51 255 102 / 0.08);
+  --SHADOW-LG: 0 0 28px -4px rgb(51 255 102 / 0.2), 0 0 12px -4px rgb(51 255 102 / 0.1);
+
+  /* Typography — monospace-optimized */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 500;
+
+  --BodyText-1-line-height: 26px;
+  --BodyText-2-line-height: 22px;
+
+  /* Page transitions — screen clear and redraw */
+  --MOTION-PAGE-TRANSITION-IN: terminal-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: terminal-page-out;
+
+  /* Motion — near-instant, step-like */
+  --MOTION-DURATION-ENTER: 80ms;
+  --MOTION-DURATION-EXIT: 60ms;
+  --MOTION-DURATION-SHIFT: 120ms;
+  --MOTION-DURATION-PAGE: 150ms;
+  --MOTION-EASE-PAGE: steps(4, end);
+  --MOTION-EASE-ENTER: steps(3, end);
+  --MOTION-EASE-EXIT: steps(2, end);
+  --MOTION-EASE-SHIFT: steps(3, end);
+  --MOTION-EASE-BOUNCE: steps(4, end);
+  --MOTION-DISTANCE-SM: 2px;
+  --MOTION-DISTANCE-MD: 6px;
+  --MOTION-DISTANCE-LG: 12px;
+  --MOTION-STAGGER-DELAY: 10ms;
+  --MOTION-SCALE-HOVER: 1;
+  --MOTION-SCALE-PRESS: 1;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay */
+  --OVERLAY-SCRIM-COLOR: rgb(10 15 10 / 0.85);
+  --OVERLAY-GRADIENT-START: rgb(10 15 10 / 0);
+  --OVERLAY-GRADIENT-END: rgb(10 15 10 / 0.92);
+  --OVERLAY-BLUR: 4px;
+  --OVERLAY-BLUR-HEAVY: 8px;
+
+  /* Media — no scale/lift, terminals don't do that */
+  --MEDIA-CARD-HOVER-SCALE: 1;
+  --MEDIA-CARD-HOVER-LIFT: 0px;
+
+  /* Transitions */
+  --DURATION-FAST: 40ms;
+  --DURATION-NORMAL: 80ms;
+  --DURATION-SLOW: 140ms;
+}
+
+@keyframes terminal-page-in {
+  0% {
+    opacity: 0;
+    clip-path: inset(0 0 100% 0);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes terminal-page-out {
+  0% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+  }
+  100% {
+    opacity: 0;
+    clip-path: inset(100% 0 0 0);
+  }
+}

@@ -1,0 +1,139 @@
+/* Synthwave Theme — Neon sunset on the grid
+   Deep purple canvas, hot magenta primary, electric violet accent. 80s retro-future.
+   Fonts: Orbitron (headings), Space Grotesk (body) */
+
+:root[data-theme="synthwave"] {
+  color-scheme: dark;
+
+  /* Fonts — geometric retro-future headings with clean modern body */
+  --DEFAULT-FONT: "Space Grotesk", sans-serif;
+  --DEFAULT-MONO-FONT: "Fira Code", monospace;
+  --HEADING-FONT: "Orbitron", sans-serif;
+  --HEADING-LETTER-SPACING: 0.06em;
+  --HEADING-TEXT-TRANSFORM: uppercase;
+
+  /* Canvas — deep dark purple, the night sky over the grid */
+  --C-CANVAS: #0d0221;
+
+  /* Brand — hot magenta like neon signage */
+  --C-PRIMARY: #f72585;
+  --C-PRIMARY-HOVER: #e01a75;
+  --C-PRIMARY-ACTIVE: #ff3595;
+  --C-SECONDARY: #1a0e38;
+  --C-SECONDARY-HOVER: #261648;
+  --C-ACCENT: #b429f9;
+  --C-ACCENT-HOVER: #9e20e0;
+
+  /* Surface — dark purples with increasing warmth */
+  --C-SURFACE-0: #100428;
+  --C-SURFACE-1: #160832;
+  --C-SURFACE-2: #1e0e40;
+  --C-SURFACE-3: #28164e;
+
+  /* Text — cool lavender whites */
+  --C-TEXT-PRIMARY: #ede4f8;
+  --C-TEXT-SECONDARY: #a090c4;
+  --C-TEXT-MUTED: #5e4a80;
+  --C-TEXT-INVERSE: #0d0221;
+  --C-TEXT-ON-PRIMARY: #ffffff;
+  --C-TEXT-ON-ACCENT: #ffffff;
+
+  /* Border */
+  --C-BORDER-DEFAULT: #28164e;
+  --C-BORDER-STRONG: #362060;
+  --C-BORDER-FOCUS: #b429f9;
+
+  /* Status — vivid neon tones */
+  --C-STATUS-ERROR: #ff4477;
+  --C-STATUS-ERROR-BG: #2a0820;
+  --C-STATUS-SUCCESS: #00e87a;
+  --C-STATUS-SUCCESS-BG: #082a18;
+  --C-STATUS-WARNING: #ffd319;
+  --C-STATUS-WARNING-BG: #2a2408;
+  --C-STATUS-INFO: #4cc9f0;
+  --C-STATUS-INFO-BG: #08202a;
+
+  /* Radius — small, clean geometric */
+  --RADIUS-SM: 2px;
+  --RADIUS-MD: 4px;
+  --RADIUS-LG: 6px;
+  --RADIUS-XL: 8px;
+
+  /* Shadows — purple/magenta neon glow */
+  --SHADOW-SM: 0 0 8px 0 rgb(247 37 133 / 0.15), 0 0 4px 0 rgb(180 41 249 / 0.1);
+  --SHADOW-MD: 0 0 20px -2px rgb(247 37 133 / 0.2), 0 0 10px -2px rgb(180 41 249 / 0.12);
+  --SHADOW-LG: 0 0 36px -4px rgb(247 37 133 / 0.25), 0 0 18px -4px rgb(180 41 249 / 0.15);
+
+  /* Typography — bold display-forward */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 28px;
+  --BodyText-2-line-height: 24px;
+
+  /* Page transitions — VHS tracking */
+  --MOTION-PAGE-TRANSITION-IN: synthwave-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: synthwave-page-out;
+
+  /* Motion — medium-fast, punchy with overshoot */
+  --MOTION-DURATION-ENTER: 200ms;
+  --MOTION-DURATION-EXIT: 140ms;
+  --MOTION-DURATION-SHIFT: 260ms;
+  --MOTION-DURATION-PAGE: 350ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.68, -0.3, 0.32, 1.3);
+  --MOTION-EASE-ENTER: cubic-bezier(0.22, 1.2, 0.36, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.33, 1, 0.68, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.28, 1.6, 0.5, 1);
+  --MOTION-DISTANCE-SM: 6px;
+  --MOTION-DISTANCE-MD: 14px;
+  --MOTION-DISTANCE-LG: 28px;
+  --MOTION-STAGGER-DELAY: 35ms;
+  --MOTION-SCALE-HOVER: 1.05;
+  --MOTION-SCALE-PRESS: 0.95;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay */
+  --OVERLAY-SCRIM-COLOR: rgb(13 2 33 / 0.8);
+  --OVERLAY-GRADIENT-START: rgb(13 2 33 / 0);
+  --OVERLAY-GRADIENT-END: rgb(13 2 33 / 0.9);
+  --OVERLAY-BLUR: 16px;
+  --OVERLAY-BLUR-HEAVY: 32px;
+
+  /* Media — punchy hover */
+  --MEDIA-CARD-HOVER-SCALE: 1.05;
+  --MEDIA-CARD-HOVER-LIFT: -5px;
+
+  /* Transitions */
+  --DURATION-FAST: 80ms;
+  --DURATION-NORMAL: 160ms;
+  --DURATION-SLOW: 260ms;
+}
+
+@keyframes synthwave-page-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.94);
+    filter: saturate(1.8) brightness(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: saturate(1) brightness(1);
+  }
+}
+
+@keyframes synthwave-page-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: saturate(1) brightness(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.04);
+    filter: saturate(1.8) brightness(0.6);
+  }
+}

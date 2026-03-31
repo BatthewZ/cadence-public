@@ -1,0 +1,143 @@
+/* Storm Theme — Thundercloud intensity
+   Dark slate-charcoal canvas, steel-blue primary, electric lightning accent.
+   The exhilaration of watching a thunderstorm. Awe-inspiring power.
+   Fonts: Josefin Sans (headings), Sora (body) */
+
+:root[data-theme="storm"] {
+  color-scheme: dark;
+
+  /* Fonts — geometric commanding uppercase headings with authoritative body */
+  --DEFAULT-FONT: "Sora", sans-serif;
+  --DEFAULT-MONO-FONT: "Fira Code", monospace;
+  --HEADING-FONT: "Josefin Sans", sans-serif;
+  --HEADING-LETTER-SPACING: 0.06em;
+  --HEADING-TEXT-TRANSFORM: uppercase;
+
+  /* Canvas — thundercloud dark */
+  --C-CANVAS: #14161a;
+
+  /* Brand — steel/gunmetal with blue tint, the color of storm clouds */
+  --C-PRIMARY: #5a6a80;
+  --C-PRIMARY-HOVER: #4a5a70;
+  --C-PRIMARY-ACTIVE: #6a7a90;
+  --C-SECONDARY: #1e2228;
+  --C-SECONDARY-HOVER: #282e36;
+  --C-ACCENT: #e0f0ff;
+  --C-ACCENT-HOVER: #c8e0f4;
+
+  /* Surface — dark slates with subtle blue undertone, building tension */
+  --C-SURFACE-0: #181a1e;
+  --C-SURFACE-1: #1c2026;
+  --C-SURFACE-2: #22282e;
+  --C-SURFACE-3: #2a3038;
+
+  /* Text — cold whites and blue-grays, like lightning-lit clouds */
+  --C-TEXT-PRIMARY: #e8ecf0;
+  --C-TEXT-SECONDARY: #8a94a4;
+  --C-TEXT-MUTED: #505868;
+  --C-TEXT-INVERSE: #14161a;
+  --C-TEXT-ON-PRIMARY: #e8ecf0;
+  --C-TEXT-ON-ACCENT: #14161a;
+
+  /* Border — tense, slightly blue */
+  --C-BORDER-DEFAULT: #2a3038;
+  --C-BORDER-STRONG: #3a424e;
+  --C-BORDER-FOCUS: #e0f0ff;
+
+  /* Status — sharp and vivid, cutting through the dark */
+  --C-STATUS-ERROR: #f06060;
+  --C-STATUS-ERROR-BG: #281416;
+  --C-STATUS-SUCCESS: #48c878;
+  --C-STATUS-SUCCESS-BG: #142818;
+  --C-STATUS-WARNING: #f0c040;
+  --C-STATUS-WARNING-BG: #282214;
+  --C-STATUS-INFO: #60b8f0;
+  --C-STATUS-INFO-BG: #141e28;
+
+  /* Radius — small-medium, taut and tense */
+  --RADIUS-SM: 4px;
+  --RADIUS-MD: 6px;
+  --RADIUS-LG: 8px;
+  --RADIUS-XL: 12px;
+
+  /* Shadows — strong, dramatic, blue-electric tint, pressing down */
+  --SHADOW-SM: 0 2px 6px 0 rgb(20 22 26 / 0.5), 0 0 4px 0 rgb(224 240 255 / 0.04);
+  --SHADOW-MD: 0 6px 16px -2px rgb(20 22 26 / 0.6), 0 0 8px -1px rgb(224 240 255 / 0.06);
+  --SHADOW-LG: 0 16px 36px -4px rgb(20 22 26 / 0.7), 0 0 16px -2px rgb(224 240 255 / 0.08);
+
+  /* Typography — strong, commanding */
+  --Bold-Weight: 800;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 28px;
+  --BodyText-2-line-height: 24px;
+
+  /* Page transitions — quick dramatic flash */
+  --MOTION-PAGE-TRANSITION-IN: storm-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: storm-page-out;
+
+  /* Motion — fast and sharp, wind gusts with overshoot */
+  --MOTION-DURATION-ENTER: 200ms;
+  --MOTION-DURATION-EXIT: 140ms;
+  --MOTION-DURATION-SHIFT: 280ms;
+  --MOTION-DURATION-PAGE: 250ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.7, 0, 0.15, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.18, 1.1, 0.32, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.6, 0, 1, 0.4);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.3, 1.05, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.28, 1.5, 0.58, 1);
+  --MOTION-DISTANCE-SM: 6px;
+  --MOTION-DISTANCE-MD: 16px;
+  --MOTION-DISTANCE-LG: 34px;
+  --MOTION-STAGGER-DELAY: 35ms;
+  --MOTION-SCALE-HOVER: 1.04;
+  --MOTION-SCALE-PRESS: 0.95;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — heavy dark, oppressive atmospheric pressure */
+  --OVERLAY-SCRIM-COLOR: rgb(20 22 26 / 0.8);
+  --OVERLAY-GRADIENT-START: rgb(20 22 26 / 0);
+  --OVERLAY-GRADIENT-END: rgb(20 22 26 / 0.9);
+  --OVERLAY-BLUR: 12px;
+  --OVERLAY-BLUR-HEAVY: 28px;
+
+  /* Media — punchy interaction */
+  --MEDIA-CARD-HOVER-SCALE: 1.04;
+  --MEDIA-CARD-HOVER-LIFT: -5px;
+
+  /* Transitions — quick and forceful */
+  --DURATION-FAST: 80ms;
+  --DURATION-NORMAL: 160ms;
+  --DURATION-SLOW: 260ms;
+}
+
+@keyframes storm-page-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+    filter: brightness(1.8);
+  }
+  40% {
+    filter: brightness(1.0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: brightness(1);
+  }
+}
+
+@keyframes storm-page-out {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: brightness(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.98) translateY(-4px);
+    filter: brightness(0.5);
+  }
+}

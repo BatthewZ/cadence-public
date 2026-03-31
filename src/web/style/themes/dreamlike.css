@@ -1,0 +1,140 @@
+/* Dreamlike Theme — Vaporwave haze, liminal twilight
+   Hazy purple-pink canvas, desaturated mauve primary, washed aqua accent.
+   Everything slightly out of focus, like a VHS tape played too many times.
+   Fonts: Poppins (headings), Quicksand (body) */
+
+:root[data-theme="dreamlike"] {
+  color-scheme: dark;
+
+  /* Fonts — geometric friendly headings with rounded soft body */
+  --DEFAULT-FONT: "Quicksand", sans-serif;
+  --DEFAULT-MONO-FONT: "Libertinus Mono", monospace;
+  --HEADING-FONT: "Poppins", sans-serif;
+  --HEADING-LETTER-SPACING: 0.04em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas — hazy dark purple-pink, twilight through frosted glass */
+  --C-CANVAS: #1a1220;
+
+  /* Brand — desaturated pink/mauve, faded neon; washed aqua complement */
+  --C-PRIMARY: #b88aa0;
+  --C-PRIMARY-HOVER: #a67a90;
+  --C-PRIMARY-ACTIVE: #c89aae;
+  --C-SECONDARY: #2a2038;
+  --C-SECONDARY-HOVER: #362c46;
+  --C-ACCENT: #7ac4b8;
+  --C-ACCENT-HOVER: #68b0a4;
+
+  /* Surface — purple-pink darks, each layer deeper into the dream */
+  --C-SURFACE-0: #1e1628;
+  --C-SURFACE-1: #241c30;
+  --C-SURFACE-2: #2c2240;
+  --C-SURFACE-3: #36284c;
+
+  /* Text — washed lavender whites, never crisp */
+  --C-TEXT-PRIMARY: #e0d6e8;
+  --C-TEXT-SECONDARY: #9a8ea8;
+  --C-TEXT-MUTED: #645a72;
+  --C-TEXT-INVERSE: #1a1220;
+  --C-TEXT-ON-PRIMARY: #1a1220;
+  --C-TEXT-ON-ACCENT: #1a1220;
+
+  /* Border — soft purple haze */
+  --C-BORDER-DEFAULT: #36284c;
+  --C-BORDER-STRONG: #443658;
+  --C-BORDER-FOCUS: #7ac4b8;
+
+  /* Status — desaturated, hazy versions */
+  --C-STATUS-ERROR: #d48080;
+  --C-STATUS-ERROR-BG: #281a20;
+  --C-STATUS-SUCCESS: #6ab88a;
+  --C-STATUS-SUCCESS-BG: #1a2822;
+  --C-STATUS-WARNING: #d4aa6a;
+  --C-STATUS-WARNING-BG: #28221a;
+  --C-STATUS-INFO: #70a0c8;
+  --C-STATUS-INFO-BG: #1a2028;
+
+  /* Radius — largest in system, no hard edges in a dream */
+  --RADIUS-SM: 14px;
+  --RADIUS-MD: 18px;
+  --RADIUS-LG: 24px;
+  --RADIUS-XL: 32px;
+
+  /* Shadows — soft pink-purple glow, very diffuse, like light through fog */
+  --SHADOW-SM: 0 2px 12px 0 rgb(184 138 160 / 0.1), 0 0 6px 0 rgb(122 196 184 / 0.04);
+  --SHADOW-MD: 0 4px 24px -4px rgb(184 138 160 / 0.15), 0 0 12px -2px rgb(122 196 184 / 0.06);
+  --SHADOW-LG: 0 8px 48px -8px rgb(184 138 160 / 0.2), 0 0 24px -4px rgb(122 196 184 / 0.08);
+
+  /* Typography — light and airy, dreamy weights */
+  --Bold-Weight: 600;
+  --Semibold-Weight: 500;
+
+  --BodyText-1-line-height: 32px;
+  --BodyText-2-line-height: 26px;
+
+  /* Page transitions — slow blur + fade + scale, like falling asleep */
+  --MOTION-PAGE-TRANSITION-IN: dreamlike-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: dreamlike-page-out;
+
+  /* Motion — SLOW and floaty. Long durations. Gentle overshoot — things drift. */
+  --MOTION-DURATION-ENTER: 600ms;
+  --MOTION-DURATION-EXIT: 450ms;
+  --MOTION-DURATION-SHIFT: 750ms;
+  --MOTION-DURATION-PAGE: 700ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.16, 0.9, 0.4, 1.04);
+  --MOTION-EASE-ENTER: cubic-bezier(0.12, 0.95, 0.3, 1.06);
+  --MOTION-EASE-EXIT: cubic-bezier(0.4, 0, 0.7, 0.4);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.2, 1.04, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.14, 1.12, 0.38, 1.04);
+  --MOTION-DISTANCE-SM: 12px;
+  --MOTION-DISTANCE-MD: 24px;
+  --MOTION-DISTANCE-LG: 48px;
+  --MOTION-STAGGER-DELAY: 90ms;
+  --MOTION-SCALE-HOVER: 1.03;
+  --MOTION-SCALE-PRESS: 0.97;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — heavy blur, dreams are blurry */
+  --OVERLAY-SCRIM-COLOR: rgb(26 18 32 / 0.75);
+  --OVERLAY-GRADIENT-START: rgb(26 18 32 / 0);
+  --OVERLAY-GRADIENT-END: rgb(26 18 32 / 0.9);
+  --OVERLAY-BLUR: 20px;
+  --OVERLAY-BLUR-HEAVY: 40px;
+
+  /* Media — gentle float on hover */
+  --MEDIA-CARD-HOVER-SCALE: 1.03;
+  --MEDIA-CARD-HOVER-LIFT: -5px;
+
+  /* Transitions — slow, languid */
+  --DURATION-FAST: 180ms;
+  --DURATION-NORMAL: 350ms;
+  --DURATION-SLOW: 550ms;
+}
+
+@keyframes dreamlike-page-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes dreamlike-page-out {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.03);
+    filter: blur(8px);
+  }
+}

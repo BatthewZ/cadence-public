@@ -1,0 +1,140 @@
+/* Melancholy Theme — Lo-fi rainy afternoon
+   Desaturated blue-gray canvas, muted dusty-blue primary, faded rose accent.
+   The beauty in grey skies. Comfortable sadness. Rain on windows.
+   Fonts: Cormorant Garamond (headings), Raleway (body) */
+
+:root[data-theme="melancholy"] {
+  color-scheme: dark;
+
+  /* Fonts — delicate literary serif headings with thin elegant body */
+  --DEFAULT-FONT: "Raleway", sans-serif;
+  --DEFAULT-MONO-FONT: "Libertinus Mono", monospace;
+  --HEADING-FONT: "Cormorant Garamond", serif;
+  --HEADING-LETTER-SPACING: 0.01em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas — overcast sky seen through a window */
+  --C-CANVAS: #1a1e24;
+
+  /* Brand — muted dusty blue, nothing demanding attention */
+  --C-PRIMARY: #7a8a9e;
+  --C-PRIMARY-HOVER: #6a7a8e;
+  --C-PRIMARY-ACTIVE: #8a9aae;
+  --C-SECONDARY: #262c34;
+  --C-SECONDARY-HOVER: #303840;
+  --C-ACCENT: #b08a7a;
+  --C-ACCENT-HOVER: #a07a6a;
+
+  /* Surface — cool gray-blues, barely differentiated, like layers of fog */
+  --C-SURFACE-0: #1e2228;
+  --C-SURFACE-1: #22272e;
+  --C-SURFACE-2: #282e36;
+  --C-SURFACE-3: #2e343c;
+
+  /* Text — cool desaturated whites, like light through clouds */
+  --C-TEXT-PRIMARY: #c8ccd4;
+  --C-TEXT-SECONDARY: #8890a0;
+  --C-TEXT-MUTED: #585e6e;
+  --C-TEXT-INVERSE: #1a1e24;
+  --C-TEXT-ON-PRIMARY: #1a1e24;
+  --C-TEXT-ON-ACCENT: #1a1e24;
+
+  /* Border — barely visible, like edges lost in mist */
+  --C-BORDER-DEFAULT: #2e343c;
+  --C-BORDER-STRONG: #3a4048;
+  --C-BORDER-FOCUS: #8a9aae;
+
+  /* Status — muted, gentle. Even errors shouldn't shout */
+  --C-STATUS-ERROR: #c47070;
+  --C-STATUS-ERROR-BG: #261c1c;
+  --C-STATUS-SUCCESS: #6aaa7a;
+  --C-STATUS-SUCCESS-BG: #1c261e;
+  --C-STATUS-WARNING: #b8a060;
+  --C-STATUS-WARNING-BG: #26241c;
+  --C-STATUS-INFO: #6a94b8;
+  --C-STATUS-INFO-BG: #1c2226;
+
+  /* Radius — medium-large, soft edges, nothing sharp */
+  --RADIUS-SM: 10px;
+  --RADIUS-MD: 14px;
+  --RADIUS-LG: 18px;
+  --RADIUS-XL: 24px;
+
+  /* Shadows — very soft, diffuse, cool-tinted, frosted glass feel */
+  --SHADOW-SM: 0 2px 8px 0 rgb(26 30 36 / 0.3), 0 0 0 1px rgb(122 138 158 / 0.03);
+  --SHADOW-MD: 0 4px 16px -2px rgb(26 30 36 / 0.35), 0 2px 6px -2px rgb(122 138 158 / 0.04);
+  --SHADOW-LG: 0 12px 32px -6px rgb(26 30 36 / 0.4), 0 4px 10px -4px rgb(122 138 158 / 0.05);
+
+  /* Typography — gentle weights, generous breathing room */
+  --Bold-Weight: 600;
+  --Semibold-Weight: 500;
+
+  --BodyText-1-line-height: 32px;
+  --BodyText-2-line-height: 28px;
+
+  /* Page transitions — slow dissolve, like memory fading */
+  --MOTION-PAGE-TRANSITION-IN: melancholy-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: melancholy-page-out;
+
+  /* Motion — the slowest theme. Everything drifts. Rain falling, not snapping */
+  --MOTION-DURATION-ENTER: 550ms;
+  --MOTION-DURATION-EXIT: 400ms;
+  --MOTION-DURATION-SHIFT: 700ms;
+  --MOTION-DURATION-PAGE: 600ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.25, 0.75, 0.35, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.12, 0.9, 0.3, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.45, 0, 0.85, 0.45);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.2, 0.9, 0.4, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.18, 1.0, 0.42, 1);
+  --MOTION-DISTANCE-SM: 6px;
+  --MOTION-DISTANCE-MD: 14px;
+  --MOTION-DISTANCE-LG: 28px;
+  --MOTION-STAGGER-DELAY: 85ms;
+  --MOTION-SCALE-HOVER: 1.01;
+  --MOTION-SCALE-PRESS: 0.99;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — cool dark, like looking through rain-streaked glass */
+  --OVERLAY-SCRIM-COLOR: rgb(26 30 36 / 0.65);
+  --OVERLAY-GRADIENT-START: rgb(26 30 36 / 0);
+  --OVERLAY-GRADIENT-END: rgb(26 30 36 / 0.8);
+  --OVERLAY-BLUR: 16px;
+  --OVERLAY-BLUR-HEAVY: 32px;
+
+  /* Media — minimal movement, gentle */
+  --MEDIA-CARD-HOVER-SCALE: 1.01;
+  --MEDIA-CARD-HOVER-LIFT: -2px;
+
+  /* Transitions — unhurried, contemplative */
+  --DURATION-FAST: 180ms;
+  --DURATION-NORMAL: 350ms;
+  --DURATION-SLOW: 550ms;
+}
+
+@keyframes melancholy-page-in {
+  0% {
+    opacity: 0;
+    filter: blur(4px) saturate(0.6);
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0) saturate(1);
+    transform: translateY(0);
+  }
+}
+
+@keyframes melancholy-page-out {
+  0% {
+    opacity: 1;
+    filter: blur(0) saturate(1);
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(6px) saturate(0.5);
+    transform: translateY(-4px);
+  }
+}
