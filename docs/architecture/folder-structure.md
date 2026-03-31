@@ -260,7 +260,7 @@ src/
         ├── ProjectSettings/
         │   └── components/       # GeneralTab, AppearanceTab, MembersTab, TaskGroupsTab
         ├── ProjectTimeline/
-        │   └── components/       # TimelineTaskRow, grouping (date-helpers moved to shared util/date.ts)
+        │   └── components/       # TimelineTaskRow, GroupByDropdown, grouping (date-helpers moved to shared util/date.ts)
         ├── Projects/
         │   └── components/       # ProjectCardGrid, RenameProjectDialog
         ├── Register/

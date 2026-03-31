@@ -1,13 +1,15 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarOff } from "lucide-react";
+import { CalendarOff, UserX } from "lucide-react";
 import {
   useCallback,
   useMemo,
 } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { Row, Stack } from "@/web/components/layout";
 import {
   Accordion,
+  Avatar,
   Badge,
   EmptyState,
   EmptyStateDescription,
@@ -23,9 +25,11 @@ import { useMultiSelect } from "@/web/hooks/use-multi-select";
 import { useTaskFilters } from "@/web/hooks/use-task-filters";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
+import { getPriorityBadgeVariant } from "@/web/util/task-display";
 
-import type { TimelineTask } from "./components/grouping";
-import { groupTasksIntoBuckets } from "./components/grouping";
+import { GroupByDropdown } from "./components/GroupByDropdown";
+import type { GroupingMode, TimelineTask } from "./components/grouping";
+import { getDefaultOpenKeys, groupTimelineTasks, parseGroupingMode } from "./components/grouping";
 import { TimelineTaskRow } from "./components/TimelineTaskRow";
 
 /* ------------------------------------------------------------------ */
@@ -34,16 +38,35 @@ import { TimelineTaskRow } from "./components/TimelineTaskRow";
 
 export default function ProjectTimeline() {
   useDocumentTitle("Timeline");
-  const { project, tasks, updateTask } = useProject();
+  const { project, tasks, updateTask, members, taskGroups } = useProject();
   const { toast } = useToast();
   const qc = useQueryClient();
   const { filteredTasks } = useTaskFilters(tasks);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Grouping mode from URL (defaults to "dueDate")
+  const groupBy = parseGroupingMode(searchParams.get("groupBy"));
+
+  const handleGroupByChange = useCallback(
+    (mode: GroupingMode) => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        if (mode === "dueDate") {
+          next.delete("groupBy");
+        } else {
+          next.set("groupBy", mode);
+        }
+        return next;
+      }, { replace: true });
+    },
+    [setSearchParams],
+  );
 
   // Multi-select state
   const { selectedIds, handleToggleSelect, handleClearSelection } = useMultiSelect();
 
-  // Group all tasks into time buckets (including unscheduled)
-  const buckets = useMemo(() => {
+  // Group filtered tasks based on the active grouping mode
+  const groups = useMemo(() => {
     const timelineTasks: TimelineTask[] = filteredTasks
       .map((t) => ({
         id: t.id,
@@ -57,16 +80,13 @@ export default function ProjectTimeline() {
         taskGroupId: t.taskGroupId,
       }));
 
-    return groupTasksIntoBuckets(timelineTasks);
-  }, [filteredTasks]);
+    return groupTimelineTasks(groupBy, timelineTasks, taskGroups, members);
+  }, [filteredTasks, groupBy, taskGroups, members]);
 
-  // Auto-expand Overdue and Today
+  // Determine which accordion sections to auto-expand
   const defaultOpen = useMemo(
-    () =>
-      buckets
-        .filter((b) => b.key === "overdue" || b.key === "today")
-        .map((b) => b.key),
-    [buckets],
+    () => getDefaultOpenKeys(groupBy, groups),
+    [groupBy, groups],
   );
 
   const handleToggleCompleted = useCallback(
@@ -102,9 +122,12 @@ export default function ProjectTimeline() {
 
   return (
     <Stack gap="r3">
-      <Text variant="h4">Timeline</Text>
+      <Row justify="between" align="center">
+        <Text variant="h4">Timeline</Text>
+        <GroupByDropdown value={groupBy} onChange={handleGroupByChange} />
+      </Row>
 
-      {buckets.length === 0 ? (
+      {groups.length === 0 ? (
         <EmptyState size="md">
           <EmptyStateTitle>No tasks</EmptyStateTitle>
           <EmptyStateDescription>
@@ -112,31 +135,55 @@ export default function ProjectTimeline() {
           </EmptyStateDescription>
         </EmptyState>
       ) : (
-        <Accordion mode="multiple" defaultValue={defaultOpen}>
-          {buckets.map((bucket) => {
-            const isUnscheduled = bucket.key === "unscheduled";
+        <Accordion key={groupBy} mode="multiple" defaultValue={defaultOpen}>
+          {groups.map((group) => {
+            const isUnscheduled = group.meta?.icon === "unscheduled";
+            const isOverdue = group.meta?.icon === "overdue";
             return (
-              <Accordion.Item key={bucket.key} value={bucket.key}>
+              <Accordion.Item key={group.key} value={group.key}>
                 <Accordion.Trigger
                   className={isUnscheduled ? "text-fg-muted" : undefined}
                 >
                   <Row gap="r5" align="center">
+                    {/* Contextual leading icon based on grouping meta */}
                     {isUnscheduled && (
                       <CalendarOff size={14} className="text-fg-muted shrink-0" />
                     )}
-                    <span>{bucket.label}</span>
-                    <Badge
-                      variant={
-                        bucket.key === "overdue" ? "error" : "default"
-                      }
-                    >
-                      {bucket.tasks.length}
+                    {group.meta?.color && (
+                      <span
+                        className="size-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: group.meta.color }}
+                      />
+                    )}
+                    {group.meta?.avatarName && (
+                      <Avatar
+                        name={group.meta.avatarName}
+                        src={group.meta.avatarUrl}
+                        size="xs"
+                      />
+                    )}
+                    {group.meta?.icon === "unassigned" && (
+                      <UserX size={14} className="text-fg-muted shrink-0" />
+                    )}
+
+                    {/* Group label — for priority, render as a colored badge */}
+                    {group.meta?.priority ? (
+                      <Badge variant={getPriorityBadgeVariant(group.meta.priority)}>
+                        {group.label}
+                      </Badge>
+                    ) : (
+                      <span>{group.label}</span>
+                    )}
+
+                    {/* Task count badge */}
+                    <Badge variant={isOverdue ? "error" : "default"}>
+                      {group.tasks.length}
                     </Badge>
                   </Row>
                 </Accordion.Trigger>
                 <Accordion.Content>
                   <Stack gap="r6">
-                    {bucket.tasks.map((task) => (
+                    {group.tasks.map((task) => (
                       <TimelineTaskRow
                         key={task.id}
                         task={task}

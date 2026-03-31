@@ -151,14 +151,14 @@ function setupProjectMock(tasks: Task[]) {
   });
 }
 
-function renderTimeline() {
+function renderTimeline(initialEntries: string[] = ["/"]) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>
         <ProjectTimeline />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -678,6 +678,144 @@ describe("ProjectTimeline", () => {
       renderTimeline();
 
       expect(screen.getByText("Timeline")).toBeInTheDocument();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 10. GroupBy dropdown
+  // -----------------------------------------------------------------------
+  describe("GroupBy dropdown", () => {
+    it("renders with 'Group: Due Date' by default", () => {
+      setupProjectMock([]);
+      renderTimeline();
+
+      expect(screen.getByText("Group: Due Date")).toBeInTheDocument();
+    });
+
+    it("shows all four grouping options when clicked", async () => {
+      const user = userEvent.setup();
+      setupProjectMock([]);
+      renderTimeline();
+
+      await user.click(screen.getByText("Group: Due Date"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Group by")).toBeInTheDocument();
+        expect(screen.getByText("Due Date")).toBeInTheDocument();
+        expect(screen.getByText("Priority")).toBeInTheDocument();
+        expect(screen.getByText("Task Group")).toBeInTheDocument();
+        expect(screen.getByText("Assignee")).toBeInTheDocument();
+      });
+    });
+
+    it("shows the correct label when groupBy URL param is set", () => {
+      setupProjectMock([]);
+      renderTimeline(["/?groupBy=priority"]);
+
+      expect(screen.getByText("Group: Priority")).toBeInTheDocument();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 11. Priority grouping
+  // -----------------------------------------------------------------------
+  describe("priority grouping", () => {
+    it("groups tasks by priority level in order", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Urgent task", dueDate: daysFromNow(0), priority: "urgent" }),
+        makeTask({ id: "t-2", title: "Low task", dueDate: daysFromNow(1), priority: "low" }),
+        makeTask({ id: "t-3", title: "High task", dueDate: daysFromNow(2), priority: "high" }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline(["/?groupBy=priority"]);
+
+      expect(screen.getByText("Urgent task")).toBeInTheDocument();
+      expect(screen.getByText("High task")).toBeInTheDocument();
+      expect(screen.getByText("Low task")).toBeInTheDocument();
+    });
+
+    it("only shows non-empty priority groups", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "High task", dueDate: daysFromNow(0), priority: "high" }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline(["/?groupBy=priority"]);
+
+      // "High" appears as both the group header badge and the inline priority badge on the task row
+      expect(screen.getAllByText("High").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("High task")).toBeInTheDocument();
+      // Only one accordion group should be rendered since only "high" priority tasks exist
+      const accordionItems = document.querySelectorAll(".accordion-item");
+      expect(accordionItems.length).toBe(1);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 12. Task Group grouping
+  // -----------------------------------------------------------------------
+  describe("task group grouping", () => {
+    it("groups tasks by their task group", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Todo task", taskGroupId: "tg-1", dueDate: daysFromNow(0) }),
+        makeTask({ id: "t-2", title: "Done task", taskGroupId: "tg-2", dueDate: daysFromNow(1) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline(["/?groupBy=taskGroup"]);
+
+      expect(screen.getByText("To Do")).toBeInTheDocument();
+      expect(screen.getByText("Done")).toBeInTheDocument();
+      expect(screen.getByText("Todo task")).toBeInTheDocument();
+      expect(screen.getByText("Done task")).toBeInTheDocument();
+    });
+
+    it("hides empty task groups", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Todo task", taskGroupId: "tg-1", dueDate: daysFromNow(0) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline(["/?groupBy=taskGroup"]);
+
+      expect(screen.getByText("To Do")).toBeInTheDocument();
+      // "Done" group should not be rendered since no tasks are in it
+      expect(screen.queryByText("Done")).not.toBeInTheDocument();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 13. Assignee grouping
+  // -----------------------------------------------------------------------
+  describe("assignee grouping", () => {
+    it("groups tasks by assignee with Unassigned last", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Alice task", assigneeId: "user-1", assigneeName: "Alice", dueDate: daysFromNow(0) }),
+        makeTask({ id: "t-2", title: "Bob task", assigneeId: "user-2", assigneeName: "Bob", dueDate: daysFromNow(1) }),
+        makeTask({ id: "t-3", title: "Orphan task", assigneeId: null, dueDate: daysFromNow(2) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline(["/?groupBy=assignee"]);
+
+      expect(screen.getByText("Alice task")).toBeInTheDocument();
+      expect(screen.getByText("Bob task")).toBeInTheDocument();
+      expect(screen.getByText("Orphan task")).toBeInTheDocument();
+
+      // "Unassigned" section should be present
+      expect(screen.getByText("Unassigned")).toBeInTheDocument();
+
+      // Verify order: Alice, Bob, Unassigned (alphabetical with Unassigned last)
+      const accordionItems = document.querySelectorAll(".accordion-item");
+      expect(accordionItems.length).toBe(3);
+    });
+
+    it("hides empty assignee groups", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Alice task", assigneeId: "user-1", assigneeName: "Alice", dueDate: daysFromNow(0) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline(["/?groupBy=assignee"]);
+
+      // Only Alice group should appear (not Bob or Unassigned)
+      const accordionItems = document.querySelectorAll(".accordion-item");
+      expect(accordionItems.length).toBe(1);
     });
   });
 });

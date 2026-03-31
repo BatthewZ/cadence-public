@@ -4,7 +4,7 @@ import {
 } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { Checkbox } from "@/web/components/form/Checkbox";
+import { TaskCheckbox } from "@/web/components/form/TaskCheckbox";
 import { Row } from "@/web/components/layout";
 import {
   Avatar,
@@ -83,7 +83,8 @@ export function TimelineTaskRow({
         )}
 
         <div onClick={(e) => e.stopPropagation()}>
-          <Checkbox
+          <TaskCheckbox
+            size="sm"
             checked={task.completed}
             onChange={() => onToggleCompleted(task.id, task.completed)}
             aria-label={`Mark "${task.title}" as ${task.completed ? "incomplete" : "complete"}`}
