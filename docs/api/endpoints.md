@@ -158,7 +158,7 @@ Lists all workspaces the authenticated user is a member of, including their role
 
 ### `GET /api/workspaces/:workspaceId/freshness`
 
-Returns lightweight timestamps indicating when workspace-level data was last modified. Clients poll this at a moderate interval (~3s) to detect changes made by other users and selectively invalidate stale caches. Responses are edge-cached (Cloudflare Cache API, 2s TTL) since freshness data is identical for all workspace members.
+Returns lightweight timestamps indicating when workspace-level data was last modified. Clients poll this at a moderate interval (~3s) to detect changes made by other users and selectively invalidate stale caches. Polling is only active for multi-user workspaces — single-member workspaces skip polling entirely since no other user can modify data. Responses are edge-cached (Cloudflare Cache API, 2s TTL) since freshness data is identical for all workspace members.
 
 **Auth:** Required.
 **Authorization:** Workspace member.
@@ -374,7 +374,7 @@ Lists all projects in a workspace, enriched with member and task group counts.
 
 ### `GET /api/projects/:projectId/freshness`
 
-Returns lightweight timestamps indicating when each entity type in a project was last modified. Clients poll this at short intervals (~1.5s) and selectively refetch only the data that changed. Responses are edge-cached (Cloudflare Cache API, 2s TTL) since freshness data is identical for all project viewers.
+Returns lightweight timestamps indicating when each entity type in a project was last modified. Clients poll this at short intervals (~1.5s) and selectively refetch only the data that changed. Polling is only active for multi-user workspaces — single-member workspaces skip polling entirely since no other user can modify data. Responses are edge-cached (Cloudflare Cache API, 2s TTL) since freshness data is identical for all project viewers.
 
 **Auth:** Required.
 **Authorization:** Project member, or workspace owner/admin.

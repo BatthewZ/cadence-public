@@ -131,8 +131,23 @@ interface ProjectProviderProps {
 export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
   const qc = useQueryClient();
 
-  // Poll for changes made by other users and selectively invalidate stale caches
-  useProjectFreshness(projectId);
+  // Read workspace member count from the query cache (already populated by
+  // WorkspaceLayout) to decide whether freshness polling is needed. Reading
+  // from cache avoids creating extra hook instances that would spawn
+  // duplicate polling timers.
+  const workspaces = qc.getQueryData<{ workspaces: Array<{ id: string; memberCount?: number }> }>(queryKeys.workspaces.all);
+  const projectDetail = qc.getQueryData<{ project: { workspaceId: string } }>(queryKeys.projects.detail(projectId));
+  const wsId = projectDetail?.project.workspaceId ?? "";
+  const wsMembers = qc.getQueryData<{ members: unknown[] }>(queryKeys.workspaces.members(wsId));
+  const memberCount =
+    wsMembers?.members.length
+    ?? workspaces?.workspaces.find(w => w.id === wsId)?.memberCount
+    ?? 0;
+  const isMultiUser = memberCount > 1;
+
+  // Only poll when the workspace has multiple members — if you're the sole
+  // member nobody else can modify data, so polling would be wasted requests.
+  useProjectFreshness(projectId, isMultiUser);
 
   const {
     data: projectData,

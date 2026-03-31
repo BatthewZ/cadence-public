@@ -26,6 +26,7 @@ import { useFavorites } from "@/web/hooks/use-favorites";
 import { useChordIndicator, useHotkey, useHotkeyChord } from "@/web/hooks/use-hotkey";
 import { useWorkspacePermissions } from "@/web/hooks/use-permissions";
 import { useThemeApplication } from "@/web/hooks/use-theme";
+import { useWorkspaceFreshness } from "@/web/hooks/use-workspace-freshness";
 import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
 import { queryKeys } from "@/web/lib/query-keys";
@@ -33,6 +34,7 @@ import { queryKeys } from "@/web/lib/query-keys";
 export function WorkspaceLayout() {
   const navigate = useNavigate();
   const { workspace, members, projects, refetch } = useWorkspace();
+  useWorkspaceFreshness(workspace.id, members.length > 1);
   const { data: session } = useSession();
   const qc = useQueryClient();
   const { toast } = useToast();

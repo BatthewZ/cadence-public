@@ -18,14 +18,17 @@ interface ProjectFreshness {
  * caches when another user's changes are detected. Pauses automatically when
  * the browser tab is hidden.
  */
-export function useProjectFreshness(projectId: string): void {
+export function useProjectFreshness(projectId: string, multiUser = true): void {
   const qc = useQueryClient();
   const lastSeen = useRef<Record<string, number | null>>({});
+
+  const enabled = projectId.length > 0 && multiUser;
 
   const { data } = useQuery({
     queryKey: queryKeys.freshness.project(projectId),
     queryFn: () => api.get<ProjectFreshness>(`/api/projects/${projectId}/freshness`),
-    refetchInterval: 1500,
+    enabled,
+    refetchInterval: enabled ? 1500 : false,
     refetchIntervalInBackground: false,
     staleTime: 0,
     gcTime: 0,

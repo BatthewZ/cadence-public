@@ -19,11 +19,11 @@ interface WorkspaceFreshness {
  * Uses a slower interval than project freshness since workspace-level changes
  * are less frequent.
  */
-export function useWorkspaceFreshness(workspaceId: string): void {
+export function useWorkspaceFreshness(workspaceId: string, multiUser = true): void {
   const qc = useQueryClient();
   const lastSeen = useRef<Record<string, number | null>>({});
 
-  const enabled = workspaceId.length > 0;
+  const enabled = workspaceId.length > 0 && multiUser;
 
   const { data } = useQuery({
     queryKey: queryKeys.freshness.workspace(workspaceId),

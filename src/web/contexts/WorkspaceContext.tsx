@@ -3,7 +3,6 @@ import { useCallback } from "react";
 import { useParams } from "react-router-dom";
 
 import type { WorkspaceRole } from "@/shared/types/roles";
-import { useWorkspaceFreshness } from "@/web/hooks/use-workspace-freshness";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 
@@ -116,9 +115,6 @@ function useWorkspaceQueries(workspaceId: string | null) {
   const qc = useQueryClient();
   const enabled = !!workspaceId;
   const id = workspaceId ?? "";
-
-  // Poll for changes made by other users
-  useWorkspaceFreshness(id);
 
   const { data: workspaceData } = useQuery({
     queryKey: queryKeys.workspaces.detail(id),
