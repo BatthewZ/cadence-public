@@ -626,6 +626,9 @@ export function TaskDetailDialog({
       invalidateTaskQueries();
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id) });
+      if (projectId) {
+        void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(projectId) });
+      }
     } catch {
       setLocalTask((prev) => (prev ? { ...prev, completed: wasCompleted } : prev));
       toast("Failed to update task", { variant: "error" });
@@ -653,6 +656,9 @@ export function TaskDetailDialog({
       await api.post(`/api/tasks/${taskId}/duplicate`, {});
       invalidateTaskQueries();
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
+      if (projectId) {
+        void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(projectId) });
+      }
       toast("Task duplicated", { variant: "success" });
     } catch {
       toast("Failed to duplicate task", { variant: "error" });
@@ -666,6 +672,9 @@ export function TaskDetailDialog({
       onClose();
       void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
+      if (projectId) {
+        void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(projectId) });
+      }
       toast("Task deleted", { variant: "success" });
     } catch {
       toast("Failed to delete task", { variant: "error" });
