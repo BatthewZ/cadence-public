@@ -28,7 +28,7 @@ export function PasswordSection() {
     });
     if (!result.success) {
       const errors: Record<string, string> = {};
-      for (const issue of result.error.errors) {
+      for (const issue of result.error.issues) {
         const key = issue.path[0]?.toString();
         if (key) errors[key] = issue.message;
       }

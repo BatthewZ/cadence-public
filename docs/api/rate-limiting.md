@@ -63,6 +63,9 @@ X-RateLimit-Reset: 1700000000
 | `/api/auth/*` (all other) | 30 | 60s | `auth-general` |
 | `GET /api/invitations/:token` | 10 | 60s | `invitation-lookup` |
 | `POST /api/invitations/accept` | 10 | 60s | `invitation-accept` |
+| Webhook read (list, get) | 60 | 60s | `webhook-read` |
+| Webhook write (create, update, delete) | 20 | 60s | `webhook-write` |
+| Webhook test delivery | 5 | 60s | `webhook-test` |
 
 ## Limitations
 

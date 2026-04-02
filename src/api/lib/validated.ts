@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import type { z, ZodSchema } from "zod";
+import type { z, ZodType } from "zod";
 
 /**
  * Internal helper that accesses Hono's validated data store.
@@ -28,12 +28,12 @@ function extractValid(c: Context, target: "json" | "query"): unknown {
  * time the handler runs. The schema parameter is used only for type inference
  * (z.output<T>), not re-parsed at runtime.
  */
-export function validJson<T extends ZodSchema>(c: Context, schema: T): z.output<T> {
+export function validJson<T extends ZodType>(c: Context, schema: T): z.output<T> {
   void schema;
   return extractValid(c, "json") as z.output<T>;
 }
 
-export function validQuery<T extends ZodSchema>(c: Context, schema: T): z.output<T> {
+export function validQuery<T extends ZodType>(c: Context, schema: T): z.output<T> {
   void schema;
   return extractValid(c, "query") as z.output<T>;
 }

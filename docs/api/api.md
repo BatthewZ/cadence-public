@@ -21,7 +21,8 @@ The API is a Hono application running inside a Cloudflare Worker. All API endpoi
 - [CORS](./cors.md) -- CORS configuration and allowed origins
 - [Email Service](./email.md) -- email delivery via Resend (production) or console (development)
 - [File Storage](./storage.md) -- file uploads via Cloudflare R2 with upload endpoints
-- [Webhooks](./webhooks.md) -- event types, payload format, signature verification, retry/delivery, auto-disable, retention, dev mode, limits
+- [Webhooks](./webhooks.md) -- event types, payload format, signature verification, retry/delivery, auto-disable, retention, dev mode, limits, OpenAPI spec
+- [Interactive API Docs](./webhooks.md#interactive-api-documentation) -- Scalar-powered OpenAPI 3.1 reference at `/api/docs` (spec at `/api/openapi.json`)
 - [Webhook Internals](../../src/api/lib/webhooks.ts) -- re-export barrel for `webhooks/` sub-modules: delivery with exponential-backoff retries and cron-driven retry processing ([delivery.ts](../../src/api/lib/webhooks/delivery.ts)), HMAC-SHA256 signing, SSRF-safe URL validation, and secret generation ([utils.ts](../../src/api/lib/webhooks/utils.ts))
 - [Webhook Payloads](../../src/api/lib/webhook-payloads.ts) -- payload envelope builder, change detection (`computeChanges`), domain-specific data extractors (task, project, invitation, member), secondary event detection, context fetcher, `fireWebhookEvent` fire-and-forget dispatch, and `dispatchWebhook` convenience wrapper for Hono handlers
 - [Deferred Work](../../src/api/lib/defer.ts) -- `deferWork()` helper that uses the Cloudflare Workers `waitUntil()` API to run non-critical side-effects (activity logging, notifications) after the response is sent

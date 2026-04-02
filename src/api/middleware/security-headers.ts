@@ -37,12 +37,30 @@ const SPA_CSP = [
   "form-action 'self'",
 ].join("; ");
 
+/** Paths that serve the interactive API documentation UI (Scalar). */
+const DOCS_PATHS = new Set(["/api/docs", "/api/openapi.json"]);
+
+const DOCS_CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+  "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com https://fonts.scalar.com",
+  "img-src 'self' data: blob:",
+  "connect-src 'self' https://api.scalar.com",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
 export const securityHeadersMiddleware = createMiddleware(async (c, next) => {
   await next();
   for (const [key, value] of Object.entries(SHARED_HEADERS)) {
     c.header(key, value);
   }
-  c.header("Content-Security-Policy", API_CSP);
+  c.header(
+    "Content-Security-Policy",
+    DOCS_PATHS.has(c.req.path) ? DOCS_CSP : API_CSP,
+  );
 });
 
 /**

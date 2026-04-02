@@ -21,7 +21,7 @@ export function useFieldErrors() {
 
   const setFromZodError = useCallback((zodError: ZodError) => {
     const errors: Record<string, string> = {};
-    for (const issue of zodError.errors) {
+    for (const issue of zodError.issues) {
       const key = issue.path[0]?.toString();
       if (key) errors[key] = issue.message;
     }

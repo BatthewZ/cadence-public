@@ -38,3 +38,14 @@ When validation fails, the response is:
 ```
 
 The `details` array maps each Zod issue to a `{ path, message }` object, where `path` is the dot-joined path to the invalid field.
+
+## `validationHook`
+
+The underlying hook function is also exported as `validationHook` for use as the `defaultHook` in `OpenAPIHono` instances. This allows `@hono/zod-openapi` route definitions to reuse the same 400-format validation error response without wrapping each route in `validateBody`.
+
+```ts
+import { OpenAPIHono } from "@hono/zod-openapi";
+import { validationHook } from "../../middleware/validate";
+
+const app = new OpenAPIHono<AppEnv>({ defaultHook: validationHook });
+```

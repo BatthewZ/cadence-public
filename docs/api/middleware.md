@@ -114,7 +114,7 @@ Sets security-related response headers on all API responses. These headers are a
 | `X-XSS-Protection` | `0` | Disables the legacy XSS filter (modern CSP is preferred). |
 | `Content-Security-Policy` | See below | Controls which resources can be loaded. |
 
-**CSP directives**:
+**CSP directives** (API default):
 
 ```
 default-src 'self';
@@ -127,6 +127,8 @@ frame-ancestors 'none';
 base-uri 'self';
 form-action 'self'
 ```
+
+**Docs CSP** (`/api/docs` and `/api/openapi.json`): A relaxed policy is applied to these paths to allow the Scalar interactive API documentation to load its scripts, styles, and fonts from `cdn.jsdelivr.net`, `fonts.googleapis.com`, `fonts.gstatic.com`, `fonts.scalar.com`, and `api.scalar.com`.
 
 ### 4. DB Singleton (inline in `src/api/index.ts`)
 

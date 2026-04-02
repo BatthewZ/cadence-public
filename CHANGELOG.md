@@ -4,6 +4,21 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.9.0] - 2026-04-02
+
+### Added
+
+- OpenAPI 3.1 specification for webhook endpoints with Scalar interactive docs at `/api/docs`
+- Per-endpoint rate limiting on webhook routes (read 60/min, write 20/min, test 5/min)
+- Response schemas for all webhook endpoints (`src/shared/schemas/webhook-responses.ts`)
+
+### Changed
+
+- Webhook routes rewritten from plain Hono to `@hono/zod-openapi` for type-safe OpenAPI definitions
+- Upgraded Zod from v3 to v4; updated validation types (`ZodSchema` → `ZodType`) and Zod error access (`.errors` → `.issues`)
+- Exported `validationHook` from validate middleware for reuse as `OpenAPIHono` default hook
+- Docs-specific CSP policy for Scalar UI paths
+
 ## [1.8.0] - 2026-04-02
 
 ### Added

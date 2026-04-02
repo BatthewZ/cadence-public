@@ -1,3 +1,4 @@
+import { Scalar } from "@scalar/hono-api-reference";
 import { sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -54,6 +55,15 @@ app.use(
     allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     credentials: true,
   })
+);
+
+// Interactive API documentation (Scalar)
+app.get(
+  "/api/docs",
+  Scalar({
+    url: "/api/openapi.json",
+    pageTitle: "Cadence Webhook API",
+  }),
 );
 
 app.get("/api/health", async (c) => {

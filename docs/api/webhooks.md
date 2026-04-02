@@ -363,3 +363,25 @@ The webhook CRUD API is mounted under `/api/workspaces/:workspaceId/webhooks`. F
 | Webhook name max length     | 100 characters       |
 | Minimum subscribed events   | 1                    |
 | Webhook secret length       | 64 hex characters (256-bit) |
+
+---
+
+## Interactive API Documentation
+
+An interactive API reference for the webhook endpoints is available at `/api/docs`, powered by [Scalar](https://scalar.com). The underlying OpenAPI 3.1 specification is served at `/api/openapi.json`.
+
+The docs include:
+
+- All 6 webhook management endpoints with request/response schemas
+- The `WebhookPayloadEnvelope` schema documenting the shape of payloads delivered to subscriber endpoints
+- Authentication requirements and error response formats
+
+### Rate Limits
+
+Webhook endpoints have per-action rate limits applied via the `rateLimit` middleware:
+
+| Action | Max | Window | Prefix |
+| ------ | --- | ------ | ------ |
+| Read (list, get) | 60 | 60s | `webhook-read` |
+| Write (create, update, delete) | 20 | 60s | `webhook-write` |
+| Test delivery | 5 | 60s | `webhook-test` |
