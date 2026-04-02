@@ -9,3 +9,4 @@ dist/
 wrangler.toml
 auth.json
 auth-state.json
+swarm/**/*.md
