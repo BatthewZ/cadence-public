@@ -1,0 +1,149 @@
+# Changelog
+
+All notable changes to Cadence are documented in this file.
+
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
+
+## [1.8.0] - 2026-04-02
+
+### Added
+
+- Recurring tasks system: schema, types, recurrence rule helpers, RecurrencePicker UI, task spawning on completion, and webhook payloads for recurrence events (Phases 1-5)
+
+### Fixed
+
+- Timeline date-bucketing timezone bug
+
+## [1.7.1] - 2026-04-01
+
+### Fixed
+
+- Project dashboard overdue count now updates when a task is marked completed
+
+### Changed
+
+- Completed tasks are excluded from the Timeline by default
+
+## [1.7.0] - 2026-03-31
+
+### Added
+
+- Multi-mode grouping for ProjectTimeline with GroupBy dropdown, URL persistence, and input validation
+
+### Fixed
+
+- Skip freshness polling for single-member workspaces to eliminate unnecessary network requests
+
+## [1.6.0] - 2026-03-31
+
+### Added
+
+- Real-time freshness polling system with edge caching and `updatedAt` propagation
+
+## [1.5.1] - 2026-03-31
+
+### Changed
+
+- Pinned all dependencies
+- Viewport-constrained height for floating elements via Floating UI size middleware
+
+## [1.5.0] - 2026-03-31
+
+### Changed
+
+- Updated theme palette and aesthetic tweaks
+
+## [1.2.0] - 2026-03-30
+
+### Added
+
+- Project duplication feature with API endpoint, UI dialog, tests, and docs
+
+### Fixed
+
+- Closing task sidebar on route change no longer bounces back to board/project route
+- Tab indicator and scroll state now update correctly on tab size changes
+
+## [1.1.0] - 2026-03-30
+
+### Added
+
+- `autoAssignCreator` project setting to auto-assign new tasks to their creator
+
+## [1.0.9] - 2026-03-30
+
+### Fixed
+
+- Centralized My Tasks query keys and fixed DataTable double scrollbar
+
+## [1.0.8] - 2026-03-30
+
+### Fixed
+
+- My Tasks task dialog double scrollbar
+
+## [1.0.7] - 2026-03-29
+
+### Changed
+
+- Split monolithic API handlers and utilities into modular subdirectories
+- Added barrel import rule to prevent circular chunk dependencies in build
+
+### Fixed
+
+- Circular dependency issues in build output
+
+## [1.0.6] - 2026-03-29
+
+### Added
+
+- Rate limiting on invitation lookup and acceptance endpoints
+- `componentDidCatch` error boundary to force silent refresh after deploy (stale asset hashes)
+- Public mirror CI pipeline for private/public repo binding
+
+### Fixed
+
+- UI component error handling, query hooks, and project page refactor
+- UserMenu placement on `/workspaces` page
+- Delete Tasks no longer produces console errors
+- CSP updated for Cloudflare static insights
+
+### Changed
+
+- API error handling, type safety, and parameter validation refactor
+
+## [1.0.4] - 2026-03-29
+
+### Added
+
+- Password reset cooldown and rate limiting
+
+## [1.0.3] - 2026-03-28
+
+### Fixed
+
+- Minor bug fixes
+
+## [1.0.1] - 2026-03-28
+
+### Changed
+
+- Workspace slugs are now unique per-owner (composite index) instead of globally unique
+
+## [1.0.0] - 2026-03-28
+
+Initial public release.
+
+### Pre-1.0 highlights
+
+- **Core platform**: Workspaces, projects, tasks, labels, attachments, teams, invitations
+- **Task management**: Kanban board with drag-and-drop, task detail panel, bulk actions, subtasks, comments
+- **Project features**: Timeline view, dashboard with stats, budget tracking, project lifecycle (active/completed/archived)
+- **Auth**: Better Auth integration with email/password, session management, password hashing
+- **API**: 84 endpoints with Hono, rate limiting, HMAC-signed webhooks (23 event types)
+- **Performance**: D1 query batching (`db.batch()`), session cookie caching, auth singleton, cache-control middleware
+- **Scheduled tasks**: Auth cleanup for expired sessions/tokens, webhook cleanup
+- **Notifications**: Real-time notification system with modular components
+- **Design system**: Theming, responsive layout, mobile support
+- **Database**: 23 tables on Cloudflare D1 with Drizzle ORM
+- **Deployment**: Cloudflare Workers
