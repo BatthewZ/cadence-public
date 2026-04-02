@@ -1,17 +1,18 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type { Context } from "hono";
 
-import { label, taskLabel } from "../../../../db/schema/label";
-import { subtask, task, taskGroup } from "../../../../db/schema/task";
+import { task, taskGroup } from "../../../../db/schema/task";
 import { generateKeyBetween } from "../../../../shared/lib/fractional-index";
 import { moveTaskSchema } from "../../../../shared/schemas/task";
 import type { AppEnv } from "../../../env";
 import { deferWork } from "../../../lib/defer";
-import { errorResponse, throwWithContext } from "../../../lib/error-response";
+import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
 import { requireParam } from "../../../lib/params";
 import { validJson } from "../../../lib/validated";
 import { buildTaskEventData, dispatchWebhook } from "../../../lib/webhook-payloads";
+import { copyTaskRelations } from "../helpers/copy-task-relations";
+import { logRecurringInstanceCreated, spawnNextRecurringInstance } from "../helpers/spawn-recurring-instance";
 import { type ActivityEntry, logActivity, logActivityBatch } from "../log-activity";
 
 export async function moveTask(c: Context<AppEnv>) {
@@ -61,6 +62,14 @@ export async function moveTask(c: Context<AppEnv>) {
     .where(eq(task.id, taskId))
     .returning();
 
+  // Spawn next recurring instance when auto-completing via move to done column.
+  // Uses pre-completion taskGroupId so the new instance goes to the original group.
+  let nextRecurringTask: import("../helpers/spawn-recurring-instance").SpawnedTaskData | null = null;
+  if (targetGroup.isCompletionGroup && !foundTask.completed && foundTask.recurrenceRule) {
+    const result = await spawnNextRecurringInstance(db, foundTask, now, foundTask.taskGroupId);
+    nextRecurringTask = result.nextRecurringTask;
+  }
+
   // Defer activity logging — runs after the response is sent
   const movedBetweenGroups = foundTask.taskGroupId !== body.taskGroupId;
   if (movedBetweenGroups) {
@@ -68,6 +77,10 @@ export async function moveTask(c: Context<AppEnv>) {
     const oldTaskGroupId = foundTask.taskGroupId;
     const wasCompleted = foundTask.completed;
     const isCompletionTarget = targetGroup.isCompletionGroup;
+    const capturedNextRecurringTask = nextRecurringTask;
+    const assigneeId = foundTask.assigneeId;
+    const taskTitle = foundTask.title;
+    const projectId = foundTask.projectId;
 
     deferWork(c, async () => {
       const [oldGroup] = await db
@@ -94,6 +107,36 @@ export async function moveTask(c: Context<AppEnv>) {
       }
 
       await logActivityBatch(db, activities);
+
+      // Log activity and notify assignee for the spawned recurring instance
+      if (capturedNextRecurringTask) {
+        await logRecurringInstanceCreated(db, {
+          nextTaskId: capturedNextRecurringTask.id,
+          actorId: user.id,
+          assigneeId,
+          taskTitle,
+          projectId,
+        });
+      }
+    });
+  }
+
+  // Log activity and notify assignee for spawned recurring instance when task didn't move between groups
+  // (e.g. reordering within a completion group while uncompleted)
+  if (nextRecurringTask && !movedBetweenGroups) {
+    const capturedNextRecurringTask = nextRecurringTask;
+    const assigneeId = foundTask.assigneeId;
+    const taskTitle = foundTask.title;
+    const projectId = foundTask.projectId;
+
+    deferWork(c, async () => {
+      await logRecurringInstanceCreated(db, {
+        nextTaskId: capturedNextRecurringTask.id,
+        actorId: user.id,
+        assigneeId,
+        taskTitle,
+        projectId,
+      });
     });
   }
 
@@ -110,7 +153,14 @@ export async function moveTask(c: Context<AppEnv>) {
     dispatchWebhook(c, foundTask.projectId, moveEvents);
   }
 
-  return c.json({ task: updated });
+  // Non-blocking webhook dispatch for spawned recurring instance
+  if (nextRecurringTask) {
+    dispatchWebhook(c, foundTask.projectId, [
+      { event: "task.created", data: buildTaskEventData(nextRecurringTask as Parameters<typeof buildTaskEventData>[0]) },
+    ]);
+  }
+
+  return c.json({ task: updated, nextRecurringTask });
 }
 
 // ---------------------------------------------------------------------------
@@ -122,21 +172,7 @@ export async function duplicateTask(c: Context<AppEnv>) {
   const user = c.get("user")!;
   const taskId = requireParam(c, "taskId");
 
-  // Batch: source task + subtasks + source labels (all independent — only need taskId)
-  const [sourceTaskResult, sourceSubtasks, sourceLabels] = await db.batch([
-    db.select().from(task).where(eq(task.id, taskId)).limit(1),
-    db.select().from(subtask).where(eq(subtask.taskId, taskId)).orderBy(asc(subtask.position)),
-    db.select({
-      labelId: taskLabel.labelId,
-      labelName: label.name,
-      labelColor: label.color,
-    })
-      .from(taskLabel)
-      .innerJoin(label, eq(taskLabel.labelId, label.id))
-      .where(eq(taskLabel.taskId, taskId)),
-  ] as const);
-
-  const sourceTask = sourceTaskResult[0];
+  const [sourceTask] = await db.select().from(task).where(eq(task.id, taskId)).limit(1);
   if (!sourceTask) {
     return errorResponse(c, "Task not found", 404);
   }
@@ -170,6 +206,9 @@ export async function duplicateTask(c: Context<AppEnv>) {
     icon: sourceTask.icon,
     coverImageKey: null,
     coverImagePosition: null,
+    recurrenceRule: sourceTask.recurrenceRule,
+    recurrenceParentId: null,
+    recurrenceSeriesId: sourceTask.recurrenceRule ? crypto.randomUUID() : null,
     position,
     createdAt: now,
     updatedAt: now,
@@ -178,45 +217,10 @@ export async function duplicateTask(c: Context<AppEnv>) {
   // Insert the new task
   await db.insert(task).values(newTask);
 
-  // Duplicate subtasks with completion reset
-  if (sourceSubtasks.length > 0) {
-    const newSubtasks = sourceSubtasks.map((st) => ({
-      id: crypto.randomUUID(),
-      taskId: newTaskId,
-      title: st.title,
-      completed: false,
-      position: st.position,
-      createdAt: now,
-    }));
-    try {
-      await db.insert(subtask).values(newSubtasks);
-    } catch (error) {
-      // Attempt cleanup of the already-inserted task
-      await db.delete(task).where(eq(task.id, newTaskId)).catch((cleanupError) =>
-        console.error("Failed to clean up duplicated task after subtask insert failure:", cleanupError),
-      );
-      throwWithContext(error, "duplicateTask.subtasks");
-    }
-  }
-
-  if (sourceLabels.length > 0) {
-    try {
-      await db.insert(taskLabel).values(
-        sourceLabels.map((sl) => ({
-          id: crypto.randomUUID(),
-          taskId: newTaskId,
-          labelId: sl.labelId,
-          createdAt: now,
-        })),
-      );
-    } catch (error) {
-      // Attempt cleanup
-      await db.delete(task).where(eq(task.id, newTaskId)).catch((cleanupError) =>
-        console.error("Failed to clean up duplicated task after label insert failure:", cleanupError),
-      );
-      throwWithContext(error, "duplicateTask.labels");
-    }
-  }
+  // Copy subtasks (with completion reset) and labels from the source task
+  const { subtaskCount, labels: copiedLabels } = await copyTaskRelations(
+    db, taskId, newTaskId, { resetSubtaskCompletion: true },
+  );
 
   // Log activity on the new task
   try {
@@ -257,14 +261,10 @@ export async function duplicateTask(c: Context<AppEnv>) {
     {
       task: {
         ...newTask,
-        subtaskCount: sourceSubtasks.length,
+        subtaskCount,
         subtaskCompletedCount: 0,
         commentCount: 0,
-        labels: sourceLabels.map((sl) => ({
-          id: sl.labelId,
-          name: sl.labelName,
-          color: sl.labelColor,
-        })),
+        labels: copiedLabels,
       },
     },
     201,

@@ -74,7 +74,9 @@ function groupTasksIntoBuckets(tasks: TimelineTask[]): TimelineGroup[] {
       continue;
     }
 
-    const due = startOfDay(new Date(task.dueDate));
+    // Parse YYYY-MM-DD as local date (new Date("YYYY-MM-DD") is UTC, causing timezone bugs)
+    const [y, m, d] = task.dueDate.split("-").map(Number);
+    const due = new Date(y, m - 1, d);
 
     if (due < today) {
       buckets[0].tasks.push(task);

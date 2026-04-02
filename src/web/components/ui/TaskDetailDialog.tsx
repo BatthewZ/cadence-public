@@ -8,11 +8,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, Copy, GripVertical, Pencil, SmilePlus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -58,6 +54,10 @@ import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
 import { queryKeys } from "@/web/lib/query-keys";
 import { PropertyRow } from "@/web/pages/TaskDetail/components/PropertyRow";
+import {
+  RecurrencePicker,
+  RecurrencePickerReadOnly,
+} from "@/web/pages/TaskDetail/components/RecurrencePicker";
 import { SortableSubtaskRow } from "@/web/pages/TaskDetail/components/SortableSubtaskRow";
 import { TaskActivityFeed } from "@/web/pages/TaskDetail/TaskActivityFeed";
 import { TaskAttachmentSection } from "@/web/pages/TaskDetail/TaskAttachmentSection";
@@ -622,12 +622,19 @@ export function TaskDetailDialog({
       ? `/api/tasks/${taskId}/uncomplete`
       : `/api/tasks/${taskId}/complete`;
     try {
-      await api.post(endpoint, {});
+      const res = await api.post<{ task: Task; nextRecurringTask?: Task }>(endpoint, {});
+      setLocalTask((prev) => (prev ? { ...prev, ...res.task } : prev));
+      if (res.nextRecurringTask) {
+        toast("Next occurrence created", { variant: "success" });
+      }
       invalidateTaskQueries();
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
-      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id) });
+      void qc.invalidateQueries({
+        queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id),
+      });
       if (projectId) {
         void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(projectId) });
+        void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(projectId) });
       }
     } catch {
       setLocalTask((prev) => (prev ? { ...prev, completed: wasCompleted } : prev));
@@ -719,7 +726,9 @@ export function TaskDetailDialog({
                 uploading={coverUploading}
                 editable={canEditTasks}
                 position={task.coverImagePosition}
-                onPositionChange={(pos) => { void handleCoverPositionChange(pos); }}
+                onPositionChange={(pos) => {
+                  void handleCoverPositionChange(pos);
+                }}
               />
 
               <Stack gap="r4" className="p-r3">
@@ -875,6 +884,17 @@ export function TaskDetailDialog({
                       }}
                       className="border-transparent bg-transparent hover:bg-surface-2 focus:bg-surface-0 py-1.5 px-r5 text-body-3 rounded"
                     />
+                  </PropertyRow>
+
+                  <PropertyRow label="Repeat">
+                    {canEditTasks ? (
+                      <RecurrencePicker
+                        value={task.recurrenceRule ?? null}
+                        onSelect={(rule) => void handlePatch({ recurrenceRule: rule })}
+                      />
+                    ) : (
+                      <RecurrencePickerReadOnly value={task.recurrenceRule ?? null} />
+                    )}
                   </PropertyRow>
 
                   <PropertyRow label="Cost">

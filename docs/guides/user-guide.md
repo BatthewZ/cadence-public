@@ -113,6 +113,7 @@ Click a task to open the detail panel:
 | **Description** | Rich text with `@mention` support |
 | **Icon** | Optional emoji icon |
 | **Cover Image** | Optional header image with positioning |
+| **Recurrence** | Optional repeat schedule (daily, weekly, monthly, yearly) |
 
 ### Subtasks
 
@@ -129,6 +130,36 @@ The detail panel shows a combined feed of comments and activity (status changes,
 ### Attachments
 
 Upload files from the detail panel. Attachments are stored in Cloudflare R2.
+
+### Recurring Tasks
+
+Set a task to repeat on a schedule so the next instance is automatically created when you complete the current one.
+
+**Setting up recurrence:**
+
+Open the task detail panel and click the **Recurrence** property row. The recurrence picker lets you configure:
+
+- **Frequency** — Daily, Weekly, Monthly, or Yearly
+- **Interval** — Repeat every N days/weeks/months/years (e.g. every 2 weeks)
+- **Day selection (Weekly)** — Pick specific days of the week (e.g. Mon, Wed, Fri)
+- **Monthly mode** — By date (e.g. the 15th) or by pattern (e.g. the 2nd Tuesday)
+- **End date** — Optional date after which no more instances are created
+
+Changes apply immediately — there is no save button.
+
+**What happens on completion:**
+
+When a recurring task is completed (via checkbox, Mark complete, or drag to a completion column), a new task instance is automatically created with:
+- The **next due date** computed from the recurrence rule
+- The same title, description, assignee, priority, cost, icon, labels, and subtasks
+- Subtask completion is reset on the new instance
+- Cover images are not carried over
+
+The new instance appears on the board in the same column as the original task (before it was moved to completion). If the computed next due date falls past the rule's end date, no new instance is created.
+
+**Recurrence indicator:**
+
+Tasks with a recurrence rule display a repeat icon (↻) on their card in the Board and Timeline views.
 
 ### Completing Tasks
 

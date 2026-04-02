@@ -90,7 +90,7 @@ export async function upcomingTasks(c: Context<AppEnv>) {
   };
 
   for (const t of tasks) {
-    // dueDate is guaranteed non-null by the isNotNull filter
+    // dueDate is guaranteed non-null by the isNotNull filter in the query
     const bucket = getTimeBucket(t.dueDate!);
     buckets[bucket].push(t);
   }

@@ -913,6 +913,9 @@ Creates a new task within a project. The task is placed at the end of the specif
 | `dueDate` | `string \| null` | ISO 8601 datetime | No |
 | `cost` | `integer \| null` | Non-negative integer (cents) | No |
 | `icon` | `string \| null` | max 50 characters | No |
+| `recurrenceRule` | `object \| null` | See [Recurrence Rule](#recurrence-rule-object) below | No |
+
+> **Note:** When `recurrenceRule` is provided but `dueDate` is omitted, `dueDate` defaults to the current date. A `recurrenceSeriesId` (UUID) is automatically generated for new recurring tasks.
 
 **Response** (201):
 
@@ -931,6 +934,9 @@ Creates a new task within a project. The task is placed at the end of the specif
     "cost": null,
     "icon": null,
     "coverImageKey": null,
+    "recurrenceRule": null,
+    "recurrenceSeriesId": null,
+    "recurrenceParentId": null,
     "position": "a0",
     "createdAt": "...",
     "updatedAt": "..."
@@ -958,8 +964,10 @@ Lists all tasks in a project, ordered by position. Supports optional query-param
 **Response** (200):
 
 ```json
-{ "tasks": [ { "id": "...", "title": "...", "status": "...", "..." } ] }
+{ "tasks": [ { "id": "...", "title": "...", "status": "...", "recurrenceRule": null, "labels": [], "..." } ] }
 ```
+
+Each task object includes `recurrenceRule` (parsed object or `null`) and `labels` (array of label objects).
 
 ### `GET /api/tasks/:taskId`
 
@@ -980,13 +988,13 @@ Returns a single task with its subtasks and comments.
     "priority": "medium",
     "assigneeId": "...",
     "dueDate": "...",
+    "recurrenceRule": null,
     "position": "...",
     "subtasks": [
       { "id": "...", "title": "...", "completed": false, "position": "...", "createdAt": "..." }
     ],
-    "comments": [
-      { "id": "...", "authorId": "...", "body": "...", "createdAt": "...", "updatedAt": "..." }
-    ]
+    "commentCount": 2,
+    "labels": []
   }
 }
 ```
@@ -1011,12 +1019,19 @@ Updates task fields.
 | `cost` | `integer \| null` | Non-negative integer (cents) |
 | `icon` | `string \| null` | max 50 characters |
 | `coverImageKey` | `string \| null` | R2 object key for cover image |
+| `coverImagePosition` | `integer \| null` | 0--100, vertical position of cover image |
+| `recurrenceRule` | `object \| null` | See [Recurrence Rule](#recurrence-rule-object) below |
 
 **Response** (200):
 
 ```json
-{ "task": { "id": "...", "title": "...", "status": "...", "cost": 0, "icon": "...", "coverImageKey": "...", "..." } }
+{ "task": { "id": "...", "title": "...", "status": "...", "cost": 0, "icon": "...", "recurrenceRule": null, "..." } }
 ```
+
+**Behavior notes:**
+- When `recurrenceRule` is set on a task that has no `recurrenceSeriesId`, a new series ID is generated automatically.
+- Changing `recurrenceRule` logs a `recurrence_changed` activity; removing it (setting to `null`) logs a `recurrence_removed` activity.
+- The `recurrenceRule` field is included in webhook change detection for `task.updated` events.
 
 ### `DELETE /api/tasks/:taskId`
 
@@ -1045,15 +1060,22 @@ Moves a task to a different task group and/or position (drag-and-drop). The targ
 | `taskGroupId` | `string` | UUID, must be in the same project | Yes |
 | `position` | `string` | non-empty fractional index | Yes |
 
+**Recurring task behavior:** If the target group is a completion group and the task was not already completed and has a `recurrenceRule`, a new task instance is spawned (same logic as the `/complete` endpoint). A `task.created` webhook is dispatched for the spawned instance.
+
 **Response** (200):
 
 ```json
-{ "task": { "id": "...", "taskGroupId": "...", "position": "...", "..." } }
+{
+  "task": { "id": "...", "taskGroupId": "...", "position": "...", "..." },
+  "nextRecurringTask": { "id": "...", "projectId": "...", "title": "...", "dueDate": "...", "..." } | null
+}
 ```
+
+`nextRecurringTask` is present when the move auto-completes a recurring task. It is `null` otherwise.
 
 ### `POST /api/tasks/:taskId/duplicate`
 
-Duplicates a task including its subtasks. The new task is placed at the end of the same task group with `" (copy)"` appended to the title. Subtask completion state is reset. Cover image and comments are not copied.
+Duplicates a task including its subtasks and labels. The new task is placed at the end of the same task group with `" (copy)"` appended to the title. Subtask completion state is reset. Cover image, comments, and recurrence settings are not copied.
 
 **Auth:** Required.
 **Authorization:** Project admin or member (resolved via `requireTaskRole`).
@@ -1088,9 +1110,9 @@ Duplicates a task including its subtasks. The new task is placed at the end of t
 ```
 
 **Behavior:**
-1. Fetches the source task and its subtasks.
-2. Creates a new task copying title (with `" (copy)"` suffix), description, assignee, priority, due date, cost, and icon. Cover image is not copied.
-3. Duplicates all subtasks with completion reset to `false`.
+1. Fetches the source task.
+2. Creates a new task copying title (with `" (copy)"` suffix), description, assignee, priority, due date, cost, and icon. Cover image and recurrence settings are not copied.
+3. Copies subtasks (with completion reset to `false`) and labels from the source task.
 4. Logs a `"created"` activity entry with `newValue: "Duplicated from: <original title>"`.
 5. If the source task has an assignee, creates a `task_assigned` notification for them.
 
@@ -1276,6 +1298,8 @@ Lists comments for a task with compound cursor-based pagination (`createdAt|id`)
 
 Marks a task as complete. If the project has a completion group, the task is automatically moved into it. Creates activity log entries and notifies the assignee (if different from the actor).
 
+**Recurring task behavior:** If the completed task has a `recurrenceRule`, a new task instance is automatically spawned with the next due date computed from the rule. The new instance inherits the title, description, assignee, priority, cost, icon, labels, and subtasks (with completion reset) from the completed task. A unique partial index on `recurrenceParentId` prevents duplicate spawns from concurrent requests. A `task.created` webhook is dispatched for the spawned instance.
+
 **Auth:** Required.
 **Authorization:** Project admin or member (resolved via `requireTaskRole`).
 
@@ -1283,9 +1307,12 @@ Marks a task as complete. If the project has a completion group, the task is aut
 
 ```json
 {
-  "task": { "id": "...", "completed": true, "completedAt": "...", "completedBy": "userId", "..." }
+  "task": { "id": "...", "completed": true, "completedAt": "...", "completedBy": "userId", "..." },
+  "nextRecurringTask": { "id": "...", "projectId": "...", "title": "...", "dueDate": "...", "..." } | null
 }
 ```
+
+`nextRecurringTask` is present when the completed task had a `recurrenceRule` and the next due date falls within the rule's bounds. It is `null` otherwise.
 
 Returns 404 if the task is not found. Returns the task unchanged if already completed.
 
@@ -2144,6 +2171,23 @@ Any `/api/*` request that does not match a defined route returns a 404:
   "requestId": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
+
+---
+
+## Shared Types
+
+### Recurrence Rule Object
+
+Used in task create/update endpoints to define a recurring schedule. Stored as JSON in the `recurrenceRule` column.
+
+| Field | Type | Constraints | Required |
+|-------|------|-------------|----------|
+| `frequency` | `string` | `"daily"`, `"weekly"`, `"monthly"`, or `"yearly"` | Yes |
+| `interval` | `integer` | 1--365 | Yes |
+| `daysOfWeek` | `integer[]` | 0 (Sun) -- 6 (Sat), min 1 element | No |
+| `dayOfMonth` | `integer` | 1--31 | No |
+| `nthWeekday` | `object` | `{ n: 1-5, day: 0-6 }` (e.g. 2nd Tuesday) | No |
+| `endDate` | `string` | ISO 8601 date, optional end condition | No |
 
 ---
 

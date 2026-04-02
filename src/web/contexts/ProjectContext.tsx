@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo } from "react";
 
 import type { TaskLabelInfo } from "@/shared/schemas/label";
+import type { RecurrenceRule } from "@/shared/types/recurrence";
 import type { ProjectStatus, TaskPriority } from "@/shared/types/roles";
 import { Center } from "@/web/components/layout";
 import { Spinner, Text } from "@/web/components/ui";
@@ -85,6 +86,9 @@ export interface Task {
   commentCount?: number;
   attachmentCount?: number;
   labels?: TaskLabelInfo[];
+  recurrenceRule?: RecurrenceRule | null;
+  recurrenceParentId?: string | null;
+  recurrenceSeriesId?: string | null;
 }
 
 export interface ProjectContextValue {

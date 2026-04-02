@@ -233,11 +233,14 @@ export * from "./workspace";
 | `icon`          | `text`                        |                                                   | Task icon (e.g. emoji or icon identifier)          |
 | `coverImageKey` | `text`                        |                                                   | R2 object key for the task cover image             |
 | `coverImagePosition` | `integer`               |                                                   | Vertical position of the cover image               |
+| `recurrenceRule` | `text`                     |                                                   | JSON-encoded recurrence rule (frequency, interval, etc.) |
+| `recurrenceParentId` | `text`                  | **FK** -> `task.id` (set null), unique (non-null) | References the parent task in a recurrence chain |
+| `recurrenceSeriesId` | `text`                  |                                                   | Groups all tasks belonging to the same recurrence series |
 | `position`    | `text`                        | `NOT NULL`                                        | Fractional index for ordering within group       |
 | `createdAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                        | Creation timestamp                               |
 | `updatedAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                        | Last update timestamp                            |
 
-**Indexes:** index on (`assigneeId`, `dueDate`), index on (`taskGroupId`, `position`), index on (`projectId`, `completed`), composite index on (`projectId`, `assigneeId`), composite index on (`projectId`, `dueDate`, `completed`), composite index on (`projectId`, `updatedAt`)
+**Indexes:** index on (`assigneeId`, `dueDate`), index on (`taskGroupId`, `position`), index on (`projectId`, `completed`), composite index on (`projectId`, `assigneeId`), composite index on (`projectId`, `dueDate`, `completed`), composite index on (`projectId`, `updatedAt`), index on (`recurrenceParentId`), unique index on (`recurrenceParentId`) where non-null, index on (`recurrenceSeriesId`)
 
 #### `subtask`
 
@@ -278,7 +281,7 @@ export * from "./workspace";
 | `id`        | `text`                        | **Primary key**                            | Unique activity entry identifier             |
 | `taskId`    | `text`                        | `NOT NULL`, **FK** -> `task.id` (cascade)  | References the parent task                   |
 | `actorId`   | `text`                        | **FK** -> `user.id` (set null)             | References the user who performed the action |
-| `action`    | `text`                        | `NOT NULL`                                 | Action type (e.g. `"completed"`, `"moved"`, `"reopened"`, `"comment_added"`, `"comment_updated"`, `"comment_deleted"`, `"label_added"`, `"label_removed"`, `"attachment_added"`, `"attachment_removed"`) |
+| `action`    | `text`                        | `NOT NULL`                                 | Action type (e.g. `"completed"`, `"moved"`, `"reopened"`, `"comment_added"`, `"comment_updated"`, `"comment_deleted"`, `"label_added"`, `"label_removed"`, `"attachment_added"`, `"attachment_removed"`, `"recurrence_changed"`, `"recurrence_removed"`) |
 | `field`     | `text`                        |                                            | Field that was changed (e.g. `"taskGroupId"`, `"priority"`) |
 | `oldValue`  | `text`                        |                                            | Previous value of the changed field          |
 | `newValue`  | `text`                        |                                            | New value of the changed field               |

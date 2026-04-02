@@ -9,6 +9,7 @@ import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
 import { requireParam } from "../../../lib/params";
 import { buildTaskEventData, dispatchWebhook } from "../../../lib/webhook-payloads";
+import { logRecurringInstanceCreated, spawnNextRecurringInstance } from "../helpers/spawn-recurring-instance";
 import { type ActivityEntry, logActivityBatch } from "../log-activity";
 
 // ---------------------------------------------------------------------------
@@ -78,6 +79,14 @@ export async function completeTask(c: Context<AppEnv>) {
     .where(eq(task.id, taskId))
     .returning();
 
+  // Spawn next recurring instance if applicable.
+  // Uses pre-completion taskGroupId so the new instance goes to the original group.
+  let nextRecurringTask: import("../helpers/spawn-recurring-instance").SpawnedTaskData | null = null;
+  if (foundTask.recurrenceRule) {
+    const result = await spawnNextRecurringInstance(db, foundTask, now, foundTask.taskGroupId);
+    nextRecurringTask = result.nextRecurringTask;
+  }
+
   // Defer activity logging + notifications — runs after response is sent
   {
     const oldTaskGroupId = foundTask.taskGroupId;
@@ -85,6 +94,7 @@ export async function completeTask(c: Context<AppEnv>) {
     const assigneeId = foundTask.assigneeId;
     const taskTitle = foundTask.title;
     const projectId = foundTask.projectId;
+    const capturedNextRecurringTask = nextRecurringTask;
 
     deferWork(c, async () => {
       const activities: ActivityEntry[] = [{ taskId, actorId: user.id, action: "completed" }];
@@ -118,6 +128,17 @@ export async function completeTask(c: Context<AppEnv>) {
           taskId,
         });
       }
+
+      // Log activity and notify assignee for the spawned recurring instance
+      if (capturedNextRecurringTask) {
+        await logRecurringInstanceCreated(db, {
+          nextTaskId: capturedNextRecurringTask.id,
+          actorId: user.id,
+          assigneeId,
+          taskTitle,
+          projectId,
+        });
+      }
     });
   }
 
@@ -126,7 +147,14 @@ export async function completeTask(c: Context<AppEnv>) {
     { event: "task.completed", data: buildTaskEventData(updated) },
   ]);
 
-  return c.json({ task: updated });
+  // Non-blocking webhook dispatch for spawned recurring instance
+  if (nextRecurringTask) {
+    dispatchWebhook(c, foundTask.projectId, [
+      { event: "task.created", data: buildTaskEventData(nextRecurringTask as Parameters<typeof buildTaskEventData>[0]) },
+    ]);
+  }
+
+  return c.json({ task: updated, nextRecurringTask });
 }
 
 export async function uncompleteTask(c: Context<AppEnv>) {

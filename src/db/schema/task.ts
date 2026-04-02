@@ -1,4 +1,12 @@
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
+import {
+  foreignKey,
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
 import { project } from "./project";
@@ -51,6 +59,9 @@ export const task = sqliteTable(
     icon: text("icon"),
     coverImageKey: text("cover_image_key"),
     coverImagePosition: integer("cover_image_position"),
+    recurrenceRule: text("recurrence_rule"),
+    recurrenceParentId: text("recurrence_parent_id"),
+    recurrenceSeriesId: text("recurrence_series_id"),
     position: text("position").notNull(),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
@@ -62,6 +73,15 @@ export const task = sqliteTable(
     index("task_project_assignee_idx").on(table.projectId, table.assigneeId),
     index("task_project_due_completed_idx").on(table.projectId, table.dueDate, table.completed),
     index("task_project_updated_idx").on(table.projectId, table.updatedAt),
+    foreignKey({
+      columns: [table.recurrenceParentId],
+      foreignColumns: [table.id],
+    }).onDelete("set null"),
+    index("task_recurrence_parent_idx").on(table.recurrenceParentId),
+    uniqueIndex("task_recurrence_parent_unique_idx")
+      .on(table.recurrenceParentId)
+      .where(sql`recurrence_parent_id IS NOT NULL`),
+    index("task_recurrence_series_idx").on(table.recurrenceSeriesId),
   ],
 );
 

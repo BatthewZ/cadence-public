@@ -8,6 +8,7 @@ import {
   MessageSquare,
   MoreHorizontal,
   Paperclip,
+  Repeat,
 } from "lucide-react";
 import {
   type CSSProperties,
@@ -60,6 +61,7 @@ export function SortableTaskCard({
     project,
     updateTask: ctxUpdateTask,
     removeTask: ctxRemoveTask,
+    addTask,
     members,
     taskGroups,
   } = useProject();
@@ -130,9 +132,12 @@ export function SortableTaskCard({
       const endpoint = checked
         ? `/api/tasks/${task.id}/complete`
         : `/api/tasks/${task.id}/uncomplete`;
-      const res = await api.post<{ task: Task }>(endpoint, {});
+      const res = await api.post<{ task: Task; nextRecurringTask?: Task }>(endpoint, {});
       // Apply the full server response (includes new taskGroupId, position)
       ctxUpdateTask(task.id, res.task);
+      if (res.nextRecurringTask) {
+        addTask(res.nextRecurringTask);
+      }
       void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(task.id) });
       void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(project.workspaceId) });
@@ -226,6 +231,7 @@ export function SortableTaskCard({
             </div>
             {(badgeVariant ||
               formattedDue ||
+              task.recurrenceRule ||
               (task.subtaskCount ?? 0) > 0 ||
               (task.commentCount ?? 0) > 0 ||
               (task.attachmentCount ?? 0) > 0 ||
@@ -248,6 +254,11 @@ export function SortableTaskCard({
                     <span className={`text-body-3 leading-none ${dueDateColor}`}>
                       {formattedDue}
                     </span>
+                  </span>
+                )}
+                {task.recurrenceRule && (
+                  <span className="inline-flex items-center gap-1 text-fg-muted leading-none">
+                    <Repeat size={12} />
                   </span>
                 )}
                 {(task.subtaskCount ?? 0) > 0 && (

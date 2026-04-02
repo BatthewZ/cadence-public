@@ -138,6 +138,9 @@ export function buildTaskEventData(taskRow: TaskRow): Record<string, unknown> {
     completedBy: taskRow.completedBy,
     position: taskRow.position,
     icon: taskRow.icon,
+    recurrenceRule: taskRow.recurrenceRule ?? null,
+    recurrenceParentId: taskRow.recurrenceParentId ?? null,
+    recurrenceSeriesId: taskRow.recurrenceSeriesId ?? null,
     createdAt: taskRow.createdAt.toISOString(),
     updatedAt: taskRow.updatedAt.toISOString(),
   };

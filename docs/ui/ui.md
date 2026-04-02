@@ -69,6 +69,8 @@ General-purpose interactive and display primitives.
 | TaskLabelPicker                    | Popover for assigning/removing labels on a task         |
 | TaskAttachmentSection              | File attachment list with drag-and-drop upload, image lightbox, and inline delete for task detail views |
 | TaskContextMenuItems               | Shared task context menu fragment (priority, assign, move, due date, delete) using DropdownMenu sub-menus. Used by ProjectBoard and ProjectTimeline. |
+| RecurrencePicker                   | Popover for configuring a task's recurrence rule (frequency, interval, day-of-week, monthly mode, end date) with auto-apply on change |
+| RecurrencePickerReadOnly           | Static display of a recurrence rule (non-interactive variant of RecurrencePicker) |
 
 ## Overlay Components
 

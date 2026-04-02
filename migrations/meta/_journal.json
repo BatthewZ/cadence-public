@@ -141,6 +141,13 @@
       "when": 1774960095105,
       "tag": "0019_amazing_blizzard",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1775052222528,
+      "tag": "0020_cynical_hannibal_king",
+      "breakpoints": true
     }
   ]
 }

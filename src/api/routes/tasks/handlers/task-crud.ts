@@ -7,6 +7,7 @@ import { project } from "../../../../db/schema/project";
 import { comment, subtask, task, taskGroup } from "../../../../db/schema/task";
 import { taskAttachment } from "../../../../db/schema/task-attachment";
 import { generateKeyBetween } from "../../../../shared/lib/fractional-index";
+import { parseRecurrenceRule } from "../../../../shared/lib/recurrence";
 import type { TaskLabelInfo } from "../../../../shared/schemas/label";
 import { createTaskSchema, updateTaskSchema } from "../../../../shared/schemas/task";
 import type { AppEnv } from "../../../env";
@@ -71,6 +72,11 @@ export async function createTask(c: Context<AppEnv>) {
     ? (body.assigneeId ?? null)
     : (projectResult[0]?.autoAssignCreator ? user.id : null);
 
+  // If recurrence is set but no dueDate provided, default dueDate to today
+  const dueDate = body.dueDate
+    ? new Date(body.dueDate)
+    : (body.recurrenceRule ? now : null);
+
   const newTask = {
     id,
     projectId,
@@ -82,9 +88,12 @@ export async function createTask(c: Context<AppEnv>) {
     completed: isCompleted,
     completedAt: isCompleted ? now : null,
     completedBy: isCompleted ? user.id : null,
-    dueDate: body.dueDate ? new Date(body.dueDate) : null,
+    dueDate,
     cost: body.cost ?? null,
     icon: body.icon ?? null,
+    recurrenceRule: body.recurrenceRule ? JSON.stringify(body.recurrenceRule) : null,
+    recurrenceSeriesId: body.recurrenceRule ? crypto.randomUUID() : null,
+    recurrenceParentId: null,
     position,
     createdAt: now,
     updatedAt: now,
@@ -137,7 +146,10 @@ export async function createTask(c: Context<AppEnv>) {
     }
   }
 
-  return c.json({ task: { ...newTask, assigneeName, assigneeAvatarUrl } }, 201);
+  // Parse recurrenceRule back from JSON string for the response
+  const { recurrenceRule: rawRecurrenceRule, ...newTaskFields } = newTask;
+
+  return c.json({ task: { ...newTaskFields, recurrenceRule: parseRecurrenceRule(rawRecurrenceRule), assigneeName, assigneeAvatarUrl } }, 201);
 }
 
 export async function listTasks(c: Context<AppEnv>) {
@@ -241,9 +253,9 @@ export async function listTasks(c: Context<AppEnv>) {
     .where(and(...conditions))
     .orderBy(asc(task.position));
 
-  // Parse labels JSON for each task
+  // Parse labels JSON and recurrenceRule JSON for each task
   const tasksWithLabels = tasks.map((t) => {
-    const { labelsJson, ...rest } = t;
+    const { labelsJson, recurrenceRule: recurrenceRuleJson, ...rest } = t;
     let labels: TaskLabelInfo[] = [];
     if (labelsJson) {
       try {
@@ -252,7 +264,7 @@ export async function listTasks(c: Context<AppEnv>) {
         labels = [];
       }
     }
-    return { ...rest, labels };
+    return { ...rest, recurrenceRule: parseRecurrenceRule(recurrenceRuleJson), labels };
   });
 
   return c.json({ tasks: tasksWithLabels });
@@ -281,9 +293,12 @@ export async function getTask(c: Context<AppEnv>) {
     return errorResponse(c, "Task not found", 404);
   }
 
+  const { recurrenceRule: recurrenceRuleJson, ...taskFields } = foundTask;
+
   return c.json({
     task: {
-      ...foundTask,
+      ...taskFields,
+      recurrenceRule: parseRecurrenceRule(recurrenceRuleJson),
       subtasks,
       commentCount,
       labels: taskLabels,
@@ -321,6 +336,12 @@ export async function updateTask(c: Context<AppEnv>) {
     ...(body.icon !== undefined && { icon: body.icon }),
     ...(body.coverImageKey !== undefined && { coverImageKey: body.coverImageKey }),
     ...(body.coverImagePosition !== undefined && { coverImagePosition: body.coverImagePosition }),
+    ...(body.recurrenceRule !== undefined && {
+      recurrenceRule: body.recurrenceRule ? JSON.stringify(body.recurrenceRule) : null,
+    }),
+    ...(body.recurrenceRule !== undefined && body.recurrenceRule !== null && !currentTask.recurrenceSeriesId && {
+      recurrenceSeriesId: crypto.randomUUID(),
+    }),
   };
 
   const [updated] = await db
@@ -385,6 +406,18 @@ export async function updateTask(c: Context<AppEnv>) {
         field: "description",
       });
     }
+    if (body.recurrenceRule !== undefined) {
+      const oldRule = currentTask.recurrenceRule;
+      const newRule = body.recurrenceRule ? JSON.stringify(body.recurrenceRule) : null;
+      if (oldRule !== newRule) {
+        activities.push({
+          taskId,
+          actorId: user.id,
+          action: body.recurrenceRule ? "recurrence_changed" : "recurrence_removed",
+          field: "recurrenceRule",
+        });
+      }
+    }
 
     const assigneeForNotification = body.assigneeId !== undefined && body.assigneeId !== currentTask.assigneeId ? body.assigneeId : null;
     const taskTitle = currentTask.title;
@@ -415,7 +448,7 @@ export async function updateTask(c: Context<AppEnv>) {
     const changes = computeChanges(
       currentTask as Record<string, unknown>,
       updated as Record<string, unknown>,
-      ["title", "description", "assigneeId", "priority", "dueDate", "cost", "icon", "taskGroupId", "coverImageKey", "coverImagePosition"],
+      ["title", "description", "assigneeId", "priority", "dueDate", "cost", "icon", "taskGroupId", "coverImageKey", "coverImagePosition", "recurrenceRule"],
     );
     const additionalEvents = detectAdditionalEvents(
       "task.updated",
@@ -428,7 +461,9 @@ export async function updateTask(c: Context<AppEnv>) {
     ]);
   }
 
-  return c.json({ task: updated });
+  const { recurrenceRule: updatedRuleJson, ...updatedFields } = updated;
+
+  return c.json({ task: { ...updatedFields, recurrenceRule: parseRecurrenceRule(updatedRuleJson) } });
 }
 
 export async function deleteTask(c: Context<AppEnv>) {

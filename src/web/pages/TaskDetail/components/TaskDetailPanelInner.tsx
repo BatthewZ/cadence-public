@@ -74,6 +74,7 @@ import {
   PriorityPickerReadOnly,
 } from "./PropertyEditors";
 import { PropertyRow } from "./PropertyRow";
+import { RecurrencePicker, RecurrencePickerReadOnly } from "./RecurrencePicker";
 import { SortableSubtaskRow } from "./SortableSubtaskRow";
 
 export function TaskDetailPanelInner({
@@ -417,9 +418,13 @@ export function TaskDetailPanelInner({
       ? `/api/tasks/${taskId}/uncomplete`
       : `/api/tasks/${taskId}/complete`;
     try {
-      const res = await api.post<{ task: Task }>(endpoint, {});
+      const res = await api.post<{ task: Task; nextRecurringTask?: Task }>(endpoint, {});
       setLocalTask((prev) => (prev ? { ...prev, ...res.task } : prev));
       updateTaskInContext(taskId, res.task);
+      if (res.nextRecurringTask) {
+        addTaskToContext(res.nextRecurringTask);
+        toast("Next occurrence created", { variant: "success" });
+      }
       void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id) });
     } catch {
@@ -649,6 +654,19 @@ export function TaskDetailPanelInner({
                       }}
                       className="border-transparent bg-transparent hover:bg-surface-2 focus:bg-surface-0 py-1.5 px-r5 text-body-3 rounded"
                     />
+                  </PropertyRow>
+
+                  <PropertyRow label="Repeat">
+                    {canEditTasks ? (
+                      <RecurrencePicker
+                        value={localTask.recurrenceRule ?? null}
+                        onSelect={(rule) => {
+                          void handlePatch({ recurrenceRule: rule });
+                        }}
+                      />
+                    ) : (
+                      <RecurrencePickerReadOnly value={localTask.recurrenceRule ?? null} />
+                    )}
                   </PropertyRow>
 
                   <PropertyRow label="Cost">
