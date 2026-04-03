@@ -636,7 +636,14 @@ export function TaskDetailPanelInner({
                         value={task.assigneeId ?? null}
                         members={members}
                         onSelect={(userId) => {
-                          void handlePatch({ assigneeId: userId });
+                          const member = userId
+                            ? members.find((m) => m.userId === userId)
+                            : undefined;
+                          void handlePatch({
+                            assigneeId: userId,
+                            assigneeName: member?.user.name ?? undefined,
+                            assigneeAvatarUrl: member?.user.image ?? undefined,
+                          });
                         }}
                       />
                     ) : (
