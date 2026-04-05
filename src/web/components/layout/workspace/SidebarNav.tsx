@@ -62,7 +62,7 @@ export function SidebarNav({
       {favoriteProjects.length > 0 && (
         <AppShell.SidebarSection>
           <div className="flex items-center justify-between px-3 py-1">
-            <Text variant="body-3" weight="semibold" color="muted" className="uppercase tracking-wider text-[11px]">
+            <Text variant="body-3" weight="semibold" color="muted" className="uppercase tracking-wider text-[0.6875rem]">
               Favorites
             </Text>
           </div>
@@ -83,7 +83,7 @@ export function SidebarNav({
         <div className="flex items-center justify-between px-3 py-1">
           <Link
             to={`${basePath}/projects`}
-            className="uppercase tracking-wider text-[11px] font-semibold text-fg-muted hover:text-fg-primary transition-colors"
+            className="uppercase tracking-wider text-[0.6875rem] font-semibold text-fg-muted hover:text-fg-primary transition-colors"
           >
             Projects
           </Link>

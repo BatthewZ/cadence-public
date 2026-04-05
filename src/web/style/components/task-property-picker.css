@@ -3,8 +3,8 @@
 .task-property-picker__trigger {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 4px 8px;
+  gap: 0.5rem;
+  padding: 0.25rem 0.5rem;
   border-radius: var(--RADIUS-SM);
   border: none;
   background: none;
@@ -15,7 +15,7 @@
   width: 100%;
   text-align: left;
   line-height: 1.4;
-  min-height: 32px;
+  min-height: 2rem;
 }
 
 .task-property-picker__trigger:hover {
@@ -32,16 +32,16 @@
 }
 
 .task-property-picker__popover {
-  min-width: 220px;
-  max-width: 280px;
-  padding: 10px 12px;
+  min-width: 13.75rem;
+  max-width: 17.5rem;
+  padding: 0.625rem 0.75rem;
 }
 
 .task-property-picker__list {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  max-height: 260px;
+  gap: 0.0625rem;
+  max-height: 16.25rem;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--C-BORDER-DEFAULT) transparent;
@@ -63,8 +63,8 @@
 .task-property-picker__option {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
   border-radius: var(--RADIUS-SM);
   font-size: var(--BodyText-3);
   line-height: 1.4;
@@ -90,8 +90,8 @@
 }
 
 .task-property-picker__dot {
-  width: 10px;
-  height: 10px;
+  width: 0.625rem;
+  height: 0.625rem;
   border-radius: var(--RADIUS-FULL);
   flex-shrink: 0;
 }
@@ -111,7 +111,7 @@
 
 .task-property-picker__completion-badge {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--C-STATUS-SUCCESS);
 }
 
@@ -120,12 +120,12 @@
 .task-property-picker__avatar-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
 }
 
 .task-property-picker__unassigned-icon {
-  width: 20px;
-  height: 20px;
+  width: 1.25rem;
+  height: 1.25rem;
   border-radius: var(--RADIUS-FULL);
   background: var(--C-SURFACE-2);
   display: inline-flex;

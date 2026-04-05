@@ -348,7 +348,7 @@ export default function MyTasks() {
                   {count != null && !loading && (
                     <span
                       className={[
-                        "ml-1 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-xs font-semibold",
+                        "ml-1 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-semibold",
                         hasOverdue
                           ? "bg-status-error/10 text-status-error"
                           : "bg-surface-2 text-fg-muted",

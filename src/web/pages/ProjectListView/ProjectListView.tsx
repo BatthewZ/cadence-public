@@ -150,12 +150,12 @@ export default function ProjectListView() {
         sortable: true,
         render: (row) =>
           row.completed ? (
-            <span className="inline-flex items-center gap-1.5 text-status-success font-medium text-[13px]">
+            <span className="inline-flex items-center gap-1.5 text-status-success font-medium text-[0.8125rem]">
               <CheckCircle2 size={14} />
               Done
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 text-fg-muted text-[13px]">
+            <span className="inline-flex items-center gap-1.5 text-fg-muted text-[0.8125rem]">
               <CircleDot size={14} />
               Active
             </span>

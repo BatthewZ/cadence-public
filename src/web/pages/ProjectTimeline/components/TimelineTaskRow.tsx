@@ -123,7 +123,7 @@ export function TimelineTaskRow({
                 </button>
               )}
             </DropdownMenu.Trigger>
-            <DropdownMenu.Content className="min-w-[160px]">
+            <DropdownMenu.Content className="min-w-[10rem]">
               <DropdownMenu.Label>Assign to</DropdownMenu.Label>
               <DropdownMenu.Item
                 index={0}
@@ -170,7 +170,7 @@ export function TimelineTaskRow({
                 </button>
               )}
             </DropdownMenu.Trigger>
-            <DropdownMenu.Content className="min-w-[140px]">
+            <DropdownMenu.Content className="min-w-[8.75rem]">
               <DropdownMenu.Label>Set priority</DropdownMenu.Label>
               {PRIORITY_OPTIONS.map((opt, i) => (
                 <DropdownMenu.Item
@@ -228,7 +228,7 @@ export function TimelineTaskRow({
                 <MoreHorizontal size={22} />
               </IconButton>
             </DropdownMenu.Trigger>
-            <DropdownMenu.Content className="min-w-[180px]">
+            <DropdownMenu.Content className="min-w-[11.25rem]">
               <TaskContextMenuItems
                 task={task}
                 members={members}

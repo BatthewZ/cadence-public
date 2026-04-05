@@ -36,7 +36,7 @@ export function GroupByDropdown({
           Group: {current.label}
         </button>
       </DropdownMenu.Trigger>
-      <DropdownMenu.Content className="min-w-[160px]">
+      <DropdownMenu.Content className="min-w-[10rem]">
         <DropdownMenu.Label>Group by</DropdownMenu.Label>
         {GROUPING_OPTIONS.map((opt, i) => (
           <DropdownMenu.Item

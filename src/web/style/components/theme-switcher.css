@@ -1,8 +1,8 @@
 .theme-switcher-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 0.375rem;
+  padding: 0.375rem 0.625rem;
   border-radius: var(--RADIUS-MD);
   background: var(--C-SURFACE-1);
   border: 1px solid var(--C-BORDER-DEFAULT);
@@ -21,8 +21,8 @@
 
 .theme-switcher-swatch {
   display: inline-block;
-  width: 10px;
-  height: 10px;
+  width: 0.625rem;
+  height: 0.625rem;
   border-radius: var(--RADIUS-FULL);
   flex-shrink: 0;
 }
@@ -42,6 +42,6 @@
   }
 
   .theme-switcher-trigger {
-    padding: 6px 8px;
+    padding: 0.375rem 0.5rem;
   }
 }

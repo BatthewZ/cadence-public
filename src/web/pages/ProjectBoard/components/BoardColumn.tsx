@@ -201,7 +201,7 @@ export function SortableColumn({
       <div
         ref={overlay ? undefined : setNodeRef}
         style={overlay ? undefined : style}
-        className={`flex flex-col w-[260px] min-w-[240px] sm:w-[300px] sm:min-w-[300px] flex-shrink-0 h-full rounded-lg bg-surface-1 ${
+        className={`flex flex-col w-[16.25rem] min-w-[15rem] sm:w-[18.75rem] sm:min-w-[18.75rem] flex-shrink-0 h-full rounded-lg bg-surface-1 ${
           overlay ? "shadow-xl rotate-3" : ""
         }`}
       >

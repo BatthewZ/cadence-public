@@ -690,14 +690,14 @@ export function TaskDetailDialog({
 
   return (
     <>
-      <Dialog open={open} onClose={onClose} className="max-w-[640px] p-0 overflow-hidden">
+      <Dialog open={open} onClose={onClose} className="max-w-[40rem] p-0 overflow-hidden">
         <div className="max-h-[80vh] overflow-y-auto">
           {loading && (
             <Stack gap="r5" className="p-r3">
               <Skeleton variant="text" className="h-6 w-2/3" />
               {Array.from({ length: 4 }, (_, i) => (
-                <div key={i} className="flex items-center min-h-[32px]">
-                  <Skeleton variant="text" className="h-3 w-[100px] shrink-0 mr-r4" />
+                <div key={i} className="flex items-center min-h-[2rem]">
+                  <Skeleton variant="text" className="h-3 w-[6.25rem] shrink-0 mr-r4" />
                   <Skeleton variant="rectangular" className="h-7 flex-1 rounded" />
                 </div>
               ))}
@@ -952,7 +952,7 @@ export function TaskDetailDialog({
                     }}
                     placeholder={canEditTasks ? "Add a description..." : "No description"}
                     readOnly={!canEditTasks}
-                    className="resize-y min-h-[80px] border-transparent bg-surface-1 hover:border-border-default focus:border-border-strong focus:bg-surface-0"
+                    className="resize-y min-h-[5rem] border-transparent bg-surface-1 hover:border-border-default focus:border-border-strong focus:bg-surface-0"
                   />
                 </div>
 
@@ -1106,7 +1106,7 @@ export function TaskDetailDialog({
                               <Textarea
                                 value={editingCommentBody}
                                 onChange={(e) => setEditingCommentBody(e.target.value)}
-                                className="min-h-[40px] border-border-default bg-surface-1 focus:bg-surface-0 text-body-2"
+                                className="min-h-[2.5rem] border-border-default bg-surface-1 focus:bg-surface-0 text-body-2"
                                 autoFocus
                               />
                               <Row gap="r6" className="justify-end">
@@ -1157,7 +1157,7 @@ export function TaskDetailDialog({
                           onChange={setCommentBody}
                           members={members}
                           placeholder="Write a comment... Use @ to mention"
-                          className="min-h-[60px] border-border-default bg-surface-1 focus:bg-surface-0"
+                          className="min-h-[3.75rem] border-border-default bg-surface-1 focus:bg-surface-0"
                         />
                         <div className="flex justify-end">
                           <Button

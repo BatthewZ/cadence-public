@@ -20,22 +20,22 @@ describe("Container", () => {
   it("applies default md size", () => {
     render(<Container data-testid="container">Content</Container>);
     const el = screen.getByTestId("container");
-    expect(el.className).toContain("max-w-[640px]");
+    expect(el.className).toContain("max-w-[40rem]");
   });
 
   it("supports sm size variant", () => {
     render(<Container size="sm" data-testid="container">Content</Container>);
-    expect(screen.getByTestId("container").className).toContain("max-w-[480px]");
+    expect(screen.getByTestId("container").className).toContain("max-w-[30rem]");
   });
 
   it("supports lg size variant", () => {
     render(<Container size="lg" data-testid="container">Content</Container>);
-    expect(screen.getByTestId("container").className).toContain("max-w-[768px]");
+    expect(screen.getByTestId("container").className).toContain("max-w-[48rem]");
   });
 
   it("supports xl size variant", () => {
     render(<Container size="xl" data-testid="container">Content</Container>);
-    expect(screen.getByTestId("container").className).toContain("max-w-[1024px]");
+    expect(screen.getByTestId("container").className).toContain("max-w-[64rem]");
   });
 
   it("supports full size variant", () => {

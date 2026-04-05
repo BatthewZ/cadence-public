@@ -54,10 +54,10 @@
   --C-STATUS-INFO-BG: #08202a;
 
   /* Radius — small, clean geometric */
-  --RADIUS-SM: 2px;
-  --RADIUS-MD: 4px;
-  --RADIUS-LG: 6px;
-  --RADIUS-XL: 8px;
+  --RADIUS-SM: 0.125rem;
+  --RADIUS-MD: 0.25rem;
+  --RADIUS-LG: 0.375rem;
+  --RADIUS-XL: 0.5rem;
 
   /* Shadows — purple/magenta neon glow */
   --SHADOW-SM: 0 0 8px 0 rgb(247 37 133 / 0.15), 0 0 4px 0 rgb(180 41 249 / 0.1);
@@ -68,8 +68,8 @@
   --Bold-Weight: 700;
   --Semibold-Weight: 600;
 
-  --BodyText-1-line-height: 28px;
-  --BodyText-2-line-height: 24px;
+  --BodyText-1-line-height: 1.75rem;
+  --BodyText-2-line-height: 1.5rem;
 
   /* Page transitions — VHS tracking */
   --MOTION-PAGE-TRANSITION-IN: synthwave-page-in;
@@ -85,9 +85,9 @@
   --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
   --MOTION-EASE-SHIFT: cubic-bezier(0.33, 1, 0.68, 1);
   --MOTION-EASE-BOUNCE: cubic-bezier(0.28, 1.6, 0.5, 1);
-  --MOTION-DISTANCE-SM: 6px;
-  --MOTION-DISTANCE-MD: 14px;
-  --MOTION-DISTANCE-LG: 28px;
+  --MOTION-DISTANCE-SM: 0.375rem;
+  --MOTION-DISTANCE-MD: 0.875rem;
+  --MOTION-DISTANCE-LG: 1.75rem;
   --MOTION-STAGGER-DELAY: 35ms;
   --MOTION-SCALE-HOVER: 1.05;
   --MOTION-SCALE-PRESS: 0.95;
@@ -99,12 +99,12 @@
   --OVERLAY-SCRIM-COLOR: rgb(13 2 33 / 0.8);
   --OVERLAY-GRADIENT-START: rgb(13 2 33 / 0);
   --OVERLAY-GRADIENT-END: rgb(13 2 33 / 0.9);
-  --OVERLAY-BLUR: 16px;
-  --OVERLAY-BLUR-HEAVY: 32px;
+  --OVERLAY-BLUR: 1rem;
+  --OVERLAY-BLUR-HEAVY: 2rem;
 
   /* Media — punchy hover */
   --MEDIA-CARD-HOVER-SCALE: 1.05;
-  --MEDIA-CARD-HOVER-LIFT: -5px;
+  --MEDIA-CARD-HOVER-LIFT: -0.3125rem;
 
   /* Transitions */
   --DURATION-FAST: 80ms;

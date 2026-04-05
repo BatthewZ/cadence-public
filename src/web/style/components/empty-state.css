@@ -79,7 +79,7 @@
 
 .empty-state__description {
   margin: 0;
-  max-width: 360px;
+  max-width: 22.5rem;
   color: var(--C-TEXT-MUTED);
   font-size: var(--BodyText-2);
   line-height: var(--BodyText-2-line-height);

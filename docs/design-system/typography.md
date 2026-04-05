@@ -2,30 +2,30 @@
 
 **File:** `src/web/style/responsive/text.css`
 
-Font sizes and line heights scale automatically at the `640px` breakpoint. Font weights are also responsive.
+Font sizes and line heights scale automatically at the `640px` (`40rem`) breakpoint. All values use `rem` units (base 16px). Font weights are also responsive.
 
 ### Headings
 
-| Token | CSS Variable | Mobile (size/line-height) | Desktop (size/line-height) | Tailwind Class | Weight |
-| ----- | ------------ | ------------------------- | -------------------------- | -------------- | ------ |
-| `h1`  | `--H1`       | 36px / 44px               | 64px / 72px                | `text-h1`      | 700    |
-| `h2`  | `--H2`       | 28px / 36px               | 48px / 64px                | `text-h2`      | 700    |
-| `h3`  | `--H3`       | 24px / 32px               | 36px / 50px                | `text-h3`      | 700    |
-| `h4`  | `--H4`       | 20px / 32px               | 28px / 42px                | `text-h4`      | 700    |
-| `h5`  | `--H5`       | 18px / 28px               | 20px / 32px                | `text-h5`      | 700    |
-| `h6`  | `--H6`       | 16px / 24px               | 20px / 32px                | `text-h6`      | 600    |
+| Token | CSS Variable | Mobile (size/line-height)     | Desktop (size/line-height)      | Tailwind Class | Weight |
+| ----- | ------------ | ----------------------------- | ------------------------------- | -------------- | ------ |
+| `h1`  | `--H1`       | 2.25rem / 2.75rem            | 4rem / 4.5rem                   | `text-h1`      | 700    |
+| `h2`  | `--H2`       | 1.75rem / 2.25rem            | 3rem / 4rem                     | `text-h2`      | 700    |
+| `h3`  | `--H3`       | 1.5rem / 2rem                | 2.25rem / 3.125rem             | `text-h3`      | 700    |
+| `h4`  | `--H4`       | 1.25rem / 2rem               | 1.75rem / 2.625rem             | `text-h4`      | 700    |
+| `h5`  | `--H5`       | 1.125rem / 1.75rem           | 1.25rem / 2rem                 | `text-h5`      | 700    |
+| `h6`  | `--H6`       | 1rem / 1.5rem                | 1.25rem / 2rem                 | `text-h6`      | 600    |
 
 ### Body
 
-| Token    | CSS Variable    | Mobile (size/line-height) | Desktop (size/line-height) | Tailwind Class |
-| -------- | --------------- | ------------------------- | -------------------------- | -------------- |
-| `body-1` | `--BodyText-1`  | 14px / 30px               | 16px / 32px                | `text-body-1`  |
-| `body-2` | `--BodyText-2`  | 13px / 24px               | 14px / 28px                | `text-body-2`  |
-| `body-3` | `--BodyText-3`  | 12px / 28px               | 13px / 28px                | `text-body-3`  |
+| Token    | CSS Variable    | Mobile (size/line-height)     | Desktop (size/line-height)      | Tailwind Class |
+| -------- | --------------- | ----------------------------- | ------------------------------- | -------------- |
+| `body-1` | `--BodyText-1`  | 0.875rem / 1.875rem          | 1rem / 2rem                     | `text-body-1`  |
+| `body-2` | `--BodyText-2`  | 0.8125rem / 1.5rem           | 0.875rem / 1.75rem             | `text-body-2`  |
+| `body-3` | `--BodyText-3`  | 0.75rem / 1.75rem            | 0.8125rem / 1.75rem            | `text-body-3`  |
 
 ### Font Weights
 
-Font weights are responsive too -- they step up at the 640px breakpoint:
+Font weights are responsive too -- they step up at the `640px` (`40rem`) breakpoint:
 
 | Token          | CSS Variable        | Mobile | Desktop |
 | -------------- | ------------------- | ------ | ------- |

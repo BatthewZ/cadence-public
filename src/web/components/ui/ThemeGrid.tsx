@@ -83,7 +83,7 @@ export function ThemeGrid({
               </div>
             )}
             {isHighlighted && (
-              <Text variant="body-3" color="muted" className="text-[10px]">
+              <Text variant="body-3" color="muted" className="text-[0.625rem]">
                 inherited
               </Text>
             )}

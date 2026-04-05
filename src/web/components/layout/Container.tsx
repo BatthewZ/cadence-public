@@ -5,10 +5,10 @@ import { cn } from "@/web/util/style/style";
 type ContainerSize = "sm" | "md" | "lg" | "xl" | "full";
 
 const sizeMap: Record<ContainerSize, string> = {
-  sm: "max-w-[480px]",
-  md: "max-w-[640px]",
-  lg: "max-w-[768px]",
-  xl: "max-w-[1024px]",
+  sm: "max-w-[30rem]",
+  md: "max-w-[40rem]",
+  lg: "max-w-[48rem]",
+  xl: "max-w-[64rem]",
   full: "max-w-full",
 };
 

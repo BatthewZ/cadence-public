@@ -180,18 +180,18 @@ Also accepts all `div` props.
 
 ### Size Map
 
-| Size   | Max Width |
-| ------ | --------- |
-| `sm`   | 480px     |
-| `md`   | 640px     |
-| `lg`   | 768px     |
-| `xl`   | 1024px    |
-| `full` | 100%      |
+| Size   | Max Width  |
+| ------ | ---------- |
+| `sm`   | 30rem      |
+| `md`   | 40rem      |
+| `lg`   | 48rem      |
+| `xl`   | 64rem      |
+| `full` | 100%       |
 
 ### Base Classes
 
 ```
-mx-auto w-full px-r3 max-w-[640px]
+mx-auto w-full px-r3 max-w-[40rem]
 ```
 
 ### Usage
@@ -201,7 +201,7 @@ import { Container } from "@/web/components/layout/Container";
 
 {/* Default medium container */}
 <Container>
-  <p>Content constrained to 640px.</p>
+  <p>Content constrained to 40rem.</p>
 </Container>
 
 {/* Narrow container for auth forms */}

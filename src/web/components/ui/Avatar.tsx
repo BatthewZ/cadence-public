@@ -20,7 +20,7 @@ const sizeClassMap: Record<AvatarSize, string> = {
 };
 
 const initialsTextMap: Record<AvatarSize, string> = {
-  xs: "text-[10px]",
+  xs: "text-[0.625rem]",
   sm: "text-body-3",
   md: "text-body-2",
   lg: "text-body-1",

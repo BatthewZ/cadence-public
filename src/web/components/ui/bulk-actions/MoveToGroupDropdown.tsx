@@ -20,7 +20,7 @@ export function MoveToGroupDropdown({
           <span className="hidden sm:inline ml-1">Move</span>
         </Button>
       </DropdownMenu.Trigger>
-      <DropdownMenu.Content className="min-w-[160px]">
+      <DropdownMenu.Content className="min-w-[10rem]">
         {taskGroups.map((group, i) => (
           <DropdownMenu.Item
             key={group.id}

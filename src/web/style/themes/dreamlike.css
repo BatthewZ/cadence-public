@@ -55,10 +55,10 @@
   --C-STATUS-INFO-BG: #1a2028;
 
   /* Radius — largest in system, no hard edges in a dream */
-  --RADIUS-SM: 14px;
-  --RADIUS-MD: 18px;
-  --RADIUS-LG: 24px;
-  --RADIUS-XL: 32px;
+  --RADIUS-SM: 0.875rem;
+  --RADIUS-MD: 1.125rem;
+  --RADIUS-LG: 1.5rem;
+  --RADIUS-XL: 2rem;
 
   /* Shadows — soft pink-purple glow, very diffuse, like light through fog */
   --SHADOW-SM: 0 2px 12px 0 rgb(184 138 160 / 0.1), 0 0 6px 0 rgb(122 196 184 / 0.04);
@@ -69,8 +69,8 @@
   --Bold-Weight: 600;
   --Semibold-Weight: 500;
 
-  --BodyText-1-line-height: 32px;
-  --BodyText-2-line-height: 26px;
+  --BodyText-1-line-height: 2rem;
+  --BodyText-2-line-height: 1.625rem;
 
   /* Page transitions — slow blur + fade + scale, like falling asleep */
   --MOTION-PAGE-TRANSITION-IN: dreamlike-page-in;
@@ -86,9 +86,9 @@
   --MOTION-EASE-EXIT: cubic-bezier(0.4, 0, 0.7, 0.4);
   --MOTION-EASE-SHIFT: cubic-bezier(0.2, 1.04, 0.5, 1);
   --MOTION-EASE-BOUNCE: cubic-bezier(0.14, 1.12, 0.38, 1.04);
-  --MOTION-DISTANCE-SM: 12px;
-  --MOTION-DISTANCE-MD: 24px;
-  --MOTION-DISTANCE-LG: 48px;
+  --MOTION-DISTANCE-SM: 0.75rem;
+  --MOTION-DISTANCE-MD: 1.5rem;
+  --MOTION-DISTANCE-LG: 3rem;
   --MOTION-STAGGER-DELAY: 90ms;
   --MOTION-SCALE-HOVER: 1.03;
   --MOTION-SCALE-PRESS: 0.97;
@@ -100,12 +100,12 @@
   --OVERLAY-SCRIM-COLOR: rgb(26 18 32 / 0.75);
   --OVERLAY-GRADIENT-START: rgb(26 18 32 / 0);
   --OVERLAY-GRADIENT-END: rgb(26 18 32 / 0.9);
-  --OVERLAY-BLUR: 20px;
-  --OVERLAY-BLUR-HEAVY: 40px;
+  --OVERLAY-BLUR: 1.25rem;
+  --OVERLAY-BLUR-HEAVY: 2.5rem;
 
   /* Media — gentle float on hover */
   --MEDIA-CARD-HOVER-SCALE: 1.03;
-  --MEDIA-CARD-HOVER-LIFT: -5px;
+  --MEDIA-CARD-HOVER-LIFT: -0.3125rem;
 
   /* Transitions — slow, languid */
   --DURATION-FAST: 180ms;

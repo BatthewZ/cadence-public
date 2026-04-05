@@ -1,7 +1,7 @@
 .keyboard-shortcuts-dialog {
   padding: var(--S-4) var(--S-5);
-  min-width: min(400px, calc(100vw - 32px));
-  max-width: 500px;
+  min-width: min(25rem, calc(100vw - 2rem));
+  max-width: 31.25rem;
 }
 
 .keyboard-shortcuts-dialog__header {
@@ -15,13 +15,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 1.75rem;
+  height: 1.75rem;
   border-radius: var(--R-MD);
   border: none;
   background: transparent;
   color: var(--C-TEXT-MUTED);
-  font-size: 18px;
+  font-size: 1.125rem;
   cursor: pointer;
   transition: background-color 0.15s ease;
 }
@@ -45,7 +45,7 @@
 
 .keyboard-shortcuts-dialog__section-title {
   text-transform: uppercase;
-  font-size: 11px;
+  font-size: 0.6875rem;
   letter-spacing: 0.05em;
 }
 
@@ -82,20 +82,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  height: 24px;
+  min-width: 1.5rem;
+  height: 1.5rem;
   padding: 0 var(--S-1-5);
   border-radius: var(--R-SM);
   border: 1px solid var(--C-BORDER-DEFAULT);
   background-color: var(--C-SURFACE-1);
   color: var(--C-TEXT-MUTED);
   font-family: inherit;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 500;
 }
 
 .keyboard-shortcuts-dialog__separator {
-  font-size: 11px;
+  font-size: 0.6875rem;
   color: var(--C-TEXT-MUTED);
   padding: 0 var(--S-0-5);
 }

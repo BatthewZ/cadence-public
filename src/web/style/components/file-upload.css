@@ -11,7 +11,7 @@
   justify-content: center;
   gap: var(--R-SIZE-5);
   width: 100%;
-  min-height: 160px;
+  min-height: 10rem;
   padding: var(--R-SIZE-3);
   border: 2px dashed var(--C-BORDER-DEFAULT);
   border-radius: var(--RADIUS-MD);

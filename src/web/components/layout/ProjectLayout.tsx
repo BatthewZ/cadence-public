@@ -293,7 +293,7 @@ function ProjectLayoutInner() {
           )}
         </div>
         {project.description && (
-          <Text variant="body-2" color="muted" className="mt-0.5 ml-[40px]">
+          <Text variant="body-2" color="muted" className="mt-0.5 ml-[2.5rem]">
             {project.description}
           </Text>
         )}

@@ -26,9 +26,9 @@ Animation and transition tuning knobs that control the **feel** of all motion ac
 
 | CSS Variable               | Default Value | Purpose                           |
 | -------------------------- | ------------- | --------------------------------- |
-| `--MOTION-DISTANCE-SM`     | `8px`         | Small translate offset            |
-| `--MOTION-DISTANCE-MD`     | `20px`        | Medium translate offset           |
-| `--MOTION-DISTANCE-LG`     | `40px`        | Large translate offset            |
+| `--MOTION-DISTANCE-SM`     | `0.5rem`      | Small translate offset            |
+| `--MOTION-DISTANCE-MD`     | `1.25rem`     | Medium translate offset           |
+| `--MOTION-DISTANCE-LG`     | `2.5rem`      | Large translate offset            |
 | `--MOTION-STAGGER-DELAY`   | `50ms`        | Per-item delay in staggered lists |
 | `--MOTION-PARALLAX-RATE`   | `0.3`         | Default parallax speed ratio      |
 | `--MOTION-SCALE-HOVER`     | `1.05`        | Hover scale-up factor             |

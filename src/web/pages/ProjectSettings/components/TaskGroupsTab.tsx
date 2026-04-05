@@ -219,7 +219,7 @@ export function TaskGroupsTab({
                     {group.name}
                   </Text>
                   {group.isCompletionGroup && (
-                    <Badge variant="success" className="text-[10px] px-1.5 py-0">
+                    <Badge variant="success" className="text-[0.625rem] px-1.5 py-0">
                       Auto-complete
                     </Badge>
                   )}

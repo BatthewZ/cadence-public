@@ -2,33 +2,33 @@
 
 :root {
   /* Headings */
-  --H1: 36px;
-  --H1-line-height: 44px;
+  --H1: 2.25rem;
+  --H1-line-height: 2.75rem;
 
-  --H2: 28px;
-  --H2-line-height: 36px;
+  --H2: 1.75rem;
+  --H2-line-height: 2.25rem;
 
-  --H3: 24px;
-  --H3-line-height: 32px;
+  --H3: 1.5rem;
+  --H3-line-height: 2rem;
 
-  --H4: 20px;
-  --H4-line-height: 32px;
+  --H4: 1.25rem;
+  --H4-line-height: 2rem;
 
-  --H5: 18px;
-  --H5-line-height: 28px;
+  --H5: 1.125rem;
+  --H5-line-height: 1.75rem;
 
-  --H6: 16px;
-  --H6-line-height: 24px;
+  --H6: 1rem;
+  --H6-line-height: 1.5rem;
 
   /* Body */
-  --BodyText-1: 14px;
-  --BodyText-1-line-height: 30px;
+  --BodyText-1: 0.875rem;
+  --BodyText-1-line-height: 1.875rem;
 
-  --BodyText-2: 13px;
-  --BodyText-2-line-height: 24px;
+  --BodyText-2: 0.8125rem;
+  --BodyText-2-line-height: 1.5rem;
 
-  --BodyText-3: 12px;
-  --BodyText-3-line-height: 28px;
+  --BodyText-3: 0.75rem;
+  --BodyText-3-line-height: 1.75rem;
 
   --Semibold-Weight: 500;
   --Bold-Weight: 600;
@@ -38,33 +38,33 @@
 @media (width >= 40rem) {
   :root {
     /* Headings */
-    --H1: 64px;
-    --H1-line-height: 72px;
+    --H1: 4rem;
+    --H1-line-height: 4.5rem;
 
-    --H2: 48px;
-    --H2-line-height: 64px;
+    --H2: 3rem;
+    --H2-line-height: 4rem;
 
-    --H3: 36px;
-    --H3-line-height: 50px;
+    --H3: 2.25rem;
+    --H3-line-height: 3.125rem;
 
-    --H4: 28px;
-    --H4-line-height: 42px;
+    --H4: 1.75rem;
+    --H4-line-height: 2.625rem;
 
-    --H5: 20px;
-    --H5-line-height: 32px;
+    --H5: 1.25rem;
+    --H5-line-height: 2rem;
 
-    --H6: 20px;
-    --H6-line-height: 32px;
+    --H6: 1.25rem;
+    --H6-line-height: 2rem;
 
     /* Body */
-    --BodyText-1: 16px;
-    --BodyText-1-line-height: 32px;
+    --BodyText-1: 1rem;
+    --BodyText-1-line-height: 2rem;
 
-    --BodyText-2: 14px;
-    --BodyText-2-line-height: 28px;
+    --BodyText-2: 0.875rem;
+    --BodyText-2-line-height: 1.75rem;
 
-    --BodyText-3: 13px;
-    --BodyText-3-line-height: 28px;
+    --BodyText-3: 0.8125rem;
+    --BodyText-3-line-height: 1.75rem;
 
     --Semibold-Weight: 600;
     --Bold-Weight: 700;

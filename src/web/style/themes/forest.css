@@ -54,10 +54,10 @@
   --C-STATUS-INFO-BG: #0e1a24;
 
   /* Radius — organic, like rounded tree trunks */
-  --RADIUS-SM: 8px;
-  --RADIUS-MD: 12px;
-  --RADIUS-LG: 16px;
-  --RADIUS-XL: 20px;
+  --RADIUS-SM: 0.5rem;
+  --RADIUS-MD: 0.75rem;
+  --RADIUS-LG: 1rem;
+  --RADIUS-XL: 1.25rem;
 
   /* Shadows — green-brown tinted, warm where accent touches */
   --SHADOW-SM: 0 2px 6px 0 rgb(11 19 14 / 0.5), 0 1px 2px 0 rgb(45 138 78 / 0.04);
@@ -68,8 +68,8 @@
   --Bold-Weight: 700;
   --Semibold-Weight: 500;
 
-  --BodyText-1-line-height: 30px;
-  --BodyText-2-line-height: 26px;
+  --BodyText-1-line-height: 1.875rem;
+  --BodyText-2-line-height: 1.625rem;
 
   /* Page transitions — mist parting */
   --MOTION-PAGE-TRANSITION-IN: forest-page-in;
@@ -85,9 +85,9 @@
   --MOTION-EASE-EXIT: cubic-bezier(0.5, 0, 0.85, 0.35);
   --MOTION-EASE-SHIFT: cubic-bezier(0.2, 1, 0.4, 1);
   --MOTION-EASE-BOUNCE: cubic-bezier(0.18, 1.08, 0.38, 1);
-  --MOTION-DISTANCE-SM: 10px;
-  --MOTION-DISTANCE-MD: 22px;
-  --MOTION-DISTANCE-LG: 44px;
+  --MOTION-DISTANCE-SM: 0.625rem;
+  --MOTION-DISTANCE-MD: 1.375rem;
+  --MOTION-DISTANCE-LG: 2.75rem;
   --MOTION-STAGGER-DELAY: 75ms;
   --MOTION-SCALE-HOVER: 1.02;
   --MOTION-SCALE-PRESS: 0.98;
@@ -99,12 +99,12 @@
   --OVERLAY-SCRIM-COLOR: rgb(11 19 14 / 0.75);
   --OVERLAY-GRADIENT-START: rgb(11 19 14 / 0);
   --OVERLAY-GRADIENT-END: rgb(11 19 14 / 0.88);
-  --OVERLAY-BLUR: 12px;
-  --OVERLAY-BLUR-HEAVY: 26px;
+  --OVERLAY-BLUR: 0.75rem;
+  --OVERLAY-BLUR-HEAVY: 1.625rem;
 
   /* Media */
   --MEDIA-CARD-HOVER-SCALE: 1.02;
-  --MEDIA-CARD-HOVER-LIFT: -3px;
+  --MEDIA-CARD-HOVER-LIFT: -0.1875rem;
 
   /* Transitions */
   --DURATION-FAST: 150ms;

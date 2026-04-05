@@ -124,7 +124,7 @@ export function ThemeEditor() {
     <div className="min-h-screen bg-canvas">
       {/* Header */}
       <div className="border-b border-border-default bg-surface-0 sticky top-0 z-30">
-        <Container size="full" className="!max-w-[1400px]">
+        <Container size="full" className="!max-w-[87.5rem]">
           <div className="flex items-center justify-between py-r5 gap-r4 flex-wrap">
             <Row gap="r5" align="center">
               <Pipette className="w-5 h-5 text-accent shrink-0" />
@@ -179,7 +179,7 @@ export function ThemeEditor() {
       </div>
 
       {/* Body */}
-      <Container size="full" className="!max-w-[1400px] py-r2">
+      <Container size="full" className="!max-w-[87.5rem] py-r2">
         <div className="flex gap-r3 flex-col lg:flex-row lg:items-start">
           {/* Editor panel */}
           <div className="flex-1 min-w-0">
@@ -212,7 +212,7 @@ export function ThemeEditor() {
           </div>
 
           {/* Preview panel */}
-          <div className="w-full lg:w-[380px] shrink-0">
+          <div className="w-full lg:w-[23.75rem] shrink-0">
             <LivePreview />
           </div>
         </div>

@@ -1,8 +1,8 @@
 :root {
-  --RADIUS-SM: 4px;
-  --RADIUS-MD: 8px;
-  --RADIUS-LG: 12px;
-  --RADIUS-XL: 16px;
+  --RADIUS-SM: 0.25rem;
+  --RADIUS-MD: 0.5rem;
+  --RADIUS-LG: 0.75rem;
+  --RADIUS-XL: 1rem;
   --RADIUS-FULL: 9999px;
 }
 

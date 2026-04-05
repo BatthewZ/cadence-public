@@ -55,10 +55,10 @@
   --C-STATUS-INFO-BG: #141e28;
 
   /* Radius — small-medium, taut and tense */
-  --RADIUS-SM: 4px;
-  --RADIUS-MD: 6px;
-  --RADIUS-LG: 8px;
-  --RADIUS-XL: 12px;
+  --RADIUS-SM: 0.25rem;
+  --RADIUS-MD: 0.375rem;
+  --RADIUS-LG: 0.5rem;
+  --RADIUS-XL: 0.75rem;
 
   /* Shadows — strong, dramatic, blue-electric tint, pressing down */
   --SHADOW-SM: 0 2px 6px 0 rgb(20 22 26 / 0.5), 0 0 4px 0 rgb(224 240 255 / 0.04);
@@ -69,8 +69,8 @@
   --Bold-Weight: 800;
   --Semibold-Weight: 600;
 
-  --BodyText-1-line-height: 28px;
-  --BodyText-2-line-height: 24px;
+  --BodyText-1-line-height: 1.75rem;
+  --BodyText-2-line-height: 1.5rem;
 
   /* Page transitions — quick dramatic flash */
   --MOTION-PAGE-TRANSITION-IN: storm-page-in;
@@ -86,9 +86,9 @@
   --MOTION-EASE-EXIT: cubic-bezier(0.6, 0, 1, 0.4);
   --MOTION-EASE-SHIFT: cubic-bezier(0.3, 1.05, 0.5, 1);
   --MOTION-EASE-BOUNCE: cubic-bezier(0.28, 1.5, 0.58, 1);
-  --MOTION-DISTANCE-SM: 6px;
-  --MOTION-DISTANCE-MD: 16px;
-  --MOTION-DISTANCE-LG: 34px;
+  --MOTION-DISTANCE-SM: 0.375rem;
+  --MOTION-DISTANCE-MD: 1rem;
+  --MOTION-DISTANCE-LG: 2.125rem;
   --MOTION-STAGGER-DELAY: 35ms;
   --MOTION-SCALE-HOVER: 1.04;
   --MOTION-SCALE-PRESS: 0.95;
@@ -100,12 +100,12 @@
   --OVERLAY-SCRIM-COLOR: rgb(20 22 26 / 0.8);
   --OVERLAY-GRADIENT-START: rgb(20 22 26 / 0);
   --OVERLAY-GRADIENT-END: rgb(20 22 26 / 0.9);
-  --OVERLAY-BLUR: 12px;
-  --OVERLAY-BLUR-HEAVY: 28px;
+  --OVERLAY-BLUR: 0.75rem;
+  --OVERLAY-BLUR-HEAVY: 1.75rem;
 
   /* Media — punchy interaction */
   --MEDIA-CARD-HOVER-SCALE: 1.04;
-  --MEDIA-CARD-HOVER-LIFT: -5px;
+  --MEDIA-CARD-HOVER-LIFT: -0.3125rem;
 
   /* Transitions — quick and forceful */
   --DURATION-FAST: 80ms;

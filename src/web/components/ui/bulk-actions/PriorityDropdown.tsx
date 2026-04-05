@@ -15,7 +15,7 @@ export function PriorityDropdown({ onSelect }: { onSelect: (p: TaskPriority) => 
           <span className="hidden sm:inline ml-1">Priority</span>
         </Button>
       </DropdownMenu.Trigger>
-      <DropdownMenu.Content className="min-w-[140px]">
+      <DropdownMenu.Content className="min-w-[8.75rem]">
         {PRIORITY_OPTIONS.map((opt, i) => (
           <DropdownMenu.Item
             key={opt.value}

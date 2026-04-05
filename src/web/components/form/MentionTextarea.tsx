@@ -249,7 +249,7 @@ export const MentionTextarea = forwardRef<HTMLTextAreaElement, MentionTextareaPr
           <div
             ref={menuRef}
             className={cn(
-              "absolute z-50 min-w-[200px] max-w-[280px] max-h-[200px] overflow-y-auto",
+              "absolute z-50 min-w-[12.5rem] max-w-[17.5rem] max-h-[12.5rem] overflow-y-auto",
               "bg-surface-0 border border-border-default rounded-lg shadow-lg",
               "py-1",
             )}

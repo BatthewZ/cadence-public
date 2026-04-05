@@ -42,7 +42,7 @@ function MockCard({ card }: { card: MockCardType }) {
       </div>
       <div className="flex items-center justify-between">
         <span
-          className="rounded-full px-2 py-0.5 text-[10px] font-medium text-white"
+          className="rounded-full px-2 py-0.5 text-[0.625rem] font-medium text-white"
           style={{ backgroundColor: card.label.color }}
         >
           {card.label.name}
@@ -52,7 +52,7 @@ function MockCard({ card }: { card: MockCardType }) {
             <span className={cn("size-1.5 rounded-full", PRIORITY_DOT[card.priority])} />
           )}
           {"avatar" in card && card.avatar && (
-            <span className="flex size-5 items-center justify-center rounded-full bg-surface-2 text-[9px] font-semibold text-fg-secondary">
+            <span className="flex size-5 items-center justify-center rounded-full bg-surface-2 text-[0.5625rem] font-semibold text-fg-secondary">
               {card.avatar}
             </span>
           )}
@@ -87,7 +87,7 @@ function ProductShowcase() {
                 <div className="flex items-center justify-between border-b border-border-default px-4 py-3">
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-semibold text-fg-primary">Website Redesign</span>
-                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[10px] text-fg-muted">
+                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[0.625rem] text-fg-muted">
                       16 tasks
                     </span>
                   </div>
@@ -113,7 +113,7 @@ function ProductShowcase() {
                       <div className="mb-3 flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-fg-primary">{col.title}</span>
-                          <span className="flex size-4 items-center justify-center rounded-full bg-surface-2 text-[10px] text-fg-muted">
+                          <span className="flex size-4 items-center justify-center rounded-full bg-surface-2 text-[0.625rem] text-fg-muted">
                             {col.count}
                           </span>
                         </div>

@@ -54,10 +54,10 @@
   --C-STATUS-INFO-BG: #eff6ff;
 
   /* Radius — chunky, playful */
-  --RADIUS-SM: 10px;
-  --RADIUS-MD: 14px;
-  --RADIUS-LG: 18px;
-  --RADIUS-XL: 24px;
+  --RADIUS-SM: 0.625rem;
+  --RADIUS-MD: 0.875rem;
+  --RADIUS-LG: 1.125rem;
+  --RADIUS-XL: 1.5rem;
 
   /* Shadows — colorful, saturated */
   --SHADOW-SM: 0 2px 4px 0 rgb(230 57 70 / 0.08), 0 1px 2px 0 rgb(26 26 46 / 0.04);
@@ -68,8 +68,8 @@
   --Bold-Weight: 700;
   --Semibold-Weight: 600;
 
-  --BodyText-1-line-height: 28px;
-  --BodyText-2-line-height: 24px;
+  --BodyText-1-line-height: 1.75rem;
+  --BodyText-2-line-height: 1.5rem;
 
   /* Page transitions */
   --MOTION-PAGE-TRANSITION-IN: candy-page-in;
@@ -85,9 +85,9 @@
   --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
   --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
   --MOTION-EASE-BOUNCE: cubic-bezier(0.22, 1.6, 0.5, 1);
-  --MOTION-DISTANCE-SM: 12px;
-  --MOTION-DISTANCE-MD: 26px;
-  --MOTION-DISTANCE-LG: 48px;
+  --MOTION-DISTANCE-SM: 0.75rem;
+  --MOTION-DISTANCE-MD: 1.625rem;
+  --MOTION-DISTANCE-LG: 3rem;
   --MOTION-STAGGER-DELAY: 50ms;
   --MOTION-SCALE-HOVER: 1.05;
   --MOTION-SCALE-PRESS: 0.95;
@@ -99,12 +99,12 @@
   --OVERLAY-SCRIM-COLOR: rgb(26 26 46 / 0.4);
   --OVERLAY-GRADIENT-START: rgb(26 26 46 / 0);
   --OVERLAY-GRADIENT-END: rgb(26 26 46 / 0.55);
-  --OVERLAY-BLUR: 12px;
-  --OVERLAY-BLUR-HEAVY: 24px;
+  --OVERLAY-BLUR: 0.75rem;
+  --OVERLAY-BLUR-HEAVY: 1.5rem;
 
   /* Media */
   --MEDIA-CARD-HOVER-SCALE: 1.05;
-  --MEDIA-CARD-HOVER-LIFT: -5px;
+  --MEDIA-CARD-HOVER-LIFT: -0.3125rem;
 
   /* Transitions */
   --DURATION-FAST: 100ms;

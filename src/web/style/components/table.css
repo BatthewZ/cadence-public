@@ -50,7 +50,7 @@
 
 .table-header-cell__sort-icon {
   display: inline-flex;
-  margin-left: 4px;
+  margin-left: 0.25rem;
   vertical-align: middle;
 }
 
@@ -96,19 +96,19 @@
 
 /* Density: dense */
 .table-cell--dense {
-  padding: 4px 12px;
+  padding: 0.25rem 0.75rem;
   font-size: var(--BodyText-2);
 }
 
 /* Density: comfortable */
 .table-cell--comfortable {
-  padding: 10px 16px;
+  padding: 0.625rem 1rem;
   font-size: var(--BodyText-1);
 }
 
 /* Density: spacious */
 .table-cell--spacious {
-  padding: 16px 16px;
+  padding: 1rem 1rem;
   font-size: var(--BodyText-1);
 }
 

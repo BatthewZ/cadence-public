@@ -61,9 +61,9 @@
   background-image: repeating-linear-gradient(
     45deg,
     transparent,
-    transparent 8px,
-    rgba(255, 255, 255, 0.15) 8px,
-    rgba(255, 255, 255, 0.15) 16px
+    transparent 0.5rem,
+    rgba(255, 255, 255, 0.15) 0.5rem,
+    rgba(255, 255, 255, 0.15) 1rem
   );
   background-size: 200% 100%;
 }

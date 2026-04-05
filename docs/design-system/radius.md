@@ -4,8 +4,8 @@
 
 | CSS Variable    | Default Value | Tailwind Class | Usage            |
 | --------------- | ------------- | -------------- | ---------------- |
-| `--RADIUS-SM`   | `4px`         | `rounded-sm`   | Badges, tags     |
-| `--RADIUS-MD`   | `8px`         | `rounded-md`   | Buttons, inputs  |
-| `--RADIUS-LG`   | `12px`        | `rounded-lg`   | Cards, modals    |
-| `--RADIUS-XL`   | `16px`        | `rounded-xl`   | Large containers |
+| `--RADIUS-SM`   | `0.25rem`     | `rounded-sm`   | Badges, tags     |
+| `--RADIUS-MD`   | `0.5rem`      | `rounded-md`   | Buttons, inputs  |
+| `--RADIUS-LG`   | `0.75rem`     | `rounded-lg`   | Cards, modals    |
+| `--RADIUS-XL`   | `1rem`        | `rounded-xl`   | Large containers |
 | `--RADIUS-FULL` | `9999px`      | `rounded-full` | Avatars, pills   |

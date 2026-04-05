@@ -189,7 +189,7 @@ export function SortableTaskCard({
                     <MoreHorizontal size={14} />
                   </IconButton>
                 </DropdownMenu.Trigger>
-                <DropdownMenu.Content className="min-w-[180px]">
+                <DropdownMenu.Content className="min-w-[11.25rem]">
                   <TaskContextMenuItems
                     task={task}
                     members={members}
@@ -237,7 +237,7 @@ export function SortableTaskCard({
               (task.attachmentCount ?? 0) > 0 ||
               (task.labels?.length ?? 0) > 0 ||
               task.assigneeName) && (
-              <div className="flex items-center gap-2 flex-wrap ml-[26px]">
+              <div className="flex items-center gap-2 flex-wrap ml-[1.625rem]">
                 {badgeVariant && !task.completed && (
                   <span
                     className={`inline-flex items-center gap-1 ${PRIORITY_TEXT_CLASS[task.priority] ?? ""}`}

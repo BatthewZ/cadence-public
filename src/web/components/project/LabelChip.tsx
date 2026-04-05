@@ -15,7 +15,7 @@ export function LabelChip({ label: lbl, size = "default", className }: LabelChip
   if (size === "sm") {
     return (
       <span
-        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium leading-none ${className ?? ""}`}
+        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[0.625rem] font-medium leading-none ${className ?? ""}`}
         style={{
           backgroundColor: lbl.color + "20",
           color: lbl.color,

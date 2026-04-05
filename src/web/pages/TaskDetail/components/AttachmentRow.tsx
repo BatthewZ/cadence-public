@@ -61,7 +61,7 @@ export function AttachmentRow({
                   name={attachment.uploaderName}
                   src={attachment.uploaderImage ?? undefined}
                 />
-                <span className="truncate max-w-[120px]">{attachment.uploaderName}</span>
+                <span className="truncate max-w-[7.5rem]">{attachment.uploaderName}</span>
               </span>
             </>
           )}

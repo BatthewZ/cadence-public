@@ -13,8 +13,8 @@
   border: 1px solid var(--C-BORDER-DEFAULT);
   border-radius: var(--RADIUS-MD);
   box-shadow: var(--SHADOW-LG);
-  padding: 4px 0;
-  min-width: 180px;
+  padding: 0.25rem 0;
+  min-width: 11.25rem;
   overflow-y: auto;
   z-index: 51;
   outline: none;
@@ -23,9 +23,9 @@
 .dropdown-menu-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
   width: 100%;
-  padding: 6px 12px;
+  padding: 0.375rem 0.75rem;
   background: none;
   border: none;
   color: var(--C-TEXT-PRIMARY);
@@ -38,8 +38,8 @@
 
 @media (max-width: 639px) {
   .dropdown-menu-item {
-    min-height: 44px;
-    padding: 10px 12px;
+    min-height: 2.75rem;
+    padding: 0.625rem 0.75rem;
   }
 }
 
@@ -54,8 +54,8 @@
 }
 
 .dropdown-menu-item-icon {
-  width: 16px;
-  height: 16px;
+  width: 1rem;
+  height: 1rem;
   flex-shrink: 0;
   color: var(--C-TEXT-SECONDARY);
 }
@@ -78,12 +78,12 @@
   height: 1px;
   background: var(--C-BORDER-DEFAULT);
   border: none;
-  margin: 4px 0;
+  margin: 0.25rem 0;
 }
 
 .dropdown-menu-label {
   display: block;
-  padding: 6px 12px;
+  padding: 0.375rem 0.75rem;
   font-size: var(--BodyText-3);
   color: var(--C-TEXT-MUTED);
   font-weight: 600;

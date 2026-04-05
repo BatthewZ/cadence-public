@@ -62,7 +62,7 @@ export function IconGrid({ value, onChange, tooltipPortal }: IconGridProps) {
       <div
         role="listbox"
         aria-label="Icon selection"
-        className="grid grid-cols-6 gap-0.5 max-h-[240px] overflow-y-auto p-0.5"
+        className="grid grid-cols-6 gap-0.5 max-h-[15rem] overflow-y-auto p-0.5"
       >
         {filtered.map((name) => {
           const Icon = getIconComponent(name);

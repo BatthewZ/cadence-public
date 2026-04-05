@@ -163,7 +163,7 @@ function ActivityFeed<T extends BaseActivityItem>({
                           <Text
                             variant="body-3"
                             color="muted"
-                            className="shrink-0 text-[10px]"
+                            className="shrink-0 text-[0.625rem]"
                           >
                             {renderExtra(activity)}
                           </Text>

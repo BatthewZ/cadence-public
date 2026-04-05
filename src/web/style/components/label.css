@@ -3,7 +3,7 @@
 .label-mgmt__list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 0.125rem;
 }
 
 .label-mgmt__row {
@@ -24,8 +24,8 @@
 }
 
 .label-mgmt__color-dot {
-  width: 24px;
-  height: 24px;
+  width: 1.5rem;
+  height: 1.5rem;
   border-radius: var(--RADIUS-FULL);
   border: 2px solid var(--C-BORDER-DEFAULT);
   cursor: pointer;
@@ -45,7 +45,7 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 2px 4px;
+  padding: 0.125rem 0.25rem;
   border-radius: var(--RADIUS-SM);
   font-size: var(--BodyText-2);
   color: var(--C-TEXT-PRIMARY);
@@ -92,7 +92,7 @@
   cursor: pointer;
   color: var(--C-TEXT-MUTED);
   opacity: 0;
-  padding: 4px;
+  padding: 0.25rem;
   border-radius: var(--RADIUS-SM);
   transition: opacity var(--DURATION-FAST) ease, color var(--DURATION-FAST) ease, background var(--DURATION-FAST) ease;
 }
@@ -118,12 +118,12 @@
 }
 
 .label-mgmt__color-picker {
-  padding: 10px;
+  padding: 0.625rem;
 }
 
 .label-mgmt__color-picker--inline {
   position: absolute;
-  top: calc(100% + 4px);
+  top: calc(100% + 0.25rem);
   left: 0;
   z-index: 50;
   background: var(--C-SURFACE-0);
@@ -135,12 +135,12 @@
 .label-mgmt__color-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
+  gap: 0.375rem;
 }
 
 .label-mgmt__color-swatch {
-  width: 24px;
-  height: 24px;
+  width: 1.5rem;
+  height: 1.5rem;
   border-radius: var(--RADIUS-FULL);
   border: none;
   cursor: pointer;
@@ -159,8 +159,8 @@
 .task-label-picker__trigger {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 4px 8px;
+  gap: 0.375rem;
+  padding: 0.25rem 0.5rem;
   border-radius: var(--RADIUS-SM);
   border: none;
   background: none;
@@ -180,32 +180,32 @@
 .task-label-picker__chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 0.25rem;
   align-items: center;
 }
 
 .task-label-picker__chip {
   display: inline-flex;
   align-items: center;
-  padding: 1px 6px;
+  padding: 0.0625rem 0.375rem;
   border-radius: var(--RADIUS-SM);
-  font-size: 11px;
+  font-size: 0.6875rem;
   font-weight: 500;
   line-height: 1.5;
   white-space: nowrap;
 }
 
 .task-label-picker__popover {
-  min-width: 220px;
-  max-width: 280px;
-  padding: 10px 12px;
+  min-width: 13.75rem;
+  max-width: 17.5rem;
+  padding: 0.625rem 0.75rem;
 }
 
 .task-label-picker__list {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  max-height: 260px;
+  gap: 0.0625rem;
+  max-height: 16.25rem;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--C-BORDER-DEFAULT) transparent;
@@ -227,8 +227,8 @@
 .task-label-picker__option {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 8px;
+  gap: 0.5rem;
+  padding: 0.3125rem 0.5rem;
   border-radius: var(--RADIUS-SM);
   font-size: var(--BodyText-3);
   line-height: 1.4;
@@ -254,15 +254,15 @@
 }
 
 .task-label-picker__dot {
-  width: 12px;
-  height: 12px;
+  width: 0.75rem;
+  height: 0.75rem;
   border-radius: var(--RADIUS-FULL);
   flex-shrink: 0;
 }
 
 .task-label-picker__swatch {
-  width: 16px;
-  height: 16px;
+  width: 1rem;
+  height: 1rem;
   border-radius: var(--RADIUS-SM);
   flex-shrink: 0;
 }
@@ -280,11 +280,11 @@
 .task-label-picker__manage {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 5px 8px;
+  gap: 0.375rem;
+  margin-top: 0.5rem;
+  padding: 0.3125rem 0.5rem;
   border-top: 1px solid var(--C-BORDER-DEFAULT);
-  padding-top: 10px;
+  padding-top: 0.625rem;
   width: 100%;
   font-size: var(--BodyText-3);
   color: var(--C-TEXT-MUTED);

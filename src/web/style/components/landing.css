@@ -19,8 +19,8 @@
 }
 
 .landing-orb--1 {
-  width: min(600px, 80vw);
-  height: min(600px, 80vw);
+  width: min(37.5rem, 80vw);
+  height: min(37.5rem, 80vw);
   background: var(--C-ACCENT);
   opacity: 0.15;
   top: -20%;
@@ -29,8 +29,8 @@
 }
 
 .landing-orb--2 {
-  width: min(450px, 60vw);
-  height: min(450px, 60vw);
+  width: min(28.125rem, 60vw);
+  height: min(28.125rem, 60vw);
   background: var(--landing-glow-violet);
   opacity: 0.1;
   bottom: -15%;
@@ -39,8 +39,8 @@
 }
 
 .landing-orb--3 {
-  width: min(350px, 50vw);
-  height: min(350px, 50vw);
+  width: min(21.875rem, 50vw);
+  height: min(21.875rem, 50vw);
   background: var(--landing-glow-cyan);
   opacity: 0.08;
   top: 40%;
@@ -72,7 +72,7 @@
     color-mix(in srgb, var(--C-TEXT-INVERSE) 7%, transparent) 1px,
     transparent 1px
   );
-  background-size: 32px 32px;
+  background-size: 2rem 2rem;
   pointer-events: none;
 }
 
@@ -81,12 +81,12 @@
 .landing-rhythm {
   display: flex;
   align-items: end;
-  gap: 3px;
-  height: 48px;
+  gap: 0.1875rem;
+  height: 3rem;
 }
 
 .landing-rhythm-bar {
-  width: 3px;
+  width: 0.1875rem;
   border-radius: var(--RADIUS-FULL);
   background: currentColor;
   animation: landing-rhythm-pulse 1.8s ease-in-out infinite;
@@ -136,7 +136,7 @@
 /* ─── Product showcase ─── */
 
 .landing-showcase {
-  perspective: 1200px;
+  perspective: 75rem;
 }
 
 .landing-showcase-board {
@@ -152,10 +152,10 @@
 /* Glow beneath showcase */
 .landing-showcase-glow {
   position: absolute;
-  bottom: -40px;
+  bottom: -2.5rem;
   left: 10%;
   right: 10%;
-  height: 120px;
+  height: 7.5rem;
   background: var(--C-ACCENT);
   filter: blur(80px);
   opacity: 0.15;
@@ -172,7 +172,7 @@
 }
 
 .landing-theme-card:hover {
-  transform: translateY(-4px);
+  transform: translateY(-0.25rem);
   box-shadow: var(--SHADOW-LG);
 }
 
@@ -190,12 +190,12 @@
 .landing-wave svg {
   display: block;
   width: 100%;
-  height: 48px;
+  height: 3rem;
 }
 
 @media (width >= 40rem) {
   .landing-wave svg {
-    height: 72px;
+    height: 4.5rem;
   }
 }
 
@@ -205,8 +205,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 3rem;
+  height: 3rem;
   border-radius: var(--RADIUS-LG);
   background: var(--C-ACCENT-SUBTLE);
   color: var(--C-ACCENT);

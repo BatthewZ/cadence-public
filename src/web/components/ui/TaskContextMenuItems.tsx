@@ -65,7 +65,7 @@ export function TaskContextMenuItems({
         <DropdownMenu.SubTrigger icon={<Flag size={14} />}>
           Change priority
         </DropdownMenu.SubTrigger>
-        <DropdownMenu.SubContent className="min-w-[160px]">
+        <DropdownMenu.SubContent className="min-w-[10rem]">
           {PRIORITY_OPTIONS.map((opt, i) => (
             <DropdownMenu.SubItem
               key={opt.value}
@@ -90,7 +90,7 @@ export function TaskContextMenuItems({
         <DropdownMenu.SubTrigger icon={<Users size={14} />}>
           Assign to
         </DropdownMenu.SubTrigger>
-        <DropdownMenu.SubContent className="min-w-[160px]">
+        <DropdownMenu.SubContent className="min-w-[10rem]">
           <DropdownMenu.SubItem
             index={0}
             icon={<UserX size={14} className="text-fg-muted" />}
@@ -118,7 +118,7 @@ export function TaskContextMenuItems({
         <DropdownMenu.SubTrigger icon={<ArrowRightLeft size={14} />}>
           Move to
         </DropdownMenu.SubTrigger>
-        <DropdownMenu.SubContent className="min-w-[160px]">
+        <DropdownMenu.SubContent className="min-w-[10rem]">
           {taskGroups.map((group, i) => (
             <DropdownMenu.SubItem
               key={group.id}

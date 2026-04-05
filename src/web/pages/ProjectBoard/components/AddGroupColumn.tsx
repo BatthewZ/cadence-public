@@ -66,7 +66,7 @@ export function AddGroupColumn() {
   };
 
   return (
-    <div className="flex flex-col w-[260px] min-w-[240px] sm:w-[300px] sm:min-w-[300px] flex-shrink-0 h-full rounded-lg border border-dashed border-border-default/50 hover:border-accent/40 bg-surface-1/30 hover:bg-surface-1/60 transition-all">
+    <div className="flex flex-col w-[16.25rem] min-w-[15rem] sm:w-[18.75rem] sm:min-w-[18.75rem] flex-shrink-0 h-full rounded-lg border border-dashed border-border-default/50 hover:border-accent/40 bg-surface-1/30 hover:bg-surface-1/60 transition-all">
       {isEditing ? (
         <div className="p-3">
           <Input

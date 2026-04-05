@@ -4,6 +4,12 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.9.1] - 2026-04-05
+
+### Changed
+
+- Converted all hardcoded `px` values to `rem` units across CSS tokens (radius, spacing, typography, motion distances, overlay blur, media), component stylesheets, and Tailwind arbitrary values in TSX components (80 files). Improves accessibility by respecting user font-size preferences.
+
 ## [1.9.0] - 2026-04-02
 
 ### Added

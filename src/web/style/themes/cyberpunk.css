@@ -54,10 +54,10 @@
   --C-STATUS-INFO-BG: #0a1e2a;
 
   /* Radius — tight, angular, geometric */
-  --RADIUS-SM: 2px;
-  --RADIUS-MD: 4px;
-  --RADIUS-LG: 6px;
-  --RADIUS-XL: 8px;
+  --RADIUS-SM: 0.125rem;
+  --RADIUS-MD: 0.25rem;
+  --RADIUS-LG: 0.375rem;
+  --RADIUS-XL: 0.5rem;
 
   /* Shadows — neon glow (pink and cyan tinted) */
   --SHADOW-SM: 0 0 6px 0 rgb(230 36 122 / 0.15), 0 0 3px 0 rgb(0 229 255 / 0.08);
@@ -68,8 +68,8 @@
   --Bold-Weight: 700;
   --Semibold-Weight: 600;
 
-  --BodyText-1-line-height: 28px;
-  --BodyText-2-line-height: 24px;
+  --BodyText-1-line-height: 1.75rem;
+  --BodyText-2-line-height: 1.5rem;
 
   /* Page transitions */
   --MOTION-PAGE-TRANSITION-IN: cyberpunk-page-in;
@@ -85,9 +85,9 @@
   --MOTION-EASE-EXIT: cubic-bezier(0.55, 0, 1, 0.45);
   --MOTION-EASE-SHIFT: cubic-bezier(0.33, 1, 0.68, 1);
   --MOTION-EASE-BOUNCE: cubic-bezier(0.34, 1.4, 0.64, 1);
-  --MOTION-DISTANCE-SM: 4px;
-  --MOTION-DISTANCE-MD: 12px;
-  --MOTION-DISTANCE-LG: 24px;
+  --MOTION-DISTANCE-SM: 0.25rem;
+  --MOTION-DISTANCE-MD: 0.75rem;
+  --MOTION-DISTANCE-LG: 1.5rem;
   --MOTION-STAGGER-DELAY: 25ms;
   --MOTION-SCALE-HOVER: 1.04;
   --MOTION-SCALE-PRESS: 0.96;
@@ -99,12 +99,12 @@
   --OVERLAY-SCRIM-COLOR: rgb(10 10 20 / 0.8);
   --OVERLAY-GRADIENT-START: rgb(10 10 20 / 0);
   --OVERLAY-GRADIENT-END: rgb(10 10 20 / 0.9);
-  --OVERLAY-BLUR: 16px;
-  --OVERLAY-BLUR-HEAVY: 32px;
+  --OVERLAY-BLUR: 1rem;
+  --OVERLAY-BLUR-HEAVY: 2rem;
 
   /* Media */
   --MEDIA-CARD-HOVER-SCALE: 1.04;
-  --MEDIA-CARD-HOVER-LIFT: -4px;
+  --MEDIA-CARD-HOVER-LIFT: -0.25rem;
 
   /* Transitions */
   --DURATION-FAST: 70ms;

@@ -164,7 +164,7 @@ export function SessionsSection() {
             <Stack gap="r4">
               {error && <Alert variant="error">{error}</Alert>}
 
-              <div className={hasMoreSessions && showAll ? "max-h-[400px] overflow-y-auto pr-r6" : ""}>
+              <div className={hasMoreSessions && showAll ? "max-h-[25rem] overflow-y-auto pr-r6" : ""}>
                 <Stack gap="r5">
                   {visibleSessions.map((session) => {
                     const isCurrent = session.id === currentSessionId;

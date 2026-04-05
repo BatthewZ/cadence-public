@@ -11,7 +11,7 @@ export function BoardSkeletonColumns() {
       {Array.from({ length: 3 }, (_, i) => (
         <div
           key={i}
-          className="flex flex-col w-[260px] min-w-[240px] sm:w-[300px] sm:min-w-[300px] flex-shrink-0 h-full rounded-lg bg-surface-1"
+          className="flex flex-col w-[16.25rem] min-w-[15rem] sm:w-[18.75rem] sm:min-w-[18.75rem] flex-shrink-0 h-full rounded-lg bg-surface-1"
         >
           <div className="flex items-center gap-2 px-3 py-3 rounded-t-lg">
             <Skeleton variant="circular" className="size-3" />

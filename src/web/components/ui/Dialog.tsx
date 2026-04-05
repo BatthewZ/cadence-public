@@ -51,7 +51,7 @@ export const Dialog = forwardRef<HTMLDialogElement, DialogProps>(function Dialog
     <dialog
       ref={mergedRef}
       className={cn(
-        "no-body-scroll bg-surface-0 rounded-lg shadow-lg p-r2 animate-fade-in max-w-[640px] w-full m-auto",
+        "no-body-scroll bg-surface-0 rounded-lg shadow-lg p-r2 animate-fade-in max-w-[40rem] w-full m-auto",
         "backdrop:bg-black/50",
         className
       )}

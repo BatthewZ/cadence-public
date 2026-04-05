@@ -19,7 +19,7 @@ export function AssignDropdown({
           <span className="hidden sm:inline ml-1">Assign</span>
         </Button>
       </DropdownMenu.Trigger>
-      <DropdownMenu.Content className="min-w-[160px] max-h-[240px] overflow-y-auto">
+      <DropdownMenu.Content className="min-w-[10rem] max-h-[15rem] overflow-y-auto">
         <DropdownMenu.Item index={0} onSelect={() => void onSelect(null)}>
           Unassigned
         </DropdownMenu.Item>

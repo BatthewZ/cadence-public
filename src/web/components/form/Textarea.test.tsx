@@ -26,7 +26,7 @@ describe("Textarea", () => {
     render(<Textarea aria-label="Bio" />);
     const textarea = screen.getByRole("textbox", { name: "Bio" });
     expect(textarea.className).toContain("resize-y");
-    expect(textarea.className).toContain("min-h-[100px]");
+    expect(textarea.className).toContain("min-h-[6.25rem]");
   });
 
   it("applies error styling when error is true", () => {
