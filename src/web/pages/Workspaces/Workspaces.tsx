@@ -8,6 +8,11 @@ import { UserMenu } from "@/web/components/layout/UserMenu";
 import {
   Alert,
   Button,
+  EmptyState,
+  EmptyStateActions,
+  EmptyStateDescription,
+  EmptyStateIcon,
+  EmptyStateTitle,
   Spinner,
   Text,
 } from "@/web/components/ui";
@@ -88,20 +93,22 @@ export default function Workspaces() {
 
         {workspaces.length === 0 && !error ? (
           /* ── Empty state ── */
-          <div className="flex flex-col items-center text-center py-r1 px-r3">
-            <div className="w-20 h-20 rounded-2xl bg-accent-subtle flex items-center justify-center mb-r4">
-              <Layers size={36} className="text-accent" />
-            </div>
-            <Text variant="h4" className="mb-r6">Create your first workspace</Text>
-            <Text variant="body-2" color="secondary" className="max-w-md mb-r3">
+          <EmptyState size="lg">
+            <EmptyStateIcon>
+              <Layers size={36} />
+            </EmptyStateIcon>
+            <EmptyStateTitle>Create your first workspace</EmptyStateTitle>
+            <EmptyStateDescription>
               Workspaces are where your team organizes projects, tracks tasks, and collaborates.
               Start by creating one for your team or personal use.
-            </Text>
-            <Button size="lg" onClick={() => setDialogOpen(true)}>
-              <Plus size={18} />
-              Create Workspace
-            </Button>
-          </div>
+            </EmptyStateDescription>
+            <EmptyStateActions>
+              <Button size="lg" onClick={() => setDialogOpen(true)}>
+                <Plus size={18} />
+                Create Workspace
+              </Button>
+            </EmptyStateActions>
+          </EmptyState>
         ) : (
           /* ── Workspace grid ── */
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

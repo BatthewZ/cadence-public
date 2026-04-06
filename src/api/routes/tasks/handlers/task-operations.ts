@@ -231,7 +231,7 @@ export async function duplicateTask(c: Context<AppEnv>) {
       newValue: `Duplicated from: ${sourceTask.title}`,
     });
   } catch (error) {
-    console.error("Failed to log activity for duplicateTask:", error);
+    console.error("Failed to log activity for duplicateTask:", { sourceTaskId: taskId, newTaskId, userId: user.id }, error);
     // Non-fatal: task was already duplicated
   }
 
@@ -247,7 +247,7 @@ export async function duplicateTask(c: Context<AppEnv>) {
         taskId: newTaskId,
       });
     } catch (error) {
-      console.error("Failed to create assignment notification for duplicateTask:", error);
+      console.error("Failed to create assignment notification for duplicateTask:", { newTaskId, assigneeId: sourceTask.assigneeId, projectId: sourceTask.projectId, userId: user.id }, error);
       // Non-fatal: task was already duplicated
     }
   }

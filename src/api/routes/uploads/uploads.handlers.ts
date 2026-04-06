@@ -58,7 +58,7 @@ export async function uploadAvatar(c: Context<AppEnv>) {
       filename: file.name,
     });
   } catch (error) {
-    console.error("Failed to upload file to R2:", error);
+    console.error("Failed to upload file to R2:", { userId: user.id, key }, error);
     return errorResponse(c, "Failed to upload file", 500);
   }
 
@@ -88,16 +88,16 @@ export async function uploadAvatar(c: Context<AppEnv>) {
     ] as const);
   } catch (error) {
     // Clean up orphaned R2 object and any partially-inserted upload record
-    await deleteObject(storage, key).catch((err) => console.error("Failed to clean up orphaned avatar R2 object:", err));
-    await db.delete(upload).where(eq(upload.id, id)).catch((err) => console.error("Failed to clean up orphaned avatar upload record:", err));
-    console.error("Failed to save upload record:", error);
+    await deleteObject(storage, key).catch((err) => console.error("Failed to clean up orphaned avatar R2 object:", { userId: user.id, key }, err));
+    await db.delete(upload).where(eq(upload.id, id)).catch((err) => console.error("Failed to clean up orphaned avatar upload record:", { userId: user.id, uploadId: id }, err));
+    console.error("Failed to save upload record:", { userId: user.id, uploadId: id, key }, error);
     return errorResponse(c, "Failed to save upload", 500);
   }
 
   // Clean up old avatar AFTER new one is fully saved
   if (oldAvatar) {
-    await deleteObject(storage, oldAvatar.key).catch((err) => console.error("Failed to delete old avatar R2 object:", err));
-    await db.delete(upload).where(eq(upload.id, oldAvatar.id)).catch((err) => console.error("Failed to delete old avatar upload record:", err));
+    await deleteObject(storage, oldAvatar.key).catch((err) => console.error("Failed to delete old avatar R2 object:", { userId: user.id, key: oldAvatar.key }, err));
+    await db.delete(upload).where(eq(upload.id, oldAvatar.id)).catch((err) => console.error("Failed to delete old avatar upload record:", { userId: user.id, uploadId: oldAvatar.id }, err));
   }
 
   return c.json({
@@ -165,7 +165,7 @@ export async function deleteUpload(c: Context<AppEnv>) {
   }
 
   await deleteObject(storage, record.key).catch((err) => {
-    console.error(`Failed to delete object ${record.key} from storage:`, err);
+    console.error("Failed to delete object from storage:", { userId: user.id, uploadId: id, key: record.key }, err);
   });
 
   return c.json({ ok: true });

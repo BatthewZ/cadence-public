@@ -73,7 +73,7 @@ export async function uploadAttachment(c: Context<AppEnv>) {
       filename: file.name,
     });
   } catch (error) {
-    console.error("Failed to upload attachment to R2:", error);
+    console.error("Failed to upload attachment to R2:", { taskId, userId: user.id, key }, error);
     return errorResponse(c, "Failed to upload file", 500);
   }
 
@@ -104,12 +104,12 @@ export async function uploadAttachment(c: Context<AppEnv>) {
   } catch (error) {
     // Clean up R2 object and any partially-inserted records
     await deleteObject(storage, key).catch((err) =>
-      console.error("Failed to clean up orphaned attachment R2 object:", err),
+      console.error("Failed to clean up orphaned attachment R2 object:", { taskId, key, uploadId }, err),
     );
     await db.delete(upload).where(eq(upload.id, uploadId)).catch((err) =>
-      console.error("Failed to clean up orphaned upload record:", err),
+      console.error("Failed to clean up orphaned upload record:", { taskId, uploadId }, err),
     );
-    console.error("Failed to save attachment records:", error);
+    console.error("Failed to save attachment records:", { taskId, userId: user.id, key, uploadId, attachmentId }, error);
     return errorResponse(c, "Failed to save attachment", 500);
   }
 
@@ -222,7 +222,7 @@ export async function deleteAttachment(c: Context<AppEnv>) {
       db.update(task).set({ updatedAt: new Date() }).where(eq(task.id, taskId)),
     ] as const),
     deleteObject(storage, record.key).catch((err) =>
-      console.error(`Failed to delete attachment R2 object ${record.key}:`, err),
+      console.error("Failed to delete attachment R2 object:", { taskId, attachmentId, key: record.key }, err),
     ),
   ]);
 

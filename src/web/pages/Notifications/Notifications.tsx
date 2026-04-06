@@ -7,10 +7,10 @@ import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import type { Invitation } from "@/shared/types/invitations";
-import { Container, Row, Stack } from "@/web/components/layout";
+import { Container, Row } from "@/web/components/layout";
 import { NotificationItem } from "@/web/components/layout/NotificationItem";
 import { type Notification } from "@/web/components/layout/NotificationPanel";
-import { Avatar, Button, Spinner, Text } from "@/web/components/ui";
+import { Avatar, Button, EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle, Spinner, Text } from "@/web/components/ui";
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { useOptionalWorkspace, type WorkspacesResponse } from "@/web/contexts/WorkspaceContext";
@@ -186,14 +186,19 @@ export default function Notifications() {
           ) : isError ? (
             <QueryErrorRetry message="Failed to load notifications." onRetry={refetch} />
           ) : notifications.length === 0 ? (
-            <Stack gap="r5" className="items-center py-r1">
-              <Bell size={32} className="text-fg-muted" />
-              <Text variant="body-2" color="muted">
+            <EmptyState size="sm">
+              <EmptyStateIcon><Bell size={32} /></EmptyStateIcon>
+              <EmptyStateTitle>
                 {unreadOnly
                   ? "No unread notifications"
                   : "No notifications yet"}
-              </Text>
-            </Stack>
+              </EmptyStateTitle>
+              <EmptyStateDescription>
+                {unreadOnly
+                  ? "You're all caught up."
+                  : "Notifications will appear here when there is activity."}
+              </EmptyStateDescription>
+            </EmptyState>
           ) : (
             <>
               {notifications.map((n) => {

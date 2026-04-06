@@ -4,6 +4,26 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.10.1] - 2026-04-06
+
+### Changed
+
+- Webhook retry batch limit increased from 10 to 50 per cron invocation
+- Webhook retry backoff delays now include ±20% random jitter to prevent thundering-herd effects
+- Scheduled handler tasks are now error-isolated — a failure in one cleanup task no longer blocks the rest
+- Comment database index upgraded to compound index on (`taskId`, `createdAt`) for faster chronological queries
+- Structured context objects added to error logging across API handlers for improved debuggability
+
+### Added
+
+- Error states with retry UI on ProjectBoard and ProjectTimeline when data queries fail
+- `tasksError` and `taskGroupsError` exposed from `ProjectContext` for downstream error handling
+- Notifications and Workspaces pages now use the `EmptyState` component family for consistent empty-state UX
+
+### Removed
+
+- One-off `convert-to-oklch.ts` script (color migration complete)
+
 ## [1.10.0] - 2026-04-06
 
 ### Added

@@ -26,6 +26,7 @@ import {
 
 import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import { BulkActionBar } from "@/web/components/ui/BulkActionBar";
+import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { type Task, useProject } from "@/web/contexts/ProjectContext";
 import { useMultiSelect } from "@/web/hooks/use-multi-select";
@@ -58,6 +59,10 @@ export default function ProjectBoard() {
     taskGroups,
     tasks,
     members,
+    tasksError,
+    taskGroupsError,
+    refetchTasks,
+    refetchTaskGroups,
     updateTask: ctxUpdateTask,
     updateTaskGroup: ctxUpdateTaskGroup,
   } = useProject();
@@ -303,6 +308,21 @@ export default function ProjectBoard() {
     const cappedTasks = sortByPosition(allGroupTasks).slice(0, COLUMN_TASK_LIMIT);
     return <ColumnOverlay group={activeItem.group} tasks={cappedTasks} />;
   };
+
+  // Show error state when board data queries fail
+  if (tasksError || taskGroupsError) {
+    return (
+      <div className="flex h-full min-h-0 items-center justify-center p-3 sm:p-4">
+        <QueryErrorRetry
+          message="Failed to load board data."
+          onRetry={() => {
+            if (taskGroupsError) refetchTaskGroups();
+            if (tasksError) refetchTasks();
+          }}
+        />
+      </div>
+    );
+  }
 
   // Show skeleton columns when task groups haven't loaded yet
   if (taskGroups.length === 0 && tasks.length === 0 && !sortedGroups.length) {

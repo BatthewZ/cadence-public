@@ -114,7 +114,7 @@ export const comment = sqliteTable(
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
   },
-  (table) => [index("comment_task_idx").on(table.taskId)],
+  (table) => [index("comment_task_created_idx").on(table.taskId, table.createdAt)],
 );
 
 export const taskActivity = sqliteTable(

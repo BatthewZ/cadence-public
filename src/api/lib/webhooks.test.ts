@@ -642,7 +642,7 @@ describe("processWebhookRetries", () => {
     expect(updatedDelivery.success).toBe(false);
   });
 
-  it("respects the batch limit of 10", async () => {
+  it("respects the batch limit of 50", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Batch Limit WS" });
@@ -654,9 +654,9 @@ describe("processWebhookRetries", () => {
       consecutiveFailures: 0,
     });
 
-    // Seed 15 failed deliveries all eligible for retry
+    // Seed 60 failed deliveries all eligible for retry
     const pastRetryAt = new Date(Date.now() - 120_000);
-    for (let i = 0; i < 15; i++) {
+    for (let i = 0; i < 60; i++) {
       await seedWebhookDelivery(d1, hook.id, {
         event: "task.created",
         payload: JSON.stringify({ id: `batch-${i}`, index: i }),
@@ -671,8 +671,8 @@ describe("processWebhookRetries", () => {
 
     const count = await processWebhookRetries(db);
 
-    // Should process at most 10 (RETRY_BATCH_LIMIT)
-    expect(count).toBeLessThanOrEqual(10);
+    // Should process at most 50 (RETRY_BATCH_LIMIT)
+    expect(count).toBeLessThanOrEqual(50);
     // And at least some were processed
     expect(count).toBeGreaterThan(0);
   });

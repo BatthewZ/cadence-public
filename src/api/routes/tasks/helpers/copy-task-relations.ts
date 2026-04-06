@@ -60,7 +60,7 @@ export async function copyTaskRelations(
         .delete(task)
         .where(eq(task.id, targetTaskId))
         .catch((cleanupError) =>
-          console.error("Failed to clean up task after subtask insert failure:", cleanupError),
+          console.error("Failed to clean up task after subtask insert failure:", { sourceTaskId, targetTaskId }, cleanupError),
         );
       throwWithContext(error, "copyTaskRelations.subtasks");
     }
@@ -83,7 +83,7 @@ export async function copyTaskRelations(
         .delete(task)
         .where(eq(task.id, targetTaskId))
         .catch((cleanupError) =>
-          console.error("Failed to clean up task after label insert failure:", cleanupError),
+          console.error("Failed to clean up task after label insert failure:", { sourceTaskId, targetTaskId }, cleanupError),
         );
       throwWithContext(error, "copyTaskRelations.labels");
     }

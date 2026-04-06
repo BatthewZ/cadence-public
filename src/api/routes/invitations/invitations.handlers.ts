@@ -372,7 +372,7 @@ export async function acceptInvitation(c: Context<AppEnv>) {
       .delete(workspaceMember)
       .where(eq(workspaceMember.id, newMemberId))
       .catch((cleanupErr) =>
-        console.error("Failed to clean up orphaned workspace member after invitation status update failure:", cleanupErr),
+        console.error("Failed to clean up orphaned workspace member after invitation status update failure:", { userId: user.id, workspaceId: inv.workspaceId, memberId: newMemberId, invitationId: inv.id }, cleanupErr),
       );
     throwWithContext(error, "acceptInvitation");
   }

@@ -15,8 +15,8 @@ import { cleanupWebhookDeliveries } from "./webhook-cleanup";
  * user-facing HTTP requests:
  *
  * 1. **Webhook retries** -- Re-attempts failed webhook deliveries whose
- *    exponential backoff timer has elapsed (batch of 10 to stay within
- *    free-tier CPU budget).
+ *    exponential backoff timer has elapsed (batch of 50 with jitter to
+ *    prevent thundering herd).
  * 2. **Delivery cleanup** -- Removes webhook delivery records older than
  *    30 days and enforces a per-webhook cap of 200 records.
  * 3. **Auth cleanup** -- Removes expired sessions and abandoned verification
@@ -28,49 +28,28 @@ import { cleanupWebhookDeliveries } from "./webhook-cleanup";
  * 6. **Invitation cleanup** -- Removes non-pending expired invitations and
  *    pending invitations expired beyond a 7-day grace period.
  */
+/** Run a cleanup task, logging results. Catches so one failure doesn't block the rest. */
+async function runTask(name: string, fn: () => Promise<number>): Promise<void> {
+  try {
+    const count = await fn();
+    if (count > 0) {
+      console.log(`[scheduled] ${name}: ${count}`);
+    }
+  } catch (error) {
+    console.error(`[scheduled] ${name} failed:`, error);
+  }
+}
+
 export async function handleScheduled(
   _event: ScheduledEvent,
   env: AppBindings,
 ): Promise<void> {
   const db = createDb(env.DB);
 
-  // Process pending webhook retries (batch of 10, stays within free tier CPU)
-  const retriesProcessed = await processWebhookRetries(db);
-  if (retriesProcessed > 0) {
-    console.log(`[scheduled] Processed ${retriesProcessed} webhook retries`);
-  }
-
-  // Clean up old webhook deliveries (30-day retention + per-webhook cap)
-  const cleaned = await cleanupWebhookDeliveries(db);
-  if (cleaned > 0) {
-    console.log(`[scheduled] Cleaned up ${cleaned} old webhook deliveries`);
-  }
-
-  // Clean up expired sessions and abandoned verification tokens
-  const authCleaned = await cleanupAuthTables(db);
-  if (authCleaned > 0) {
-    console.log(`[scheduled] Cleaned up ${authCleaned} expired auth records`);
-  }
-
-  // Clean up old notifications (30-day read, 90-day unread retention)
-  const notifCleaned = await cleanupNotifications(db);
-  if (notifCleaned > 0) {
-    console.log(`[scheduled] Cleaned up ${notifCleaned} old notifications`);
-  }
-
-  // Clean up old task activity records (90-day retention + per-task cap)
-  const activityCleaned = await cleanupTaskActivity(db);
-  if (activityCleaned > 0) {
-    console.log(
-      `[scheduled] Cleaned up ${activityCleaned} old task activity records`,
-    );
-  }
-
-  // Clean up expired invitations (accepted/revoked + pending with grace period)
-  const invitationCleaned = await cleanupInvitations(db);
-  if (invitationCleaned > 0) {
-    console.log(
-      `[scheduled] Cleaned up ${invitationCleaned} expired invitations`,
-    );
-  }
+  await runTask("Processed webhook retries", () => processWebhookRetries(db));
+  await runTask("Cleaned up old webhook deliveries", () => cleanupWebhookDeliveries(db));
+  await runTask("Cleaned up expired auth records", () => cleanupAuthTables(db));
+  await runTask("Cleaned up old notifications", () => cleanupNotifications(db));
+  await runTask("Cleaned up old task activity records", () => cleanupTaskActivity(db));
+  await runTask("Cleaned up expired invitations", () => cleanupInvitations(db));
 }

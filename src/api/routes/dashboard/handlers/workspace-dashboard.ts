@@ -222,7 +222,7 @@ export async function workspaceDashboard(c: Context<AppEnv>) {
     const costRows = await costQuery;
     costAggregation = costRows[0] ?? emptyCostAggregation;
   } catch (error) {
-    console.error("Failed to fetch cost aggregation for workspace dashboard:", error);
+    console.error("Failed to fetch cost aggregation for workspace dashboard:", { workspaceId }, error);
     // Non-fatal: return the rest of the dashboard with zeroed cost data
   }
 

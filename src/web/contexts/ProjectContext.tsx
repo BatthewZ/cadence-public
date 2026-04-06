@@ -96,6 +96,8 @@ export interface ProjectContextValue {
   members: ProjectMember[];
   taskGroups: TaskGroup[];
   tasks: Task[];
+  tasksError: Error | null;
+  taskGroupsError: Error | null;
   refetchTasks: () => void;
   refetchTaskGroups: () => void;
   refetch: () => void;
@@ -169,12 +171,12 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
     staleTime: 5 * 60_000,
   });
 
-  const { data: taskGroupsData } = useQuery({
+  const { data: taskGroupsData, error: taskGroupsError } = useQuery({
     queryKey: queryKeys.projects.taskGroups(projectId),
     queryFn: () => api.get<{ taskGroups: TaskGroup[] }>(`/api/projects/${projectId}/task-groups`),
   });
 
-  const { data: tasksData } = useQuery({
+  const { data: tasksData, error: tasksError } = useQuery({
     queryKey: queryKeys.projects.tasks(projectId),
     queryFn: () => api.get<{ tasks: Task[] }>(`/api/projects/${projectId}/tasks`),
   });
@@ -305,6 +307,8 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
         members: mappedMembers,
         taskGroups: taskGroupsData?.taskGroups ?? [],
         tasks: tasksData?.tasks ?? [],
+        tasksError,
+        taskGroupsError,
         refetchTasks,
         refetchTaskGroups,
         refetch,

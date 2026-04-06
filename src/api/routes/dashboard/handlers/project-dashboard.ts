@@ -122,7 +122,7 @@ export async function projectDashboard(c: Context<AppEnv>) {
       .where(eq(task.projectId, projectId));
     costAggregation = costResult[0] ?? emptyCostAggregation;
   } catch (error) {
-    console.error("Failed to fetch cost aggregation for project dashboard:", error);
+    console.error("Failed to fetch cost aggregation for project dashboard:", { projectId }, error);
     // Non-fatal: return the rest of the dashboard with zeroed cost data
   }
 
@@ -136,7 +136,7 @@ export async function projectDashboard(c: Context<AppEnv>) {
       .limit(1);
     budget = proj?.budget ?? null;
   } catch (error) {
-    console.error("Failed to fetch project budget for project dashboard:", error);
+    console.error("Failed to fetch project budget for project dashboard:", { projectId }, error);
     // Non-fatal: return the rest of the dashboard without budget info
   }
 
@@ -154,7 +154,7 @@ export async function projectDashboard(c: Context<AppEnv>) {
       .where(and(eq(task.projectId, projectId), isNotNull(task.cost)))
       .groupBy(userTable.id, userTable.name);
   } catch (error) {
-    console.error("Failed to fetch cost per member for project dashboard:", error);
+    console.error("Failed to fetch cost per member for project dashboard:", { projectId }, error);
     // Non-fatal: return the rest of the dashboard without per-member cost breakdown
   }
 

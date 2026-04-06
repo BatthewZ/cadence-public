@@ -18,6 +18,7 @@ import {
   Text,
 } from "@/web/components/ui";
 import { BulkActionBar } from "@/web/components/ui/BulkActionBar";
+import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { type Task, useProject } from "@/web/contexts/ProjectContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
@@ -38,7 +39,7 @@ import { TimelineTaskRow } from "./components/TimelineTaskRow";
 
 export default function ProjectTimeline() {
   useDocumentTitle("Timeline");
-  const { project, tasks, updateTask, members, taskGroups } = useProject();
+  const { project, tasks, updateTask, members, taskGroups, tasksError, refetchTasks } = useProject();
   const { toast } = useToast();
   const qc = useQueryClient();
   const { filteredTasks, filters } = useTaskFilters(tasks);
@@ -120,6 +121,12 @@ export default function ProjectTimeline() {
       <Row justify="center" className="py-r1">
         <Spinner />
       </Row>
+    );
+  }
+
+  if (tasksError) {
+    return (
+      <QueryErrorRetry message="Failed to load timeline data." onRetry={refetchTasks} />
     );
   }
 

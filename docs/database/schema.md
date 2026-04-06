@@ -271,7 +271,7 @@ export * from "./workspace";
 | `createdAt` | `integer` (mode: `timestamp`) | `NOT NULL`                                 | Creation timestamp            |
 | `updatedAt` | `integer` (mode: `timestamp`) | `NOT NULL`                                 | Last update timestamp         |
 
-**Indexes:** index on `taskId`
+**Indexes:** compound index on (`taskId`, `createdAt`)
 
 #### `taskActivity`
 

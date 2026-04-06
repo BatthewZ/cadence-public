@@ -20,7 +20,13 @@ const BACKOFF_SCHEDULE: Record<number, number> = {
 const MAX_ATTEMPTS = 5;
 const AUTO_DISABLE_THRESHOLD = 10;
 const DELIVERY_TIMEOUT_MS = 10_000;
-const RETRY_BATCH_LIMIT = 10;
+const RETRY_BATCH_LIMIT = 50;
+
+/** Apply +/- 20% random jitter to a backoff delay to prevent thundering herd. */
+function applyJitter(seconds: number): number {
+  const jitter = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
+  return Math.round(seconds * jitter);
+}
 
 // ---------------------------------------------------------------------------
 // dispatchWebhookEvent
@@ -226,7 +232,7 @@ async function recordDeliveryFailure(
   const hasMoreRetries = nextAttempt <= MAX_ATTEMPTS && backoffSeconds !== undefined;
 
   const nextRetryAt = hasMoreRetries
-    ? new Date(now.getTime() + backoffSeconds * 1000)
+    ? new Date(now.getTime() + applyJitter(backoffSeconds) * 1000)
     : null;
 
   await db.insert(webhookDelivery).values({
@@ -472,7 +478,7 @@ async function updateDeliveryRetryFailure(
     nextAttemptNumber <= MAX_ATTEMPTS && backoffSeconds !== undefined;
 
   const nextRetryAt = hasMoreRetries
-    ? new Date(now.getTime() + backoffSeconds * 1000)
+    ? new Date(now.getTime() + applyJitter(backoffSeconds) * 1000)
     : null;
 
   await db

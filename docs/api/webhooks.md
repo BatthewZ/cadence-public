@@ -273,19 +273,19 @@ A 2xx response (200-299) is considered successful. Any other status code or netw
 
 ### Retry Schedule
 
-Failed deliveries are retried with exponential backoff. There are **5 total attempts** (1 initial + 4 retries):
+Failed deliveries are retried with exponential backoff. There are **5 total attempts** (1 initial + 4 retries). Each delay has ±20% random jitter applied, so actual wait times vary slightly from the base values below:
 
-| Attempt | Delay after previous attempt | Cumulative wait |
-| :-----: | :--------------------------: | :-------------: |
-|    1    |          Immediate           |        0        |
-|    2    |           1 minute           |     1 minute    |
-|    3    |          5 minutes           |    6 minutes    |
-|    4    |          30 minutes          |   36 minutes    |
-|    5    |           2 hours            | 2 hours 36 min  |
+| Attempt | Base delay after previous attempt | Approximate cumulative wait |
+| :-----: | :-------------------------------: | :-------------------------: |
+|    1    |            Immediate              |              0              |
+|    2    |            1 minute               |          ~1 minute          |
+|    3    |            5 minutes              |         ~6 minutes          |
+|    4    |            30 minutes             |        ~36 minutes          |
+|    5    |            2 hours                |       ~2 hours 36 min       |
 
 ### Cron-Driven Retries
 
-A Cloudflare Cron Trigger runs every 5 minutes (`*/5 * * * *`) and processes pending retries. Each cron invocation processes up to **10 retries** per batch to stay within Cloudflare Workers free-tier CPU budgets.
+A Cloudflare Cron Trigger runs every 5 minutes (`*/5 * * * *`) and processes pending retries. Each cron invocation processes up to **50 retries** per batch. Retry delays include ±20% random jitter to prevent thundering-herd effects when many deliveries become eligible simultaneously.
 
 ### Permanent Failure
 
@@ -357,7 +357,7 @@ The webhook CRUD API is mounted under `/api/workspaces/:workspaceId/webhooks`. F
 | Max delivery attempts       | 5 (1 initial + 4 retries) |
 | Delivery timeout            | 10 seconds           |
 | Auto-disable threshold      | 10 consecutive failures |
-| Retry batch size (per cron) | 10                   |
+| Retry batch size (per cron) | 50                   |
 | Delivery retention          | 30 days              |
 | Delivery records per webhook| 200                  |
 | Webhook name max length     | 100 characters       |

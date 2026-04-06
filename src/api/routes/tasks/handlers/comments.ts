@@ -64,7 +64,7 @@ export async function createComment(c: Context<AppEnv>) {
       }
     }
   } catch (error) {
-    console.error("Failed to process mentions or notifications for createComment:", error);
+    console.error("Failed to process mentions or notifications for createComment:", { taskId, userId: user.id, commentId: id }, error);
     // Non-fatal: comment was already created
   }
 
@@ -76,7 +76,7 @@ export async function createComment(c: Context<AppEnv>) {
       newValue: body.body.substring(0, 100),
     });
   } catch (error) {
-    console.error("Failed to log activity for createComment:", error);
+    console.error("Failed to log activity for createComment:", { taskId, userId: user.id, commentId: id }, error);
     // Non-fatal: comment was already created
   }
 
