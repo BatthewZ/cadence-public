@@ -43,6 +43,9 @@ export const queryKeys = {
     byToken: (token: string) => ["invitations", token] as const,
     pending: ["invitations", "pending"] as const,
   },
+  legal: {
+    tosStatus: ["legal", "tos-status"] as const,
+  },
   notifications: {
     all: ["notifications"] as const,
     list: (filters?: { unreadOnly?: boolean }) =>

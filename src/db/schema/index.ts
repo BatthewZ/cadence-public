@@ -1,6 +1,7 @@
 export * from "./auth";
 export * from "./invitation";
 export * from "./label";
+export * from "./legal-acceptance";
 export * from "./notification";
 export * from "./project";
 export * from "./task";

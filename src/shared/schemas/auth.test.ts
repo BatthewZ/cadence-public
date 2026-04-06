@@ -37,14 +37,36 @@ describe("loginSchema", () => {
 });
 
 describe("registerSchema", () => {
-  it("accepts valid name, email, password, and matching confirmPassword", () => {
+  it("accepts valid name, email, password, matching confirmPassword, and tosAccepted", () => {
+    const result = registerSchema.safeParse({
+      name: "Test User",
+      email: "user@example.com",
+      password: "Password123",
+      confirmPassword: "Password123",
+      tosAccepted: true,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects when tosAccepted is false", () => {
+    const result = registerSchema.safeParse({
+      name: "Test User",
+      email: "user@example.com",
+      password: "Password123",
+      confirmPassword: "Password123",
+      tosAccepted: false,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects when tosAccepted is missing", () => {
     const result = registerSchema.safeParse({
       name: "Test User",
       email: "user@example.com",
       password: "Password123",
       confirmPassword: "Password123",
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
   });
 
   it("rejects missing name", () => {
@@ -52,6 +74,7 @@ describe("registerSchema", () => {
       email: "user@example.com",
       password: "Password123",
       confirmPassword: "Password123",
+      tosAccepted: true,
     });
     expect(result.success).toBe(false);
   });
@@ -62,6 +85,7 @@ describe("registerSchema", () => {
       email: "user@example.com",
       password: "Password123",
       confirmPassword: "Password123",
+      tosAccepted: true,
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -75,6 +99,7 @@ describe("registerSchema", () => {
       email: "bad-email",
       password: "Password123",
       confirmPassword: "Password123",
+      tosAccepted: true,
     });
     expect(result.success).toBe(false);
   });
@@ -85,6 +110,7 @@ describe("registerSchema", () => {
       email: "user@example.com",
       password: "short",
       confirmPassword: "short",
+      tosAccepted: true,
     });
     expect(result.success).toBe(false);
   });
@@ -95,6 +121,7 @@ describe("registerSchema", () => {
       email: "user@example.com",
       password: "Password123",
       confirmPassword: "different456",
+      tosAccepted: true,
     });
     expect(result.success).toBe(false);
     if (!result.success) {
@@ -109,6 +136,7 @@ describe("registerSchema", () => {
       email: "user@example.com",
       password: "Password123",
       confirmPassword: "",
+      tosAccepted: true,
     });
     expect(result.success).toBe(false);
     if (!result.success) {

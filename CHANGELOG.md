@@ -4,6 +4,16 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.10.0] - 2026-04-06
+
+### Added
+
+- Terms of Service and Privacy Policy pages (`/terms`, `/privacy`)
+- ToS acceptance gate for authenticated users via `TosGuard` route guard — existing users who haven't accepted the current ToS version are redirected to `/accept-terms`
+- Legal acceptance API endpoints (`GET /api/legal/tos-status`, `POST /api/legal/accept-tos`) with `legal_acceptance` database table
+- ToS acceptance checkbox on the registration form with schema validation (`tosAccepted` field on `registerSchema`)
+- Terms and Privacy links in the landing page footer
+
 ## [1.9.1] - 2026-04-05
 
 ### Changed

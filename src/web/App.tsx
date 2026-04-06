@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes, useParams } from "react-router-
 
 import { AuthGuard } from "./components/guards/AuthGuard";
 import { GuestGuard } from "./components/guards/GuestGuard";
+import { TosGuard } from "./components/guards/TosGuard";
 import { WorkspaceGuard } from "./components/guards/WorkspaceGuard";
 import { HomeRedirect } from "./components/HomeRedirect";
 import { Center } from "./components/layout";
@@ -17,6 +18,7 @@ import { queryClient } from "./lib/query-client";
 
 /* ─── Lazy page imports ─── */
 
+const AcceptTerms = lazy(() => import("./pages/AcceptTerms/AcceptTerms"));
 const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword/ForgotPassword"));
 const InviteAccept = lazy(() => import("./pages/InviteAccept/InviteAccept"));
@@ -24,6 +26,7 @@ const Login = lazy(() => import("./pages/Login/Login"));
 const MyTasks = lazy(() => import("./pages/MyTasks/MyTasks"));
 const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 const Notifications = lazy(() => import("./pages/Notifications/Notifications"));
+const Privacy = lazy(() => import("./pages/Privacy/Privacy"));
 const ProjectBoard = lazy(() => import("./pages/ProjectBoard/ProjectBoard"));
 const ProjectDashboard = lazy(() => import("./pages/ProjectDashboard/ProjectDashboard"));
 const ProjectList = lazy(() => import("./pages/Projects/ProjectList"));
@@ -33,6 +36,7 @@ const ProjectTimeline = lazy(() => import("./pages/ProjectTimeline/ProjectTimeli
 const Register = lazy(() => import("./pages/Register/Register"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword/ResetPassword"));
 const Settings = lazy(() => import("./pages/Settings/Settings"));
+const Terms = lazy(() => import("./pages/Terms/Terms"));
 const ThemeEditor = lazy(() => import("./pages/ThemeEditor/ThemeEditor"));
 const Workspaces = lazy(() => import("./pages/Workspaces/Workspaces"));
 const WorkspaceSettings = lazy(() => import("./pages/WorkspaceSettings/WorkspaceSettings"));
@@ -133,16 +137,22 @@ export function App() {
                     }
                   />
 
+                  {/* Public legal pages */}
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/privacy" element={<Privacy />} />
+
                   {/* Workspace-scoped routes */}
                   <Route
                     path="/w/:workspaceSlug"
                     element={
                       <AuthGuard>
-                        <WorkspaceBoundary>
-                          <WorkspaceGuard>
-                            <WorkspaceLayout />
-                          </WorkspaceGuard>
-                        </WorkspaceBoundary>
+                        <TosGuard>
+                          <WorkspaceBoundary>
+                            <WorkspaceGuard>
+                              <WorkspaceLayout />
+                            </WorkspaceGuard>
+                          </WorkspaceBoundary>
+                        </TosGuard>
                       </AuthGuard>
                     }
                   >
@@ -175,16 +185,28 @@ export function App() {
                     path="/workspaces"
                     element={
                       <AuthGuard>
-                        <Workspaces />
+                        <TosGuard>
+                          <Workspaces />
+                        </TosGuard>
                       </AuthGuard>
                     }
                   />
                   <Route path="/invite/:token" element={<InviteAccept />} />
                   <Route
+                    path="/accept-terms"
+                    element={
+                      <AuthGuard>
+                        <AcceptTerms />
+                      </AuthGuard>
+                    }
+                  />
+                  <Route
                     path="/notifications"
                     element={
                       <AuthGuard>
-                        <Notifications />
+                        <TosGuard>
+                          <Notifications />
+                        </TosGuard>
                       </AuthGuard>
                     }
                   />
@@ -192,7 +214,9 @@ export function App() {
                     path="/settings"
                     element={
                       <AuthGuard>
-                        <Settings />
+                        <TosGuard>
+                          <Settings />
+                        </TosGuard>
                       </AuthGuard>
                     }
                   />

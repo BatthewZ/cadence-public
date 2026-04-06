@@ -2,11 +2,17 @@
 
 ### Sign Up
 
-1. User submits name, email, and password on `/register`.
-2. Frontend calls `signUp.email({ name, email, password })` from the auth client.
-3. Better Auth creates a `user` record and an `account` record (with `providerId: "credential"` and a hashed password).
-4. A `session` record is created and a session cookie is set.
-5. The user is redirected to `/dashboard`.
+1. User submits name, email, password, and accepts the Terms of Service checkbox on `/register`.
+2. The `registerSchema` validates all fields, including that `tosAccepted` is `true`.
+3. Frontend calls `signUp.email({ name, email, password })` from the auth client.
+4. Better Auth creates a `user` record and an `account` record (with `providerId: "credential"` and a hashed password).
+5. A `session` record is created and a session cookie is set.
+6. The frontend records ToS acceptance by calling `POST /api/legal/accept-tos` with the current ToS version. If this call fails, the `TosGuard` will prompt the user on the next authenticated page load.
+7. The user is redirected to `/`.
+
+### ToS Acceptance (existing users)
+
+When the ToS version is bumped, existing users who haven't accepted the new version are redirected to `/accept-terms` by the `TosGuard`. On that page, the user reviews the Terms of Service and Privacy Policy, checks the agreement box, and clicks "Accept and Continue". The acceptance is recorded via `POST /api/legal/accept-tos` and the `legal.tosStatus` query cache is invalidated.
 
 ### Sign In
 

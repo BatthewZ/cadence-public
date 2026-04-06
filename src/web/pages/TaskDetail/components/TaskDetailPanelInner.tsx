@@ -795,8 +795,12 @@ export function TaskDetailPanelInner({
                       value={newSubtaskTitle}
                       onChange={(e) => setNewSubtaskTitle(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") void handleAddSubtask();
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          void handleAddSubtask();
+                        }
                       }}
+                      enterKeyHint="done"
                       placeholder="+ Add subtask"
                       className="border-dashed border-border-default bg-transparent py-1.5 px-r5 text-body-3 rounded"
                     />

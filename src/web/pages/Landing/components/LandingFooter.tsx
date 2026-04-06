@@ -23,6 +23,18 @@ function LandingFooter() {
             </svg>
           </a>
           <Link
+            to="/terms"
+            className="text-sm text-fg-secondary transition-colors hover:text-fg-primary"
+          >
+            Terms
+          </Link>
+          <Link
+            to="/privacy"
+            className="text-sm text-fg-secondary transition-colors hover:text-fg-primary"
+          >
+            Privacy
+          </Link>
+          <Link
             to="/login"
             className="text-sm text-fg-secondary transition-colors hover:text-fg-primary"
           >

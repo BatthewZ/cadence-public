@@ -1617,6 +1617,49 @@ Removes a member from a team.
 
 ---
 
+## Legal
+
+### `GET /api/legal/tos-status`
+
+Returns whether the authenticated user has accepted the current Terms of Service version.
+
+**Auth:** Required.
+
+**Response** (200):
+
+```json
+{
+  "accepted": true,
+  "currentVersion": "1.0"
+}
+```
+
+### `POST /api/legal/accept-tos`
+
+Records the authenticated user's acceptance of the current Terms of Service version. Idempotent — re-accepting an already-accepted version is a no-op success. Returns 400 if the submitted version does not match the current version.
+
+**Auth:** Required.
+
+**Request body:**
+
+| Field | Type | Constraints | Required |
+|-------|------|-------------|----------|
+| `tosVersion` | `string` | min 1 character, must match current version | Yes |
+
+**Response** (200):
+
+```json
+{ "accepted": true }
+```
+
+**Response** (400, version mismatch):
+
+```json
+{ "error": "Version mismatch: please accept the current Terms of Service" }
+```
+
+---
+
 ## Invitations
 
 ### `POST /api/workspaces/:workspaceId/invitations`

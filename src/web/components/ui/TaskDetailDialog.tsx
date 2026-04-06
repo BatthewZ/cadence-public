@@ -52,6 +52,7 @@ import {
 } from "@/web/hooks/use-task-comments";
 import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
+import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import { queryKeys } from "@/web/lib/query-keys";
 import { PropertyRow } from "@/web/pages/TaskDetail/components/PropertyRow";
 import {
@@ -122,8 +123,11 @@ export function TaskDetailDialog({
     void qc.invalidateQueries({ queryKey: queryKeys.tasks.comments(taskId) });
     if (projectId) {
       void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(projectId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(projectId) });
     }
-  }, [qc, taskId, projectId]);
+    void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
+    freshnessTracker.recordMutation("tasks");
+  }, [qc, taskId, projectId, workspace.id]);
 
   // Local optimistic copy of the task
   const [localTask, setLocalTask] = useState<TaskDetail | null>(null);
@@ -628,14 +632,9 @@ export function TaskDetailDialog({
         toast("Next occurrence created", { variant: "success" });
       }
       invalidateTaskQueries();
-      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
       void qc.invalidateQueries({
         queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id),
       });
-      if (projectId) {
-        void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(projectId) });
-        void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(projectId) });
-      }
     } catch {
       setLocalTask((prev) => (prev ? { ...prev, completed: wasCompleted } : prev));
       toast("Failed to update task", { variant: "error" });
@@ -662,10 +661,6 @@ export function TaskDetailDialog({
     try {
       await api.post(`/api/tasks/${taskId}/duplicate`, {});
       invalidateTaskQueries();
-      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
-      if (projectId) {
-        void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(projectId) });
-      }
       toast("Task duplicated", { variant: "success" });
     } catch {
       toast("Failed to duplicate task", { variant: "error" });
@@ -1016,8 +1011,12 @@ export function TaskDetailDialog({
                         value={newSubtaskTitle}
                         onChange={(e) => setNewSubtaskTitle(e.target.value)}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter") void handleAddSubtask();
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            void handleAddSubtask();
+                          }
                         }}
+                        enterKeyHint="done"
                         placeholder="+ Add subtask"
                         className="border-dashed border-border-default bg-transparent py-1.5 px-r5 text-body-3 rounded"
                       />

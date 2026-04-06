@@ -15,7 +15,7 @@ Authentication is handled by [Better Auth](https://www.better-auth.com/), a Type
 - [Rate Limiting](./rate-limiting.md) -- rate limit rules on auth endpoints
 - [Middleware](./middleware.md) -- session extraction middleware and auth guard middleware
 - [Frontend Auth Client](./client.md) -- Better Auth React client and exported functions
-- [Route Guards](./guards.md) -- AuthGuard and GuestGuard React components
+- [Route Guards](./guards.md) -- AuthGuard, GuestGuard, and TosGuard React components
 - [Validation Schemas](./schemas.md) -- shared Zod schemas for auth forms
 - [Database Schema](./database.md) -- auth-related database tables
 - [Adding Providers](./adding-providers.md) -- how to add a new auth provider (Google, GitHub, etc.)

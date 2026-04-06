@@ -4,6 +4,7 @@ import type { AppEnv } from "../env";
 import authRoutes from "./auth/auth.routes";
 import dashboardRoutes from "./dashboard/dashboard.routes";
 import invitationRoutes from "./invitations/invitations.routes";
+import legalRoutes from "./legal/legal.routes";
 import notificationRoutes from "./notifications/notifications.routes";
 import projectRoutes from "./projects/projects.routes";
 import searchRoutes from "./search/search.routes";
@@ -30,5 +31,6 @@ app.route("/", taskRoutes);
 app.route("/", dashboardRoutes);
 app.route("/", searchRoutes);
 app.route("/", webhookRoutes);
+app.route("/", legalRoutes);
 
 export default app;

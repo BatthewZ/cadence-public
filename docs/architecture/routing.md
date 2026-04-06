@@ -30,9 +30,10 @@ Routes are protected using guard components that wrap page components:
 
 - **`AuthGuard`** -- requires an active session. If no session exists, redirects to `/login`. Used for protected pages like `/workspaces`, `/settings`, and all workspace-scoped routes.
 - **`GuestGuard`** -- requires no active session. If a session exists, redirects to `/`. Used for auth pages like `/login`, `/register`, `/forgot-password`, and `/reset-password`.
+- **`TosGuard`** -- requires the authenticated user to have accepted the current Terms of Service version (checked via `GET /api/legal/tos-status`). If not accepted, redirects to `/accept-terms`. Nested inside `AuthGuard`, wrapping workspace-scoped routes, `/workspaces`, `/settings`, and `/notifications`.
 - **`WorkspaceGuard`** -- requires the `:workspaceSlug` URL parameter to match a workspace the user belongs to. Fetches the user's workspaces from `/api/workspaces` and, if the slug is valid, prefetches the workspace detail into the React Query cache so that downstream `useWorkspace()` hooks read from a warm cache on first render. If the slug does not match any workspace, redirects to `/workspaces`.
 
-All three guards show a loading spinner while their data is being fetched (`isPending` / `loading` state).
+All four guards show a loading spinner while their data is being fetched (`isPending` / `loading` state).
 
 ### Current Routes
 
@@ -50,11 +51,19 @@ All three guards show a loading spinner while their data is being fetched (`isPe
 | Path | Layout | Page | Notes |
 |---|---|---|---|
 | `/` | -- | HomeRedirect | Redirects to `/w/:lastSlug/dashboard` if a workspace slug is stored in `localStorage`, otherwise to `/workspaces` |
-| `/workspaces` | -- | Workspaces | Workspace picker / create workspace |
-| `/settings` | -- | Settings | User-level settings |
-| `/notifications` | -- | Notifications | Standalone notifications (outside workspace context) |
+| `/workspaces` | -- | Workspaces | Workspace picker / create workspace (TosGuard) |
+| `/settings` | -- | Settings | User-level settings (TosGuard) |
+| `/notifications` | -- | Notifications | Standalone notifications (TosGuard) |
+| `/accept-terms` | -- | AcceptTerms | ToS acceptance prompt for existing users (no TosGuard) |
 
-#### Workspace Routes (AuthGuard + WorkspaceGuard + WorkspaceLayout)
+#### Public Routes (no guard)
+
+| Path | Page | Notes |
+|---|---|---|
+| `/terms` | Terms | Public Terms of Service page |
+| `/privacy` | Privacy | Public Privacy Policy page |
+
+#### Workspace Routes (AuthGuard + TosGuard + WorkspaceGuard + WorkspaceLayout)
 
 All routes below are nested under `/w/:workspaceSlug` and rendered inside `WorkspaceLayout` (sidebar + navbar).
 
@@ -68,7 +77,7 @@ All routes below are nested under `/w/:workspaceSlug` and rendered inside `Works
 | `/w/:workspaceSlug/settings/members` | WorkspaceMembers | |
 | `/w/:workspaceSlug/notifications` | Notifications | Workspace-scoped notifications view with breadcrumbs |
 
-#### Project Routes (AuthGuard + WorkspaceGuard + WorkspaceLayout + ProjectLayout)
+#### Project Routes (AuthGuard + TosGuard + WorkspaceGuard + WorkspaceLayout + ProjectLayout)
 
 Project routes are nested under `/w/:workspaceSlug/projects/:projectId` and additionally wrapped in `ProjectLayout`, which provides breadcrumbs, tab navigation, `ProjectProvider`, and — for project admins — inline editing of the project name (click-to-edit) and icon (popover picker).
 
@@ -91,6 +100,8 @@ Project routes are nested under `/w/:workspaceSlug/projects/:projectId` and addi
 
 | Path | Page | Notes |
 |---|---|---|
+| `/terms` | Terms | Public Terms of Service |
+| `/privacy` | Privacy | Public Privacy Policy |
 | `/theme-editor` | ThemeEditor | |
 | `*` | NotFound | Catch-all 404 page |
 

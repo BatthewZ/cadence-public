@@ -14,10 +14,31 @@ export const loginSchema = z.object({
 ### `registerSchema`
 
 ```ts
-export const registerSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email(),
-  password: z.string().min(8, "Password must be at least 8 characters"),
+export const registerSchema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Invalid email"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+    tosAccepted: z.literal(true, {
+      error: "You must accept the Terms of Service",
+    }),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+```
+
+### `acceptTosSchema`
+
+**File:** `src/shared/schemas/legal.ts`
+
+Used by the `POST /api/legal/accept-tos` endpoint to validate the ToS acceptance request body.
+
+```ts
+export const acceptTosSchema = z.object({
+  tosVersion: z.string().min(1),
 });
 ```
 
@@ -51,3 +72,4 @@ Each schema has a corresponding inferred type:
 - `RegisterInput`
 - `ForgotPasswordInput`
 - `ResetPasswordInput`
+- `AcceptTosInput` (from `src/shared/schemas/legal.ts`)

@@ -26,6 +26,18 @@ vi.mock("@/web/lib/auth/auth-client", () => ({
   },
 }));
 
+const mockApiPost = vi.fn();
+
+vi.mock("@/web/lib/api/client", () => ({
+  api: Object.assign(vi.fn(), {
+    get: vi.fn(),
+    post: (...args: unknown[]) => mockApiPost(...args) as Promise<unknown>,
+    put: vi.fn(),
+    patch: vi.fn(),
+    delete: vi.fn(),
+  }),
+}));
+
 vi.mock("@/web/hooks/use-document-title", () => ({
   useDocumentTitle: vi.fn(),
 }));
@@ -62,6 +74,10 @@ function getConfirmPasswordInput() {
   return screen.getByLabelText("Confirm Password");
 }
 
+function getTosCheckbox() {
+  return screen.getByRole("checkbox");
+}
+
 function getSubmitButton() {
   return screen.getByRole("button", { name: /create account/i });
 }
@@ -74,6 +90,7 @@ describe("Register", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSignUpEmail.mockResolvedValue({ error: null });
+    mockApiPost.mockResolvedValue({ accepted: true });
   });
 
   // 1. Renders all form fields and submit button
@@ -100,6 +117,7 @@ describe("Register", () => {
     expect(screen.getByText("Invalid email")).toBeInTheDocument();
     expect(screen.getByText("Password must be at least 8 characters")).toBeInTheDocument();
     expect(screen.getByText("Please confirm your password")).toBeInTheDocument();
+    expect(screen.getByText("You must accept the Terms of Service")).toBeInTheDocument();
 
     // signUp should not have been called
     expect(mockSignUpEmail).not.toHaveBeenCalled();
@@ -113,6 +131,7 @@ describe("Register", () => {
     await user.type(getEmailInput(), "test@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password2");
+    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     await waitFor(() => {
@@ -150,6 +169,7 @@ describe("Register", () => {
     await user.type(getEmailInput(), "test@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password1");
+    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     await waitFor(() => {
@@ -169,6 +189,7 @@ describe("Register", () => {
     await user.type(getEmailInput(), "test@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password1");
+    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     await waitFor(() => {
@@ -188,6 +209,7 @@ describe("Register", () => {
     await user.type(getEmailInput(), "taken@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password1");
+    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     await waitFor(() => {
@@ -210,6 +232,7 @@ describe("Register", () => {
     await user.type(getEmailInput(), "test@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password1");
+    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     await waitFor(() => {
@@ -227,6 +250,7 @@ describe("Register", () => {
     await user.type(getEmailInput(), "test@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password1");
+    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     await waitFor(() => {
@@ -257,6 +281,7 @@ describe("Register", () => {
     await user.type(getEmailInput(), "test@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password1");
+    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     // While loading, button should be disabled and show loading text

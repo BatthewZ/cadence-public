@@ -117,7 +117,7 @@ The delete confirmation dialog uses the shared [`ConfirmDialog`](confirm-dialog.
 
 ## Cache Invalidation
 
-All mutations invalidate `queryKeys.tasks.detail(taskId)`, `queryKeys.tasks.comments(taskId)`, `queryKeys.workspaces.dashboard(workspace.id)`, and (when a `projectId` is available) `queryKeys.projects.tasks(projectId)` and `queryKeys.projects.dashboard(projectId)` to keep project board/list views and the project dashboard in sync. Attachment mutations additionally invalidate `queryKeys.tasks.attachments(taskId)` and `queryKeys.tasks.activity(taskId)`.
+All mutations invalidate `queryKeys.tasks.detail(taskId)`, `queryKeys.tasks.comments(taskId)`, `queryKeys.workspaces.dashboard(workspace.id)`, and (when a `projectId` is available) `queryKeys.projects.tasks(projectId)` and `queryKeys.projects.dashboard(projectId)` to keep project board/list views and the project dashboard in sync. Each mutation also calls `freshnessTracker.recordMutation("tasks")` so the freshness poller skips re-invalidation for changes the current user already applied locally. Attachment mutations additionally invalidate `queryKeys.tasks.attachments(taskId)` and `queryKeys.tasks.activity(taskId)`.
 
 ## Usage
 

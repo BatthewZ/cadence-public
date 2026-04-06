@@ -6,6 +6,7 @@ All table definitions live in `src/db/schema/`. The barrel file `src/db/schema/i
 export * from "./auth";
 export * from "./invitation";
 export * from "./label";
+export * from "./legal-acceptance";
 export * from "./notification";
 export * from "./project";
 export * from "./task";
@@ -371,6 +372,19 @@ export * from "./workspace";
 
 **Indexes:** unique on `token`, index on `workspaceId`, index on `email`
 
+#### `legalAcceptance`
+
+**File:** `src/db/schema/legal-acceptance.ts`
+
+| Column       | Type                          | Constraints                               | Description                               |
+| ------------ | ----------------------------- | ----------------------------------------- | ----------------------------------------- |
+| `id`         | `text`                        | **Primary key**                           | Unique acceptance record identifier       |
+| `userId`     | `text`                        | `NOT NULL`, **FK** -> `user.id` (cascade) | References the user who accepted          |
+| `tosVersion` | `text`                        | `NOT NULL`                                | ToS version string (e.g. `"1.0"`)        |
+| `acceptedAt` | `integer` (mode: `timestamp`) | `NOT NULL`                                | Timestamp of acceptance                   |
+
+**Indexes:** index on `userId`
+
 #### `webhook`
 
 **File:** `src/db/schema/webhook.ts`
@@ -452,8 +466,9 @@ export * from "./workspace";
 - `invitation.invitedBy` -> `user.id` (foreign key, set null on delete)
 - `webhook.workspaceId` -> `workspace.id` (foreign key, cascade delete)
 - `webhookDelivery.webhookId` -> `webhook.id` (foreign key, cascade delete)
+- `legalAcceptance.userId` -> `user.id` (foreign key, cascade delete)
 
-The `user`, `session`, `account`, and `verification` tables are managed by **Better Auth** and follow its expected schema conventions. The `upload` table is application-managed. The `workspace`, `workspaceMember`, `team`, `teamMember`, `project`, `projectMember`, `taskGroup`, `task`, `subtask`, `comment`, `taskActivity`, `taskAttachment`, `label`, `taskLabel`, `notification`, `invitation`, `webhook`, and `webhookDelivery` tables are application-managed.
+The `user`, `session`, `account`, and `verification` tables are managed by **Better Auth** and follow its expected schema conventions. The `upload` table is application-managed. The `workspace`, `workspaceMember`, `team`, `teamMember`, `project`, `projectMember`, `taskGroup`, `task`, `subtask`, `comment`, `taskActivity`, `taskAttachment`, `label`, `taskLabel`, `notification`, `invitation`, `webhook`, `webhookDelivery`, and `legalAcceptance` tables are application-managed.
 
 ### Role & Status Types
 

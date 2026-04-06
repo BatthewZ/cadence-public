@@ -80,6 +80,47 @@ export function GuestGuard({ children }: { children: React.ReactNode }) {
 />
 ```
 
+### TosGuard
+
+**File**: `src/web/components/guards/TosGuard.tsx`
+
+Requires the authenticated user to have accepted the current Terms of Service version. Queries `GET /api/legal/tos-status` to check acceptance status. If the user has not accepted, redirects to `/accept-terms`. Shows a spinner while loading and a retry prompt on error.
+
+```tsx
+export function TosGuard({ children }: { children: React.ReactNode }) {
+  const { data, isPending, isError, refetch } = useQuery({
+    queryKey: queryKeys.legal.tosStatus,
+    queryFn: () => api.get<TosStatusResponse>("/api/legal/tos-status"),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  if (isPending) { /* spinner */ }
+  if (isError) { /* retry prompt */ }
+  if (!data?.accepted) {
+    return <Navigate to="/accept-terms" replace />;
+  }
+
+  return <>{children}</>;
+}
+```
+
+**Usage**: Nested inside `AuthGuard`, wrapping workspace-scoped routes, `/workspaces`, `/settings`, and `/notifications`:
+
+```tsx
+<Route
+  path="/w/:workspaceSlug"
+  element={
+    <AuthGuard>
+      <TosGuard>
+        <WorkspaceGuard>
+          <WorkspaceLayout />
+        </WorkspaceGuard>
+      </TosGuard>
+    </AuthGuard>
+  }
+/>
+```
+
 ### WorkspaceGuard
 
 **File**: `src/web/components/guards/WorkspaceGuard.tsx`
