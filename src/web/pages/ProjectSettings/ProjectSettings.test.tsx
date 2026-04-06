@@ -170,7 +170,7 @@ function makeTaskGroup(
   return {
     id,
     name,
-    color: "#ef4444",
+    color: "oklch(0.6368 0.2078 25.33)",
     isCompletionGroup: false,
     position,
     taskCount: 0,

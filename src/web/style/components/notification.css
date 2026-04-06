@@ -148,11 +148,11 @@
 }
 
 .notification-item[data-unread="true"] {
-  background: color-mix(in srgb, var(--C-ACCENT) 5%, transparent);
+  background: color-mix(in oklch, var(--C-ACCENT) 5%, transparent);
 }
 
 .notification-item[data-unread="true"]:hover {
-  background: color-mix(in srgb, var(--C-ACCENT) 10%, transparent);
+  background: color-mix(in oklch, var(--C-ACCENT) 10%, transparent);
 }
 
 .notification-item-indicator {

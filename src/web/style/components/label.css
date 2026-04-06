@@ -76,7 +76,7 @@
 .label-mgmt__name-input:focus {
   outline: none;
   border-color: var(--C-BORDER-FOCUS);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--C-BORDER-FOCUS) 20%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--C-BORDER-FOCUS) 20%, transparent);
 }
 
 .label-mgmt__task-count {
@@ -129,7 +129,7 @@
   background: var(--C-SURFACE-0);
   border: 1px solid var(--C-BORDER-DEFAULT);
   border-radius: var(--RADIUS-MD);
-  box-shadow: var(--SHADOW-MD, 0 4px 12px rgba(0, 0, 0, 0.1));
+  box-shadow: var(--SHADOW-MD, 0 4px 12px oklch(0 0 0 / 0.1));
 }
 
 .label-mgmt__color-grid {

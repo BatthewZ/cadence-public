@@ -97,7 +97,7 @@ export function AuthLayout({ children, className }: AuthLayoutProps) {
           style={{
             width: 300,
             height: 300,
-            background: "#7c3aed",
+            background: "oklch(0.5413 0.2466 293.01)",
             opacity: 0.08,
             bottom: "-10%",
             left: "-5%",

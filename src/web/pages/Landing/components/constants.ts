@@ -89,17 +89,17 @@ const MOCK_COLUMNS = [
     cards: [
       {
         title: "Design system audit",
-        label: { name: "Design", color: "#3b82f6" },
+        label: { name: "Design", color: "oklch(0.6231 0.188 259.81)" },
         priority: "medium" as const,
       },
       {
         title: "User onboarding flow",
-        label: { name: "Feature", color: "#8b5cf6" },
+        label: { name: "Feature", color: "oklch(0.6056 0.2189 292.72)" },
         priority: "high" as const,
       },
       {
         title: "API rate limiting",
-        label: { name: "Backend", color: "#f97316" },
+        label: { name: "Backend", color: "oklch(0.7049 0.1867 47.6)" },
         priority: "low" as const,
       },
     ],
@@ -110,13 +110,13 @@ const MOCK_COLUMNS = [
     cards: [
       {
         title: "Dashboard analytics",
-        label: { name: "Feature", color: "#8b5cf6" },
+        label: { name: "Feature", color: "oklch(0.6056 0.2189 292.72)" },
         priority: "high" as const,
         avatar: "AK",
       },
       {
         title: "Payment integration",
-        label: { name: "Backend", color: "#f97316" },
+        label: { name: "Backend", color: "oklch(0.7049 0.1867 47.6)" },
         priority: "medium" as const,
         avatar: "JL",
       },
@@ -128,13 +128,13 @@ const MOCK_COLUMNS = [
     cards: [
       {
         title: "Auth system",
-        label: { name: "Backend", color: "#f97316" },
+        label: { name: "Backend", color: "oklch(0.7049 0.1867 47.6)" },
         done: true,
         avatar: "SM",
       },
       {
         title: "Team invitations",
-        label: { name: "Feature", color: "#8b5cf6" },
+        label: { name: "Feature", color: "oklch(0.6056 0.2189 292.72)" },
         done: true,
         avatar: "AK",
       },

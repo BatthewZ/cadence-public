@@ -23,7 +23,7 @@ Foundation for the starter kit UI primitives. Every visual value in the system f
 
 ### No hardcoded values
 
-Every visual value must go through a CSS variable. Never hardcode `300ms`, `#2563eb`, `8px`, or `scale(1.05)` in a component -- use the corresponding token.
+Every visual value must go through a CSS variable. Never hardcode `300ms`, `oklch(...)`, `8px`, or `scale(1.05)` in a component -- use the corresponding token.
 
 ### Mobile-first
 

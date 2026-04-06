@@ -45,7 +45,7 @@
   padding: 0;
   border-radius: var(--RADIUS-XL);
   overflow: hidden;
-  box-shadow: 0 16px 70px rgb(0 0 0 / 0.15), 0 0 0 1px var(--C-BORDER-DEFAULT);
+  box-shadow: 0 16px 70px oklch(0 0 0 / 0.15), 0 0 0 1px var(--C-BORDER-DEFAULT);
   /* Position in upper third of screen */
   margin-top: 12vh;
   align-self: flex-start;
@@ -193,5 +193,5 @@
   font-size: 0.6875rem;
   font-family: inherit;
   line-height: 1;
-  box-shadow: 0 1px 1px rgb(0 0 0 / 0.06);
+  box-shadow: 0 1px 1px oklch(0 0 0 / 0.06);
 }

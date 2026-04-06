@@ -14,45 +14,45 @@
   --HEADING-TEXT-TRANSFORM: none;
 
   /* Canvas — overcast sky seen through a window */
-  --C-CANVAS: #1a1e24;
+  --C-CANVAS: oklch(0.2336 0.0131 258.37);
 
   /* Brand — muted dusty blue, nothing demanding attention */
-  --C-PRIMARY: #7a8a9e;
-  --C-PRIMARY-HOVER: #6a7a8e;
-  --C-PRIMARY-ACTIVE: #8a9aae;
-  --C-SECONDARY: #262c34;
-  --C-SECONDARY-HOVER: #303840;
-  --C-ACCENT: #b08a7a;
-  --C-ACCENT-HOVER: #a07a6a;
+  --C-PRIMARY: oklch(0.6276 0.0355 254.09);
+  --C-PRIMARY-HOVER: oklch(0.5737 0.0363 254.12);
+  --C-PRIMARY-ACTIVE: oklch(0.6803 0.0348 254.07);
+  --C-SECONDARY: oklch(0.2907 0.0169 255.66);
+  --C-SECONDARY-HOVER: oklch(0.3365 0.0178 248.36);
+  --C-ACCENT: oklch(0.6651 0.0521 43.96);
+  --C-ACCENT-HOVER: oklch(0.6123 0.0533 43.91);
 
   /* Surface — cool gray-blues, barely differentiated, like layers of fog */
-  --C-SURFACE-0: #1e2228;
-  --C-SURFACE-1: #22272e;
-  --C-SURFACE-2: #282e36;
-  --C-SURFACE-3: #2e343c;
+  --C-SURFACE-0: oklch(0.2505 0.0128 258.37);
+  --C-SURFACE-1: oklch(0.2708 0.0149 256.8);
+  --C-SURFACE-2: oklch(0.2987 0.0168 255.65);
+  --C-SURFACE-3: oklch(0.3226 0.0165 255.64);
 
   /* Text — cool desaturated whites, like light through clouds */
-  --C-TEXT-PRIMARY: #c8ccd4;
-  --C-TEXT-SECONDARY: #8890a0;
-  --C-TEXT-MUTED: #585e6e;
-  --C-TEXT-INVERSE: #1a1e24;
-  --C-TEXT-ON-PRIMARY: #1a1e24;
-  --C-TEXT-ON-ACCENT: #1a1e24;
+  --C-TEXT-PRIMARY: oklch(0.8445 0.0119 264.5);
+  --C-TEXT-SECONDARY: oklch(0.6521 0.0256 264.38);
+  --C-TEXT-MUTED: oklch(0.4826 0.0268 269.12);
+  --C-TEXT-INVERSE: oklch(0.2336 0.0131 258.37);
+  --C-TEXT-ON-PRIMARY: oklch(0.2336 0.0131 258.37);
+  --C-TEXT-ON-ACCENT: oklch(0.2336 0.0131 258.37);
 
   /* Border — barely visible, like edges lost in mist */
-  --C-BORDER-DEFAULT: #2e343c;
-  --C-BORDER-STRONG: #3a4048;
-  --C-BORDER-FOCUS: #8a9aae;
+  --C-BORDER-DEFAULT: oklch(0.3226 0.0165 255.64);
+  --C-BORDER-STRONG: oklch(0.369 0.0159 255.61);
+  --C-BORDER-FOCUS: oklch(0.6803 0.0348 254.07);
 
   /* Status — muted, gentle. Even errors shouldn't shout */
-  --C-STATUS-ERROR: #c47070;
-  --C-STATUS-ERROR-BG: #261c1c;
-  --C-STATUS-SUCCESS: #6aaa7a;
-  --C-STATUS-SUCCESS-BG: #1c261e;
-  --C-STATUS-WARNING: #b8a060;
-  --C-STATUS-WARNING-BG: #26241c;
-  --C-STATUS-INFO: #6a94b8;
-  --C-STATUS-INFO-BG: #1c2226;
+  --C-STATUS-ERROR: oklch(0.6384 0.1066 20.46);
+  --C-STATUS-ERROR-BG: oklch(0.2386 0.0158 18.32);
+  --C-STATUS-SUCCESS: oklch(0.6816 0.0969 151.11);
+  --C-STATUS-SUCCESS-BG: oklch(0.2561 0.0205 150.73);
+  --C-STATUS-WARNING: oklch(0.7127 0.0879 89.55);
+  --C-STATUS-WARNING-BG: oklch(0.2597 0.0147 95.59);
+  --C-STATUS-INFO: oklch(0.6497 0.0711 245.06);
+  --C-STATUS-INFO-BG: oklch(0.2477 0.0116 237.16);
 
   /* Radius — medium-large, soft edges, nothing sharp */
   --RADIUS-SM: 0.625rem;
@@ -61,9 +61,9 @@
   --RADIUS-XL: 1.5rem;
 
   /* Shadows — very soft, diffuse, cool-tinted, frosted glass feel */
-  --SHADOW-SM: 0 2px 8px 0 rgb(26 30 36 / 0.3), 0 0 0 1px rgb(122 138 158 / 0.03);
-  --SHADOW-MD: 0 4px 16px -2px rgb(26 30 36 / 0.35), 0 2px 6px -2px rgb(122 138 158 / 0.04);
-  --SHADOW-LG: 0 12px 32px -6px rgb(26 30 36 / 0.4), 0 4px 10px -4px rgb(122 138 158 / 0.05);
+  --SHADOW-SM: 0 2px 8px 0 oklch(0.2336 0.0131 258.37 / 0.3), 0 0 0 1px oklch(0.6276 0.0355 254.09 / 0.03);
+  --SHADOW-MD: 0 4px 16px -2px oklch(0.2336 0.0131 258.37 / 0.35), 0 2px 6px -2px oklch(0.6276 0.0355 254.09 / 0.04);
+  --SHADOW-LG: 0 12px 32px -6px oklch(0.2336 0.0131 258.37 / 0.4), 0 4px 10px -4px oklch(0.6276 0.0355 254.09 / 0.05);
 
   /* Typography — gentle weights, generous breathing room */
   --Bold-Weight: 600;
@@ -97,9 +97,9 @@
   --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
 
   /* Overlay — cool dark, like looking through rain-streaked glass */
-  --OVERLAY-SCRIM-COLOR: rgb(26 30 36 / 0.65);
-  --OVERLAY-GRADIENT-START: rgb(26 30 36 / 0);
-  --OVERLAY-GRADIENT-END: rgb(26 30 36 / 0.8);
+  --OVERLAY-SCRIM-COLOR: oklch(0.2336 0.0131 258.37 / 0.65);
+  --OVERLAY-GRADIENT-START: oklch(0.2336 0.0131 258.37 / 0);
+  --OVERLAY-GRADIENT-END: oklch(0.2336 0.0131 258.37 / 0.8);
   --OVERLAY-BLUR: 1rem;
   --OVERLAY-BLUR-HEAVY: 2rem;
 

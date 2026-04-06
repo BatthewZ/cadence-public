@@ -1,8 +1,8 @@
 # Token Architecture
 
 ```
-:root CSS variables          -->  @theme inline mappings  -->  Tailwind utility classes
-(e.g. --C-PRIMARY: #1e293b)      (--color-primary: var(...))   (bg-primary, text-primary)
+:root CSS variables                          -->  @theme inline mappings  -->  Tailwind utility classes
+(e.g. --C-PRIMARY: oklch(0.2795 0.0368 260.03))  (--color-primary: var(...))   (bg-primary, text-primary)
 ```
 
 ### How it works

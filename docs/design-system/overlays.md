@@ -4,10 +4,10 @@
 
 Gradient overlays, scrims, and backdrop blurs used by Hero, MediaCard, Dialog, and similar components.
 
-| CSS Variable               | Default Value       | Purpose                               |
-| -------------------------- | ------------------- | ------------------------------------- |
-| `--OVERLAY-SCRIM-COLOR`    | `rgb(0 0 0 / 0.5)` | Modal/dialog backdrop                 |
-| `--OVERLAY-GRADIENT-START` | `rgb(0 0 0 / 0)`   | Card/hero gradient from (transparent) |
-| `--OVERLAY-GRADIENT-END`   | `rgb(0 0 0 / 0.7)` | Card/hero gradient to (dark)          |
+| CSS Variable               | Default Value          | Purpose                               |
+| -------------------------- | ---------------------- | ------------------------------------- |
+| `--OVERLAY-SCRIM-COLOR`    | `oklch(0 0 0 / 0.5)`  | Modal/dialog backdrop                 |
+| `--OVERLAY-GRADIENT-START` | `oklch(0 0 0 / 0)`    | Card/hero gradient from (transparent) |
+| `--OVERLAY-GRADIENT-END`   | `oklch(0 0 0 / 0.7)`  | Card/hero gradient to (dark)          |
 | `--OVERLAY-BLUR`           | `0.5rem`            | Standard backdrop blur                |
 | `--OVERLAY-BLUR-HEAVY`     | `1.25rem`           | Heavy blur (frosted glass)            |

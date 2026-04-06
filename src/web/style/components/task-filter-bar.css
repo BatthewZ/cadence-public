@@ -173,7 +173,7 @@
 .task-filter-bar__date-input:focus {
   outline: none;
   border-color: var(--C-BORDER-FOCUS);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--C-BORDER-FOCUS) 20%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--C-BORDER-FOCUS) 20%, transparent);
 }
 
 .task-filter-bar__quick-picks {

@@ -45,33 +45,33 @@ All theme fonts are self-hosted as woff2 files in `src/web/fonts/`, with `@font-
   --HEADING-LETTER-SPACING: -0.01em;
   --HEADING-TEXT-TRANSFORM: none;
 
-  /* Brand colors */
-  --C-PRIMARY: #your-primary;
-  --C-PRIMARY-HOVER: #your-primary-hover;
-  --C-PRIMARY-ACTIVE: #your-primary-active;
-  --C-SECONDARY: #your-secondary;
-  --C-SECONDARY-HOVER: #your-secondary-hover;
-  --C-ACCENT: #your-accent;
-  --C-ACCENT-HOVER: #your-accent-hover;
+  /* Brand colors (use OKLCH for perceptually uniform color manipulation) */
+  --C-PRIMARY: oklch(L C H);
+  --C-PRIMARY-HOVER: oklch(L C H);
+  --C-PRIMARY-ACTIVE: oklch(L C H);
+  --C-SECONDARY: oklch(L C H);
+  --C-SECONDARY-HOVER: oklch(L C H);
+  --C-ACCENT: oklch(L C H);
+  --C-ACCENT-HOVER: oklch(L C H);
 
   /* Surface colors */
-  --C-SURFACE-0: #...;
-  --C-SURFACE-1: #...;
-  --C-SURFACE-2: #...;
-  --C-SURFACE-3: #...;
+  --C-SURFACE-0: oklch(L C H);
+  --C-SURFACE-1: oklch(L C H);
+  --C-SURFACE-2: oklch(L C H);
+  --C-SURFACE-3: oklch(L C H);
 
   /* Text colors */
-  --C-TEXT-PRIMARY: #...;
-  --C-TEXT-SECONDARY: #...;
-  --C-TEXT-MUTED: #...;
-  --C-TEXT-INVERSE: #...;
-  --C-TEXT-ON-PRIMARY: #...;
-  --C-TEXT-ON-ACCENT: #...;
+  --C-TEXT-PRIMARY: oklch(L C H);
+  --C-TEXT-SECONDARY: oklch(L C H);
+  --C-TEXT-MUTED: oklch(L C H);
+  --C-TEXT-INVERSE: oklch(L C H);
+  --C-TEXT-ON-PRIMARY: oklch(L C H);
+  --C-TEXT-ON-ACCENT: oklch(L C H);
 
   /* Border colors */
-  --C-BORDER-DEFAULT: #...;
-  --C-BORDER-STRONG: #...;
-  --C-BORDER-FOCUS: #...;
+  --C-BORDER-DEFAULT: oklch(L C H);
+  --C-BORDER-STRONG: oklch(L C H);
+  --C-BORDER-FOCUS: oklch(L C H);
 
   /* Radius */
   --RADIUS-SM: ...;

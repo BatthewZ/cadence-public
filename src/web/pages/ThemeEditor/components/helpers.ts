@@ -1,3 +1,5 @@
+import { formatHex, parse } from "culori";
+
 import { ALL_TOKENS } from "./token-constants";
 
 /** Read the current computed value for a CSS variable */
@@ -14,25 +16,13 @@ function snapshotAll(): Record<string, string> {
   return snap;
 }
 
-/** Convert rgb(r, g, b) or similar to #hex for color inputs */
+/** Convert any CSS color (hex, rgb, oklch, hsl, etc.) to #hex for color inputs */
 function toHex(raw: string): string {
   const v = raw.trim();
-  // Already hex
   if (v.startsWith("#")) return v;
 
-  // rgb(r, g, b) or rgb(r g b)
-  const rgbMatch = v.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/);
-  if (rgbMatch) {
-    const [, r, g, b] = rgbMatch;
-    const hex = [r, g, b]
-      .map((c) =>
-        Math.round(Number(c))
-          .toString(16)
-          .padStart(2, "0")
-      )
-      .join("");
-    return `#${hex}`;
-  }
+  const parsed = parse(v);
+  if (parsed) return formatHex(parsed);
 
   return v;
 }

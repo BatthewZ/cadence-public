@@ -14,45 +14,45 @@
   --HEADING-TEXT-TRANSFORM: none;
 
   /* Canvas — hazy dark purple-pink, twilight through frosted glass */
-  --C-CANVAS: #1a1220;
+  --C-CANVAS: oklch(0.1994 0.0298 309.97);
 
   /* Brand — desaturated pink/mauve, faded neon; washed aqua complement */
-  --C-PRIMARY: #b88aa0;
-  --C-PRIMARY-HOVER: #a67a90;
-  --C-PRIMARY-ACTIVE: #c89aae;
-  --C-SECONDARY: #2a2038;
-  --C-SECONDARY-HOVER: #362c46;
-  --C-ACCENT: #7ac4b8;
-  --C-ACCENT-HOVER: #68b0a4;
+  --C-PRIMARY: oklch(0.6842 0.0631 348.61);
+  --C-PRIMARY-HOVER: oklch(0.6298 0.0623 347.57);
+  --C-PRIMARY-ACTIVE: oklch(0.735 0.0608 350.83);
+  --C-SECONDARY: oklch(0.2669 0.0455 302.6);
+  --C-SECONDARY-HOVER: oklch(0.316 0.0472 301.42);
+  --C-ACCENT: oklch(0.7684 0.0762 182.83);
+  --C-ACCENT-HOVER: oklch(0.7064 0.075 182.24);
 
   /* Surface — purple-pink darks, each layer deeper into the dream */
-  --C-SURFACE-0: #1e1628;
-  --C-SURFACE-1: #241c30;
-  --C-SURFACE-2: #2c2240;
-  --C-SURFACE-3: #36284c;
+  --C-SURFACE-0: oklch(0.2191 0.0361 304);
+  --C-SURFACE-1: oklch(0.2457 0.0387 302.02);
+  --C-SURFACE-2: oklch(0.2787 0.0552 298.1);
+  --C-SURFACE-3: oklch(0.3107 0.0648 300.62);
 
   /* Text — washed lavender whites, never crisp */
-  --C-TEXT-PRIMARY: #e0d6e8;
-  --C-TEXT-SECONDARY: #9a8ea8;
-  --C-TEXT-MUTED: #645a72;
-  --C-TEXT-INVERSE: #1a1220;
-  --C-TEXT-ON-PRIMARY: #1a1220;
-  --C-TEXT-ON-ACCENT: #1a1220;
+  --C-TEXT-PRIMARY: oklch(0.8894 0.0266 310.38);
+  --C-TEXT-SECONDARY: oklch(0.6659 0.0402 306.15);
+  --C-TEXT-MUTED: oklch(0.4861 0.0397 303.91);
+  --C-TEXT-INVERSE: oklch(0.1994 0.0298 309.97);
+  --C-TEXT-ON-PRIMARY: oklch(0.1994 0.0298 309.97);
+  --C-TEXT-ON-ACCENT: oklch(0.1994 0.0298 309.97);
 
   /* Border — soft purple haze */
-  --C-BORDER-DEFAULT: #36284c;
-  --C-BORDER-STRONG: #443658;
-  --C-BORDER-FOCUS: #7ac4b8;
+  --C-BORDER-DEFAULT: oklch(0.3107 0.0648 300.62);
+  --C-BORDER-STRONG: oklch(0.3632 0.0597 302.46);
+  --C-BORDER-FOCUS: oklch(0.7684 0.0762 182.83);
 
   /* Status — desaturated, hazy versions */
-  --C-STATUS-ERROR: #d48080;
-  --C-STATUS-ERROR-BG: #281a20;
-  --C-STATUS-SUCCESS: #6ab88a;
-  --C-STATUS-SUCCESS-BG: #1a2822;
-  --C-STATUS-WARNING: #d4aa6a;
-  --C-STATUS-WARNING-BG: #28221a;
-  --C-STATUS-INFO: #70a0c8;
-  --C-STATUS-INFO-BG: #1a2028;
+  --C-STATUS-ERROR: oklch(0.6892 0.1044 20.09);
+  --C-STATUS-ERROR-BG: oklch(0.2379 0.0245 351.7);
+  --C-STATUS-SUCCESS: oklch(0.7195 0.1033 156.7);
+  --C-STATUS-SUCCESS-BG: oklch(0.2618 0.0222 166.33);
+  --C-STATUS-WARNING: oklch(0.7622 0.0955 77.08);
+  --C-STATUS-WARNING-BG: oklch(0.2561 0.017 74.85);
+  --C-STATUS-INFO: oklch(0.6869 0.0786 244.43);
+  --C-STATUS-INFO-BG: oklch(0.2412 0.0177 255.69);
 
   /* Radius — largest in system, no hard edges in a dream */
   --RADIUS-SM: 0.875rem;
@@ -61,9 +61,9 @@
   --RADIUS-XL: 2rem;
 
   /* Shadows — soft pink-purple glow, very diffuse, like light through fog */
-  --SHADOW-SM: 0 2px 12px 0 rgb(184 138 160 / 0.1), 0 0 6px 0 rgb(122 196 184 / 0.04);
-  --SHADOW-MD: 0 4px 24px -4px rgb(184 138 160 / 0.15), 0 0 12px -2px rgb(122 196 184 / 0.06);
-  --SHADOW-LG: 0 8px 48px -8px rgb(184 138 160 / 0.2), 0 0 24px -4px rgb(122 196 184 / 0.08);
+  --SHADOW-SM: 0 2px 12px 0 oklch(0.6842 0.0631 348.61 / 0.1), 0 0 6px 0 oklch(0.7684 0.0762 182.83 / 0.04);
+  --SHADOW-MD: 0 4px 24px -4px oklch(0.6842 0.0631 348.61 / 0.15), 0 0 12px -2px oklch(0.7684 0.0762 182.83 / 0.06);
+  --SHADOW-LG: 0 8px 48px -8px oklch(0.6842 0.0631 348.61 / 0.2), 0 0 24px -4px oklch(0.7684 0.0762 182.83 / 0.08);
 
   /* Typography — light and airy, dreamy weights */
   --Bold-Weight: 600;
@@ -97,9 +97,9 @@
   --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
 
   /* Overlay — heavy blur, dreams are blurry */
-  --OVERLAY-SCRIM-COLOR: rgb(26 18 32 / 0.75);
-  --OVERLAY-GRADIENT-START: rgb(26 18 32 / 0);
-  --OVERLAY-GRADIENT-END: rgb(26 18 32 / 0.9);
+  --OVERLAY-SCRIM-COLOR: oklch(0.1994 0.0298 309.97 / 0.75);
+  --OVERLAY-GRADIENT-START: oklch(0.1994 0.0298 309.97 / 0);
+  --OVERLAY-GRADIENT-END: oklch(0.1994 0.0298 309.97 / 0.9);
   --OVERLAY-BLUR: 1.25rem;
   --OVERLAY-BLUR-HEAVY: 2.5rem;
 

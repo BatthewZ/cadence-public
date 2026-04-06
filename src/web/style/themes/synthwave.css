@@ -13,45 +13,45 @@
   --HEADING-TEXT-TRANSFORM: uppercase;
 
   /* Canvas — deep dark purple, the night sky over the grid */
-  --C-CANVAS: #0d0221;
+  --C-CANVAS: oklch(0.1418 0.0662 295.8);
 
   /* Brand — hot magenta like neon signage */
-  --C-PRIMARY: #f72585;
-  --C-PRIMARY-HOVER: #e01a75;
-  --C-PRIMARY-ACTIVE: #ff3595;
-  --C-SECONDARY: #1a0e38;
-  --C-SECONDARY-HOVER: #261648;
-  --C-ACCENT: #b429f9;
-  --C-ACCENT-HOVER: #9e20e0;
+  --C-PRIMARY: oklch(0.6429 0.2436 0.71);
+  --C-PRIMARY-HOVER: oklch(0.5934 0.229 1.45);
+  --C-PRIMARY-ACTIVE: oklch(0.6701 0.2432 357.86);
+  --C-SECONDARY: oklch(0.2096 0.0775 291.41);
+  --C-SECONDARY-HOVER: oklch(0.2533 0.0889 293.83);
+  --C-ACCENT: oklch(0.6032 0.2805 310.29);
+  --C-ACCENT-HOVER: oklch(0.55 0.2605 309.27);
 
   /* Surface — dark purples with increasing warmth */
-  --C-SURFACE-0: #100428;
-  --C-SURFACE-1: #160832;
-  --C-SURFACE-2: #1e0e40;
-  --C-SURFACE-3: #28164e;
+  --C-SURFACE-0: oklch(0.1602 0.071 293.12);
+  --C-SURFACE-1: oklch(0.1878 0.0779 292.65);
+  --C-SURFACE-2: oklch(0.2223 0.0893 292.24);
+  --C-SURFACE-3: oklch(0.2611 0.0977 293.22);
 
   /* Text — cool lavender whites */
-  --C-TEXT-PRIMARY: #ede4f8;
-  --C-TEXT-SECONDARY: #a090c4;
-  --C-TEXT-MUTED: #5e4a80;
-  --C-TEXT-INVERSE: #0d0221;
-  --C-TEXT-ON-PRIMARY: #ffffff;
-  --C-TEXT-ON-ACCENT: #ffffff;
+  --C-TEXT-PRIMARY: oklch(0.9318 0.0284 306.04);
+  --C-TEXT-SECONDARY: oklch(0.6861 0.0772 298.46);
+  --C-TEXT-MUTED: oklch(0.4537 0.0884 299.96);
+  --C-TEXT-INVERSE: oklch(0.1418 0.0662 295.8);
+  --C-TEXT-ON-PRIMARY: oklch(1 0 0);
+  --C-TEXT-ON-ACCENT: oklch(1 0 0);
 
   /* Border */
-  --C-BORDER-DEFAULT: #28164e;
-  --C-BORDER-STRONG: #362060;
-  --C-BORDER-FOCUS: #b429f9;
+  --C-BORDER-DEFAULT: oklch(0.2611 0.0977 293.22);
+  --C-BORDER-STRONG: oklch(0.31 0.1084 295.15);
+  --C-BORDER-FOCUS: oklch(0.6032 0.2805 310.29);
 
   /* Status — vivid neon tones */
-  --C-STATUS-ERROR: #ff4477;
-  --C-STATUS-ERROR-BG: #2a0820;
-  --C-STATUS-SUCCESS: #00e87a;
-  --C-STATUS-SUCCESS-BG: #082a18;
-  --C-STATUS-WARNING: #ffd319;
-  --C-STATUS-WARNING-BG: #2a2408;
-  --C-STATUS-INFO: #4cc9f0;
-  --C-STATUS-INFO-BG: #08202a;
+  --C-STATUS-ERROR: oklch(0.6727 0.2226 9.75);
+  --C-STATUS-ERROR-BG: oklch(0.2061 0.0658 341.29);
+  --C-STATUS-SUCCESS: oklch(0.8156 0.2131 152.32);
+  --C-STATUS-SUCCESS-BG: oklch(0.2547 0.0519 156.31);
+  --C-STATUS-WARNING: oklch(0.8793 0.1765 93.18);
+  --C-STATUS-WARNING-BG: oklch(0.2602 0.0439 97.15);
+  --C-STATUS-INFO: oklch(0.7824 0.1213 222.46);
+  --C-STATUS-INFO-BG: oklch(0.23 0.0353 228.57);
 
   /* Radius — small, clean geometric */
   --RADIUS-SM: 0.125rem;
@@ -60,9 +60,9 @@
   --RADIUS-XL: 0.5rem;
 
   /* Shadows — purple/magenta neon glow */
-  --SHADOW-SM: 0 0 8px 0 rgb(247 37 133 / 0.15), 0 0 4px 0 rgb(180 41 249 / 0.1);
-  --SHADOW-MD: 0 0 20px -2px rgb(247 37 133 / 0.2), 0 0 10px -2px rgb(180 41 249 / 0.12);
-  --SHADOW-LG: 0 0 36px -4px rgb(247 37 133 / 0.25), 0 0 18px -4px rgb(180 41 249 / 0.15);
+  --SHADOW-SM: 0 0 8px 0 oklch(0.6429 0.2436 0.71 / 0.15), 0 0 4px 0 oklch(0.6032 0.2805 310.29 / 0.1);
+  --SHADOW-MD: 0 0 20px -2px oklch(0.6429 0.2436 0.71 / 0.2), 0 0 10px -2px oklch(0.6032 0.2805 310.29 / 0.12);
+  --SHADOW-LG: 0 0 36px -4px oklch(0.6429 0.2436 0.71 / 0.25), 0 0 18px -4px oklch(0.6032 0.2805 310.29 / 0.15);
 
   /* Typography — bold display-forward */
   --Bold-Weight: 700;
@@ -96,9 +96,9 @@
   --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
 
   /* Overlay */
-  --OVERLAY-SCRIM-COLOR: rgb(13 2 33 / 0.8);
-  --OVERLAY-GRADIENT-START: rgb(13 2 33 / 0);
-  --OVERLAY-GRADIENT-END: rgb(13 2 33 / 0.9);
+  --OVERLAY-SCRIM-COLOR: oklch(0.1418 0.0662 295.8 / 0.8);
+  --OVERLAY-GRADIENT-START: oklch(0.1418 0.0662 295.8 / 0);
+  --OVERLAY-GRADIENT-END: oklch(0.1418 0.0662 295.8 / 0.9);
   --OVERLAY-BLUR: 1rem;
   --OVERLAY-BLUR-HEAVY: 2rem;
 

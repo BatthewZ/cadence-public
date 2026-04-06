@@ -1,48 +1,48 @@
 :root {
   /* Canvas — the base layer beneath all surfaces */
-  --C-CANVAS: #ffffff;
+  --C-CANVAS: oklch(1 0 0);
 
   /* Brand */
-  --C-PRIMARY: #1e293b;
-  --C-PRIMARY-HOVER: #0f172a;
-  --C-PRIMARY-ACTIVE: #334155;
-  --C-SECONDARY: #e2e8f0;
-  --C-SECONDARY-HOVER: #cbd5e1;
-  --C-ACCENT: #2563eb;
-  --C-ACCENT-HOVER: #1d4ed8;
+  --C-PRIMARY: oklch(0.2795 0.0368 260.03);
+  --C-PRIMARY-HOVER: oklch(0.2077 0.0398 265.75);
+  --C-PRIMARY-ACTIVE: oklch(0.3717 0.0392 257.29);
+  --C-SECONDARY: oklch(0.9288 0.0126 255.51);
+  --C-SECONDARY-HOVER: oklch(0.869 0.0198 252.89);
+  --C-ACCENT: oklch(0.5461 0.2152 262.88);
+  --C-ACCENT-HOVER: oklch(0.4882 0.2172 264.38);
 
   /* Surface */
-  --C-SURFACE-0: #ffffff;
-  --C-SURFACE-1: #f9fafb;
-  --C-SURFACE-2: #f3f4f6;
-  --C-SURFACE-3: #e5e7eb;
+  --C-SURFACE-0: oklch(1 0 0);
+  --C-SURFACE-1: oklch(0.9846 0.0017 247.84);
+  --C-SURFACE-2: oklch(0.967 0.0029 264.54);
+  --C-SURFACE-3: oklch(0.9276 0.0058 264.53);
 
   /* Text */
-  --C-TEXT-PRIMARY: #111827;
-  --C-TEXT-SECONDARY: #4b5563;
-  --C-TEXT-MUTED: #9ca3af;
-  --C-TEXT-INVERSE: #ffffff;
-  --C-TEXT-ON-PRIMARY: #ffffff;
-  --C-TEXT-ON-ACCENT: #ffffff;
+  --C-TEXT-PRIMARY: oklch(0.2101 0.0318 264.66);
+  --C-TEXT-SECONDARY: oklch(0.4461 0.0263 256.8);
+  --C-TEXT-MUTED: oklch(0.7137 0.0192 261.32);
+  --C-TEXT-INVERSE: oklch(1 0 0);
+  --C-TEXT-ON-PRIMARY: oklch(1 0 0);
+  --C-TEXT-ON-ACCENT: oklch(1 0 0);
 
   /* Accent tints */
-  --C-ACCENT-SUBTLE: color-mix(in srgb, var(--C-ACCENT) 6%, var(--C-SURFACE-0));
-  --C-ACCENT-MUTED: color-mix(in srgb, var(--C-ACCENT) 14%, var(--C-SURFACE-0));
+  --C-ACCENT-SUBTLE: color-mix(in oklch, var(--C-ACCENT) 6%, var(--C-SURFACE-0));
+  --C-ACCENT-MUTED: color-mix(in oklch, var(--C-ACCENT) 14%, var(--C-SURFACE-0));
 
   /* Border */
-  --C-BORDER-DEFAULT: #e5e7eb;
-  --C-BORDER-STRONG: #d1d5db;
-  --C-BORDER-FOCUS: #3b82f6;
+  --C-BORDER-DEFAULT: oklch(0.9276 0.0058 264.53);
+  --C-BORDER-STRONG: oklch(0.8717 0.0093 258.34);
+  --C-BORDER-FOCUS: oklch(0.6231 0.188 259.81);
 
   /* Status */
-  --C-STATUS-ERROR: #dc2626;
-  --C-STATUS-ERROR-BG: #fef2f2;
-  --C-STATUS-SUCCESS: #16a34a;
-  --C-STATUS-SUCCESS-BG: #f0fdf4;
-  --C-STATUS-WARNING: #d97706;
-  --C-STATUS-WARNING-BG: #fffbeb;
-  --C-STATUS-INFO: #2563eb;
-  --C-STATUS-INFO-BG: #eff6ff;
+  --C-STATUS-ERROR: oklch(0.5771 0.2152 27.33);
+  --C-STATUS-ERROR-BG: oklch(0.9705 0.0129 17.38);
+  --C-STATUS-SUCCESS: oklch(0.6271 0.1699 149.21);
+  --C-STATUS-SUCCESS-BG: oklch(0.9819 0.0181 155.83);
+  --C-STATUS-WARNING: oklch(0.6658 0.1574 58.32);
+  --C-STATUS-WARNING-BG: oklch(0.9869 0.0214 95.28);
+  --C-STATUS-INFO: oklch(0.5461 0.2152 262.88);
+  --C-STATUS-INFO-BG: oklch(0.9705 0.0142 254.6);
 }
 
 /*

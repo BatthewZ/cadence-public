@@ -14,45 +14,45 @@
   --HEADING-TEXT-TRANSFORM: uppercase;
 
   /* Canvas — thundercloud dark */
-  --C-CANVAS: #14161a;
+  --C-CANVAS: oklch(0.1998 0.0086 264.36);
 
   /* Brand — steel/gunmetal with blue tint, the color of storm clouds */
-  --C-PRIMARY: #5a6a80;
-  --C-PRIMARY-HOVER: #4a5a70;
-  --C-PRIMARY-ACTIVE: #6a7a90;
-  --C-SECONDARY: #1e2228;
-  --C-SECONDARY-HOVER: #282e36;
-  --C-ACCENT: #e0f0ff;
-  --C-ACCENT-HOVER: #c8e0f4;
+  --C-PRIMARY: oklch(0.5194 0.04 256.41);
+  --C-PRIMARY-HOVER: oklch(0.4629 0.0411 256.43);
+  --C-PRIMARY-ACTIVE: oklch(0.5745 0.039 256.4);
+  --C-SECONDARY: oklch(0.2505 0.0128 258.37);
+  --C-SECONDARY-HOVER: oklch(0.2987 0.0168 255.65);
+  --C-ACCENT: oklch(0.9477 0.0265 246.34);
+  --C-ACCENT-HOVER: oklch(0.8952 0.0376 243.27);
 
   /* Surface — dark slates with subtle blue undertone, building tension */
-  --C-SURFACE-0: #181a1e;
-  --C-SURFACE-1: #1c2026;
-  --C-SURFACE-2: #22282e;
-  --C-SURFACE-3: #2a3038;
+  --C-SURFACE-0: oklch(0.2174 0.0084 264.38);
+  --C-SURFACE-1: oklch(0.2421 0.0129 258.37);
+  --C-SURFACE-2: oklch(0.2735 0.0141 248.34);
+  --C-SURFACE-3: oklch(0.3067 0.0167 255.65);
 
   /* Text — cold whites and blue-grays, like lightning-lit clouds */
-  --C-TEXT-PRIMARY: #e8ecf0;
-  --C-TEXT-SECONDARY: #8a94a4;
-  --C-TEXT-MUTED: #505868;
-  --C-TEXT-INVERSE: #14161a;
-  --C-TEXT-ON-PRIMARY: #e8ecf0;
-  --C-TEXT-ON-ACCENT: #14161a;
+  --C-TEXT-PRIMARY: oklch(0.9412 0.0069 247.9);
+  --C-TEXT-SECONDARY: oklch(0.6638 0.0264 259.81);
+  --C-TEXT-MUTED: oklch(0.4594 0.028 264.25);
+  --C-TEXT-INVERSE: oklch(0.1998 0.0086 264.36);
+  --C-TEXT-ON-PRIMARY: oklch(0.9412 0.0069 247.9);
+  --C-TEXT-ON-ACCENT: oklch(0.1998 0.0086 264.36);
 
   /* Border — tense, slightly blue */
-  --C-BORDER-DEFAULT: #2a3038;
-  --C-BORDER-STRONG: #3a424e;
-  --C-BORDER-FOCUS: #e0f0ff;
+  --C-BORDER-DEFAULT: oklch(0.3067 0.0167 255.65);
+  --C-BORDER-STRONG: oklch(0.3766 0.0232 258.37);
+  --C-BORDER-FOCUS: oklch(0.9477 0.0265 246.34);
 
   /* Status — sharp and vivid, cutting through the dark */
-  --C-STATUS-ERROR: #f06060;
-  --C-STATUS-ERROR-BG: #281416;
-  --C-STATUS-SUCCESS: #48c878;
-  --C-STATUS-SUCCESS-BG: #142818;
-  --C-STATUS-WARNING: #f0c040;
-  --C-STATUS-WARNING-BG: #282214;
-  --C-STATUS-INFO: #60b8f0;
-  --C-STATUS-INFO-BG: #141e28;
+  --C-STATUS-ERROR: oklch(0.6735 0.1782 23.15);
+  --C-STATUS-ERROR-BG: oklch(0.2202 0.033 13.68);
+  --C-STATUS-SUCCESS: oklch(0.7427 0.1611 152.5);
+  --C-STATUS-SUCCESS-BG: oklch(0.2543 0.0398 149.3);
+  --C-STATUS-WARNING: oklch(0.829 0.1488 87.37);
+  --C-STATUS-WARNING-BG: oklch(0.2545 0.0259 87.32);
+  --C-STATUS-INFO: oklch(0.7505 0.1172 238.91);
+  --C-STATUS-INFO-BG: oklch(0.2303 0.0243 248.92);
 
   /* Radius — small-medium, taut and tense */
   --RADIUS-SM: 0.25rem;
@@ -61,9 +61,9 @@
   --RADIUS-XL: 0.75rem;
 
   /* Shadows — strong, dramatic, blue-electric tint, pressing down */
-  --SHADOW-SM: 0 2px 6px 0 rgb(20 22 26 / 0.5), 0 0 4px 0 rgb(224 240 255 / 0.04);
-  --SHADOW-MD: 0 6px 16px -2px rgb(20 22 26 / 0.6), 0 0 8px -1px rgb(224 240 255 / 0.06);
-  --SHADOW-LG: 0 16px 36px -4px rgb(20 22 26 / 0.7), 0 0 16px -2px rgb(224 240 255 / 0.08);
+  --SHADOW-SM: 0 2px 6px 0 oklch(0.1998 0.0086 264.36 / 0.5), 0 0 4px 0 oklch(0.9477 0.0265 246.34 / 0.04);
+  --SHADOW-MD: 0 6px 16px -2px oklch(0.1998 0.0086 264.36 / 0.6), 0 0 8px -1px oklch(0.9477 0.0265 246.34 / 0.06);
+  --SHADOW-LG: 0 16px 36px -4px oklch(0.1998 0.0086 264.36 / 0.7), 0 0 16px -2px oklch(0.9477 0.0265 246.34 / 0.08);
 
   /* Typography — strong, commanding */
   --Bold-Weight: 800;
@@ -97,9 +97,9 @@
   --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
 
   /* Overlay — heavy dark, oppressive atmospheric pressure */
-  --OVERLAY-SCRIM-COLOR: rgb(20 22 26 / 0.8);
-  --OVERLAY-GRADIENT-START: rgb(20 22 26 / 0);
-  --OVERLAY-GRADIENT-END: rgb(20 22 26 / 0.9);
+  --OVERLAY-SCRIM-COLOR: oklch(0.1998 0.0086 264.36 / 0.8);
+  --OVERLAY-GRADIENT-START: oklch(0.1998 0.0086 264.36 / 0);
+  --OVERLAY-GRADIENT-END: oklch(0.1998 0.0086 264.36 / 0.9);
   --OVERLAY-BLUR: 0.75rem;
   --OVERLAY-BLUR-HEAVY: 1.75rem;
 

@@ -1,7 +1,7 @@
 :root {
-  --OVERLAY-SCRIM-COLOR: rgb(0 0 0 / 0.5);
-  --OVERLAY-GRADIENT-START: rgb(0 0 0 / 0);
-  --OVERLAY-GRADIENT-END: rgb(0 0 0 / 0.7);
+  --OVERLAY-SCRIM-COLOR: oklch(0 0 0 / 0.5);
+  --OVERLAY-GRADIENT-START: oklch(0 0 0 / 0);
+  --OVERLAY-GRADIENT-END: oklch(0 0 0 / 0.7);
   --OVERLAY-BLUR: 0.5rem;
   --OVERLAY-BLUR-HEAVY: 1.25rem;
 }

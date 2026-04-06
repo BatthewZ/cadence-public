@@ -13,45 +13,45 @@
   --HEADING-TEXT-TRANSFORM: none;
 
   /* Canvas */
-  --C-CANVAS: #121018;
+  --C-CANVAS: oklch(0.1794 0.0165 296.16);
 
   /* Brand */
-  --C-PRIMARY: #6e4a80;
-  --C-PRIMARY-HOVER: #5e3a70;
-  --C-PRIMARY-ACTIVE: #7e5a90;
-  --C-SECONDARY: #282230;
-  --C-SECONDARY-HOVER: #342e3c;
-  --C-ACCENT: #d4a85a;
-  --C-ACCENT-HOVER: #c49848;
+  --C-PRIMARY: oklch(0.471 0.0941 313.78);
+  --C-PRIMARY-HOVER: oklch(0.4145 0.0961 313.57);
+  --C-PRIMARY-ACTIVE: oklch(0.5264 0.0921 313.93);
+  --C-SECONDARY: oklch(0.2649 0.027 304.16);
+  --C-SECONDARY-HOVER: oklch(0.3134 0.0259 304.43);
+  --C-ACCENT: oklch(0.756 0.1093 80.19);
+  --C-ACCENT-HOVER: oklch(0.7053 0.1109 80.2);
 
   /* Surface — rich dark navy with plum undertones */
-  --C-SURFACE-0: #16141e;
-  --C-SURFACE-1: #1c1a26;
-  --C-SURFACE-2: #24222e;
-  --C-SURFACE-3: #2e2c38;
+  --C-SURFACE-0: oklch(0.1985 0.02 293.66);
+  --C-SURFACE-1: oklch(0.2257 0.0232 292.07);
+  --C-SURFACE-2: oklch(0.2595 0.0224 292.4);
+  --C-SURFACE-3: oklch(0.3003 0.0216 292.69);
 
   /* Text — warm cream and muted golds */
-  --C-TEXT-PRIMARY: #ece4d8;
-  --C-TEXT-SECONDARY: #a89e90;
-  --C-TEXT-MUTED: #6e6458;
-  --C-TEXT-INVERSE: #121018;
-  --C-TEXT-ON-PRIMARY: #ece4d8;
-  --C-TEXT-ON-ACCENT: #121018;
+  --C-TEXT-PRIMARY: oklch(0.9219 0.0183 78.24);
+  --C-TEXT-SECONDARY: oklch(0.7038 0.0231 76.46);
+  --C-TEXT-MUTED: oklch(0.509 0.0224 72.33);
+  --C-TEXT-INVERSE: oklch(0.1794 0.0165 296.16);
+  --C-TEXT-ON-PRIMARY: oklch(0.9219 0.0183 78.24);
+  --C-TEXT-ON-ACCENT: oklch(0.1794 0.0165 296.16);
 
   /* Border */
-  --C-BORDER-DEFAULT: #2e2c38;
-  --C-BORDER-STRONG: #3e3c48;
-  --C-BORDER-FOCUS: #d4a85a;
+  --C-BORDER-DEFAULT: oklch(0.3003 0.0216 292.69);
+  --C-BORDER-STRONG: oklch(0.3629 0.0206 292.99);
+  --C-BORDER-FOCUS: oklch(0.756 0.1093 80.19);
 
   /* Status */
-  --C-STATUS-ERROR: #e87070;
-  --C-STATUS-ERROR-BG: #281818;
-  --C-STATUS-SUCCESS: #5cc888;
-  --C-STATUS-SUCCESS-BG: #18281c;
-  --C-STATUS-WARNING: #d4a85a;
-  --C-STATUS-WARNING-BG: #282218;
-  --C-STATUS-INFO: #70a8e8;
-  --C-STATUS-INFO-BG: #182028;
+  --C-STATUS-ERROR: oklch(0.6866 0.1493 21.76);
+  --C-STATUS-ERROR-BG: oklch(0.2301 0.026 19.24);
+  --C-STATUS-SUCCESS: oklch(0.7525 0.137 155.11);
+  --C-STATUS-SUCCESS-BG: oklch(0.2583 0.0312 151.59);
+  --C-STATUS-WARNING: oklch(0.756 0.1093 80.19);
+  --C-STATUS-WARNING-BG: oklch(0.2555 0.02 80.3);
+  --C-STATUS-INFO: oklch(0.7188 0.111 252.61);
+  --C-STATUS-INFO-BG: oklch(0.2394 0.0193 248.64);
 
   /* Radius — small-medium, precise and refined */
   --RADIUS-SM: 0.25rem;
@@ -60,9 +60,9 @@
   --RADIUS-XL: 0.875rem;
 
   /* Shadows — warm candlelight glow */
-  --SHADOW-SM: 0 1px 4px 0 rgb(18 16 24 / 0.4), 0 0 0 1px rgb(212 168 90 / 0.03);
-  --SHADOW-MD: 0 4px 12px -2px rgb(18 16 24 / 0.5), 0 2px 4px -1px rgb(212 168 90 / 0.04);
-  --SHADOW-LG: 0 14px 28px -6px rgb(18 16 24 / 0.6), 0 4px 8px -4px rgb(212 168 90 / 0.05);
+  --SHADOW-SM: 0 1px 4px 0 oklch(0.1794 0.0165 296.16 / 0.4), 0 0 0 1px oklch(0.756 0.1093 80.19 / 0.03);
+  --SHADOW-MD: 0 4px 12px -2px oklch(0.1794 0.0165 296.16 / 0.5), 0 2px 4px -1px oklch(0.756 0.1093 80.19 / 0.04);
+  --SHADOW-LG: 0 14px 28px -6px oklch(0.1794 0.0165 296.16 / 0.6), 0 4px 8px -4px oklch(0.756 0.1093 80.19 / 0.05);
 
   /* Typography — elegant, precise */
   --Bold-Weight: 700;
@@ -96,9 +96,9 @@
   --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
 
   /* Overlay — rich dark scrim */
-  --OVERLAY-SCRIM-COLOR: rgb(18 16 24 / 0.7);
-  --OVERLAY-GRADIENT-START: rgb(18 16 24 / 0);
-  --OVERLAY-GRADIENT-END: rgb(18 16 24 / 0.85);
+  --OVERLAY-SCRIM-COLOR: oklch(0.1794 0.0165 296.16 / 0.7);
+  --OVERLAY-GRADIENT-START: oklch(0.1794 0.0165 296.16 / 0);
+  --OVERLAY-GRADIENT-END: oklch(0.1794 0.0165 296.16 / 0.85);
   --OVERLAY-BLUR: 0.875rem;
   --OVERLAY-BLUR-HEAVY: 1.75rem;
 

@@ -20,8 +20,8 @@
   width: 3rem;
   height: 3rem;
   border-radius: 9999px;
-  border: 1px solid color-mix(in srgb, var(--C-BORDER-DEFAULT) 60%, transparent);
-  background: color-mix(in srgb, var(--C-SURFACE-0) 72%, transparent);
+  border: 1px solid color-mix(in oklch, var(--C-BORDER-DEFAULT) 60%, transparent);
+  background: color-mix(in oklch, var(--C-SURFACE-0) 72%, transparent);
   backdrop-filter: blur(16px);
   box-shadow: var(--SHADOW-LG);
   cursor: pointer;

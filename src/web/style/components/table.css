@@ -77,7 +77,7 @@
 }
 
 .table-row--selected {
-  background: color-mix(in srgb, var(--C-ACCENT) 8%, transparent);
+  background: color-mix(in oklch, var(--C-ACCENT) 8%, transparent);
 }
 
 .table-row--striped:nth-child(even) {
@@ -85,7 +85,7 @@
 }
 
 .table-row--selected.table-row--striped:nth-child(even) {
-  background: color-mix(in srgb, var(--C-ACCENT) 8%, transparent);
+  background: color-mix(in oklch, var(--C-ACCENT) 8%, transparent);
 }
 
 /* Cell */

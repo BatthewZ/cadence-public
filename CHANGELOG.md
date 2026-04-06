@@ -14,6 +14,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 - ToS acceptance checkbox on the registration form with schema validation (`tosAccepted` field on `registerSchema`)
 - Terms and Privacy links in the landing page footer
 
+## [1.9.2] - 2026-04-06
+
+### Changed
+
+- Converted all color tokens from hex/rgb to OKLCH color space across base tokens, all 17 theme files, overlays, shadows, and component CSS. OKLCH provides perceptually uniform lightness and wider gamut for more predictable color mixing across themes.
+- `color-mix()` functions now interpolate `in oklch` instead of `in srgb`
+- Theme editor color helper (`toHex`) now uses the `culori` library to parse any CSS color format (including OKLCH) back to hex for color picker inputs
+
+### Added
+
+- `culori` dependency for robust CSS color parsing and conversion
+
 ## [1.9.1] - 2026-04-05
 
 ### Changed

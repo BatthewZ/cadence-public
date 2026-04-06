@@ -58,7 +58,7 @@
 }
 
 .carousel-arrow:hover {
-  background-color: color-mix(in srgb, var(--C-SURFACE-2) 75%, transparent);
+  background-color: color-mix(in oklch, var(--C-SURFACE-2) 75%, transparent);
 }
 
 .carousel-arrow--prev {

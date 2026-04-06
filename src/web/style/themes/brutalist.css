@@ -13,45 +13,45 @@
   --HEADING-TEXT-TRANSFORM: uppercase;
 
   /* Canvas */
-  --C-CANVAS: #ffffff;
+  --C-CANVAS: oklch(1 0 0);
 
   /* Brand */
-  --C-PRIMARY: #0a0a0a;
-  --C-PRIMARY-HOVER: #000000;
-  --C-PRIMARY-ACTIVE: #1a1a1a;
-  --C-SECONDARY: #e8e8e8;
-  --C-SECONDARY-HOVER: #d8d8d8;
-  --C-ACCENT: #dc2626;
-  --C-ACCENT-HOVER: #b91c1c;
+  --C-PRIMARY: oklch(0.1448 0 0);
+  --C-PRIMARY-HOVER: oklch(0 0 0);
+  --C-PRIMARY-ACTIVE: oklch(0.2178 0 0);
+  --C-SECONDARY: oklch(0.931 0 0);
+  --C-SECONDARY-HOVER: oklch(0.8822 0 0);
+  --C-ACCENT: oklch(0.5771 0.2152 27.33);
+  --C-ACCENT-HOVER: oklch(0.5054 0.1905 27.52);
 
   /* Surface — pure whites and stark grays, no warmth */
-  --C-SURFACE-0: #ffffff;
-  --C-SURFACE-1: #f5f5f5;
-  --C-SURFACE-2: #e8e8e8;
-  --C-SURFACE-3: #d4d4d4;
+  --C-SURFACE-0: oklch(1 0 0);
+  --C-SURFACE-1: oklch(0.9702 0 0);
+  --C-SURFACE-2: oklch(0.931 0 0);
+  --C-SURFACE-3: oklch(0.8699 0 0);
 
   /* Text — pure black on white, maximum contrast */
-  --C-TEXT-PRIMARY: #0a0a0a;
-  --C-TEXT-SECONDARY: #404040;
-  --C-TEXT-MUTED: #737373;
-  --C-TEXT-INVERSE: #ffffff;
-  --C-TEXT-ON-PRIMARY: #ffffff;
-  --C-TEXT-ON-ACCENT: #ffffff;
+  --C-TEXT-PRIMARY: oklch(0.1448 0 0);
+  --C-TEXT-SECONDARY: oklch(0.3715 0 0);
+  --C-TEXT-MUTED: oklch(0.5555 0 0);
+  --C-TEXT-INVERSE: oklch(1 0 0);
+  --C-TEXT-ON-PRIMARY: oklch(1 0 0);
+  --C-TEXT-ON-ACCENT: oklch(1 0 0);
 
   /* Border */
-  --C-BORDER-DEFAULT: #0a0a0a;
-  --C-BORDER-STRONG: #000000;
-  --C-BORDER-FOCUS: #dc2626;
+  --C-BORDER-DEFAULT: oklch(0.1448 0 0);
+  --C-BORDER-STRONG: oklch(0 0 0);
+  --C-BORDER-FOCUS: oklch(0.5771 0.2152 27.33);
 
   /* Status */
-  --C-STATUS-ERROR: #dc2626;
-  --C-STATUS-ERROR-BG: #fef2f2;
-  --C-STATUS-SUCCESS: #16a34a;
-  --C-STATUS-SUCCESS-BG: #f0fdf4;
-  --C-STATUS-WARNING: #ca8a04;
-  --C-STATUS-WARNING-BG: #fefce8;
-  --C-STATUS-INFO: #0a0a0a;
-  --C-STATUS-INFO-BG: #f5f5f5;
+  --C-STATUS-ERROR: oklch(0.5771 0.2152 27.33);
+  --C-STATUS-ERROR-BG: oklch(0.9705 0.0129 17.38);
+  --C-STATUS-SUCCESS: oklch(0.6271 0.1699 149.21);
+  --C-STATUS-SUCCESS-BG: oklch(0.9819 0.0181 155.83);
+  --C-STATUS-WARNING: oklch(0.6806 0.1423 75.83);
+  --C-STATUS-WARNING-BG: oklch(0.9873 0.0262 102.21);
+  --C-STATUS-INFO: oklch(0.1448 0 0);
+  --C-STATUS-INFO-BG: oklch(0.9702 0 0);
 
   /* Radius — 0px everywhere, hard edges */
   --RADIUS-SM: 0rem;
@@ -60,9 +60,9 @@
   --RADIUS-XL: 0rem;
 
   /* Shadows — hard-offset block shadows, no blur */
-  --SHADOW-SM: 2px 2px 0 0 #0a0a0a;
-  --SHADOW-MD: 3px 3px 0 0 #0a0a0a;
-  --SHADOW-LG: 5px 5px 0 0 #0a0a0a;
+  --SHADOW-SM: 2px 2px 0 0 oklch(0.1448 0 0);
+  --SHADOW-MD: 3px 3px 0 0 oklch(0.1448 0 0);
+  --SHADOW-LG: 5px 5px 0 0 oklch(0.1448 0 0);
 
   /* Typography — strong, authoritative */
   --Bold-Weight: 800;
@@ -96,9 +96,9 @@
   --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: none;
 
   /* Overlay — stark black */
-  --OVERLAY-SCRIM-COLOR: rgb(10 10 10 / 0.6);
-  --OVERLAY-GRADIENT-START: rgb(10 10 10 / 0);
-  --OVERLAY-GRADIENT-END: rgb(10 10 10 / 0.8);
+  --OVERLAY-SCRIM-COLOR: oklch(0.1448 0 0 / 0.6);
+  --OVERLAY-GRADIENT-START: oklch(0.1448 0 0 / 0);
+  --OVERLAY-GRADIENT-END: oklch(0.1448 0 0 / 0.8);
   --OVERLAY-BLUR: 0rem;
   --OVERLAY-BLUR-HEAVY: 0rem;
 

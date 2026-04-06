@@ -62,7 +62,7 @@ export function HoldToDeleteButton({
             cy="10"
             r="9"
             fill="none"
-            stroke="var(--C-STATUS-ERROR, #ef4444)"
+            stroke="var(--C-STATUS-ERROR, oklch(0.6275 0.2577 29.23))"
             strokeWidth="2"
             strokeDasharray={CIRCUMFERENCE}
             strokeDashoffset={CIRCUMFERENCE}
