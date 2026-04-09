@@ -206,6 +206,7 @@ export function WorkspaceLayout() {
             />
             <SidebarNav
               basePath={basePath}
+              workspaceId={workspace.id}
               favoriteProjects={favoriteProjects}
               visibleProjects={visibleProjects}
               activeProjects={activeProjects}

@@ -34,7 +34,12 @@ export const addProjectMemberSchema = z.object({
   role: z.enum(PROJECT_ROLES, { message: "Invalid role" }),
 });
 
+export const reorderProjectSchema = z.object({
+  position: z.string().min(1, "Position is required"),
+});
+
 export type CreateProjectInput = z.infer<typeof createProjectSchema>;
 export type UpdateProjectInput = z.infer<typeof updateProjectSchema>;
 export type DuplicateProjectInput = z.infer<typeof duplicateProjectSchema>;
 export type AddProjectMemberInput = z.infer<typeof addProjectMemberSchema>;
+export type ReorderProjectInput = z.infer<typeof reorderProjectSchema>;

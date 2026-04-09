@@ -88,6 +88,10 @@ Use the **Duplicate project** option in the project card's context menu to creat
 
 A confirmation dialog lets you optionally **include members and their roles**. The duplicated project is set to active status and named `"{original name} (copy)"`. You are automatically added as an admin on the new project and navigated to it after creation.
 
+### Reordering Projects in the Sidebar
+
+Drag and drop projects in the sidebar to reorder them. Hover over a project to reveal the grip handle on the left, then drag to your desired position. The new order is saved automatically and persists across sessions.
+
 The workspace sidebar only shows active projects. Completed and archived projects do not appear in the sidebar, My Tasks, or dashboard statistics — they are accessible from the **Projects** page tabs.
 
 ---

@@ -179,6 +179,7 @@ export * from "./workspace";
 | `theme`       | `text`                        |                                                | Project theme name                       |
 | `budget`      | `integer`                     |                                                | Project budget in cents (nullable)       |
 | `autoAssignCreator` | `integer` (mode: `boolean`) | `NOT NULL`, default `false`              | Auto-assign new tasks to their creator   |
+| `position`    | `text`                        |                                                | Fractional index for sidebar ordering (nullable; lazy-backfilled on first list) |
 
 **Indexes:** index on `workspaceId`, composite index on (`workspaceId`, `updatedAt`)
 

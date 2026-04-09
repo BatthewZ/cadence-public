@@ -2,7 +2,7 @@
 
 ## Overview
 
-The API is a Hono application running inside a Cloudflare Worker. All API endpoints are mounted under `/api/*`. The entry point is `src/api/index.ts`. There are 90 endpoints across workspaces, projects, tasks, labels, attachments, teams, invitations, dashboard, activity, webhooks, and freshness.
+The API is a Hono application running inside a Cloudflare Worker. All API endpoints are mounted under `/api/*`. The entry point is `src/api/index.ts`. There are 91 endpoints across workspaces, projects, tasks, labels, attachments, teams, invitations, dashboard, activity, webhooks, and freshness.
 
 ## Documentation
 

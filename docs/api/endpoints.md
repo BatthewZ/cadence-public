@@ -450,6 +450,39 @@ Deletes a project and all associated data.
 { "ok": true }
 ```
 
+### `PATCH /api/projects/:projectId/reorder`
+
+Updates a project's sidebar position using a fractional index key. Used by the drag-and-drop reorder in the workspace sidebar.
+
+**Auth:** Required.
+**Authorization:** Project member, or workspace owner/admin.
+
+**Request body** (JSON, validated via `reorderProjectSchema`):
+
+| Field | Type | Description | Required |
+| --- | --- | --- | --- |
+| `position` | `string` | Fractional index key (generated client-side between adjacent items) | Yes |
+
+**Response** (200):
+
+```json
+{
+  "project": {
+    "id": "...",
+    "position": "a1",
+    "..."
+  }
+}
+```
+
+**Error responses:**
+
+| Status | Condition |
+| --- | --- |
+| 401 | Not authenticated |
+| 403 | Not a project member or workspace owner/admin |
+| 404 | Project not found |
+
 ### `POST /api/projects/:projectId/duplicate`
 
 Duplicates a project, creating a new copy with the name `"{original name} (copy)"`. Copies the project's settings (description, icon, budget, theme, autoAssignCreator), task groups (with positions and colors), and labels. Optionally includes members and their roles. Tasks, comments, attachments, and cover images are not copied. The duplicating user is always added as an admin on the new project.

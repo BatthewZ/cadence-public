@@ -5,6 +5,7 @@ import {
   addProjectMemberSchema,
   createProjectSchema,
   duplicateProjectSchema,
+  reorderProjectSchema,
   updateProjectSchema,
 } from "../../../shared/schemas/project";
 import { createWebhookSchema, updateWebhookSchema } from "../../../shared/schemas/webhook";
@@ -42,6 +43,7 @@ import {
   listMembers,
   listProjects,
   removeMember,
+  reorderProject,
   updateProject,
   uploadProjectCover,
 } from "./projects.handlers";
@@ -76,6 +78,14 @@ app.patch(
   requireProjectRole("admin"),
   validateBody(updateProjectSchema),
   updateProject,
+);
+
+app.patch(
+  "/projects/:projectId/reorder",
+  requireAuth,
+  requireProjectAccess(),
+  validateBody(reorderProjectSchema),
+  reorderProject,
 );
 
 app.delete(

@@ -1,14 +1,16 @@
-import { and, count, eq, getTableColumns, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, getTableColumns, sql } from "drizzle-orm";
 import type { BatchItem } from "drizzle-orm/batch";
 import type { Context } from "hono";
 
+import type { Database } from "../../../db";
 import { user as userTable } from "../../../db/schema/auth";
 import { label } from "../../../db/schema/label";
 import { project, projectMember } from "../../../db/schema/project";
 import { task, taskGroup } from "../../../db/schema/task";
 import { webhook } from "../../../db/schema/webhook";
 import { workspaceMember } from "../../../db/schema/workspace";
-import { addProjectMemberSchema, createProjectSchema, duplicateProjectSchema, updateProjectSchema } from "../../../shared/schemas/project";
+import { generateKeyBetween, generateNKeysBetween } from "../../../shared/lib/fractional-index";
+import { addProjectMemberSchema, createProjectSchema, duplicateProjectSchema, reorderProjectSchema, updateProjectSchema } from "../../../shared/schemas/project";
 import type { ProjectRole } from "../../../shared/types/roles";
 import type { AppEnv } from "../../env";
 import { handleDeleteCover, handleUploadCover } from "../../lib/cover-image";
@@ -25,6 +27,24 @@ import {
   resolveUser,
 } from "../../lib/webhook-payloads";
 
+/** Shared orderBy for position-aware project listing: positioned first, then by createdAt. */
+const projectPositionOrder = [
+  sql`CASE WHEN ${project.position} IS NULL THEN 1 ELSE 0 END`,
+  asc(project.position),
+  asc(project.createdAt),
+] as const;
+
+/** Fetch the last fractional-index position for a workspace and generate the next one. */
+async function getNextProjectPosition(db: Database, workspaceId: string): Promise<string> {
+  const [last] = await db
+    .select({ position: project.position })
+    .from(project)
+    .where(eq(project.workspaceId, workspaceId))
+    .orderBy(desc(project.position))
+    .limit(1);
+  return generateKeyBetween(last?.position ?? null, null);
+}
+
 export async function createProject(c: Context<AppEnv>) {
   const user = c.get("user")!;
   const workspaceId = requireParam(c, "workspaceId");
@@ -33,6 +53,8 @@ export async function createProject(c: Context<AppEnv>) {
   const db = c.get("db");
   const now = new Date();
   const projectId = crypto.randomUUID();
+
+  const position = await getNextProjectPosition(db, workspaceId);
 
   const newProject = {
     id: projectId,
@@ -44,6 +66,7 @@ export async function createProject(c: Context<AppEnv>) {
     budget: body.budget ?? null,
     theme: body.theme ?? null,
     autoAssignCreator: body.autoAssignCreator ?? false,
+    position,
     createdAt: now,
     updatedAt: now,
   };
@@ -98,6 +121,7 @@ export async function listProjects(c: Context<AppEnv>) {
         .select()
         .from(project)
         .where(eq(project.workspaceId, workspaceId))
+        .orderBy(...projectPositionOrder)
     : await db
         .select(getTableColumns(project))
         .from(project)
@@ -108,7 +132,26 @@ export async function listProjects(c: Context<AppEnv>) {
             eq(projectMember.userId, user.id),
           ),
         )
-        .where(eq(project.workspaceId, workspaceId));
+        .where(eq(project.workspaceId, workspaceId))
+        .orderBy(...projectPositionOrder);
+
+  // Lazy backfill: assign positions to projects that don't have one yet
+  const unpositioned = projects.filter(p => !p.position);
+  if (unpositioned.length > 0) {
+    const positioned = projects.filter(p => p.position);
+    const lastPosition = positioned.length > 0
+      ? positioned.sort((a, b) => (a.position! > b.position! ? 1 : -1)).at(-1)!.position
+      : null;
+    unpositioned.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    const newPositions = generateNKeysBetween(lastPosition, null, unpositioned.length);
+    const updates = unpositioned.map((p, i) =>
+      db.update(project).set({ position: newPositions[i] }).where(eq(project.id, p.id))
+    );
+    await db.batch(updates as [typeof updates[0], ...typeof updates]);
+    for (let i = 0; i < unpositioned.length; i++) {
+      Object.assign(unpositioned[i], { position: newPositions[i] });
+    }
+  }
 
   // Get member counts and task counts for each project
   const projectIds = projects.map((p) => p.id);
@@ -252,6 +295,25 @@ export async function deleteProject(c: Context<AppEnv>) {
   return c.json({ ok: true });
 }
 
+export async function reorderProject(c: Context<AppEnv>) {
+  const db = c.get("db");
+  const projectId = requireParam(c, "projectId");
+  const body = validJson(c, reorderProjectSchema);
+  const now = new Date();
+
+  const [updated] = await db
+    .update(project)
+    .set({ position: body.position, updatedAt: now })
+    .where(eq(project.id, projectId))
+    .returning();
+
+  if (!updated) {
+    return errorResponse(c, "Project not found", 404);
+  }
+
+  return c.json({ project: updated });
+}
+
 export async function duplicateProject(c: Context<AppEnv>) {
   const user = c.get("user")!;
   const projectId = requireParam(c, "projectId");
@@ -274,6 +336,8 @@ export async function duplicateProject(c: Context<AppEnv>) {
   const now = new Date();
   const newProjectId = crypto.randomUUID();
 
+  const dupPosition = await getNextProjectPosition(db, source.workspaceId);
+
   // Truncate name so "name (copy)" fits within 100 chars
   const suffix = " (copy)";
   const maxBaseLength = 100 - suffix.length;
@@ -293,6 +357,7 @@ export async function duplicateProject(c: Context<AppEnv>) {
     autoAssignCreator: source.autoAssignCreator,
     coverImageKey: null,
     coverImagePosition: null,
+    position: dupPosition,
     createdAt: now,
     updatedAt: now,
   };

@@ -55,6 +55,7 @@ export interface WorkspaceProject {
   memberCount?: number;
   taskCount?: number;
   taskCounts?: { total: number; completed: number };
+  position?: string | null;
 }
 
 export interface WorkspaceContextValue {

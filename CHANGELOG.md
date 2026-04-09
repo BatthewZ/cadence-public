@@ -4,6 +4,16 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.13.0] - 2026-04-09
+
+### Added
+
+- Drag-and-drop project reordering in the workspace sidebar using fractional indexing
+- `PATCH /api/projects/:projectId/reorder` endpoint for updating project position
+- Lazy backfill: existing projects without a position are automatically assigned one on first list
+- New projects and duplicated projects are appended to the end of the sidebar order
+- Optimistic UI updates for instant drag-and-drop feedback with rollback on failure
+
 ## [1.12.1] - 2026-04-09
 
 ### Added

@@ -28,6 +28,7 @@ export const project = sqliteTable(
     theme: text("theme"),
     budget: integer("budget"),
     autoAssignCreator: integer("auto_assign_creator", { mode: "boolean" }).notNull().default(false),
+    position: text("position"),
   },
   (table) => [
     index("project_workspace_idx").on(table.workspaceId),

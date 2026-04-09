@@ -1,25 +1,45 @@
 import {
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { useQueryClient } from "@tanstack/react-query";
+import {
   Bell,
   CheckSquare,
   FolderKanban,
   LayoutDashboard,
   Plus,
-  Star,
   Users,
 } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
+import { useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 
+import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import { UserMenu } from "@/web/components/layout/UserMenu";
 import { AppShell } from "@/web/components/ui/AppShell";
 import { Text } from "@/web/components/ui/Text";
 import type { WorkspaceProject } from "@/web/contexts/WorkspaceContext";
+import { api } from "@/web/lib/api/client";
 import { getIconComponent } from "@/web/lib/icon-map";
+import { queryKeys } from "@/web/lib/query-keys";
+
+import { SortableProjectItem } from "./SortableProjectItem";
 
 export const SIDEBAR_PROJECT_LIMIT = 8;
 
 interface SidebarNavProps {
   basePath: string;
+  workspaceId: string;
   favoriteProjects: WorkspaceProject[];
   visibleProjects: WorkspaceProject[];
   activeProjects: WorkspaceProject[];
@@ -32,6 +52,7 @@ interface SidebarNavProps {
 
 export function SidebarNav({
   basePath,
+  workspaceId,
   favoriteProjects,
   visibleProjects,
   activeProjects,
@@ -41,6 +62,74 @@ export function SidebarNav({
   isFavorite,
   toggleFavorite,
 }: SidebarNavProps) {
+  const qc = useQueryClient();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  const sortedVisibleProjects = useMemo(
+    () =>
+      [...visibleProjects].sort((a, b) => {
+        if (!a.position && !b.position) return 0;
+        if (!a.position) return 1;
+        if (!b.position) return -1;
+        return a.position < b.position ? -1 : a.position > b.position ? 1 : 0;
+      }),
+    [visibleProjects],
+  );
+
+  const projectIds = useMemo(
+    () => sortedVisibleProjects.map((p) => p.id),
+    [sortedVisibleProjects],
+  );
+
+  const handleDragEnd = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+
+      const oldIndex = sortedVisibleProjects.findIndex((p) => p.id === active.id);
+      const newIndex = sortedVisibleProjects.findIndex((p) => p.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+
+      const reordered = arrayMove(sortedVisibleProjects, oldIndex, newIndex);
+      const above = newIndex > 0 ? reordered[newIndex - 1] : null;
+      const below =
+        newIndex < reordered.length - 1 ? reordered[newIndex + 1] : null;
+      const newPosition = generateKeyBetween(
+        above?.position ?? null,
+        below?.position ?? null,
+      );
+
+      const movedProject = sortedVisibleProjects[oldIndex];
+      const queryKey = queryKeys.workspaces.projects(workspaceId);
+
+      const previousData = qc.getQueryData(queryKey);
+      qc.setQueryData(
+        queryKey,
+        (old: { projects: Array<{ id: string; position?: string | null }> } | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            projects: old.projects.map((p) =>
+              p.id === movedProject.id ? { ...p, position: newPosition } : p,
+            ),
+          };
+        },
+      );
+
+      try {
+        await api.patch(`/api/projects/${movedProject.id}/reorder`, {
+          position: newPosition,
+        });
+      } catch {
+        qc.setQueryData(queryKey, previousData);
+      }
+    },
+    [sortedVisibleProjects, workspaceId, qc],
+  );
+
   return (
     <>
       {/* Main navigation */}
@@ -97,32 +186,28 @@ export function SidebarNav({
           </button>
         </div>
         <div className="overflow-y-none flex-1">
-          {visibleProjects.map((project) => (
-            <div key={project.id} className="group relative">
-              <AppShell.SidebarLink
-                to={`${basePath}/projects/${project.id}`}
-                icon={getIconComponent(project.icon) ?? FolderKanban}
-              >
-                {project.name}
-              </AppShell.SidebarLink>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  toggleFavorite(project.id);
-                }}
-                className={`absolute right-2 top-1/2 -translate-y-1/2 inline-flex items-center justify-center size-5 rounded hover:bg-surface-2 transition-opacity ${
-                  isFavorite(project.id)
-                    ? "opacity-100 text-amber-400"
-                    : "opacity-0 group-hover:opacity-100 text-fg-muted"
-                }`}
-                aria-label={isFavorite(project.id) ? "Remove from favorites" : "Add to favorites"}
-              >
-                <Star size={12} fill={isFavorite(project.id) ? "currentColor" : "none"} />
-              </button>
-            </div>
-          ))}
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={(event) => {
+              void handleDragEnd(event);
+            }}
+          >
+            <SortableContext
+              items={projectIds}
+              strategy={verticalListSortingStrategy}
+            >
+              {sortedVisibleProjects.map((project) => (
+                <SortableProjectItem
+                  key={project.id}
+                  project={project}
+                  basePath={basePath}
+                  isFavorite={isFavorite(project.id)}
+                  onToggleFavorite={toggleFavorite}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
           {activeProjects.length > SIDEBAR_PROJECT_LIMIT && (
             <button
               type="button"
