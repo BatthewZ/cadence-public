@@ -1,9 +1,14 @@
-import type { WebhookEventType } from "@/shared/types/webhook";
-import { Checkbox, Field, Input, Label } from "@/web/components/form";
+import { type WebhookEventType, WORKSPACE_SCOPED_EVENTS } from "@/shared/types/webhook";
+import { Checkbox, Field, Input, Label, Select } from "@/web/components/form";
 import { Divider } from "@/web/components/layout";
 import { Text } from "@/web/components/ui";
 
 import { WebhookEventSelector } from "./WebhookEventSelector";
+
+export interface ProjectOption {
+  id: string;
+  name: string;
+}
 
 export function WebhookFormFields({
   name,
@@ -16,6 +21,9 @@ export function WebhookFormFields({
   onEventsChange,
   active,
   onActiveChange,
+  projectId,
+  onProjectIdChange,
+  projects,
 }: {
   name: string;
   onNameChange: (value: string) => void;
@@ -27,7 +35,22 @@ export function WebhookFormFields({
   onEventsChange: (value: WebhookEventType[]) => void;
   active?: boolean;
   onActiveChange?: (value: boolean) => void;
+  projectId: string | null;
+  onProjectIdChange: (value: string | null) => void;
+  projects: ProjectOption[];
 }) {
+  function handleProjectChange(value: string) {
+    const newProjectId = value || null;
+    onProjectIdChange(newProjectId);
+    // When scoping to a project, remove any workspace-scoped events
+    if (newProjectId) {
+      const filtered = events.filter((e) => !WORKSPACE_SCOPED_EVENTS.has(e));
+      if (filtered.length !== events.length) {
+        onEventsChange(filtered);
+      }
+    }
+  }
+
   return (
     <>
       <Field>
@@ -55,6 +78,25 @@ export function WebhookFormFields({
         </Text>
       </Field>
 
+      <Field>
+        <Label htmlFor="wh-project-scope">Project scope</Label>
+        <Select
+          id="wh-project-scope"
+          value={projectId ?? ""}
+          onChange={(e) => handleProjectChange(e.target.value)}
+        >
+          <option value="">All projects</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
+          ))}
+        </Select>
+        <Text variant="body-3" color="muted">
+          Optionally limit this webhook to events from a specific project.
+        </Text>
+      </Field>
+
       {onActiveChange !== undefined && active !== undefined && (
         <Field>
           <Label>Status</Label>
@@ -74,7 +116,7 @@ export function WebhookFormFields({
       <Text variant="body-2" weight="semibold">
         Events
       </Text>
-      <WebhookEventSelector value={events} onChange={onEventsChange} />
+      <WebhookEventSelector value={events} onChange={onEventsChange} projectScoped={!!projectId} />
     </>
   );
 }

@@ -162,6 +162,13 @@
       "when": 1775467223999,
       "tag": "0022_heavy_james_howlett",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1775695214015,
+      "tag": "0023_project_scoped_webhooks",
+      "breakpoints": true
     }
   ]
 }

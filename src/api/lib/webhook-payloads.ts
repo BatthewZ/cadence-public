@@ -385,6 +385,7 @@ export function fireWebhookEvent(
               contextOpts.workspaceId,
               event,
               payload,
+              contextOpts.projectId,
             );
           }),
         ),

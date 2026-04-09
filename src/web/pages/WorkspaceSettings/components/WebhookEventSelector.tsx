@@ -1,4 +1,4 @@
-import { WEBHOOK_EVENT_GROUPS, type WebhookEventType } from "@/shared/types/webhook";
+import { WEBHOOK_EVENT_GROUPS, type WebhookEventType, WORKSPACE_SCOPED_EVENTS } from "@/shared/types/webhook";
 import { Checkbox } from "@/web/components/form";
 import { Stack } from "@/web/components/layout";
 import { Text } from "@/web/components/ui";
@@ -27,6 +27,8 @@ function humanLabel(event: string): string {
 interface WebhookEventSelectorProps {
   value: WebhookEventType[];
   onChange: (events: WebhookEventType[]) => void;
+  /** When true, workspace/invitation event groups are disabled (project-scoped webhook). */
+  projectScoped?: boolean;
 }
 
 /* ------------------------------------------------------------------ */
@@ -40,7 +42,7 @@ interface WebhookEventSelectorProps {
  * using the shared WEBHOOK_EVENT_GROUPS constant. Each group includes a
  * "Select all" toggle for fast bulk selection.
  */
-export function WebhookEventSelector({ value, onChange }: WebhookEventSelectorProps) {
+export function WebhookEventSelector({ value, onChange, projectScoped }: WebhookEventSelectorProps) {
   const selected = new Set(value);
 
   function toggleEvent(event: WebhookEventType) {
@@ -66,19 +68,24 @@ export function WebhookEventSelector({ value, onChange }: WebhookEventSelectorPr
   return (
     <Stack gap="r4">
       {Object.entries(WEBHOOK_EVENT_GROUPS).map(([groupName, events]) => {
+        const groupDisabled = projectScoped && events.some((e) => WORKSPACE_SCOPED_EVENTS.has(e));
         const allInGroupSelected = events.every((e) => selected.has(e));
         const someInGroupSelected = events.some((e) => selected.has(e));
 
         return (
-          <div key={groupName} className="border border-border-default/50 rounded-lg p-r4">
-            <label className="flex items-center gap-r5 cursor-pointer mb-r5">
+          <div
+            key={groupName}
+            className={`border border-border-default/50 rounded-lg p-r4${groupDisabled ? " opacity-50" : ""}`}
+          >
+            <label className={`flex items-center gap-r5 mb-r5${groupDisabled ? " cursor-not-allowed" : " cursor-pointer"}`}>
               <Checkbox
-                checked={allInGroupSelected}
+                checked={!groupDisabled && allInGroupSelected}
                 ref={(el) => {
-                  if (el) el.indeterminate = someInGroupSelected && !allInGroupSelected;
+                  if (el) el.indeterminate = !groupDisabled && someInGroupSelected && !allInGroupSelected;
                 }}
-                onChange={() => toggleGroup(events, allInGroupSelected)}
+                onChange={() => !groupDisabled && toggleGroup(events, allInGroupSelected)}
                 aria-label={`Select all ${groupName} events`}
+                disabled={groupDisabled}
               />
               <Text variant="body-2" weight="semibold" as="span">
                 {groupName}
@@ -88,13 +95,23 @@ export function WebhookEventSelector({ value, onChange }: WebhookEventSelectorPr
               </Text>
             </label>
 
+            {groupDisabled && (
+              <Text variant="body-3" color="muted" className="mb-r5 pl-r3">
+                Not available for project-scoped webhooks
+              </Text>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-r6 pl-r3">
               {events.map((event) => (
-                <label key={event} className="flex items-center gap-r5 cursor-pointer py-r6">
+                <label
+                  key={event}
+                  className={`flex items-center gap-r5 py-r6${groupDisabled ? " cursor-not-allowed" : " cursor-pointer"}`}
+                >
                   <Checkbox
-                    checked={selected.has(event)}
-                    onChange={() => toggleEvent(event)}
+                    checked={!groupDisabled && selected.has(event)}
+                    onChange={() => !groupDisabled && toggleEvent(event)}
                     aria-label={event}
+                    disabled={groupDisabled}
                   />
                   <Text variant="body-3" as="span">
                     {humanLabel(event)}

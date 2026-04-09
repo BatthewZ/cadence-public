@@ -1,8 +1,11 @@
 import { and,desc, eq } from "drizzle-orm";
 import type { Context } from "hono";
 
+import type { Database } from "../../../db";
+import { project } from "../../../db/schema/project";
 import { webhook, webhookDelivery } from "../../../db/schema/webhook";
 import { createWebhookSchema, updateWebhookSchema } from "../../../shared/schemas/webhook";
+import { type WebhookEventType, WORKSPACE_SCOPED_EVENTS } from "../../../shared/types/webhook";
 import type { AppEnv } from "../../env";
 import { errorResponse } from "../../lib/error-response";
 import { requireParam, requireParams } from "../../lib/params";
@@ -19,6 +22,28 @@ import {
 
 /** Maximum number of webhooks allowed per workspace. */
 const MAX_WEBHOOKS_PER_WORKSPACE = 20;
+
+/**
+ * Verify that a project belongs to the given workspace.
+ * Returns true if the project exists in the workspace, false otherwise.
+ */
+async function projectBelongsToWorkspace(
+  db: Database,
+  projectId: string,
+  workspaceId: string,
+): Promise<boolean> {
+  const [proj] = await db
+    .select({ id: project.id })
+    .from(project)
+    .where(
+      and(
+        eq(project.id, projectId),
+        eq(project.workspaceId, workspaceId),
+      ),
+    )
+    .limit(1);
+  return !!proj;
+}
 
 /** Check if the worker is running in local dev mode. */
 function isDevMode(c: Context<AppEnv>): boolean {
@@ -55,6 +80,13 @@ export async function createWebhook(c: Context<AppEnv>) {
     return errorResponse(c, urlValidation.error, 400);
   }
 
+  // Validate projectId belongs to this workspace
+  if (body.projectId) {
+    if (!(await projectBelongsToWorkspace(db, body.projectId, workspaceId))) {
+      return errorResponse(c, "Project not found in this workspace", 400);
+    }
+  }
+
   // Enforce per-workspace webhook limit
   const existing = await db
     .select({ id: webhook.id })
@@ -74,6 +106,7 @@ export async function createWebhook(c: Context<AppEnv>) {
     .values({
       id,
       workspaceId,
+      projectId: body.projectId ?? null,
       name: body.name,
       url: body.url,
       secret,
@@ -175,12 +208,36 @@ export async function updateWebhook(c: Context<AppEnv>) {
     }
   }
 
+  // Validate projectId if being changed
+  if (body.projectId !== undefined && body.projectId !== null) {
+    if (!(await projectBelongsToWorkspace(db, body.projectId, workspaceId))) {
+      return errorResponse(c, "Project not found in this workspace", 400);
+    }
+  }
+
+  // Cross-validate: project-scoped webhooks cannot have workspace-scoped events
+  const effectiveProjectId =
+    body.projectId !== undefined ? body.projectId : existing.projectId;
+  if (effectiveProjectId) {
+    const effectiveEvents: WebhookEventType[] = body.events ?? (JSON.parse(existing.events) as WebhookEventType[]);
+    if (effectiveEvents.some((e) => WORKSPACE_SCOPED_EVENTS.has(e))) {
+      return errorResponse(
+        c,
+        "Project-scoped webhooks cannot subscribe to workspace or invitation events",
+        400,
+      );
+    }
+  }
+
   const now = new Date();
   let newSecret: string | null = null;
 
   // Build update payload from only provided fields
   const updatePayload: Record<string, unknown> = { updatedAt: now };
 
+  if (body.projectId !== undefined) {
+    updatePayload.projectId = body.projectId;
+  }
   if (body.name !== undefined) {
     updatePayload.name = body.name;
   }

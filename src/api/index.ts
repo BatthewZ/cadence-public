@@ -59,7 +59,7 @@ app.use(
 
 // Interactive API documentation (Scalar)
 app.get(
-  "/api/docs",
+  "/api/docs/webhooks",
   Scalar({
     url: "/api/openapi.json",
     pageTitle: "Cadence Webhook API",

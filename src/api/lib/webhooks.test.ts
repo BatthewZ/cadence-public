@@ -13,12 +13,13 @@
  */
 
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createDb, type Database } from "../../db";
 import { webhook, webhookDelivery } from "../../db/schema/webhook";
 import {
   createTestD1,
+  seedProject,
   seedUser,
   seedWebhook,
   seedWebhookDelivery,
@@ -58,6 +59,10 @@ afterAll(async () => {
 
 beforeEach(() => {
   db = createDb(d1);
+  vi.restoreAllMocks();
+});
+
+afterEach(() => {
   vi.restoreAllMocks();
 });
 
@@ -289,6 +294,129 @@ describe("dispatchWebhookEvent", () => {
 
     expect(count).toBe(0);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  // -------------------------------------------------------------------------
+  // Project-scoped webhook filtering
+  // -------------------------------------------------------------------------
+
+  it("project-scoped webhook receives events from its project", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const { ctx, flush } = createAwaitableExecutionCtx();
+
+    const ws = await seedWorkspace(d1, TEST_USER.id, { name: "ProjScope Match WS" });
+    const projectId = await seedProject(d1, ws, { name: "Match Proj" });
+    await seedWebhook(d1, ws, {
+      url: "https://proj-match.example.com/hook",
+      events: JSON.stringify(["task.created"]),
+      active: true,
+      projectId,
+    });
+
+    const count = await dispatchWebhookEvent(db, ctx, ws, "task.created", { title: "Test" }, projectId);
+    await flush();
+
+    expect(count).toBe(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("project-scoped webhook ignores events from other projects", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const { ctx, flush } = createAwaitableExecutionCtx();
+
+    const ws = await seedWorkspace(d1, TEST_USER.id, { name: "ProjScope Diff WS" });
+    const projA = await seedProject(d1, ws, { name: "Proj A" });
+    const projB = await seedProject(d1, ws, { name: "Proj B" });
+    await seedWebhook(d1, ws, {
+      url: "https://proj-diff.example.com/hook",
+      events: JSON.stringify(["task.created"]),
+      active: true,
+      projectId: projA,
+    });
+
+    const count = await dispatchWebhookEvent(db, ctx, ws, "task.created", { title: "Test" }, projB);
+    await flush();
+
+    expect(count).toBe(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("project-scoped webhook ignores workspace-scoped events (no projectId in dispatch)", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const { ctx, flush } = createAwaitableExecutionCtx();
+
+    const ws = await seedWorkspace(d1, TEST_USER.id, { name: "ProjScope WS-Event WS" });
+    const projId = await seedProject(d1, ws, { name: "WS Event Proj" });
+    await seedWebhook(d1, ws, {
+      url: "https://proj-ws-event.example.com/hook",
+      events: JSON.stringify(["workspace.member_joined"]),
+      active: true,
+      projectId: projId,
+    });
+
+    // Dispatch without projectId (workspace-scoped event)
+    const count = await dispatchWebhookEvent(db, ctx, ws, "workspace.member_joined", { userId: "u1" });
+    await flush();
+
+    expect(count).toBe(0);
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("workspace-level webhook still receives all events (backward compat)", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const { ctx, flush } = createAwaitableExecutionCtx();
+
+    const ws = await seedWorkspace(d1, TEST_USER.id, { name: "WS-Level Compat WS" });
+    await seedWebhook(d1, ws, {
+      url: "https://ws-level.example.com/hook",
+      events: JSON.stringify(["task.created", "workspace.member_joined"]),
+      active: true,
+      // No projectId — workspace-level
+    });
+
+    // Project-scoped event should reach it
+    const count1 = await dispatchWebhookEvent(db, ctx, ws, "task.created", { title: "Test" }, "some-proj");
+    await flush();
+    expect(count1).toBe(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    fetchSpy.mockClear();
+
+    // Workspace-scoped event should also reach it
+    const { ctx: ctx2, flush: flush2 } = createAwaitableExecutionCtx();
+    const count2 = await dispatchWebhookEvent(db, ctx2, ws, "workspace.member_joined", { userId: "u2" });
+    await flush2();
+    expect(count2).toBe(1);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("mixed: workspace + project-scoped webhooks filter correctly", async () => {
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const { ctx, flush } = createAwaitableExecutionCtx();
+
+    const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Mixed Scope WS" });
+    const projX = await seedProject(d1, ws, { name: "Proj X" });
+    // Workspace-level webhook
+    await seedWebhook(d1, ws, {
+      name: "WS Hook",
+      url: "https://mixed-ws.example.com/hook",
+      events: JSON.stringify(["task.created"]),
+      active: true,
+    });
+    // Project-scoped webhook for projX
+    await seedWebhook(d1, ws, {
+      name: "Proj Hook",
+      url: "https://mixed-proj.example.com/hook",
+      events: JSON.stringify(["task.created"]),
+      active: true,
+      projectId: projX,
+    });
+
+    // Event from projX should reach both webhooks
+    const count = await dispatchWebhookEvent(db, ctx, ws, "task.created", { title: "Mixed" }, projX);
+    await flush();
+    expect(count).toBe(2);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it("dispatches to multiple matching webhooks and returns correct count", async () => {

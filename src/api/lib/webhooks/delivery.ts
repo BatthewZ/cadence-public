@@ -49,10 +49,21 @@ export async function dispatchWebhookEvent(
   workspaceId: string,
   event: WebhookEventType,
   payload: Record<string, unknown>,
+  projectId?: string | null,
 ): Promise<number> {
   try {
     // Use Drizzle select with raw SQL for json_each() to match webhooks
     // subscribed to this event. D1 supports SQLite JSON functions.
+    //
+    // Project scoping rules:
+    // - Workspace-level webhooks (projectId IS NULL) always fire for all events.
+    // - Project-scoped webhooks only fire when the event's projectId matches.
+    // - Workspace-scoped events (no projectId in the dispatch call) only reach
+    //   workspace-level webhooks.
+    const projectFilter = projectId
+      ? sql`(${webhook.projectId} IS NULL OR ${webhook.projectId} = ${projectId})`
+      : sql`${webhook.projectId} IS NULL`;
+
     const rows = await db
       .select()
       .from(webhook)
@@ -61,6 +72,7 @@ export async function dispatchWebhookEvent(
           eq(webhook.workspaceId, workspaceId),
           eq(webhook.active, true),
           sql`EXISTS (SELECT 1 FROM json_each(${webhook.events}) je WHERE je.value = ${event})`,
+          projectFilter,
         ),
       );
 
@@ -303,6 +315,7 @@ export async function processWebhookRetries(db: Database): Promise<number> {
         webhookActive: webhook.active,
         webhookConsecutiveFailures: webhook.consecutiveFailures,
         webhookWorkspaceId: webhook.workspaceId,
+        webhookProjectId: webhook.projectId,
         webhookName: webhook.name,
         webhookEvents: webhook.events,
         webhookCreatedAt: webhook.createdAt,
@@ -335,6 +348,7 @@ export async function processWebhookRetries(db: Database): Promise<number> {
       const webhookRow: WebhookRow = {
         id: row.delivery.webhookId,
         workspaceId: row.webhookWorkspaceId,
+        projectId: row.webhookProjectId,
         name: row.webhookName,
         url: row.webhookUrl,
         secret: row.webhookSecret,

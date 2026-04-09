@@ -30,6 +30,20 @@ export const WEBHOOK_EVENT_TYPES = [
 
 export type WebhookEventType = (typeof WEBHOOK_EVENT_TYPES)[number];
 
+/** Events that belong to a specific project (task.* and project.*). */
+export const PROJECT_SCOPED_EVENTS: ReadonlySet<WebhookEventType> = new Set(
+  WEBHOOK_EVENT_TYPES.filter(
+    (e) => e.startsWith("task.") || e.startsWith("project."),
+  ),
+);
+
+/** Events that are workspace-wide and have no project context (workspace.* and invitation.*). */
+export const WORKSPACE_SCOPED_EVENTS: ReadonlySet<WebhookEventType> = new Set(
+  WEBHOOK_EVENT_TYPES.filter(
+    (e) => e.startsWith("workspace.") || e.startsWith("invitation."),
+  ),
+);
+
 /** Groups derived from WEBHOOK_EVENT_TYPES by prefix so new events are automatically categorized. */
 export const WEBHOOK_EVENT_GROUPS = WEBHOOK_EVENT_TYPES.reduce<
   Record<string, WebhookEventType[]>

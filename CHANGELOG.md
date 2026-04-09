@@ -4,6 +4,14 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.11.0] - 2026-04-09
+
+### Added
+
+- Project-scoped webhooks: optionally limit a webhook to fire only for events from a specific project
+- Validation that project-scoped webhooks cannot subscribe to workspace or invitation events
+- Project scope selector in webhook create/edit dialogs with automatic event filtering
+
 ## [1.10.1] - 2026-04-06
 
 ### Changed

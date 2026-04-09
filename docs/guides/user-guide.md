@@ -283,8 +283,9 @@ Webhooks let external systems receive real-time HTTP notifications when events h
 Go to **Settings > Webhooks** and click **Create Webhook**:
 1. Give it a name
 2. Enter your endpoint URL (HTTPS required in production; HTTP allowed in dev mode)
-3. Select which events to subscribe to
-4. Copy the signing secret — it's only shown once
+3. Optionally select a **project scope** — when set, the webhook only fires for events from that project. Workspace and invitation events are unavailable for project-scoped webhooks.
+4. Select which events to subscribe to
+5. Copy the signing secret — it's only shown once
 
 ### Verifying Deliveries
 

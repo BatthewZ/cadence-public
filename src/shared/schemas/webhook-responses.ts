@@ -10,6 +10,10 @@ export const webhookResponseSchema = z
   .object({
     id: z.string().uuid(),
     workspaceId: z.string().uuid(),
+    projectId: z.string().uuid().nullable().openapi({
+      description:
+        "When set, the webhook only fires for events from this project. Null means all workspace events.",
+    }),
     name: z.string(),
     url: z.string().url(),
     events: z.string().openapi({

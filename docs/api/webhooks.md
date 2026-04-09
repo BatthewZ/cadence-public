@@ -2,7 +2,7 @@
 
 ## Overview
 
-Webhooks allow external systems to receive real-time notifications when events occur in a Cadence workspace. When a subscribed event fires (e.g. a task is created, a project member is added), Cadence sends an HTTP POST request to your configured endpoint with a JSON payload describing the event.
+Webhooks allow external systems to receive real-time notifications when events occur in a Cadence workspace. When a subscribed event fires (e.g. a task is created, a project member is added), Cadence sends an HTTP POST request to your configured endpoint with a JSON payload describing the event. Webhooks can optionally be scoped to a specific project so they only fire for events from that project.
 
 Common use cases:
 
@@ -62,6 +62,36 @@ There are 23 event types organized into four domains. Each webhook subscription 
 | `invitation.created`  | A new workspace invitation is sent       |       No        |
 | `invitation.accepted` | An invitation is accepted by the invitee |       No        |
 | `invitation.revoked`  | An invitation is revoked by an admin     |       No        |
+
+---
+
+## Project Scoping
+
+Webhooks can optionally be scoped to a single project by setting the `projectId` field when creating or updating a webhook.
+
+### Scope Behavior
+
+| Webhook scope | Event origin | Fires? |
+| --- | --- | :---: |
+| Workspace-level (`projectId` is null) | Any event in the workspace | Yes |
+| Project-scoped (`projectId` set) | Event from the matching project | Yes |
+| Project-scoped (`projectId` set) | Event from a different project | No |
+| Project-scoped (`projectId` set) | Workspace or invitation event (no project context) | No |
+
+### Event Restrictions
+
+Events are classified into two categories:
+
+- **Project-scoped events** (`task.*`, `project.*`) — have a project context and can be used with project-scoped webhooks.
+- **Workspace-scoped events** (`workspace.*`, `invitation.*`) — have no project context and are only delivered to workspace-level webhooks.
+
+Project-scoped webhooks **cannot** subscribe to workspace-scoped events (`workspace.*`, `invitation.*`). The API enforces this via a validation rule on both create and update. The UI disables workspace/invitation event groups when a project is selected.
+
+### Validation
+
+- The `projectId` must reference a project that belongs to the same workspace as the webhook.
+- On update, changing `projectId` to a project value while the webhook has workspace-scoped events subscribed will be rejected.
+- Clearing `projectId` (setting to `null`) converts a project-scoped webhook back to workspace-level.
 
 ---
 

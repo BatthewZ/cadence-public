@@ -400,6 +400,7 @@ export async function seedWebhook(
     events?: string;
     active?: boolean;
     consecutiveFailures?: number;
+    projectId?: string;
     createdAt?: Date;
     updatedAt?: Date;
   },
@@ -414,16 +415,17 @@ export async function seedWebhook(
   const url = opts?.url ?? "https://example.com/webhook";
   const secret = opts?.secret ?? "test-secret-hex-string";
   const events = opts?.events ?? JSON.stringify(["task.created"]);
+  const projectId = opts?.projectId ?? null;
 
   await d1
     .prepare(
-      `INSERT INTO webhook (id, workspaceId, name, url, secret, events, active, consecutiveFailures, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO webhook (id, workspaceId, projectId, name, url, secret, events, active, consecutiveFailures, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
-    .bind(id, workspaceId, name, url, secret, events, active, consecutiveFailures, createdAt, updatedAt)
+    .bind(id, workspaceId, projectId, name, url, secret, events, active, consecutiveFailures, createdAt, updatedAt)
     .run();
 
-  return { id, workspaceId, name, url, secret, events, active, consecutiveFailures, createdAt, updatedAt };
+  return { id, workspaceId, projectId, name, url, secret, events, active, consecutiveFailures, createdAt, updatedAt };
 }
 
 /** Create a webhook delivery record. Returns the created delivery object. */

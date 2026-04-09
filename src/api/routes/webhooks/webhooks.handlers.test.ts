@@ -12,6 +12,7 @@ import {
   createTestD1,
   fakeAuth,
   jsonRequest,
+  seedProject,
   seedUser,
   seedWebhook,
   seedWebhookDelivery,
@@ -175,6 +176,59 @@ describe("createWebhook", () => {
     expect(body.error).toContain("20");
   });
 
+  it("creates a project-scoped webhook with valid projectId", async () => {
+    const projWsId = await seedWorkspace(d1, TEST_USER.id, { name: "Proj Create WS" });
+    const projId = await seedProject(d1, projWsId, { name: "Proj A" });
+    const app = buildApp();
+    const req = jsonRequest("POST", `/workspaces/${projWsId}/webhooks`, {
+      name: "Project Hook",
+      url: "https://hooks.example.com/proj",
+      events: ["task.created"],
+      projectId: projId,
+    });
+    const res = await app.request(req, undefined, env);
+
+    expect(res.status).toBe(201);
+    const body = await res.json<{
+      webhook: { projectId: string | null };
+    }>();
+    expect(body.webhook.projectId).toBe(projId);
+  });
+
+  it("rejects projectId from a different workspace with 400", async () => {
+    const wsA = await seedWorkspace(d1, TEST_USER.id, { name: "WS A for proj" });
+    const wsB = await seedWorkspace(d1, TEST_USER.id, { name: "WS B for proj" });
+    const projB = await seedProject(d1, wsB, { name: "Proj in B" });
+
+    const app = buildApp();
+    const req = jsonRequest("POST", `/workspaces/${wsA}/webhooks`, {
+      name: "Cross-WS Hook",
+      url: "https://hooks.example.com/cross",
+      events: ["task.created"],
+      projectId: projB,
+    });
+    const res = await app.request(req, undefined, env);
+
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toContain("Project not found");
+  });
+
+  it("rejects project-scoped webhook with workspace-scoped events", async () => {
+    const projWsId = await seedWorkspace(d1, TEST_USER.id, { name: "Proj Events WS" });
+    const projId = await seedProject(d1, projWsId, { name: "Proj E" });
+    const app = buildApp();
+    const req = jsonRequest("POST", `/workspaces/${projWsId}/webhooks`, {
+      name: "Bad Events Hook",
+      url: "https://hooks.example.com/bad-events",
+      events: ["task.created", "workspace.member_joined"],
+      projectId: projId,
+    });
+    const res = await app.request(req, undefined, env);
+
+    expect(res.status).toBe(400);
+  });
+
   it("validates required fields and returns 400 on missing name", async () => {
     const app = buildApp();
     const req = jsonRequest("POST", `/workspaces/${workspaceId}/webhooks`, {
@@ -312,6 +366,30 @@ describe("listWebhooks", () => {
     expect(res.status).toBe(200);
     const body = await res.json<{ webhooks: Array<unknown> }>();
     expect(body.webhooks).toHaveLength(0);
+  });
+
+  it("includes projectId in list response", async () => {
+    const projListWsId = await seedWorkspace(d1, TEST_USER.id, { name: "ProjList WS" });
+    const projId = await seedProject(d1, projListWsId, { name: "Listed Proj" });
+    await seedWebhook(d1, projListWsId, {
+      name: "Proj Listed Hook",
+      projectId: projId,
+    });
+    await seedWebhook(d1, projListWsId, {
+      name: "WS Listed Hook",
+    });
+
+    const app = buildApp();
+    const res = await app.request(`/workspaces/${projListWsId}/webhooks`, undefined, env);
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      webhooks: Array<{ name: string; projectId: string | null }>;
+    }>();
+    const projHook = body.webhooks.find((w) => w.name === "Proj Listed Hook");
+    const wsHook = body.webhooks.find((w) => w.name === "WS Listed Hook");
+    expect(projHook?.projectId).toBe(projId);
+    expect(wsHook?.projectId).toBeNull();
   });
 
   it("enforces cross-workspace isolation", async () => {
@@ -610,6 +688,69 @@ describe("updateWebhook", () => {
       webhook: Record<string, unknown>;
     }>();
     expect(body.webhook).not.toHaveProperty("secret");
+  });
+
+  it("sets projectId on update", async () => {
+    const projId = await seedProject(d1, updateWsId, { name: "Update Proj" });
+    const hook = await seedWebhook(d1, updateWsId, {
+      name: "Scope Me Hook",
+      events: JSON.stringify(["task.created"]),
+    });
+    const app = buildApp();
+    const req = jsonRequest(
+      "PATCH",
+      `/workspaces/${updateWsId}/webhooks/${hook.id}`,
+      { projectId: projId },
+    );
+    const res = await app.request(req, undefined, env);
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      webhook: { projectId: string | null };
+    }>();
+    expect(body.webhook.projectId).toBe(projId);
+  });
+
+  it("clears projectId by setting it to null", async () => {
+    const projId = await seedProject(d1, updateWsId, { name: "Clear Proj" });
+    const hook = await seedWebhook(d1, updateWsId, {
+      name: "Unscope Me Hook",
+      events: JSON.stringify(["task.created"]),
+      projectId: projId,
+    });
+    const app = buildApp();
+    const req = jsonRequest(
+      "PATCH",
+      `/workspaces/${updateWsId}/webhooks/${hook.id}`,
+      { projectId: null },
+    );
+    const res = await app.request(req, undefined, env);
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      webhook: { projectId: string | null };
+    }>();
+    expect(body.webhook.projectId).toBeNull();
+  });
+
+  it("rejects update that would add workspace-scoped events to project-scoped webhook", async () => {
+    const projId = await seedProject(d1, updateWsId, { name: "Cross-val Proj" });
+    const hook = await seedWebhook(d1, updateWsId, {
+      name: "Cross-val Hook",
+      events: JSON.stringify(["task.created"]),
+      projectId: projId,
+    });
+    const app = buildApp();
+    const req = jsonRequest(
+      "PATCH",
+      `/workspaces/${updateWsId}/webhooks/${hook.id}`,
+      { events: ["task.created", "workspace.member_joined"] },
+    );
+    const res = await app.request(req, undefined, env);
+
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toContain("workspace or invitation");
   });
 
   it("returns 404 for non-existent webhook", async () => {

@@ -6,7 +6,7 @@ import { Divider, Row, Stack } from "@/web/components/layout";
 import { Alert, Button, Dialog, Text } from "@/web/components/ui";
 
 import { SecretDisplay } from "./SecretDisplay";
-import { WebhookFormFields } from "./WebhookFormFields";
+import { type ProjectOption, WebhookFormFields } from "./WebhookFormFields";
 
 export function EditWebhookDialog({
   open,
@@ -19,6 +19,9 @@ export function EditWebhookDialog({
   onEventsChange,
   active,
   onActiveChange,
+  projectId,
+  onProjectIdChange,
+  projects,
   regeneratedSecret,
   onCopiedSecret,
   isPending,
@@ -36,6 +39,9 @@ export function EditWebhookDialog({
   onEventsChange: (value: WebhookEventType[]) => void;
   active: boolean;
   onActiveChange: (value: boolean) => void;
+  projectId: string | null;
+  onProjectIdChange: (value: string | null) => void;
+  projects: ProjectOption[];
   regeneratedSecret: string | null;
   onCopiedSecret: () => void;
   isPending: boolean;
@@ -71,6 +77,9 @@ export function EditWebhookDialog({
               onEventsChange={onEventsChange}
               active={active}
               onActiveChange={onActiveChange}
+              projectId={projectId}
+              onProjectIdChange={onProjectIdChange}
+              projects={projects}
             />
 
             <Divider />

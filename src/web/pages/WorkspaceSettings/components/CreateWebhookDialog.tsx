@@ -5,7 +5,7 @@ import { Row, Stack } from "@/web/components/layout";
 import { Alert, Button, Dialog, Text } from "@/web/components/ui";
 
 import { SecretDisplay } from "./SecretDisplay";
-import { WebhookFormFields } from "./WebhookFormFields";
+import { type ProjectOption, WebhookFormFields } from "./WebhookFormFields";
 
 export function CreateWebhookDialog({
   open,
@@ -16,6 +16,9 @@ export function CreateWebhookDialog({
   onUrlChange,
   events,
   onEventsChange,
+  projectId,
+  onProjectIdChange,
+  projects,
   newSecret,
   onCopiedSecret,
   isPending,
@@ -30,6 +33,9 @@ export function CreateWebhookDialog({
   onUrlChange: (value: string) => void;
   events: WebhookEventType[];
   onEventsChange: (value: WebhookEventType[]) => void;
+  projectId: string | null;
+  onProjectIdChange: (value: string | null) => void;
+  projects: ProjectOption[];
   newSecret: string | null;
   onCopiedSecret: () => void;
   isPending: boolean;
@@ -62,6 +68,9 @@ export function CreateWebhookDialog({
               urlId="create-wh-url"
               events={events}
               onEventsChange={onEventsChange}
+              projectId={projectId}
+              onProjectIdChange={onProjectIdChange}
+              projects={projects}
             />
 
             {errorMessage && (

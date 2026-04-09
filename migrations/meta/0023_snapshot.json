@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "ee47ea5c-65c6-49af-b5a1-fea9e24155ec",
-  "prevId": "85550bd5-a135-4f51-b713-bc79f1c341c9",
+  "id": "2f533600-cf28-4730-b78e-939781b6db40",
+  "prevId": "dcdf76b2-38da-48e2-a47f-d3d4bb300804",
   "tables": {
     "account": {
       "name": "account",
@@ -609,6 +609,66 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "legal_acceptance": {
+      "name": "legal_acceptance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "userId": {
+          "name": "userId",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "tosVersion": {
+          "name": "tosVersion",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "acceptedAt": {
+          "name": "acceptedAt",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "legal_acceptance_user_idx": {
+          "name": "legal_acceptance_user_idx",
+          "columns": [
+            "userId"
+          ],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "legal_acceptance_userId_user_id_fk": {
+          "name": "legal_acceptance_userId_user_id_fk",
+          "tableFrom": "legal_acceptance",
+          "tableTo": "user",
+          "columnsFrom": [
+            "userId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "notification": {
       "name": "notification",
       "columns": {
@@ -1097,10 +1157,11 @@
         }
       },
       "indexes": {
-        "comment_task_idx": {
-          "name": "comment_task_idx",
+        "comment_task_created_idx": {
+          "name": "comment_task_created_idx",
           "columns": [
-            "taskId"
+            "taskId",
+            "createdAt"
           ],
           "isUnique": false
         }

@@ -44,6 +44,7 @@ import { SettingsNav } from "./SettingsNav";
 interface WebhookRow {
   id: string;
   workspaceId: string;
+  projectId: string | null;
   name: string;
   url: string;
   events: string; // JSON-stringified array
@@ -58,6 +59,15 @@ interface WebhookRow {
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
+/** Look up a project name by ID from the projects list. */
+function projectName(
+  projects: Array<{ id: string; name: string }>,
+  projectId: string | null,
+): string | null {
+  if (!projectId) return null;
+  return projects.find((p) => p.id === projectId)?.name ?? null;
+}
+
 function parseEvents(raw: string): WebhookEventType[] {
   try {
     return JSON.parse(raw) as WebhookEventType[];
@@ -71,7 +81,7 @@ function parseEvents(raw: string): WebhookEventType[] {
 /* ------------------------------------------------------------------ */
 
 export default function WorkspaceWebhooks() {
-  const { workspace } = useWorkspace();
+  const { workspace, projects } = useWorkspace();
   const { toast } = useToast();
   const { canManageWorkspace } = useWorkspacePermissions();
   const qc = useQueryClient();
@@ -87,6 +97,7 @@ export default function WorkspaceWebhooks() {
   const [createName, setCreateName] = useState("");
   const [createUrl, setCreateUrl] = useState("");
   const [createEvents, setCreateEvents] = useState<WebhookEventType[]>([]);
+  const [createProjectId, setCreateProjectId] = useState<string | null>(null);
   const [newSecret, setNewSecret] = useState<string | null>(null);
 
   // ---- Edit form state -----------------------------------------------
@@ -94,6 +105,7 @@ export default function WorkspaceWebhooks() {
   const [editUrl, setEditUrl] = useState("");
   const [editEvents, setEditEvents] = useState<WebhookEventType[]>([]);
   const [editActive, setEditActive] = useState(true);
+  const [editProjectId, setEditProjectId] = useState<string | null>(null);
   const [regeneratedSecret, setRegeneratedSecret] = useState<string | null>(null);
 
   // ---- Test state ----------------------------------------------------
@@ -207,6 +219,7 @@ export default function WorkspaceWebhooks() {
     setCreateName("");
     setCreateUrl("");
     setCreateEvents([]);
+    setCreateProjectId(null);
     setNewSecret(null);
     createMutation.reset();
     setCreateDialogOpen(true);
@@ -225,6 +238,7 @@ export default function WorkspaceWebhooks() {
         name: createName.trim(),
         url: createUrl.trim(),
         events: createEvents,
+        ...(createProjectId ? { projectId: createProjectId } : {}),
       });
     } catch {
       // error state handled by mutation
@@ -236,6 +250,7 @@ export default function WorkspaceWebhooks() {
     setEditUrl(wh.url);
     setEditEvents(parseEvents(wh.events));
     setEditActive(wh.active);
+    setEditProjectId(wh.projectId);
     setRegeneratedSecret(null);
     updateMutation.reset();
     setEditDialogOpen(true);
@@ -256,6 +271,7 @@ export default function WorkspaceWebhooks() {
         url: editUrl.trim(),
         events: editEvents,
         active: editActive,
+        projectId: editProjectId,
       });
     } catch {
       // error state handled by mutation
@@ -356,6 +372,16 @@ export default function WorkspaceWebhooks() {
                     </div>
                     <div>
                       <Text variant="body-3" color="muted">
+                        Scope
+                      </Text>
+                      <Text variant="body-2" className="mt-r6">
+                        {wh.projectId
+                          ? projectName(projects, wh.projectId) ?? "Specific project"
+                          : "All projects"}
+                      </Text>
+                    </div>
+                    <div className="md:col-span-2">
+                      <Text variant="body-3" color="muted">
                         Subscribed Events
                       </Text>
                       <div className="flex flex-wrap gap-r6 mt-r6">
@@ -449,6 +475,9 @@ export default function WorkspaceWebhooks() {
             onEventsChange={setEditEvents}
             active={editActive}
             onActiveChange={setEditActive}
+            projectId={editProjectId}
+            onProjectIdChange={setEditProjectId}
+            projects={projects}
             regeneratedSecret={regeneratedSecret}
             onCopiedSecret={() => toast("Secret copied to clipboard")}
             isPending={updateMutation.isPending}
@@ -559,6 +588,11 @@ export default function WorkspaceWebhooks() {
                     </Row>
 
                     <Row gap="r5" align="center" className="shrink-0">
+                      {wh.projectId && (
+                        <Badge variant="info">
+                          {projectName(projects, wh.projectId) ?? "Project"}
+                        </Badge>
+                      )}
                       <Text variant="body-3" color="muted" as="span">
                         {events.length} {events.length === 1 ? "event" : "events"}
                       </Text>
@@ -590,6 +624,9 @@ export default function WorkspaceWebhooks() {
           onUrlChange={setCreateUrl}
           events={createEvents}
           onEventsChange={setCreateEvents}
+          projectId={createProjectId}
+          onProjectIdChange={setCreateProjectId}
+          projects={projects}
           newSecret={newSecret}
           onCopiedSecret={() => toast("Secret copied to clipboard")}
           isPending={createMutation.isPending}

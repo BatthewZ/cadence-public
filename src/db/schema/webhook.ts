@@ -1,5 +1,6 @@
 import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
+import { project } from "./project";
 import { workspace } from "./workspace";
 
 export const webhook = sqliteTable(
@@ -9,6 +10,9 @@ export const webhook = sqliteTable(
     workspaceId: text("workspaceId")
       .notNull()
       .references(() => workspace.id, { onDelete: "cascade" }),
+    projectId: text("projectId").references(() => project.id, {
+      onDelete: "cascade",
+    }),
     name: text("name").notNull(),
     url: text("url").notNull(),
     secret: text("secret").notNull(),
@@ -21,6 +25,7 @@ export const webhook = sqliteTable(
   (table) => [
     index("webhook_workspace_idx").on(table.workspaceId),
     index("webhook_workspace_active_idx").on(table.workspaceId, table.active),
+    index("webhook_project_idx").on(table.projectId),
   ],
 );
 

@@ -107,7 +107,7 @@ const createWebhookRoute = createRoute({
     },
     400: {
       content: { "application/json": { schema: validationErrorResponseSchema } },
-      description: "Validation error or invalid webhook URL",
+      description: "Validation error, invalid webhook URL, or invalid projectId",
     },
     401: unauthorizedResponse,
     403: forbiddenResponse,
@@ -185,7 +185,7 @@ const updateWebhookRoute = createRoute({
     },
     400: {
       content: { "application/json": { schema: validationErrorResponseSchema } },
-      description: "Validation error or invalid webhook URL",
+      description: "Validation error, invalid webhook URL, or invalid projectId",
     },
     401: unauthorizedResponse,
     403: forbiddenResponse,

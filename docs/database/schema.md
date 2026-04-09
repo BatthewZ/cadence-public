@@ -393,6 +393,7 @@ export * from "./workspace";
 | --------------------- | ----------------------------- | ---------------------------------------------- | -------------------------------------------------- |
 | `id`                  | `text`                        | **Primary key**                                | Unique webhook identifier                          |
 | `workspaceId`         | `text`                        | `NOT NULL`, **FK** -> `workspace.id` (cascade) | References the workspace                           |
+| `projectId`           | `text`                        | **FK** -> `project.id` (cascade)               | Optional project scope — when set, webhook only fires for events from this project |
 | `name`                | `text`                        | `NOT NULL`                                     | Human-readable webhook name                        |
 | `url`                 | `text`                        | `NOT NULL`                                     | HTTPS endpoint URL for delivery                    |
 | `secret`              | `text`                        | `NOT NULL`                                     | 256-bit hex secret for HMAC-SHA256 signing         |
@@ -402,7 +403,7 @@ export * from "./workspace";
 | `createdAt`           | `integer` (mode: `timestamp`) | `NOT NULL`                                     | Creation timestamp                                 |
 | `updatedAt`           | `integer` (mode: `timestamp`) | `NOT NULL`                                     | Last update timestamp                              |
 
-**Indexes:** index on `workspaceId`, composite index on (`workspaceId`, `active`)
+**Indexes:** index on `workspaceId`, composite index on (`workspaceId`, `active`), index on `projectId`
 
 #### `webhookDelivery`
 
@@ -465,6 +466,7 @@ export * from "./workspace";
 - `invitation.workspaceId` -> `workspace.id` (foreign key, cascade delete)
 - `invitation.invitedBy` -> `user.id` (foreign key, set null on delete)
 - `webhook.workspaceId` -> `workspace.id` (foreign key, cascade delete)
+- `webhook.projectId` -> `project.id` (foreign key, cascade delete)
 - `webhookDelivery.webhookId` -> `webhook.id` (foreign key, cascade delete)
 - `legalAcceptance.userId` -> `user.id` (foreign key, cascade delete)
 
