@@ -13,15 +13,15 @@ import { validJson } from "../../lib/validated";
 import {
   deliverWebhook,
   generateWebhookSecret,
+  isDevMode,
+  MAX_WEBHOOKS_PER_WORKSPACE,
+  omitSecret,
   validateWebhookUrl,
 } from "../../lib/webhooks";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-/** Maximum number of webhooks allowed per workspace. */
-const MAX_WEBHOOKS_PER_WORKSPACE = 20;
 
 /**
  * Verify that a project belongs to the given workspace.
@@ -43,26 +43,6 @@ async function projectBelongsToWorkspace(
     )
     .limit(1);
   return !!proj;
-}
-
-/** Check if the worker is running in local dev mode. */
-function isDevMode(c: Context<AppEnv>): boolean {
-  const authUrl = c.env.BETTER_AUTH_URL ?? "";
-  return authUrl.includes("localhost") || authUrl.includes("127.0.0.1");
-}
-
-/**
- * Strip the `secret` field from a webhook row.
- *
- * Webhook secrets must only be exposed on creation or explicit regeneration
- * to avoid accidental leakage through list/detail endpoints.
- */
-function omitSecret<T extends Record<string, unknown> & { secret: string }>(
-  row: T,
-): Omit<T, "secret"> {
-  return Object.fromEntries(
-    Object.entries(row).filter(([key]) => key !== "secret"),
-  ) as Omit<T, "secret">;
 }
 
 // ---------------------------------------------------------------------------

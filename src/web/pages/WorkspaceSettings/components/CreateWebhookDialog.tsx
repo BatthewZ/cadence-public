@@ -19,6 +19,7 @@ export function CreateWebhookDialog({
   projectId,
   onProjectIdChange,
   projects,
+  fixedProjectScope,
   newSecret,
   onCopiedSecret,
   isPending,
@@ -36,6 +37,7 @@ export function CreateWebhookDialog({
   projectId: string | null;
   onProjectIdChange: (value: string | null) => void;
   projects: ProjectOption[];
+  fixedProjectScope?: boolean;
   newSecret: string | null;
   onCopiedSecret: () => void;
   isPending: boolean;
@@ -71,6 +73,7 @@ export function CreateWebhookDialog({
               projectId={projectId}
               onProjectIdChange={onProjectIdChange}
               projects={projects}
+              fixedProjectScope={fixedProjectScope}
             />
 
             {errorMessage && (

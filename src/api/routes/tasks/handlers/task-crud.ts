@@ -21,6 +21,9 @@ import {
   computeChanges,
   detectAdditionalEvents,
   dispatchWebhook,
+  resolveTaskEnrichment,
+  resolveTaskGroup,
+  resolveUser,
 } from "../../../lib/webhook-payloads";
 import { type ActivityEntry, logActivity, logActivityBatch } from "../log-activity";
 
@@ -121,8 +124,9 @@ export async function createTask(c: Context<AppEnv>) {
   });
 
   // Non-blocking webhook dispatch for task.created
+  const createdEnrichment = await resolveTaskEnrichment(db, newTask as Parameters<typeof resolveTaskEnrichment>[1]);
   dispatchWebhook(c, projectId, [
-    { event: "task.created", data: buildTaskEventData(newTask as Parameters<typeof buildTaskEventData>[0]) },
+    { event: "task.created", data: buildTaskEventData(newTask as Parameters<typeof buildTaskEventData>[0], createdEnrichment) },
   ]);
 
   // Enrich response with assignee display fields so the frontend can render
@@ -444,12 +448,32 @@ export async function updateTask(c: Context<AppEnv>) {
 
   // Non-blocking webhook dispatch for task.updated + additional events
   {
-    const data = buildTaskEventData(updated);
+    const updatedEnrichment = await resolveTaskEnrichment(db, updated);
+    const data = buildTaskEventData(updated, updatedEnrichment);
     const changes = computeChanges(
       currentTask as Record<string, unknown>,
       updated as Record<string, unknown>,
       ["title", "description", "assigneeId", "priority", "dueDate", "cost", "icon", "taskGroupId", "coverImageKey", "coverImagePosition", "recurrenceRule"],
     );
+
+    // Enrich ID-only changes with human-readable objects
+    if (changes) {
+      if (changes.assigneeId) {
+        const [prevUser, nextUser] = await Promise.all([
+          resolveUser(db, changes.assigneeId.from as string | null),
+          resolveUser(db, changes.assigneeId.to as string | null),
+        ]);
+        changes.assignee = { from: prevUser, to: nextUser };
+      }
+      if (changes.taskGroupId) {
+        const [prevGroup, nextGroup] = await Promise.all([
+          resolveTaskGroup(db, changes.taskGroupId.from as string | null),
+          resolveTaskGroup(db, changes.taskGroupId.to as string | null),
+        ]);
+        changes.taskGroup = { from: prevGroup, to: nextGroup };
+      }
+    }
+
     const additionalEvents = detectAdditionalEvents(
       "task.updated",
       currentTask as Record<string, unknown>,
@@ -484,8 +508,9 @@ export async function deleteTask(c: Context<AppEnv>) {
   await db.delete(task).where(eq(task.id, taskId));
 
   // Non-blocking webhook dispatch for task.deleted
+  const deletedEnrichment = await resolveTaskEnrichment(db, found);
   dispatchWebhook(c, found.projectId, [
-    { event: "task.deleted", data: buildTaskEventData(found) },
+    { event: "task.deleted", data: buildTaskEventData(found, deletedEnrichment) },
   ]);
 
   return c.json({ ok: true });

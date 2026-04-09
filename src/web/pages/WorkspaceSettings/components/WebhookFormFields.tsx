@@ -24,6 +24,8 @@ export function WebhookFormFields({
   projectId,
   onProjectIdChange,
   projects,
+  /** When true, the project selector is hidden and events are always project-scoped. */
+  fixedProjectScope,
 }: {
   name: string;
   onNameChange: (value: string) => void;
@@ -36,12 +38,13 @@ export function WebhookFormFields({
   active?: boolean;
   onActiveChange?: (value: boolean) => void;
   projectId: string | null;
-  onProjectIdChange: (value: string | null) => void;
-  projects: ProjectOption[];
+  onProjectIdChange?: (value: string | null) => void;
+  projects?: ProjectOption[];
+  fixedProjectScope?: boolean;
 }) {
   function handleProjectChange(value: string) {
     const newProjectId = value || null;
-    onProjectIdChange(newProjectId);
+    onProjectIdChange?.(newProjectId);
     // When scoping to a project, remove any workspace-scoped events
     if (newProjectId) {
       const filtered = events.filter((e) => !WORKSPACE_SCOPED_EVENTS.has(e));
@@ -78,24 +81,26 @@ export function WebhookFormFields({
         </Text>
       </Field>
 
-      <Field>
-        <Label htmlFor="wh-project-scope">Project scope</Label>
-        <Select
-          id="wh-project-scope"
-          value={projectId ?? ""}
-          onChange={(e) => handleProjectChange(e.target.value)}
-        >
-          <option value="">All projects</option>
-          {projects.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </Select>
-        <Text variant="body-3" color="muted">
-          Optionally limit this webhook to events from a specific project.
-        </Text>
-      </Field>
+      {!fixedProjectScope && projects && onProjectIdChange && (
+        <Field>
+          <Label htmlFor="wh-project-scope">Project scope</Label>
+          <Select
+            id="wh-project-scope"
+            value={projectId ?? ""}
+            onChange={(e) => handleProjectChange(e.target.value)}
+          >
+            <option value="">All projects</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </Select>
+          <Text variant="body-3" color="muted">
+            Optionally limit this webhook to events from a specific project.
+          </Text>
+        </Field>
+      )}
 
       {onActiveChange !== undefined && active !== undefined && (
         <Field>
@@ -116,7 +121,7 @@ export function WebhookFormFields({
       <Text variant="body-2" weight="semibold">
         Events
       </Text>
-      <WebhookEventSelector value={events} onChange={onEventsChange} projectScoped={!!projectId} />
+      <WebhookEventSelector value={events} onChange={onEventsChange} projectScoped={fixedProjectScope || !!projectId} />
     </>
   );
 }

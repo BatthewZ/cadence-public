@@ -7,6 +7,7 @@ import {
   duplicateProjectSchema,
   updateProjectSchema,
 } from "../../../shared/schemas/project";
+import { createWebhookSchema, updateWebhookSchema } from "../../../shared/schemas/webhook";
 import type { AppEnv } from "../../env";
 import {
   requireProjectAccess,
@@ -23,6 +24,14 @@ import {
   listLabels,
   updateLabel,
 } from "./labels.handlers";
+import {
+  createProjectWebhook,
+  deleteProjectWebhook,
+  getProjectWebhook,
+  listProjectWebhooks,
+  testProjectWebhook,
+  updateProjectWebhook,
+} from "./project-webhooks.handlers";
 import {
   addMember,
   createProject,
@@ -155,6 +164,60 @@ app.delete(
   requireAuth,
   requireProjectRole("admin"),
   deleteLabel,
+);
+
+// ---------------------------------------------------------------------------
+// Project-scoped webhook routes
+// ---------------------------------------------------------------------------
+
+app.get(
+  "/projects/:projectId/webhooks",
+  requireAuth,
+  requireProjectRole("admin"),
+  rateLimit({ max: 60, windowSeconds: 60, prefix: "project-webhook-read" }),
+  listProjectWebhooks,
+);
+
+app.post(
+  "/projects/:projectId/webhooks",
+  requireAuth,
+  requireProjectRole("admin"),
+  rateLimit({ max: 20, windowSeconds: 60, prefix: "project-webhook-write" }),
+  validateBody(createWebhookSchema),
+  createProjectWebhook,
+);
+
+app.get(
+  "/projects/:projectId/webhooks/:webhookId",
+  requireAuth,
+  requireProjectRole("admin"),
+  rateLimit({ max: 60, windowSeconds: 60, prefix: "project-webhook-read" }),
+  getProjectWebhook,
+);
+
+app.patch(
+  "/projects/:projectId/webhooks/:webhookId",
+  requireAuth,
+  requireProjectRole("admin"),
+  rateLimit({ max: 20, windowSeconds: 60, prefix: "project-webhook-write" }),
+  validateBody(updateWebhookSchema),
+  updateProjectWebhook,
+);
+
+app.delete(
+  "/projects/:projectId/webhooks/:webhookId",
+  requireAuth,
+  requireProjectRole("admin"),
+  rateLimit({ max: 20, windowSeconds: 60, prefix: "project-webhook-write" }),
+  deleteProjectWebhook,
+);
+
+app.post(
+  "/projects/:projectId/webhooks/:webhookId/test",
+  requireAuth,
+  requireProjectRole("admin"),
+  rateLimit({ max: 5, windowSeconds: 60, prefix: "project-webhook-test" }),
+  testProjectWebhook,
 );
 
 export default app;

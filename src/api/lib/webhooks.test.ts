@@ -612,6 +612,85 @@ describe("deliverWebhook", () => {
     expect(updatedHook.consecutiveFailures).toBe(10);
   });
 
+  it("does not schedule retries for non-retryable status codes (401, 403)", async () => {
+    for (const status of [401, 403, 404, 405, 410]) {
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response("Unauthorized", { status }),
+      );
+
+      const ws = await seedWorkspace(d1, TEST_USER.id, { name: `NonRetry ${status} WS` });
+      const hook = await seedWebhook(d1, ws, {
+        url: `https://nonretry-${status}.example.com/hook`,
+        secret: `secret-nonretry-${status}`,
+        events: JSON.stringify(["task.created"]),
+        consecutiveFailures: 0,
+      });
+
+      const webhookRow = await db
+        .select()
+        .from(webhook)
+        .where(eq(webhook.id, hook.id))
+        .then((rows) => rows[0]);
+
+      const deliveryId = crypto.randomUUID();
+      await deliverWebhook(db, webhookRow, deliveryId, "task.created", { title: "Auth Fail" });
+
+      const delivery = await db
+        .select()
+        .from(webhookDelivery)
+        .where(eq(webhookDelivery.id, deliveryId))
+        .then((rows) => rows[0]);
+
+      expect(delivery).toBeDefined();
+      expect(delivery.success).toBe(false);
+      expect(delivery.statusCode).toBe(status);
+      // Non-retryable: no retry scheduled, maxAttempts capped to current attempt
+      expect(delivery.nextRetryAt).toBeNull();
+      expect(delivery.maxAttempts).toBe(1);
+
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("still schedules retries for retryable status codes (500, 502, 503)", async () => {
+    for (const status of [500, 502, 503]) {
+      vi.spyOn(global, "fetch").mockResolvedValue(
+        new Response("Server Error", { status }),
+      );
+
+      const ws = await seedWorkspace(d1, TEST_USER.id, { name: `Retryable ${status} WS` });
+      const hook = await seedWebhook(d1, ws, {
+        url: `https://retryable-${status}.example.com/hook`,
+        secret: `secret-retryable-${status}`,
+        events: JSON.stringify(["task.created"]),
+        consecutiveFailures: 0,
+      });
+
+      const webhookRow = await db
+        .select()
+        .from(webhook)
+        .where(eq(webhook.id, hook.id))
+        .then((rows) => rows[0]);
+
+      const deliveryId = crypto.randomUUID();
+      await deliverWebhook(db, webhookRow, deliveryId, "task.created", { title: "Server Error" });
+
+      const delivery = await db
+        .select()
+        .from(webhookDelivery)
+        .where(eq(webhookDelivery.id, deliveryId))
+        .then((rows) => rows[0]);
+
+      expect(delivery.success).toBe(false);
+      expect(delivery.statusCode).toBe(status);
+      // Retryable: retry should be scheduled
+      expect(delivery.nextRetryAt).not.toBeNull();
+      expect(delivery.maxAttempts).toBe(5);
+
+      vi.restoreAllMocks();
+    }
+  });
+
   it("sends correct webhook headers", async () => {
     const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
 
@@ -768,6 +847,51 @@ describe("processWebhookRetries", () => {
     expect(updatedDelivery.nextRetryAt).toBeNull();
     // Still marked as failed
     expect(updatedDelivery.success).toBe(false);
+  });
+
+  it("stops retrying when a retry attempt receives a non-retryable status code", async () => {
+    // First attempt failed with 500 (retryable), retry returns 401 (non-retryable)
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response("Unauthorized", { status: 401 }),
+    );
+
+    const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Retry NonRetry WS" });
+    const hook = await seedWebhook(d1, ws, {
+      url: "https://retry-nonretry.example.com/hook",
+      secret: "retry-nonretry-secret",
+      events: JSON.stringify(["task.created"]),
+      active: true,
+      consecutiveFailures: 1,
+    });
+
+    // Seed a delivery that failed with 500 and is due for retry
+    const pastRetryAt = new Date(Date.now() - 120_000);
+    const delivery = await seedWebhookDelivery(d1, hook.id, {
+      event: "task.created",
+      payload: JSON.stringify({ id: "nonretry-on-retry", title: "Stop Retrying" }),
+      statusCode: 500,
+      response: "error",
+      success: false,
+      attempts: 1,
+      maxAttempts: 5,
+      nextRetryAt: pastRetryAt,
+    });
+
+    const count = await processWebhookRetries(db);
+    expect(count).toBeGreaterThanOrEqual(1);
+
+    const updatedDelivery = await db
+      .select()
+      .from(webhookDelivery)
+      .where(eq(webhookDelivery.id, delivery.id))
+      .then((rows) => rows[0]);
+
+    // Should be marked as failed with no further retries
+    expect(updatedDelivery.success).toBe(false);
+    expect(updatedDelivery.statusCode).toBe(401);
+    expect(updatedDelivery.nextRetryAt).toBeNull();
+    // maxAttempts should be capped to current attempt to prevent future pickup
+    expect(updatedDelivery.maxAttempts).toBe(2);
   });
 
   it("respects the batch limit of 50", async () => {

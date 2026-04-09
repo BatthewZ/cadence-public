@@ -8,7 +8,7 @@ import { deferWork } from "../../../lib/defer";
 import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
 import { requireParam } from "../../../lib/params";
-import { buildTaskEventData, dispatchWebhook } from "../../../lib/webhook-payloads";
+import { buildTaskEventData, dispatchWebhook, resolveRecurringTaskEnrichment, resolveTaskEnrichment } from "../../../lib/webhook-payloads";
 import { logRecurringInstanceCreated, spawnNextRecurringInstance } from "../helpers/spawn-recurring-instance";
 import { type ActivityEntry, logActivityBatch } from "../log-activity";
 
@@ -143,14 +143,16 @@ export async function completeTask(c: Context<AppEnv>) {
   }
 
   // Non-blocking webhook dispatch for task.completed
+  const completedEnrichment = await resolveTaskEnrichment(db, updated);
   dispatchWebhook(c, foundTask.projectId, [
-    { event: "task.completed", data: buildTaskEventData(updated) },
+    { event: "task.completed", data: buildTaskEventData(updated, completedEnrichment) },
   ]);
 
   // Non-blocking webhook dispatch for spawned recurring instance
   if (nextRecurringTask) {
+    const recurEnrichment = await resolveRecurringTaskEnrichment(db, nextRecurringTask);
     dispatchWebhook(c, foundTask.projectId, [
-      { event: "task.created", data: buildTaskEventData(nextRecurringTask as Parameters<typeof buildTaskEventData>[0]) },
+      { event: "task.created", data: buildTaskEventData(nextRecurringTask as Parameters<typeof buildTaskEventData>[0], recurEnrichment) },
     ]);
   }
 
@@ -256,8 +258,9 @@ export async function uncompleteTask(c: Context<AppEnv>) {
   }
 
   // Non-blocking webhook dispatch for task.uncompleted
+  const uncompletedEnrichment = await resolveTaskEnrichment(db, updated);
   dispatchWebhook(c, foundTask.projectId, [
-    { event: "task.uncompleted", data: buildTaskEventData(updated) },
+    { event: "task.uncompleted", data: buildTaskEventData(updated, uncompletedEnrichment) },
   ]);
 
   return c.json({ task: updated });

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The API is a Hono application running inside a Cloudflare Worker. All API endpoints are mounted under `/api/*`. The entry point is `src/api/index.ts`.
+The API is a Hono application running inside a Cloudflare Worker. All API endpoints are mounted under `/api/*`. The entry point is `src/api/index.ts`. There are 90 endpoints across workspaces, projects, tasks, labels, attachments, teams, invitations, dashboard, activity, webhooks, and freshness.
 
 ## Documentation
 
@@ -24,7 +24,8 @@ The API is a Hono application running inside a Cloudflare Worker. All API endpoi
 - [Webhooks](./webhooks.md) -- event types, payload format, signature verification, retry/delivery, auto-disable, retention, dev mode, limits, OpenAPI spec
 - [Interactive API Docs](./webhooks.md#interactive-api-documentation) -- Scalar-powered OpenAPI 3.1 reference at `/api/docs` (spec at `/api/openapi.json`)
 - [Webhook Internals](../../src/api/lib/webhooks.ts) -- re-export barrel for `webhooks/` sub-modules: delivery with exponential-backoff retries and cron-driven retry processing ([delivery.ts](../../src/api/lib/webhooks/delivery.ts)), HMAC-SHA256 signing, SSRF-safe URL validation, and secret generation ([utils.ts](../../src/api/lib/webhooks/utils.ts))
-- [Webhook Payloads](../../src/api/lib/webhook-payloads.ts) -- payload envelope builder, change detection (`computeChanges`), domain-specific data extractors (task, project, invitation, member), secondary event detection, context fetcher, `fireWebhookEvent` fire-and-forget dispatch, and `dispatchWebhook` convenience wrapper for Hono handlers
+- [Webhook Payloads](../../src/api/lib/webhook-payloads.ts) -- payload envelope builder, change detection (`computeChanges`), domain-specific data extractors (task, project, invitation, member), enrichment resolvers (`resolveUser`, `resolveTaskGroup`, `resolveTaskEnrichment`), secondary event detection, context fetcher, `fireWebhookEvent` fire-and-forget dispatch, and `dispatchWebhook` convenience wrapper for Hono handlers
+- [Project Webhook Handlers](../../src/api/routes/projects/project-webhooks.handlers.ts) -- CRUD + test delivery for project-scoped webhooks (6 endpoints mounted under `/api/projects/:projectId/webhooks`)
 - [Deferred Work](../../src/api/lib/defer.ts) -- `deferWork()` helper that uses the Cloudflare Workers `waitUntil()` API to run non-critical side-effects (activity logging, notifications) after the response is sent
 - [Recurring Task Spawning](../../src/api/routes/tasks/helpers/spawn-recurring-instance.ts) -- `spawnNextRecurringInstance()` creates the next instance of a recurring task on completion (computes next due date, copies relations, guards against duplicate spawns via unique index); `logRecurringInstanceCreated()` logs activity and notifies the assignee for the new instance
 - [Scheduled Handler](../../src/api/scheduled/index.ts) -- Cloudflare Cron Trigger handler (every 5 min) for webhook retry processing, delivery record cleanup, expired auth record cleanup (sessions + verification tokens), notification cleanup, task activity cleanup, and invitation cleanup. Each task is error-isolated so a single failure does not block others.

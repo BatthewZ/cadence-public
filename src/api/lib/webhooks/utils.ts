@@ -1,4 +1,7 @@
+import type { Context } from "hono";
+
 import { webhook } from "../../../db/schema/webhook";
+import type { AppEnv } from "../../env";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -99,6 +102,33 @@ export function validateWebhookUrl(
   }
 
   return { valid: true };
+}
+
+// ---------------------------------------------------------------------------
+// Shared webhook handler helpers
+// ---------------------------------------------------------------------------
+
+/** Maximum number of webhooks allowed per workspace. */
+export const MAX_WEBHOOKS_PER_WORKSPACE = 20;
+
+/** Check if the worker is running in local dev mode. */
+export function isDevMode(c: Context<AppEnv>): boolean {
+  const authUrl = c.env.BETTER_AUTH_URL ?? "";
+  return authUrl.includes("localhost") || authUrl.includes("127.0.0.1");
+}
+
+/**
+ * Strip the `secret` field from a webhook row.
+ *
+ * Webhook secrets must only be exposed on creation or explicit regeneration
+ * to avoid accidental leakage through list/detail endpoints.
+ */
+export function omitSecret<T extends Record<string, unknown> & { secret: string }>(
+  row: T,
+): Omit<T, "secret"> {
+  return Object.fromEntries(
+    Object.entries(row).filter(([key]) => key !== "secret"),
+  ) as Omit<T, "secret">;
 }
 
 // ---------------------------------------------------------------------------

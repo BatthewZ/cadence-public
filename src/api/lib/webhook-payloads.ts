@@ -5,7 +5,7 @@ import type { Database } from "../../db";
 import { user } from "../../db/schema/auth";
 import { invitation } from "../../db/schema/invitation";
 import { project } from "../../db/schema/project";
-import { task } from "../../db/schema/task";
+import { task, taskGroup } from "../../db/schema/task";
 import { workspace } from "../../db/schema/workspace";
 import type {
   WebhookEventType,
@@ -116,26 +116,128 @@ function normaliseValue(value: unknown): unknown {
 // Domain-specific data extractors
 // ---------------------------------------------------------------------------
 
+/** Resolved user info for enriching webhook payloads. */
+export interface WebhookUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
+/** Resolved task group info for enriching webhook payloads. */
+export interface WebhookTaskGroup {
+  id: string;
+  name: string;
+}
+
+/**
+ * Look up a user's display info by ID for webhook payload enrichment.
+ *
+ * Returns null when the userId is null or the user cannot be found.
+ * This is a single primary-key lookup and adds negligible latency.
+ */
+export async function resolveUser(
+  db: Database,
+  userId: string | null,
+): Promise<WebhookUser | null> {
+  if (!userId) return null;
+  const [row] = await db
+    .select({ id: user.id, name: user.name, email: user.email })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return row ?? null;
+}
+
+/**
+ * Look up a task group's display info by ID.
+ *
+ * Returns null when the groupId is null or the group cannot be found.
+ */
+export async function resolveTaskGroup(
+  db: Database,
+  groupId: string | null,
+): Promise<WebhookTaskGroup | null> {
+  if (!groupId) return null;
+  const [row] = await db
+    .select({ id: taskGroup.id, name: taskGroup.name })
+    .from(taskGroup)
+    .where(eq(taskGroup.id, groupId))
+    .limit(1);
+  return row ?? null;
+}
+
+/** Enrichment context passed to {@link buildTaskEventData}. */
+export interface TaskEventEnrichment {
+  assignee?: WebhookUser | null;
+  completedByUser?: WebhookUser | null;
+  taskGroupInfo?: WebhookTaskGroup | null;
+}
+
+/**
+ * Resolve all enrichment data for a task webhook payload in a single batch.
+ *
+ * Runs up to 3 parallel PK lookups (assignee, completedBy, taskGroup) so the
+ * total added latency is that of a single round-trip, not three sequential ones.
+ */
+export async function resolveTaskEnrichment(
+  db: Database,
+  taskRow: { assigneeId: string | null; completedBy: string | null; taskGroupId: string },
+): Promise<TaskEventEnrichment> {
+  const [assignee, completedByUser, taskGroupInfo] = await Promise.all([
+    resolveUser(db, taskRow.assigneeId),
+    resolveUser(db, taskRow.completedBy),
+    resolveTaskGroup(db, taskRow.taskGroupId),
+  ]);
+  return { assignee, completedByUser, taskGroupInfo };
+}
+
+/**
+ * Resolve enrichment for a newly-spawned recurring task instance.
+ *
+ * SpawnedTaskData uses `Record<string, unknown>` so field types are `unknown`.
+ * This adapter narrows the fields and delegates to {@link resolveTaskEnrichment}.
+ */
+export async function resolveRecurringTaskEnrichment(
+  db: Database,
+  spawnedTask: Record<string, unknown>,
+): Promise<TaskEventEnrichment> {
+  return resolveTaskEnrichment(db, {
+    assigneeId: (spawnedTask.assigneeId as string) ?? null,
+    completedBy: null,
+    taskGroupId: spawnedTask.taskGroupId as string,
+  });
+}
+
 /**
  * Extract the webhook-relevant fields from a task row.
  *
  * Timestamp columns are serialised to ISO 8601 strings so that the payload
  * is JSON-safe and consistent across time zones.
+ *
+ * When enrichment is provided, the payload includes resolved objects
+ * alongside their raw IDs so webhook consumers can display human-readable
+ * info without a round-trip to the API.
  */
-export function buildTaskEventData(taskRow: TaskRow): Record<string, unknown> {
+export function buildTaskEventData(
+  taskRow: TaskRow,
+  enrichment?: TaskEventEnrichment | null,
+): Record<string, unknown> {
   return {
     id: taskRow.id,
     title: taskRow.title,
     description: taskRow.description,
     projectId: taskRow.projectId,
     taskGroupId: taskRow.taskGroupId,
+    taskGroup: enrichment?.taskGroupInfo ?? null,
     assigneeId: taskRow.assigneeId,
+    assignee: enrichment?.assignee ?? null,
     priority: taskRow.priority,
     dueDate: taskRow.dueDate?.toISOString() ?? null,
     cost: taskRow.cost,
     completed: taskRow.completed,
     completedAt: taskRow.completedAt?.toISOString() ?? null,
     completedBy: taskRow.completedBy,
+    completedByUser: enrichment?.completedByUser ?? null,
     position: taskRow.position,
     icon: taskRow.icon,
     recurrenceRule: taskRow.recurrenceRule ?? null,
@@ -187,13 +289,18 @@ export function buildInvitationEventData(
  *
  * The shape is intentionally flat — `workspaceId` or `projectId` is provided
  * depending on the event domain.
+ *
+ * When `userInfo` is provided the payload includes a resolved `user` object
+ * (`{ id, name, email }`) alongside the raw `userId`.
  */
 export function buildMemberEventData(
   member: { userId: string; workspaceId?: string; projectId?: string },
   role?: string,
+  userInfo?: WebhookUser | null,
 ): Record<string, unknown> {
   const data: Record<string, unknown> = {
     userId: member.userId,
+    user: userInfo ?? null,
     role: role ?? null,
   };
 

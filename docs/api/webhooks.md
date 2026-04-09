@@ -78,6 +78,10 @@ Webhooks can optionally be scoped to a single project by setting the `projectId`
 | Project-scoped (`projectId` set) | Event from a different project | No |
 | Project-scoped (`projectId` set) | Workspace or invitation event (no project context) | No |
 
+### Project Archiving
+
+When a project is archived, all project-scoped webhooks belonging to that project are automatically deleted. Workspace-scoped webhooks still receive the `project.archived` event. This prevents stale webhooks from accumulating for inactive projects.
+
 ### Event Restrictions
 
 Events are classified into two categories:
@@ -124,13 +128,16 @@ Every webhook delivery sends a JSON envelope with a consistent structure. The to
     "description": "Revise hero section for Q2 campaign",
     "projectId": "proj_def456",
     "taskGroupId": "group_mno345",
+    "taskGroup": { "id": "group_mno345", "name": "In Progress" },
     "assigneeId": "user_ghi789",
+    "assignee": { "id": "user_ghi789", "name": "Jane Smith", "email": "jane@acme.com" },
     "priority": "critical",
     "dueDate": "2026-04-01T00:00:00.000Z",
     "cost": 5,
     "completed": false,
     "completedAt": null,
     "completedBy": null,
+    "completedByUser": null,
     "position": 1,
     "icon": null,
     "recurrenceRule": null,
@@ -141,7 +148,8 @@ Every webhook delivery sends a JSON envelope with a consistent structure. The to
   },
   "changes": {
     "priority": { "from": "low", "to": "critical" },
-    "assigneeId": { "from": null, "to": "user_ghi789" }
+    "assigneeId": { "from": null, "to": "user_ghi789" },
+    "assignee": { "from": null, "to": { "id": "user_ghi789", "name": "Jane Smith", "email": "jane@acme.com" } }
   }
 }
 ```
@@ -161,10 +169,24 @@ Every webhook delivery sends a JSON envelope with a consistent structure. The to
 
 ### Data Shapes by Domain
 
-- **Task events** (`task.*`): Full task object with `id`, `title`, `description`, `projectId`, `taskGroupId`, `assigneeId`, `priority`, `dueDate`, `cost`, `completed`, `completedAt`, `completedBy`, `position`, `icon`, `recurrenceRule`, `recurrenceParentId`, `recurrenceSeriesId`, `createdAt`, `updatedAt`. The `recurrenceRule` field is the JSON-encoded rule string (or `null`); `recurrenceParentId` links to the previous instance in a recurring series; `recurrenceSeriesId` groups all instances in the same series. Exception: `task.comment_created` sends the comment object (`id`, `taskId`, `content`, `authorId`, `createdAt`); `task.label_added` and `task.label_removed` send `{ task: { id, projectId }, label: { id, name } }`.
-- **Project events** (`project.*`): Full project object with `id`, `workspaceId`, `name`, `description`, `status`, `icon`, `budget`, `createdAt`, `updatedAt`. Exception: `project.member_added` and `project.member_removed` send `{ userId, projectId, role }`.
-- **Workspace events** (`workspace.*`): Member data with `{ userId, workspaceId, role }`.
+- **Task events** (`task.*`): Full task object with `id`, `title`, `description`, `projectId`, `taskGroupId`, `taskGroup`, `assigneeId`, `assignee`, `priority`, `dueDate`, `cost`, `completed`, `completedAt`, `completedBy`, `completedByUser`, `position`, `icon`, `recurrenceRule`, `recurrenceParentId`, `recurrenceSeriesId`, `createdAt`, `updatedAt`. The `recurrenceRule` field is the JSON-encoded rule string (or `null`); `recurrenceParentId` links to the previous instance in a recurring series; `recurrenceSeriesId` groups all instances in the same series. Exception: `task.comment_created` sends the comment object (`id`, `taskId`, `authorId`, `author`, `body`, `createdAt`, `updatedAt`); `task.label_added` and `task.label_removed` send `{ task: { id, projectId }, label: { id, name } }`.
+- **Project events** (`project.*`): Full project object with `id`, `workspaceId`, `name`, `description`, `status`, `icon`, `budget`, `createdAt`, `updatedAt`. Exception: `project.member_added` and `project.member_removed` send `{ userId, user, projectId, role }`.
+- **Workspace events** (`workspace.*`): Member data with `{ userId, user, workspaceId, role }`.
 - **Invitation events** (`invitation.*`): Full invitation object with `id`, `workspaceId`, `email`, `role`, `status`, `expiresAt`, `createdAt`.
+
+### Enriched Fields
+
+Webhook payloads include resolved objects alongside raw IDs so consumers can display human-readable info without a round-trip to the API. All enriched fields are `null` when the referenced entity does not exist.
+
+| Raw ID field | Enriched field | Shape | Present on |
+| --- | --- | --- | --- |
+| `assigneeId` | `assignee` | `{ id, name, email }` | Task events |
+| `completedBy` | `completedByUser` | `{ id, name, email }` | Task events |
+| `taskGroupId` | `taskGroup` | `{ id, name }` | Task events |
+| `authorId` | `author` | `{ id, name, email }` | `task.comment_created` |
+| `userId` | `user` | `{ id, name, email }` | Member events (workspace + project) |
+
+For `task.updated` and `task.moved` events, the `changes` field also includes enriched objects for ID changes. For example, when `assigneeId` changes, the `changes` object includes both `assigneeId: { from, to }` (raw IDs) and `assignee: { from, to }` (resolved user objects). The same applies for `taskGroupId`/`taskGroup`.
 
 ### Changes Format
 
@@ -317,9 +339,25 @@ Failed deliveries are retried with exponential backoff. There are **5 total atte
 
 A Cloudflare Cron Trigger runs every 5 minutes (`*/5 * * * *`) and processes pending retries. Each cron invocation processes up to **50 retries** per batch. Retry delays include ±20% random jitter to prevent thundering-herd effects when many deliveries become eligible simultaneously.
 
+### Non-Retryable Status Codes
+
+Certain HTTP status codes indicate a permanent configuration or authentication problem that will not resolve without human intervention. When a delivery receives one of these codes, retries are skipped immediately:
+
+| Status | Meaning | Why non-retryable |
+| :----: | ------- | ----------------- |
+| 401 | Unauthorized | Bad or missing webhook secret / auth token |
+| 403 | Forbidden | Receiver explicitly rejects the request |
+| 404 | Not Found | Endpoint does not exist |
+| 405 | Method Not Allowed | Receiver does not accept POST |
+| 410 | Gone | Endpoint has been permanently removed |
+
+The delivery is recorded as a failure with `maxAttempts` capped to the current attempt and `nextRetryAt` set to `null`. The webhook's `consecutiveFailures` counter is still incremented (and auto-disable still applies after 10 consecutive failures).
+
+All other non-2xx status codes (e.g. 500, 502, 503, 429) are treated as transient and follow the normal retry schedule.
+
 ### Permanent Failure
 
-After all 5 attempts are exhausted, the delivery is marked as permanently failed (`nextRetryAt` is set to `null`). The delivery record is retained for inspection in the webhook detail view.
+After all 5 attempts are exhausted (or a non-retryable status code is received), the delivery is marked as permanently failed (`nextRetryAt` is set to `null`). The delivery record is retained for inspection in the webhook detail view.
 
 ---
 
@@ -366,7 +404,9 @@ In production, webhook URLs are validated against:
 
 ## API Endpoints
 
-The webhook CRUD API is mounted under `/api/workspaces/:workspaceId/webhooks`. Full request/response details are documented in [Endpoints](./endpoints.md).
+### Workspace-Scoped Webhooks
+
+The workspace-level webhook CRUD API is mounted under `/api/workspaces/:workspaceId/webhooks`. Full request/response details are documented in [Endpoints](./endpoints.md).
 
 | Method   | Path                                            | Description                                       |
 | -------- | ----------------------------------------------- | ------------------------------------------------- |
@@ -376,6 +416,19 @@ The webhook CRUD API is mounted under `/api/workspaces/:workspaceId/webhooks`. F
 | `PATCH`  | `/api/workspaces/:workspaceId/webhooks/:id`     | Update webhook fields, optionally regenerate secret |
 | `DELETE` | `/api/workspaces/:workspaceId/webhooks/:id`     | Delete webhook and all delivery records (cascade) |
 | `POST`   | `/api/workspaces/:workspaceId/webhooks/:id/test`| Send a synchronous test delivery                  |
+
+### Project-Scoped Webhooks
+
+Project-scoped webhooks are managed under `/api/projects/:projectId/webhooks`. These endpoints require the `admin` project role. Project-scoped webhooks are automatically bound to the project and cannot subscribe to workspace or invitation events.
+
+| Method   | Path                                              | Description                                       |
+| -------- | ------------------------------------------------- | ------------------------------------------------- |
+| `POST`   | `/api/projects/:projectId/webhooks`               | Create a project-scoped webhook                   |
+| `GET`    | `/api/projects/:projectId/webhooks`               | List webhooks for the project (secrets omitted)   |
+| `GET`    | `/api/projects/:projectId/webhooks/:id`           | Get webhook details with 20 most recent deliveries |
+| `PATCH`  | `/api/projects/:projectId/webhooks/:id`           | Update webhook fields, optionally regenerate secret |
+| `DELETE` | `/api/projects/:projectId/webhooks/:id`           | Delete webhook and all delivery records           |
+| `POST`   | `/api/projects/:projectId/webhooks/:id/test`      | Send a synchronous test delivery                  |
 
 ---
 
@@ -402,7 +455,7 @@ An interactive API reference for the webhook endpoints is available at `/api/doc
 
 The docs include:
 
-- All 6 webhook management endpoints with request/response schemas
+- All 12 webhook management endpoints (6 workspace-scoped + 6 project-scoped) with request/response schemas
 - The `WebhookPayloadEnvelope` schema documenting the shape of payloads delivered to subscriber endpoints
 - Authentication requirements and error response formats
 
@@ -410,8 +463,18 @@ The docs include:
 
 Webhook endpoints have per-action rate limits applied via the `rateLimit` middleware:
 
+#### Workspace-Scoped
+
 | Action | Max | Window | Prefix |
 | ------ | --- | ------ | ------ |
 | Read (list, get) | 60 | 60s | `webhook-read` |
 | Write (create, update, delete) | 20 | 60s | `webhook-write` |
 | Test delivery | 5 | 60s | `webhook-test` |
+
+#### Project-Scoped
+
+| Action | Max | Window | Prefix |
+| ------ | --- | ------ | ------ |
+| Read (list, get) | 60 | 60s | `project-webhook-read` |
+| Write (create, update, delete) | 20 | 60s | `project-webhook-write` |
+| Test delivery | 5 | 60s | `project-webhook-test` |

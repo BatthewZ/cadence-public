@@ -10,7 +10,7 @@ import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
 import { requireParam } from "../../../lib/params";
 import { validJson } from "../../../lib/validated";
-import { buildTaskEventData, dispatchWebhook } from "../../../lib/webhook-payloads";
+import { buildTaskEventData, dispatchWebhook, resolveRecurringTaskEnrichment, resolveTaskEnrichment, resolveTaskGroup } from "../../../lib/webhook-payloads";
 import { copyTaskRelations } from "../helpers/copy-task-relations";
 import { logRecurringInstanceCreated, spawnNextRecurringInstance } from "../helpers/spawn-recurring-instance";
 import { type ActivityEntry, logActivity, logActivityBatch } from "../log-activity";
@@ -142,8 +142,13 @@ export async function moveTask(c: Context<AppEnv>) {
 
   // Non-blocking webhook dispatch for task.moved (+ task.completed if moved to done column)
   {
-    const moveData = buildTaskEventData(updated);
-    const moveChanges = { taskGroupId: { from: foundTask.taskGroupId, to: body.taskGroupId } };
+    const movedEnrichment = await resolveTaskEnrichment(db, updated);
+    const moveData = buildTaskEventData(updated, movedEnrichment);
+    const fromGroup = await resolveTaskGroup(db, foundTask.taskGroupId);
+    const moveChanges = {
+      taskGroupId: { from: foundTask.taskGroupId, to: body.taskGroupId },
+      taskGroup: { from: fromGroup, to: movedEnrichment.taskGroupInfo },
+    };
     const moveEvents: Parameters<typeof dispatchWebhook>[2] = [
       { event: "task.moved", data: moveData, changes: moveChanges },
     ];
@@ -155,8 +160,9 @@ export async function moveTask(c: Context<AppEnv>) {
 
   // Non-blocking webhook dispatch for spawned recurring instance
   if (nextRecurringTask) {
+    const recurEnrichment = await resolveRecurringTaskEnrichment(db, nextRecurringTask);
     dispatchWebhook(c, foundTask.projectId, [
-      { event: "task.created", data: buildTaskEventData(nextRecurringTask as Parameters<typeof buildTaskEventData>[0]) },
+      { event: "task.created", data: buildTaskEventData(nextRecurringTask as Parameters<typeof buildTaskEventData>[0], recurEnrichment) },
     ]);
   }
 
@@ -253,8 +259,9 @@ export async function duplicateTask(c: Context<AppEnv>) {
   }
 
   // Non-blocking webhook dispatch for task.created (duplicated task)
+  const dupEnrichment = await resolveTaskEnrichment(db, newTask as Parameters<typeof resolveTaskEnrichment>[1]);
   dispatchWebhook(c, sourceTask.projectId, [
-    { event: "task.created", data: buildTaskEventData(newTask as Parameters<typeof buildTaskEventData>[0]) },
+    { event: "task.created", data: buildTaskEventData(newTask as Parameters<typeof buildTaskEventData>[0], dupEnrichment) },
   ]);
 
   return c.json(

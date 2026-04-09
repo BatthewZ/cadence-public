@@ -22,6 +22,25 @@ const AUTO_DISABLE_THRESHOLD = 10;
 const DELIVERY_TIMEOUT_MS = 10_000;
 const RETRY_BATCH_LIMIT = 50;
 
+/**
+ * HTTP status codes that indicate a permanent configuration or authentication
+ * problem on the receiver's side. Retrying these is wasteful because the
+ * error will not resolve without human intervention (e.g. fixing the secret,
+ * correcting the endpoint URL, or allowlisting the request method).
+ */
+const NON_RETRYABLE_STATUS_CODES = new Set([
+  401, // Unauthorized — bad/missing secret or auth token
+  403, // Forbidden — receiver explicitly rejects the request
+  404, // Not Found — endpoint does not exist
+  405, // Method Not Allowed — receiver does not accept POST
+  410, // Gone — endpoint has been permanently removed
+]);
+
+/** Returns true when the status code indicates a permanent receiver-side problem. */
+function isNonRetryable(statusCode: number | null): boolean {
+  return statusCode !== null && NON_RETRYABLE_STATUS_CODES.has(statusCode);
+}
+
 /** Apply +/- 20% random jitter to a backoff delay to prevent thundering herd. */
 function applyJitter(seconds: number): number {
   const jitter = 0.8 + Math.random() * 0.4; // 0.8 to 1.2
@@ -239,13 +258,21 @@ async function recordDeliveryFailure(
   attempt: number,
   now: Date,
 ): Promise<void> {
+  const nonRetryable = isNonRetryable(statusCode);
   const nextAttempt = attempt + 1;
   const backoffSeconds = BACKOFF_SCHEDULE[nextAttempt];
-  const hasMoreRetries = nextAttempt <= MAX_ATTEMPTS && backoffSeconds !== undefined;
+  const hasMoreRetries =
+    !nonRetryable && nextAttempt <= MAX_ATTEMPTS && backoffSeconds !== undefined;
 
   const nextRetryAt = hasMoreRetries
     ? new Date(now.getTime() + applyJitter(backoffSeconds) * 1000)
     : null;
+
+  if (nonRetryable) {
+    console.warn(
+      `[webhooks] Delivery ${deliveryId} received non-retryable status ${statusCode} — skipping retries`,
+    );
+  }
 
   await db.insert(webhookDelivery).values({
     id: deliveryId,
@@ -256,7 +283,7 @@ async function recordDeliveryFailure(
     response: responseText,
     success: false,
     attempts: attempt,
-    maxAttempts: MAX_ATTEMPTS,
+    maxAttempts: nonRetryable ? attempt : MAX_ATTEMPTS,
     nextRetryAt,
     createdAt: now,
     lastAttemptAt: now,
@@ -486,14 +513,21 @@ async function updateDeliveryRetryFailure(
   responseText: string,
   now: Date,
 ): Promise<void> {
+  const nonRetryable = isNonRetryable(statusCode);
   const nextAttemptNumber = attempt + 1;
   const backoffSeconds = BACKOFF_SCHEDULE[nextAttemptNumber];
   const hasMoreRetries =
-    nextAttemptNumber <= MAX_ATTEMPTS && backoffSeconds !== undefined;
+    !nonRetryable && nextAttemptNumber <= MAX_ATTEMPTS && backoffSeconds !== undefined;
 
   const nextRetryAt = hasMoreRetries
     ? new Date(now.getTime() + applyJitter(backoffSeconds) * 1000)
     : null;
+
+  if (nonRetryable) {
+    console.warn(
+      `[webhooks] Retry for delivery ${deliveryId} received non-retryable status ${statusCode} — stopping retries`,
+    );
+  }
 
   await db
     .update(webhookDelivery)
@@ -501,6 +535,7 @@ async function updateDeliveryRetryFailure(
       statusCode,
       response: responseText,
       attempts: attempt,
+      maxAttempts: nonRetryable ? attempt : undefined,
       nextRetryAt,
       lastAttemptAt: now,
     })

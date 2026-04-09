@@ -90,6 +90,7 @@ export async function createComment(c: Context<AppEnv>) {
           id: newComment.id,
           taskId: newComment.taskId,
           authorId: newComment.authorId,
+          author: { id: user.id, name: user.name, email: user.email },
           body: newComment.body,
           createdAt: newComment.createdAt.toISOString(),
           updatedAt: newComment.updatedAt.toISOString(),

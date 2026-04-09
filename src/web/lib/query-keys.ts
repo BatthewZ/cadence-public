@@ -32,6 +32,9 @@ export const queryKeys = {
     labels: (id: string) => ["projects", id, "labels"] as const,
     dashboard: (id: string) => ["projects", id, "dashboard"] as const,
     activity: (id: string) => ["projects", id, "activity"] as const,
+    webhooks: (id: string) => ["projects", id, "webhooks"] as const,
+    webhookDetail: (projectId: string, webhookId: string) =>
+      ["projects", projectId, "webhooks", webhookId] as const,
   },
   tasks: {
     detail: (id: string) => ["tasks", id] as const,

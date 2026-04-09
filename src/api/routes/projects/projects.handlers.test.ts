@@ -34,6 +34,7 @@ import {
   seedProjectMember,
   seedTaskGroup,
   seedUser,
+  seedWebhook,
   seedWorkspace,
   seedWorkspaceMember,
   TEST_USER,
@@ -487,6 +488,42 @@ describe("updateProject", () => {
     expect(res.status).toBe(200);
     const body = await res.json<{ project: { description: string | null } }>();
     expect(body.project.description).toBeNull();
+  });
+
+  it("deletes project-scoped webhooks when archiving a project", async () => {
+    // Create a fresh active project with a project-scoped webhook
+    const projId = await seedProject(d1, workspaceId, { name: "Archive Webhook Test" });
+    await seedWebhook(d1, workspaceId, {
+      name: "Project Webhook",
+      projectId: projId,
+      events: JSON.stringify(["task.created"]),
+    });
+    // Also seed a workspace-scoped webhook (no projectId) — should NOT be deleted
+    const wsHook = await seedWebhook(d1, workspaceId, {
+      name: "Workspace Webhook",
+      events: JSON.stringify(["task.created"]),
+    });
+
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projId}`,
+      jsonRequest("PATCH", `/projects/${projId}`, { status: "archived" }),
+    );
+    expect(res.status).toBe(200);
+
+    // Project-scoped webhook should be gone
+    const projectHooks = await d1
+      .prepare("SELECT id FROM webhook WHERE projectId = ?")
+      .bind(projId)
+      .all();
+    expect(projectHooks.results).toHaveLength(0);
+
+    // Workspace-scoped webhook should still exist
+    const wsHookRow = await d1
+      .prepare("SELECT id FROM webhook WHERE id = ?")
+      .bind(wsHook.id)
+      .first();
+    expect(wsHookRow).not.toBeNull();
   });
 });
 

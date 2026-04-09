@@ -6,6 +6,7 @@ import { user as userTable } from "../../../db/schema/auth";
 import { label } from "../../../db/schema/label";
 import { project, projectMember } from "../../../db/schema/project";
 import { task, taskGroup } from "../../../db/schema/task";
+import { webhook } from "../../../db/schema/webhook";
 import { workspaceMember } from "../../../db/schema/workspace";
 import { addProjectMemberSchema, createProjectSchema, duplicateProjectSchema, updateProjectSchema } from "../../../shared/schemas/project";
 import type { ProjectRole } from "../../../shared/types/roles";
@@ -21,6 +22,7 @@ import {
   buildProjectEventData,
   computeChanges,
   fireWebhookEvent,
+  resolveUser,
 } from "../../lib/webhook-payloads";
 
 export async function createProject(c: Context<AppEnv>) {
@@ -209,6 +211,12 @@ export async function updateProject(c: Context<AppEnv>) {
       webhookEvents.push({ event: "project.archived", data });
     }
     fireWebhookEvent(db, () => c.executionCtx, { workspaceId, actorId: user.id, projectId }, webhookEvents);
+
+    // Archiving a project makes its project-scoped webhooks obsolete — delete them.
+    // Workspace-scoped webhooks still receive the project.archived event above.
+    if (beforeUpdate.status !== "archived" && updated.status === "archived") {
+      await db.delete(webhook).where(eq(webhook.projectId, projectId));
+    }
   }
 
   return c.json({ project: updated });
@@ -435,8 +443,9 @@ export async function addMember(c: Context<AppEnv>) {
   }));
 
   // Non-blocking webhook dispatch for project.member_added
+  const addedUser = await resolveUser(db, body.userId);
   fireWebhookEvent(db, () => c.executionCtx, { workspaceId: proj.workspaceId, actorId: user.id, projectId }, [
-    { event: "project.member_added", data: buildMemberEventData({ userId: body.userId, projectId }, body.role) },
+    { event: "project.member_added", data: buildMemberEventData({ userId: body.userId, projectId }, body.role, addedUser) },
   ]);
 
   return c.json({ member }, 201);
@@ -486,8 +495,9 @@ export async function removeMember(c: Context<AppEnv>) {
   // Non-blocking webhook dispatch for project.member_removed
   const proj = projResult[0];
   if (proj) {
+    const removedUser = await resolveUser(db, userId);
     fireWebhookEvent(db, () => c.executionCtx, { workspaceId: proj.workspaceId, actorId: actor.id, projectId }, [
-      { event: "project.member_removed", data: buildMemberEventData({ userId, projectId }, member.role) },
+      { event: "project.member_removed", data: buildMemberEventData({ userId, projectId }, member.role, removedUser) },
     ]);
   }
 

@@ -4,6 +4,23 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.12.1] - 2026-04-09
+
+### Added
+
+- Webhook payload enrichment: task events include resolved `assignee`, `taskGroup`, and `completedByUser` objects; member events include resolved `user` object; comment events include resolved `author` object
+- Enriched `changes` field: `task.updated` and `task.moved` events include resolved objects for ID-based changes (e.g. `assignee: { from, to }` alongside `assigneeId: { from, to }`)
+- Non-retryable HTTP status codes (401, 403, 404, 405, 410) skip retries immediately on webhook delivery failure
+- Project-scoped webhook management UI in Project Settings > Webhooks tab (6 new API endpoints)
+- Archiving a project now auto-deletes its project-scoped webhooks
+
+### Changed
+
+- Workspace webhook form only shows active projects in the project scope selector
+- Shared webhook handler helpers (`MAX_WEBHOOKS_PER_WORKSPACE`, `isDevMode`, `omitSecret`) extracted to `src/api/lib/webhooks/utils.ts`
+- `resolveRecurringTaskEnrichment()` extracted as shared helper for recurring task webhook payloads
+- API client now handles 204 No Content responses
+
 ## [1.11.0] - 2026-04-09
 
 ### Added

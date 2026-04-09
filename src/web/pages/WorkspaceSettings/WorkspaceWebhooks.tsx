@@ -84,6 +84,10 @@ export default function WorkspaceWebhooks() {
   const { workspace, projects } = useWorkspace();
   const { toast } = useToast();
   const { canManageWorkspace } = useWorkspacePermissions();
+
+  // Only show active projects in webhook selectors — archived/completed projects
+  // shouldn't receive new webhooks (archived ones auto-delete their webhooks).
+  const activeProjects = projects.filter((p) => p.status === "active");
   const qc = useQueryClient();
   const workspaceId = workspace?.id ?? "";
 
@@ -477,7 +481,7 @@ export default function WorkspaceWebhooks() {
             onActiveChange={setEditActive}
             projectId={editProjectId}
             onProjectIdChange={setEditProjectId}
-            projects={projects}
+            projects={activeProjects}
             regeneratedSecret={regeneratedSecret}
             onCopiedSecret={() => toast("Secret copied to clipboard")}
             isPending={updateMutation.isPending}
@@ -626,7 +630,7 @@ export default function WorkspaceWebhooks() {
           onEventsChange={setCreateEvents}
           projectId={createProjectId}
           onProjectIdChange={setCreateProjectId}
-          projects={projects}
+          projects={activeProjects}
           newSecret={newSecret}
           onCopiedSecret={() => toast("Secret copied to clipboard")}
           isPending={createMutation.isPending}

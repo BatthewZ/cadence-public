@@ -379,9 +379,10 @@ export async function acceptInvitation(c: Context<AppEnv>) {
 
   // Non-blocking webhook dispatch for invitation.accepted and workspace.member_joined
   const acceptedInvitation = { ...inv, status: "accepted" as const };
+  const joinedUser = { id: user.id, name: user.name, email: user.email };
   fireWebhookEvent(db, () => c.executionCtx, { workspaceId: inv.workspaceId, actorId: user.id }, [
     { event: "invitation.accepted", data: buildInvitationEventData(acceptedInvitation) },
-    { event: "workspace.member_joined", data: buildMemberEventData({ userId: user.id, workspaceId: inv.workspaceId }, inv.role) },
+    { event: "workspace.member_joined", data: buildMemberEventData({ userId: user.id, workspaceId: inv.workspaceId }, inv.role, joinedUser) },
   ]);
 
   return c.json({ ok: true, workspaceId: inv.workspaceId });

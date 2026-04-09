@@ -22,6 +22,7 @@ export function EditWebhookDialog({
   projectId,
   onProjectIdChange,
   projects,
+  fixedProjectScope,
   regeneratedSecret,
   onCopiedSecret,
   isPending,
@@ -42,6 +43,7 @@ export function EditWebhookDialog({
   projectId: string | null;
   onProjectIdChange: (value: string | null) => void;
   projects: ProjectOption[];
+  fixedProjectScope?: boolean;
   regeneratedSecret: string | null;
   onCopiedSecret: () => void;
   isPending: boolean;
@@ -80,6 +82,7 @@ export function EditWebhookDialog({
               projectId={projectId}
               onProjectIdChange={onProjectIdChange}
               projects={projects}
+              fixedProjectScope={fixedProjectScope}
             />
 
             <Divider />

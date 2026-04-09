@@ -17,6 +17,7 @@ import { validJson } from "../../lib/validated";
 import {
   buildMemberEventData,
   fireWebhookEvent,
+  resolveUser,
 } from "../../lib/webhook-payloads";
 
 const DUPLICATE_SLUG_ERROR = "You already have a workspace with that URL";
@@ -271,8 +272,9 @@ export async function updateMemberRole(c: Context<AppEnv>) {
 
   // Non-blocking webhook dispatch for workspace.member_role_changed
   const user = c.get("user")!;
+  const roleChangedUser = await resolveUser(db, targetUserId);
   fireWebhookEvent(db, () => c.executionCtx, { workspaceId, actorId: user.id }, [
-    { event: "workspace.member_role_changed", data: buildMemberEventData({ userId: targetUserId, workspaceId }, role), changes: { role: { from: oldRole, to: role } } },
+    { event: "workspace.member_role_changed", data: buildMemberEventData({ userId: targetUserId, workspaceId }, role, roleChangedUser), changes: { role: { from: oldRole, to: role } } },
   ]);
 
   return c.json({ member: updated });
@@ -318,8 +320,9 @@ export async function removeMember(c: Context<AppEnv>) {
     );
 
   // Non-blocking webhook dispatch for workspace.member_removed
+  const removedUser = await resolveUser(db, targetUserId);
   fireWebhookEvent(db, () => c.executionCtx, { workspaceId, actorId: currentUser.id }, [
-    { event: "workspace.member_removed", data: buildMemberEventData({ userId: targetUserId, workspaceId }, target.role) },
+    { event: "workspace.member_removed", data: buildMemberEventData({ userId: targetUserId, workspaceId }, target.role, removedUser) },
   ]);
 
   return c.json({ ok: true });

@@ -59,9 +59,10 @@ Each project has four views, accessible from the tab bar:
 Access via the **Settings** tab on a project:
 
 - **General** — Name, description, status (active/archived), budget, auto-assign tasks to creator
-- **Appearance** — Icon (emoji picker), cover image, project theme
-- **Task Groups** — Define your workflow columns. Mark a group as a "completion group" to auto-complete tasks moved there. Drag to reorder.
 - **Members** — Add workspace members with project-specific roles (admin, member, viewer)
+- **Task Groups** — Define your workflow columns. Mark a group as a "completion group" to auto-complete tasks moved there. Drag to reorder.
+- **Webhooks** — Create and manage webhooks scoped to this project. Project-scoped webhooks only fire for events within the project (task and project events). Workspace and invitation events are not available. Requires the project admin role.
+- **Appearance** — Icon (emoji picker), cover image, project theme (visible to workspace admins and project admins)
 
 ### Project Lifecycle
 
@@ -280,12 +281,14 @@ Webhooks let external systems receive real-time HTTP notifications when events h
 
 ### Setup
 
-Go to **Settings > Webhooks** and click **Create Webhook**:
+**Workspace webhooks** — Go to **Settings > Webhooks** and click **Create Webhook**:
 1. Give it a name
 2. Enter your endpoint URL (HTTPS required in production; HTTP allowed in dev mode)
-3. Optionally select a **project scope** — when set, the webhook only fires for events from that project. Workspace and invitation events are unavailable for project-scoped webhooks.
+3. Optionally select a **project scope** — when set, the webhook only fires for events from that project. Workspace and invitation events are unavailable for project-scoped webhooks. Only active projects appear in the project selector.
 4. Select which events to subscribe to
 5. Copy the signing secret — it's only shown once
+
+**Project webhooks** — Go to a project's **Settings > Webhooks** tab. Webhooks created here are automatically scoped to the project. The project scope selector is hidden since it's implied. When a project is archived, its project-scoped webhooks are automatically deleted.
 
 ### Verifying Deliveries
 

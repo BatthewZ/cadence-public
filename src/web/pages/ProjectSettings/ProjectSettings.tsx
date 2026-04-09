@@ -10,6 +10,7 @@ import { AppearanceTab } from "./components/AppearanceTab";
 import { GeneralTab } from "./components/GeneralTab";
 import { MembersTab } from "./components/MembersTab";
 import { TaskGroupsTab } from "./components/TaskGroupsTab";
+import { WebhooksTab } from "./components/WebhooksTab";
 
 export default function ProjectSettings() {
   const { project, members, refetch, updateProject } = useProject();
@@ -43,6 +44,7 @@ export default function ProjectSettings() {
             <Tabs.Tab value="general">General</Tabs.Tab>
             <Tabs.Tab value="members">Members</Tabs.Tab>
             <Tabs.Tab value="taskgroups">Task Groups</Tabs.Tab>
+            <Tabs.Tab value="webhooks">Webhooks</Tabs.Tab>
             {canEditTheme && <Tabs.Tab value="appearance">Appearance</Tabs.Tab>}
           </Tabs.List>
 
@@ -71,6 +73,12 @@ export default function ProjectSettings() {
                 projectId={projectId}
                 toast={toast}
               />
+            </Stack>
+          </Tabs.Panel>
+
+          <Tabs.Panel value="webhooks">
+            <Stack gap="r3" className="pt-r3">
+              <WebhooksTab projectId={projectId} toast={toast} />
             </Stack>
           </Tabs.Panel>
 
