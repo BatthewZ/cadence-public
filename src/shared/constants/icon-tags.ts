@@ -163,4 +163,59 @@ export const ICON_TAGS: Record<CuratedIconName, readonly string[]> = {
   // Transport
   plane: ["flight", "travel", "airplane", "trip", "international", "remote"],
   car: ["drive", "vehicle", "transport", "commute", "travel", "auto"],
+
+  // Healthcare / Medical
+  stethoscope: ["doctor", "medical", "health", "checkup", "diagnosis", "clinic"],
+  "heart-pulse": ["health", "medical", "heartbeat", "vitals", "cardio", "monitor"],
+  syringe: ["injection", "vaccine", "medical", "health", "dose"],
+  pill: ["medicine", "drug", "pharmacy", "health", "prescription", "tablet"],
+  hospital: ["medical", "clinic", "health", "emergency", "care", "building"],
+
+  // Legal / Compliance
+  scale: ["legal", "justice", "balance", "law", "court", "compliance", "weigh"],
+  gavel: ["legal", "judge", "court", "law", "ruling", "decision", "verdict"],
+  "file-check": ["audit", "approved", "verified", "document", "compliance", "review"],
+
+  // HR / People Ops
+  "user-round": ["person", "profile", "avatar", "account", "member", "individual"],
+  contact: ["address", "people", "directory", "crm", "rolodex", "outreach"],
+  "badge-check": ["verified", "certified", "credential", "approved", "trust", "identity"],
+  "id-card": ["badge", "identity", "employee", "access", "credential", "pass"],
+
+  // Construction / Physical Ops
+  "hard-hat": ["construction", "safety", "building", "site", "worker", "engineering"],
+  ruler: ["measure", "dimension", "size", "design", "layout", "precision"],
+  warehouse: ["storage", "inventory", "logistics", "supply", "depot", "fulfillment"],
+  fence: ["boundary", "perimeter", "property", "barrier", "enclosure"],
+
+  // Food / Hospitality
+  utensils: ["food", "restaurant", "dining", "kitchen", "meal", "culinary"],
+  "chef-hat": ["cooking", "kitchen", "restaurant", "food", "recipe", "culinary"],
+  store: ["shop", "retail", "business", "storefront", "market", "commerce"],
+  receipt: ["invoice", "billing", "purchase", "transaction", "expense", "record"],
+
+  // Sustainability / Environment
+  recycle: ["sustainability", "reuse", "green", "eco", "environment", "circular"],
+  wind: ["energy", "renewable", "weather", "turbine", "air", "breeze"],
+  droplets: ["water", "rain", "hydration", "liquid", "clean", "resource"],
+  earth: ["planet", "world", "global", "environment", "geography", "climate"],
+
+  // Security / Infosec
+  scan: ["detect", "search", "analyze", "barcode", "security", "inspect"],
+  "fingerprint-pattern": ["biometric", "identity", "auth", "security", "unique", "forensic"],
+  "shield-alert": ["warning", "security", "threat", "vulnerability", "risk", "breach"],
+  radar: ["detect", "monitor", "surveillance", "signal", "sweep", "threat"],
+
+  // Accessibility / Inclusion
+  accessibility: ["a11y", "inclusive", "disability", "universal", "ada", "wcag"],
+  ear: ["hearing", "listen", "audio", "sound", "accessibility", "feedback"],
+  hand: ["gesture", "touch", "interact", "grab", "wave", "manual"],
+
+  // Workflow / Process
+  workflow: ["process", "automation", "pipeline", "flow", "sequence", "orchestrate"],
+  "git-pull-request": ["pr", "review", "code", "merge", "contribution", "dev"],
+  kanban: ["board", "agile", "cards", "columns", "project", "scrum", "sprint"],
+  repeat: ["loop", "recurring", "cycle", "iterate", "again", "retry"],
+  split: ["divide", "branch", "fork", "separate", "parallel", "diverge"],
+  merge: ["combine", "join", "unify", "consolidate", "converge", "integrate"],
 };

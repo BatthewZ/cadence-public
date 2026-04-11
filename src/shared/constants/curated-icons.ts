@@ -137,6 +137,52 @@ export const CURATED_ICONS = [
   // Transport
   "plane",
   "car",
+  // Healthcare / Medical
+  "stethoscope",
+  "heart-pulse",
+  "syringe",
+  "pill",
+  "hospital",
+  // Legal / Compliance
+  "scale",
+  "gavel",
+  "file-check",
+  // HR / People Ops
+  "user-round",
+  "contact",
+  "badge-check",
+  "id-card",
+  // Construction / Physical Ops
+  "hard-hat",
+  "ruler",
+  "warehouse",
+  "fence",
+  // Food / Hospitality
+  "utensils",
+  "chef-hat",
+  "store",
+  "receipt",
+  // Sustainability / Environment
+  "recycle",
+  "wind",
+  "droplets",
+  "earth",
+  // Security / Infosec
+  "scan",
+  "fingerprint-pattern",
+  "shield-alert",
+  "radar",
+  // Accessibility / Inclusion
+  "accessibility",
+  "ear",
+  "hand",
+  // Workflow / Process
+  "workflow",
+  "git-pull-request",
+  "kanban",
+  "repeat",
+  "split",
+  "merge",
 ] as const;
 
 export type CuratedIconName = (typeof CURATED_ICONS)[number];
