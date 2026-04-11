@@ -12,6 +12,7 @@ import type {
   WebhookPayloadEnvelope,
 } from "../../shared/types/webhook";
 import type { AppEnv } from "../env";
+import type { TelemetrySink } from "./telemetry/types";
 import { dispatchWebhookEvent } from "./webhooks";
 
 // ---------------------------------------------------------------------------
@@ -471,6 +472,7 @@ export function fireWebhookEvent(
   getExecutionCtx: () => ExecutionContext,
   contextOpts: FetchWebhookContextOpts,
   events: WebhookEventDescriptor[],
+  sink?: TelemetrySink,
 ): void {
   let ctx: ExecutionContext;
   try {
@@ -493,6 +495,7 @@ export function fireWebhookEvent(
               event,
               payload,
               contextOpts.projectId,
+              sink,
             );
           }),
         ),
@@ -515,5 +518,6 @@ export function dispatchWebhook(
   if (!workspaceId) return;
   const db = c.get("db");
   const actorId = c.get("user")!.id;
-  fireWebhookEvent(db, () => c.executionCtx, { workspaceId, actorId, projectId }, events);
+  const sink = c.get("telemetry");
+  fireWebhookEvent(db, () => c.executionCtx, { workspaceId, actorId, projectId }, events, sink);
 }

@@ -29,4 +29,6 @@ Production secrets are managed via `wrangler secret put`:
 | `RESEND_API_KEY` | No | API key for [Resend](https://resend.com) email delivery. Without this, auth emails are logged to the console. |
 | `EMAIL_FROM` | No | Sender address for auth emails (e.g. `noreply@yourdomain.com`). Defaults to `noreply@example.com`. |
 
-The D1 database binding (`DB`), R2 storage binding (`STORAGE`), and asset binding (`ASSETS`) are configured in `wrangler.toml` and do not need separate secret configuration. The `STORAGE` binding is optional -- when absent, upload endpoints return 503. See [File Storage](../api/storage.md) for R2 setup.
+| `TELEMETRY_SINK` | No | Telemetry backend override. Values: `console` (structured JSON to stdout), `noop` (discard). When unset, auto-detects the `ANALYTICS` binding or falls back to `console`. |
+
+The D1 database binding (`DB`), R2 storage binding (`STORAGE`), asset binding (`ASSETS`), and optional Analytics Engine binding (`ANALYTICS`) are configured in `wrangler.toml` and do not need separate secret configuration. The `STORAGE` binding is optional -- when absent, upload endpoints return 503. See [File Storage](../api/storage.md) for R2 setup. The `ANALYTICS` binding is optional -- when present, telemetry events are written to Cloudflare Analytics Engine; when absent, telemetry falls back to console logging (see [Telemetry](../api/middleware.md#3-telemetry-srcapimiddlewaretelemetryts)).

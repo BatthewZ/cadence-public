@@ -4,6 +4,21 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.14.0] - 2026-04-11
+
+### Added
+
+- Pluggable telemetry subsystem with three sink backends (Analytics Engine, console, noop) and per-request middleware that tracks HTTP request events
+- Telemetry tracking on webhook delivery and retry attempts (duration, status, attempt count)
+- Telemetry tracking on scheduled cron tasks (per-task and overall run duration, success/failure counts)
+- Client-side Zod validation on webhook create/edit forms with inline field-level error display
+- New `webhook_project_idx` database index on `webhook.projectId` for faster project-scoped lookups
+
+### Changed
+
+- Webhook `projectId` foreign key now cascades on delete (migration 0025)
+- Scheduled handler reports `cron_run` and `cron_task` telemetry events for observability
+
 ## [1.13.0] - 2026-04-09
 
 ### Added

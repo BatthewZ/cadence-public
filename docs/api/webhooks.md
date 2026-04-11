@@ -323,6 +323,8 @@ When an event fires, Cadence dispatches webhook deliveries asynchronously using 
 
 A 2xx response (200-299) is considered successful. Any other status code or network error is treated as a failure.
 
+Every delivery and retry attempt is tracked via the telemetry subsystem (`webhook_delivery` and `webhook_retry` events) with webhook ID, delivery ID, event type, success flag, HTTP status code, duration in milliseconds, attempt number, and workspace ID. See the [Telemetry](../../src/api/lib/telemetry/index.ts) module for sink configuration.
+
 ### Retry Schedule
 
 Failed deliveries are retried with exponential backoff. There are **5 total attempts** (1 initial + 4 retries). Each delay has ±20% random jitter applied, so actual wait times vary slightly from the base values below:
@@ -446,6 +448,14 @@ Project-scoped webhooks are managed under `/api/projects/:projectId/webhooks`. T
 | Webhook name max length     | 100 characters       |
 | Minimum subscribed events   | 1                    |
 | Webhook secret length       | 64 hex characters (256-bit) |
+
+---
+
+## Client-Side Validation
+
+The webhook create and edit forms perform client-side validation using the shared `createWebhookSchema` (Zod) before submitting to the API. Validation errors are displayed inline next to the relevant form field (name, URL, events) using the `useFieldErrors` hook. Field errors are cleared automatically when the user modifies the errored input.
+
+This applies to both the workspace-level webhook management UI (`WorkspaceSettings`) and the project-level webhook management UI (`ProjectSettings > Webhooks`).
 
 ---
 

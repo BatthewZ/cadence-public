@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
 
-import type { CreateWebhookInput, UpdateWebhookInput } from "@/shared/schemas/webhook";
+import { type CreateWebhookInput, createWebhookSchema, type UpdateWebhookInput } from "@/shared/schemas/webhook";
 import type { WebhookEventType } from "@/shared/types/webhook";
 import { Divider, Row, Stack } from "@/web/components/layout";
 import {
@@ -24,6 +24,7 @@ import {
   Text,
 } from "@/web/components/ui";
 import type { useToast } from "@/web/components/ui/ToastContext";
+import { useFieldErrors } from "@/web/hooks/use-field-errors";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 
@@ -100,6 +101,10 @@ export function WebhooksTab({
   const [editEvents, setEditEvents] = useState<WebhookEventType[]>([]);
   const [editActive, setEditActive] = useState(true);
   const [regeneratedSecret, setRegeneratedSecret] = useState<string | null>(null);
+
+  // ---- Field errors ---------------------------------------------------
+  const createFieldErrors = useFieldErrors();
+  const editFieldErrors = useFieldErrors();
 
   // ---- Test state ----------------------------------------------------
   const [testResult, setTestResult] = useState<TestDeliveryResult | null>(null);
@@ -212,6 +217,7 @@ export function WebhooksTab({
     setCreateEvents([]);
     setNewSecret(null);
     createMutation.reset();
+    createFieldErrors.resetFieldErrors();
     setCreateDialogOpen(true);
   }
 
@@ -222,13 +228,18 @@ export function WebhooksTab({
 
   async function handleCreate(e: SyntheticEvent) {
     e.preventDefault();
-    if (!createName.trim() || !createUrl.trim() || createEvents.length === 0) return;
+    const input = {
+      name: createName.trim(),
+      url: createUrl.trim(),
+      events: createEvents,
+    };
+    const result = createWebhookSchema.safeParse(input);
+    if (!result.success) {
+      createFieldErrors.setFromZodError(result.error);
+      return;
+    }
     try {
-      await createMutation.mutateAsync({
-        name: createName.trim(),
-        url: createUrl.trim(),
-        events: createEvents,
-      });
+      await createMutation.mutateAsync(result.data);
     } catch {
       // error state handled by mutation
     }
@@ -241,6 +252,7 @@ export function WebhooksTab({
     setEditActive(wh.active);
     setRegeneratedSecret(null);
     updateMutation.reset();
+    editFieldErrors.resetFieldErrors();
     setEditDialogOpen(true);
   }
 
@@ -251,14 +263,21 @@ export function WebhooksTab({
 
   async function handleUpdate(e: SyntheticEvent) {
     e.preventDefault();
-    if (!selectedWebhookId || !editName.trim() || !editUrl.trim() || editEvents.length === 0)
+    if (!selectedWebhookId) return;
+    const input = {
+      name: editName.trim(),
+      url: editUrl.trim(),
+      events: editEvents,
+    };
+    const result = createWebhookSchema.safeParse(input);
+    if (!result.success) {
+      editFieldErrors.setFromZodError(result.error);
       return;
+    }
     try {
       await updateMutation.mutateAsync({
         id: selectedWebhookId,
-        name: editName.trim(),
-        url: editUrl.trim(),
-        events: editEvents,
+        ...result.data,
         active: editActive,
       });
     } catch {
@@ -422,6 +441,8 @@ export function WebhooksTab({
           onProjectIdChange={() => {}}
           projects={[]}
           fixedProjectScope
+          fieldErrors={editFieldErrors.fieldErrors}
+          onClearFieldError={editFieldErrors.clearFieldError}
           regeneratedSecret={regeneratedSecret}
           onCopiedSecret={() => toast("Secret copied to clipboard")}
           isPending={updateMutation.isPending}
@@ -548,6 +569,8 @@ export function WebhooksTab({
         onProjectIdChange={() => {}}
         projects={[]}
         fixedProjectScope
+        fieldErrors={createFieldErrors.fieldErrors}
+        onClearFieldError={createFieldErrors.clearFieldError}
         newSecret={newSecret}
         onCopiedSecret={() => toast("Secret copied to clipboard")}
         isPending={createMutation.isPending}

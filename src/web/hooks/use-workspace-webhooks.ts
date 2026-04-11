@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type SyntheticEvent, useCallback, useState } from "react";
 
-import type { CreateWebhookInput, UpdateWebhookInput } from "@/shared/schemas/webhook";
+import { type CreateWebhookInput, createWebhookSchema, type UpdateWebhookInput } from "@/shared/schemas/webhook";
 import type { WebhookEventType } from "@/shared/types/webhook";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
+import { useFieldErrors } from "@/web/hooks/use-field-errors";
 import { useWorkspacePermissions } from "@/web/hooks/use-permissions";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
@@ -116,6 +117,8 @@ export function useWorkspaceWebhooks() {
   // ---- Form state (create & edit) -----------------------------------
   const createForm = useWebhookForm();
   const editForm = useWebhookForm();
+  const createFieldErrors = useFieldErrors();
+  const editFieldErrors = useFieldErrors();
 
   // ---- Test state ---------------------------------------------------
   const [testResult, setTestResult] = useState<TestDeliveryResult | null>(null);
@@ -227,8 +230,9 @@ export function useWorkspaceWebhooks() {
   const handleOpenCreate = useCallback(() => {
     createForm.reset();
     createMutation.reset();
+    createFieldErrors.resetFieldErrors();
     setCreateDialogOpen(true);
-  }, [createForm, createMutation]);
+  }, [createForm, createMutation, createFieldErrors]);
 
   const handleCloseCreate = useCallback(() => {
     setCreateDialogOpen(false);
@@ -237,18 +241,23 @@ export function useWorkspaceWebhooks() {
 
   const handleCreate = useCallback(async (e: SyntheticEvent) => {
     e.preventDefault();
-    if (!createForm.name.trim() || !createForm.url.trim() || createForm.events.length === 0) return;
+    const input = {
+      name: createForm.name.trim(),
+      url: createForm.url.trim(),
+      events: createForm.events,
+      ...(createForm.projectId ? { projectId: createForm.projectId } : {}),
+    };
+    const result = createWebhookSchema.safeParse(input);
+    if (!result.success) {
+      createFieldErrors.setFromZodError(result.error);
+      return;
+    }
     try {
-      await createMutation.mutateAsync({
-        name: createForm.name.trim(),
-        url: createForm.url.trim(),
-        events: createForm.events,
-        ...(createForm.projectId ? { projectId: createForm.projectId } : {}),
-      });
+      await createMutation.mutateAsync(result.data);
     } catch {
       // error state handled by mutation
     }
-  }, [createForm.name, createForm.url, createForm.events, createForm.projectId, createMutation]);
+  }, [createForm.name, createForm.url, createForm.events, createForm.projectId, createMutation, createFieldErrors]);
 
   const handleOpenEdit = useCallback((wh: WebhookRow) => {
     editForm.reset({
@@ -259,8 +268,9 @@ export function useWorkspaceWebhooks() {
       projectId: wh.projectId,
     });
     updateMutation.reset();
+    editFieldErrors.resetFieldErrors();
     setEditDialogOpen(true);
-  }, [editForm, updateMutation]);
+  }, [editForm, updateMutation, editFieldErrors]);
 
   const handleCloseEdit = useCallback(() => {
     setEditDialogOpen(false);
@@ -269,20 +279,28 @@ export function useWorkspaceWebhooks() {
 
   const handleUpdate = useCallback(async (e: SyntheticEvent) => {
     e.preventDefault();
-    if (!selectedWebhookId || !editForm.name.trim() || !editForm.url.trim() || editForm.events.length === 0) return;
+    if (!selectedWebhookId) return;
+    const input = {
+      name: editForm.name.trim(),
+      url: editForm.url.trim(),
+      events: editForm.events,
+      ...(editForm.projectId ? { projectId: editForm.projectId } : {}),
+    };
+    const result = createWebhookSchema.safeParse(input);
+    if (!result.success) {
+      editFieldErrors.setFromZodError(result.error);
+      return;
+    }
     try {
       await updateMutation.mutateAsync({
         id: selectedWebhookId,
-        name: editForm.name.trim(),
-        url: editForm.url.trim(),
-        events: editForm.events,
+        ...result.data,
         active: editForm.active,
-        projectId: editForm.projectId,
       });
     } catch {
       // error state handled by mutation
     }
-  }, [selectedWebhookId, editForm.name, editForm.url, editForm.events, editForm.active, editForm.projectId, updateMutation]);
+  }, [selectedWebhookId, editForm.name, editForm.url, editForm.events, editForm.active, editForm.projectId, updateMutation, editFieldErrors]);
 
   const handleRegenerateSecret = useCallback(async () => {
     if (!selectedWebhookId) return;
@@ -333,6 +351,8 @@ export function useWorkspaceWebhooks() {
     // Form state
     createForm,
     editForm,
+    createFieldErrors,
+    editFieldErrors,
 
     // Test state
     testResult,

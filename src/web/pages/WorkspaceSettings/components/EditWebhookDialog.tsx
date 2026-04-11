@@ -23,6 +23,8 @@ export function EditWebhookDialog({
   onProjectIdChange,
   projects,
   fixedProjectScope,
+  fieldErrors,
+  onClearFieldError,
   regeneratedSecret,
   onCopiedSecret,
   isPending,
@@ -44,6 +46,8 @@ export function EditWebhookDialog({
   onProjectIdChange: (value: string | null) => void;
   projects: ProjectOption[];
   fixedProjectScope?: boolean;
+  fieldErrors?: Record<string, string>;
+  onClearFieldError?: (field: string) => void;
   regeneratedSecret: string | null;
   onCopiedSecret: () => void;
   isPending: boolean;
@@ -83,6 +87,8 @@ export function EditWebhookDialog({
               onProjectIdChange={onProjectIdChange}
               projects={projects}
               fixedProjectScope={fixedProjectScope}
+              fieldErrors={fieldErrors}
+              onClearFieldError={onClearFieldError}
             />
 
             <Divider />

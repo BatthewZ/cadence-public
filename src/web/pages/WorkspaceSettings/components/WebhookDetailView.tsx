@@ -45,6 +45,7 @@ export function WebhookDetailView({ hook }: { hook: UseWorkspaceWebhooksReturn }
     deleteTarget,
     setDeleteTarget,
     editForm,
+    editFieldErrors,
     testResult,
     testingId,
     detailWebhook: wh,
@@ -230,6 +231,8 @@ export function WebhookDetailView({ hook }: { hook: UseWorkspaceWebhooksReturn }
           projectId={editForm.projectId}
           onProjectIdChange={editForm.setProjectId}
           projects={activeProjects}
+          fieldErrors={editFieldErrors.fieldErrors}
+          onClearFieldError={editFieldErrors.clearFieldError}
           regeneratedSecret={editForm.secret}
           onCopiedSecret={handleCopiedSecret}
           isPending={updateMutation.isPending}

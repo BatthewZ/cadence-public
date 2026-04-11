@@ -1,5 +1,7 @@
 import { createDb } from "../../db";
 import type { AppBindings } from "../env";
+import { createTelemetrySink } from "../lib/telemetry";
+import type { TelemetrySink } from "../lib/telemetry/types";
 import { processWebhookRetries } from "../lib/webhooks";
 import { cleanupAuthTables } from "./auth-cleanup";
 import { cleanupInvitations } from "./invitation-cleanup";
@@ -29,14 +31,31 @@ import { cleanupWebhookDeliveries } from "./webhook-cleanup";
  *    pending invitations expired beyond a 7-day grace period.
  */
 /** Run a cleanup task, logging results. Catches so one failure doesn't block the rest. */
-async function runTask(name: string, fn: () => Promise<number>): Promise<void> {
+async function runTask(name: string, fn: () => Promise<number>, sink?: TelemetrySink): Promise<{ success: boolean }> {
+  const start = Date.now();
   try {
     const count = await fn();
     if (count > 0) {
       console.log(`[scheduled] ${name}: ${count}`);
     }
+    sink?.track({
+      type: "cron_task",
+      taskName: name,
+      durationMs: Date.now() - start,
+      count,
+      success: true,
+    });
+    return { success: true };
   } catch (error) {
     console.error(`[scheduled] ${name} failed:`, error);
+    sink?.track({
+      type: "cron_task",
+      taskName: name,
+      durationMs: Date.now() - start,
+      count: 0,
+      success: false,
+    });
+    return { success: false };
   }
 }
 
@@ -45,11 +64,30 @@ export async function handleScheduled(
   env: AppBindings,
 ): Promise<void> {
   const db = createDb(env.DB);
+  const sink = createTelemetrySink(env);
+  const cronStart = Date.now();
+  let tasksRun = 0;
+  let errors = 0;
 
-  await runTask("Processed webhook retries", () => processWebhookRetries(db));
-  await runTask("Cleaned up old webhook deliveries", () => cleanupWebhookDeliveries(db));
-  await runTask("Cleaned up expired auth records", () => cleanupAuthTables(db));
-  await runTask("Cleaned up old notifications", () => cleanupNotifications(db));
-  await runTask("Cleaned up old task activity records", () => cleanupTaskActivity(db));
-  await runTask("Cleaned up expired invitations", () => cleanupInvitations(db));
+  const track = async (name: string, fn: () => Promise<number>) => {
+    const result = await runTask(name, fn, sink);
+    tasksRun++;
+    if (!result.success) errors++;
+  };
+
+  await track("Processed webhook retries", () => processWebhookRetries(db, sink));
+  await track("Cleaned up old webhook deliveries", () => cleanupWebhookDeliveries(db));
+  await track("Cleaned up expired auth records", () => cleanupAuthTables(db));
+  await track("Cleaned up old notifications", () => cleanupNotifications(db));
+  await track("Cleaned up old task activity records", () => cleanupTaskActivity(db));
+  await track("Cleaned up expired invitations", () => cleanupInvitations(db));
+
+  sink.track({
+    type: "cron_run",
+    durationMs: Date.now() - cronStart,
+    tasksRun,
+    errors,
+  });
+
+  await sink.flush();
 }

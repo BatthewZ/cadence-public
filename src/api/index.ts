@@ -11,6 +11,7 @@ import { authSessionMiddleware } from "./middleware/auth";
 import { requestLogger } from "./middleware/logger";
 import { requestIdMiddleware } from "./middleware/request-id";
 import { securityHeadersMiddleware, withSpaSecurityHeaders } from "./middleware/security-headers";
+import { telemetryMiddleware } from "./middleware/telemetry";
 import routes from "./routes";
 import { handleScheduled } from "./scheduled";
 
@@ -34,6 +35,7 @@ app.onError((err, c) => {
 
 app.use("/api/*", requestIdMiddleware);
 app.use("/api/*", requestLogger);
+app.use("/api/*", telemetryMiddleware);
 app.use("/api/*", securityHeadersMiddleware);
 
 // Create a single Drizzle DB instance per request, shared across all

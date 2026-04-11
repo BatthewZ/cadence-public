@@ -14,16 +14,19 @@ Request
 2. requestLogger           -- logs method, path, status, duration, requestId
   |
   v
-3. securityHeadersMiddleware -- sets security response headers
+3. telemetryMiddleware     -- creates a TelemetrySink, tracks http_request events
   |
   v
-4. DB singleton            -- creates a single Drizzle DB instance per request
+4. securityHeadersMiddleware -- sets security response headers
   |
   v
-5. CORS                    -- validates origin, sets CORS headers
+5. DB singleton            -- creates a single Drizzle DB instance per request
   |
   v
-6. authSessionMiddleware   -- extracts user/session from cookies (skips DB when no credentials)
+6. CORS                    -- validates origin, sets CORS headers
+  |
+  v
+7. authSessionMiddleware   -- extracts user/session from cookies (skips DB when no credentials)
   |
   v
 Route Handler (or 404 catch-all)
@@ -37,6 +40,7 @@ This is registered in `src/api/index.ts`:
 ```ts
 app.use("/api/*", requestIdMiddleware);
 app.use("/api/*", requestLogger);
+app.use("/api/*", telemetryMiddleware);
 app.use("/api/*", securityHeadersMiddleware);
 app.use("/api/*", async (c, next) => { c.set("db", createDb(c.env.DB)); await next(); });
 app.use("/api/*", cors({ ... }));
@@ -101,7 +105,28 @@ export const requestLogger = createMiddleware<AppEnv>(async (c, next) => {
 });
 ```
 
-### 3. Security Headers (`src/api/middleware/security-headers.ts`)
+### 3. Telemetry (`src/api/middleware/telemetry.ts`)
+
+Creates a `TelemetrySink` from the environment bindings and stores it in the Hono context as `c.get("telemetry")`. After the response is generated, tracks an `http_request` event with method, path, status code, duration, request ID, user ID, and workspace ID.
+
+The sink is also used by downstream systems (webhook delivery, scheduled tasks) to track their own events.
+
+**Context set:**
+
+| Key | Type | Value |
+|---|---|---|
+| `telemetry` | `TelemetrySink \| undefined` | Telemetry sink instance (see [Telemetry](#telemetry-subsystem) below) |
+
+**Sink selection** (via `createTelemetrySink` in `src/api/lib/telemetry/index.ts`):
+
+| Condition | Sink |
+|---|---|
+| `TELEMETRY_SINK=noop` | `NoopSink` — silently discards all events |
+| `TELEMETRY_SINK=console` | `ConsoleSink` — writes structured JSON to `console.log` |
+| `ANALYTICS` binding present | `AnalyticsEngineSink` — writes to Cloudflare Analytics Engine |
+| Fallback | `ConsoleSink` |
+
+### 4. Security Headers (`src/api/middleware/security-headers.ts`)
 
 Sets security-related response headers on all API responses. These headers are applied **after** `await next()`, so they are set on the final response.
 
@@ -130,7 +155,7 @@ form-action 'self'
 
 **Docs CSP** (`/api/docs` and `/api/openapi.json`): A relaxed policy is applied to these paths to allow the Scalar interactive API documentation to load its scripts, styles, and fonts from `cdn.jsdelivr.net`, `fonts.googleapis.com`, `fonts.gstatic.com`, `fonts.scalar.com`, and `api.scalar.com`.
 
-### 4. DB Singleton (inline in `src/api/index.ts`)
+### 5. DB Singleton (inline in `src/api/index.ts`)
 
 Creates a single Drizzle ORM instance per request and stores it in the Hono context as `c.get("db")`. All downstream middleware and handlers use this shared instance instead of calling `createDb(c.env.DB)` themselves, avoiding 3-5 duplicate Drizzle wrapper constructions per request.
 
@@ -147,11 +172,11 @@ app.use("/api/*", async (c, next) => {
 |---|---|---|
 | `db` | `Database` (from `src/db`) | Drizzle ORM instance wrapping the D1 binding |
 
-### 5. CORS
+### 6. CORS
 
 CORS is configured using Hono's built-in `cors()` middleware. See [CORS](./cors.md) for full details.
 
-### 6. Auth Session (`src/api/middleware/auth.ts`)
+### 7. Auth Session (`src/api/middleware/auth.ts`)
 
 Extracts the user session from cookies on every request. Sets `c.get("user")` and `c.get("session")` -- either with valid session data or `null`. Does not block unauthenticated requests. See the [Auth documentation](../auth/auth.md) for details.
 

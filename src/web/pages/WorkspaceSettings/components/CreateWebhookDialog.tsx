@@ -20,6 +20,8 @@ export function CreateWebhookDialog({
   onProjectIdChange,
   projects,
   fixedProjectScope,
+  fieldErrors,
+  onClearFieldError,
   newSecret,
   onCopiedSecret,
   isPending,
@@ -38,6 +40,8 @@ export function CreateWebhookDialog({
   onProjectIdChange: (value: string | null) => void;
   projects: ProjectOption[];
   fixedProjectScope?: boolean;
+  fieldErrors?: Record<string, string>;
+  onClearFieldError?: (field: string) => void;
   newSecret: string | null;
   onCopiedSecret: () => void;
   isPending: boolean;
@@ -74,6 +78,8 @@ export function CreateWebhookDialog({
               onProjectIdChange={onProjectIdChange}
               projects={projects}
               fixedProjectScope={fixedProjectScope}
+              fieldErrors={fieldErrors}
+              onClearFieldError={onClearFieldError}
             />
 
             {errorMessage && (

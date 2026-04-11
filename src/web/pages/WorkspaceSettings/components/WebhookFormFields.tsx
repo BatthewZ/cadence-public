@@ -1,5 +1,5 @@
 import { type WebhookEventType, WORKSPACE_SCOPED_EVENTS } from "@/shared/types/webhook";
-import { Checkbox, Field, Input, Label, Select } from "@/web/components/form";
+import { Checkbox, Field, FieldError, Input, Label, Select } from "@/web/components/form";
 import { Divider } from "@/web/components/layout";
 import { Text } from "@/web/components/ui";
 
@@ -26,6 +26,8 @@ export function WebhookFormFields({
   projects,
   /** When true, the project selector is hidden and events are always project-scoped. */
   fixedProjectScope,
+  fieldErrors,
+  onClearFieldError,
 }: {
   name: string;
   onNameChange: (value: string) => void;
@@ -41,6 +43,8 @@ export function WebhookFormFields({
   onProjectIdChange?: (value: string | null) => void;
   projects?: ProjectOption[];
   fixedProjectScope?: boolean;
+  fieldErrors?: Record<string, string>;
+  onClearFieldError?: (field: string) => void;
 }) {
   function handleProjectChange(value: string) {
     const newProjectId = value || null;
@@ -62,9 +66,14 @@ export function WebhookFormFields({
           id={nameId}
           type="text"
           value={name}
-          onChange={(e) => onNameChange(e.target.value)}
+          onChange={(e) => {
+            onNameChange(e.target.value);
+            onClearFieldError?.("name");
+          }}
           placeholder="My webhook"
+          error={!!fieldErrors?.name}
         />
+        <FieldError>{fieldErrors?.name}</FieldError>
       </Field>
 
       <Field>
@@ -73,9 +82,14 @@ export function WebhookFormFields({
           id={urlId}
           type="url"
           value={url}
-          onChange={(e) => onUrlChange(e.target.value)}
+          onChange={(e) => {
+            onUrlChange(e.target.value);
+            onClearFieldError?.("url");
+          }}
           placeholder="https://example.com/webhook"
+          error={!!fieldErrors?.url}
         />
+        <FieldError>{fieldErrors?.url}</FieldError>
         <Text variant="body-3" color="muted">
           Must use HTTPS.
         </Text>
@@ -118,10 +132,20 @@ export function WebhookFormFields({
       )}
 
       <Divider />
-      <Text variant="body-2" weight="semibold">
-        Events
-      </Text>
-      <WebhookEventSelector value={events} onChange={onEventsChange} projectScoped={fixedProjectScope || !!projectId} />
+      <Field>
+        <Text variant="body-2" weight="semibold">
+          Events
+        </Text>
+        <WebhookEventSelector
+          value={events}
+          onChange={(v) => {
+            onEventsChange(v);
+            onClearFieldError?.("events");
+          }}
+          projectScoped={fixedProjectScope || !!projectId}
+        />
+        <FieldError>{fieldErrors?.events}</FieldError>
+      </Field>
     </>
   );
 }

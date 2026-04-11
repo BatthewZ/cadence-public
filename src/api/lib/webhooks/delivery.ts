@@ -3,7 +3,37 @@ import { and, eq, lt, lte, sql } from "drizzle-orm";
 import type { Database } from "../../../db";
 import { webhook, webhookDelivery } from "../../../db/schema/webhook";
 import type { WebhookEventType } from "../../../shared/types/webhook";
+import type { TelemetrySink } from "../telemetry/types";
+import type { WebhookDeliveryEvent, WebhookRetryEvent } from "../telemetry/types";
 import { signPayload, type WebhookRow } from "./utils";
+
+// ---------------------------------------------------------------------------
+// Telemetry helper — shared by initial delivery and retry paths.
+// ---------------------------------------------------------------------------
+
+function trackDeliveryTelemetry(
+  sink: TelemetrySink | undefined,
+  type: "webhook_delivery" | "webhook_retry",
+  webhookRow: WebhookRow,
+  deliveryId: string,
+  event: string,
+  opts: { success: boolean; statusCode: number | null; durationMs: number; attempt: number },
+): void {
+  if (!sink) return;
+  const data = {
+    webhookId: webhookRow.id,
+    deliveryId,
+    event,
+    ...opts,
+    workspaceId: webhookRow.workspaceId,
+  };
+  // Branch on the discriminator so TypeScript narrows to the exact event variant.
+  if (type === "webhook_delivery") {
+    sink.track({ type, ...data } satisfies WebhookDeliveryEvent);
+  } else {
+    sink.track({ type, ...data } satisfies WebhookRetryEvent);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Backoff schedule: maps attempt number to delay in seconds
@@ -69,6 +99,7 @@ export async function dispatchWebhookEvent(
   event: WebhookEventType,
   payload: Record<string, unknown>,
   projectId?: string | null,
+  sink?: TelemetrySink,
 ): Promise<number> {
   try {
     // Use Drizzle select with raw SQL for json_each() to match webhooks
@@ -101,7 +132,7 @@ export async function dispatchWebhookEvent(
 
     for (const row of rows) {
       const deliveryId = crypto.randomUUID();
-      executionCtx.waitUntil(deliverWebhook(db, row, deliveryId, event, payload));
+      executionCtx.waitUntil(deliverWebhook(db, row, deliveryId, event, payload, sink));
     }
 
     return rows.length;
@@ -136,6 +167,7 @@ export async function deliverWebhook(
   deliveryId: string,
   event: WebhookEventType,
   payload: Record<string, unknown>,
+  sink?: TelemetrySink,
 ): Promise<void> {
   const now = new Date();
   const timestampSeconds = Math.floor(now.getTime() / 1000).toString();
@@ -144,6 +176,7 @@ export async function deliverWebhook(
   const envelope = { ...payload, id: deliveryId };
 
   const payloadString = JSON.stringify(envelope);
+  const fetchStart = Date.now();
 
   try {
     const signature = await signPayload(payloadString, webhookRow.secret);
@@ -172,6 +205,11 @@ export async function deliverWebhook(
 
     const responseBody = await response.text().catch(() => "");
     const success = response.status >= 200 && response.status < 300;
+    const durationMs = Date.now() - fetchStart;
+
+    trackDeliveryTelemetry(sink, "webhook_delivery", webhookRow, deliveryId, event, {
+      success, statusCode: response.status, durationMs, attempt: 1,
+    });
 
     if (success) {
       // Record successful delivery
@@ -211,8 +249,13 @@ export async function deliverWebhook(
     }
   } catch (error) {
     // Network error, timeout, or other fetch failure
+    const durationMs = Date.now() - fetchStart;
     const errorMessage =
       error instanceof Error ? error.message : "Unknown delivery error";
+
+    trackDeliveryTelemetry(sink, "webhook_delivery", webhookRow, deliveryId, event, {
+      success: false, statusCode: null, durationMs, attempt: 1,
+    });
 
     try {
       await recordDeliveryFailure(
@@ -326,7 +369,7 @@ async function recordDeliveryFailure(
  *
  * @returns The number of retries processed.
  */
-export async function processWebhookRetries(db: Database): Promise<number> {
+export async function processWebhookRetries(db: Database, sink?: TelemetrySink): Promise<number> {
   const now = new Date();
 
   try {
@@ -386,7 +429,7 @@ export async function processWebhookRetries(db: Database): Promise<number> {
         updatedAt: row.webhookUpdatedAt,
       };
 
-      await retryDelivery(db, webhookRow, row.delivery, now);
+      await retryDelivery(db, webhookRow, row.delivery, now, sink);
       processedCount++;
     }
 
@@ -412,9 +455,11 @@ async function retryDelivery(
   webhookRow: WebhookRow,
   delivery: typeof webhookDelivery.$inferSelect,
   now: Date,
+  sink?: TelemetrySink,
 ): Promise<void> {
   const attempt = delivery.attempts + 1;
   const timestampSeconds = Math.floor(now.getTime() / 1000).toString();
+  const fetchStart = Date.now();
 
   try {
     const signature = await signPayload(delivery.payload, webhookRow.secret);
@@ -443,6 +488,11 @@ async function retryDelivery(
 
     const responseBody = await response.text().catch(() => "");
     const success = response.status >= 200 && response.status < 300;
+    const durationMs = Date.now() - fetchStart;
+
+    trackDeliveryTelemetry(sink, "webhook_retry", webhookRow, delivery.id, delivery.event, {
+      success, statusCode: response.status, durationMs, attempt,
+    });
 
     if (success) {
       await db
@@ -473,8 +523,13 @@ async function retryDelivery(
       );
     }
   } catch (error) {
+    const durationMs = Date.now() - fetchStart;
     const errorMessage =
       error instanceof Error ? error.message : "Unknown retry error";
+
+    trackDeliveryTelemetry(sink, "webhook_retry", webhookRow, delivery.id, delivery.event, {
+      success: false, statusCode: null, durationMs, attempt,
+    });
 
     try {
       await updateDeliveryRetryFailure(

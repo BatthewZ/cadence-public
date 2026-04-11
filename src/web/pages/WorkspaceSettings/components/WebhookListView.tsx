@@ -43,6 +43,7 @@ export function WebhookListView({ hook }: { hook: UseWorkspaceWebhooksReturn }) 
     handleSelectWebhook,
     createDialogOpen,
     createForm,
+    createFieldErrors,
     createMutation,
     handleCopiedSecret,
   } = hook;
@@ -167,6 +168,8 @@ export function WebhookListView({ hook }: { hook: UseWorkspaceWebhooksReturn }) 
           projectId={createForm.projectId}
           onProjectIdChange={createForm.setProjectId}
           projects={activeProjects}
+          fieldErrors={createFieldErrors.fieldErrors}
+          onClearFieldError={createFieldErrors.clearFieldError}
           newSecret={createForm.secret}
           onCopiedSecret={handleCopiedSecret}
           isPending={createMutation.isPending}
