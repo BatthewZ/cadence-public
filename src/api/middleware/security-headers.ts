@@ -44,11 +44,11 @@ function isDocsPath(path: string): boolean {
 
 const DOCS_CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+  "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://static.cloudflareinsights.com",
   "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
   "font-src 'self' https://fonts.gstatic.com https://fonts.scalar.com",
   "img-src 'self' data: blob:",
-  "connect-src 'self' https://api.scalar.com",
+  "connect-src 'self' https://api.scalar.com https://cloudflareinsights.com https://static.cloudflareinsights.com",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
