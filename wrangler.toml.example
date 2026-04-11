@@ -28,3 +28,19 @@ database_id = "your-database-id"
 # [[routes]]
 # pattern = "your-domain.com"
 # custom_domain = true
+
+# Optional: Analytics Engine. 
+# This requires setup in the Cloudflare dashboard: Storage & databases > Analytics Engine > Enable > Create Dataset
+# [[analytics_engine_datasets]]
+# binding = "ANALYTICS"
+# dataset = "cadence_telemetry"
+
+# Optional: Worker Logs and Traces
+# [observability]
+# [observability.logs]
+# enabled = true
+# invocation_logs = true
+
+# [observability.traces]
+# enabled = true
+
