@@ -37,8 +37,10 @@ const SPA_CSP = [
   "form-action 'self'",
 ].join("; ");
 
-/** Paths that serve the interactive API documentation UI (Scalar). */
-const DOCS_PATHS = new Set(["/api/docs", "/api/openapi.json"]);
+/** Returns true for paths that serve the interactive API documentation UI (Scalar). */
+function isDocsPath(path: string): boolean {
+  return path.startsWith("/api/docs/") || path === "/api/openapi.json";
+}
 
 const DOCS_CSP = [
   "default-src 'self'",
@@ -59,7 +61,7 @@ export const securityHeadersMiddleware = createMiddleware(async (c, next) => {
   }
   c.header(
     "Content-Security-Policy",
-    DOCS_PATHS.has(c.req.path) ? DOCS_CSP : API_CSP,
+    isDocsPath(c.req.path) ? DOCS_CSP : API_CSP,
   );
 });
 
