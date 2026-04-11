@@ -1,19 +1,7 @@
-import {
-  closestCenter,
-  DndContext,
-  DragOverlay,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Check,
   CheckCircle2,
   Copy,
-  GripVertical,
-  Pencil,
   SmilePlus,
   Trash2,
   X,
@@ -22,60 +10,41 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { Input } from "@/web/components/form/Input";
-import { MentionTextarea } from "@/web/components/form/MentionTextarea";
-import { TaskCheckbox } from "@/web/components/form/TaskCheckbox";
 import { Textarea } from "@/web/components/form/Textarea";
-import { Divider, Row, Stack } from "@/web/components/layout";
-import { TaskLabelPicker } from "@/web/components/project/TaskLabelPicker";
+import { Divider, Stack } from "@/web/components/layout";
 import { useAppShell } from "@/web/components/ui/AppShell";
-import { Avatar } from "@/web/components/ui/Avatar";
 import { Button } from "@/web/components/ui/Button";
 import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
 import { CoverImage } from "@/web/components/ui/CoverImage";
-import { HoldToDeleteButton } from "@/web/components/ui/HoldToDeleteButton";
 import { IconButton } from "@/web/components/ui/IconButton";
 import { IconDisplay } from "@/web/components/ui/IconDisplay";
 import { IconGrid } from "@/web/components/ui/IconPicker";
-import { MentionText } from "@/web/components/ui/MentionText";
 import { Popover } from "@/web/components/ui/Popover";
-import { CommentSkeletonList, Skeleton } from "@/web/components/ui/Skeleton";
+import { Skeleton } from "@/web/components/ui/Skeleton";
 import { Text } from "@/web/components/ui/Text";
 import type { ToastAction } from "@/web/components/ui/Toast";
-import type { Comment, Subtask, Task } from "@/web/contexts/ProjectContext";
+import type { Subtask, Task } from "@/web/contexts/ProjectContext";
 import { useProject } from "@/web/contexts/ProjectContext";
 import type { WorkspaceMember } from "@/web/contexts/WorkspaceContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useProjectPermissions } from "@/web/hooks/use-permissions";
-import {
-  type CommentsPage,
-  optimisticAddComment,
-  optimisticUpdateComment,
-  rollbackAddComment,
-  rollbackUpdateComment,
-  useTaskComments,
-} from "@/web/hooks/use-task-comments";
+import { useTaskCommentActions } from "@/web/hooks/use-task-comment-actions";
+import { useTaskComments } from "@/web/hooks/use-task-comments";
 import { useTaskCover } from "@/web/hooks/use-task-cover";
+import { useTaskDetailActions } from "@/web/hooks/use-task-detail-actions";
 import { useTaskEditing } from "@/web/hooks/use-task-editing";
 import { useTaskSubtasks } from "@/web/hooks/use-task-subtasks";
 import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
 import { queryKeys } from "@/web/lib/query-keys";
+import { TaskCommentSection } from "@/web/pages/TaskDetail/components/TaskCommentSection";
 import { TaskActivityFeed } from "@/web/pages/TaskDetail/TaskActivityFeed";
 import { TaskAttachmentSection } from "@/web/pages/TaskDetail/TaskAttachmentSection";
 import type { TaskDetail } from "@/web/pages/TaskDetail/types";
 import { cn } from "@/web/util/style/style";
 
-import {
-  AssigneePicker,
-  AssigneePickerReadOnly,
-  GroupPicker,
-  GroupPickerReadOnly,
-  PriorityPicker,
-  PriorityPickerReadOnly,
-} from "./PropertyEditors";
-import { PropertyRow } from "./PropertyRow";
-import { RecurrencePicker, RecurrencePickerReadOnly } from "./RecurrencePicker";
-import { SortableSubtaskRow } from "./SortableSubtaskRow";
+import { TaskDetailProperties } from "./TaskDetailProperties";
+import { TaskSubtaskList } from "./TaskSubtaskList";
 
 export function TaskDetailPanelInner({
   taskId,
@@ -168,26 +137,9 @@ export function TaskDetailPanelInner({
       api.patch<{ task: TaskDetail }>(`/api/tasks/${taskId}`, updates),
     onSuccess: invalidateTaskQueries,
   });
-  const deleteTaskMutation = useMutation({
-    mutationFn: () => api.delete<{ ok: boolean }>(`/api/tasks/${taskId}`),
-  });
   const createSubtask = useMutation({
     mutationFn: (input: { title: string }) =>
       api.post<{ subtask: Subtask }>(`/api/tasks/${taskId}/subtasks`, input),
-    onSettled: invalidateTaskQueries,
-  });
-  const createComment = useMutation({
-    mutationFn: (input: { body: string }) =>
-      api.post<{ comment: Comment }>(`/api/tasks/${taskId}/comments`, input),
-    onSettled: invalidateTaskQueries,
-  });
-  const updateCommentMutation = useMutation({
-    mutationFn: ({ commentId, body }: { commentId: string; body: string }) =>
-      api.patch<{ comment: Comment }>(`/api/comments/${commentId}`, { body }),
-    onSettled: invalidateTaskQueries,
-  });
-  const deleteCommentMutation = useMutation({
-    mutationFn: (commentId: string) => api.delete<{ ok: boolean }>(`/api/comments/${commentId}`),
     onSettled: invalidateTaskQueries,
   });
 
@@ -262,12 +214,58 @@ export function TaskDetailPanelInner({
   const { data: session } = useSession();
   const currentUserId = session?.user?.id;
 
-  // Local state for comments, deletion dialog, and URL params
-  const [commentBody, setCommentBody] = useState("");
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editingCommentBody, setEditingCommentBody] = useState("");
+  // Comment CRUD (shared with TaskDetailDialog)
+  const {
+    commentBody,
+    setCommentBody,
+    editingCommentId,
+    setEditingCommentId,
+    editingCommentBody,
+    setEditingCommentBody,
+    handleAddComment,
+    handleUpdateComment,
+    handleDeleteComment,
+    resetCommentState,
+    isAddingComment,
+  } = useTaskCommentActions({
+    taskId,
+    currentUserId,
+    currentUserName: session?.user?.name,
+    invalidateTaskQueries,
+    toast,
+    updateTaskInContext,
+    commentCount: localTask?.commentCount,
+  });
+
   const [, setSearchParams] = useSearchParams();
+
+  // Task-level actions (complete, duplicate, delete)
+  const {
+    showDeleteDialog,
+    setShowDeleteDialog,
+    handleToggleComplete,
+    handleDuplicateTask,
+    handleDeleteTask,
+    isDeleting,
+  } = useTaskDetailActions({
+    taskId,
+    localTask,
+    setLocalTask,
+    toast,
+    workspaceId: workspace.id,
+    projectId: project.id,
+    onDeleteSuccess: () => {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("task");
+        return next;
+      });
+    },
+    updateTaskInContext,
+    addTaskToContext,
+    removeTaskFromContext,
+    refetchTasks,
+  });
 
   // Reset all local state when switching tasks (replaces key={taskId} remount)
   // Also re-seed from cache if data is already available (React Query may serve cached data
@@ -283,12 +281,10 @@ export function TaskDetailPanelInner({
       setDescriptionValue(cached?.task?.description ?? "");
       setCostDisplay(cached?.task?.cost != null ? (cached.task.cost / 100).toFixed(2) : "");
       setNewSubtaskTitle("");
-      setCommentBody("");
-      setEditingCommentId(null);
-      setEditingCommentBody("");
+      resetCommentState();
       setShowDeleteDialog(false);
     });
-  }, [taskId, qc, dirtyFields, setEditingTitle, setTitleValue, setDescriptionValue, setCostDisplay, setNewSubtaskTitle]);
+  }, [taskId, qc, dirtyFields, setEditingTitle, setTitleValue, setDescriptionValue, setCostDisplay, setNewSubtaskTitle, resetCommentState, setShowDeleteDialog]);
 
   // Keyboard escape to close
   useEffect(() => {
@@ -298,143 +294,6 @@ export function TaskDetailPanelInner({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
-
-  async function handleAddComment() {
-    if (!commentBody.trim()) return;
-    const body = commentBody.trim();
-    setCommentBody("");
-
-    const optimisticComment = optimisticAddComment(qc, taskId, {
-      body,
-      authorId: currentUserId ?? "",
-      authorName: session?.user?.name ?? "",
-    });
-    updateTaskInContext(taskId, { commentCount: (task?.commentCount ?? 0) + 1 });
-
-    try {
-      await createComment.mutateAsync({ body });
-    } catch {
-      rollbackAddComment(qc, taskId, optimisticComment.id);
-      updateTaskInContext(taskId, { commentCount: Math.max(0, (task?.commentCount ?? 1) - 1) });
-      setCommentBody(body);
-      toast("Failed to add comment", { variant: "error" });
-    }
-  }
-
-  async function handleUpdateComment(commentId: string) {
-    const body = editingCommentBody.trim();
-    if (!body) return;
-    setEditingCommentId(null);
-
-    const oldBody = optimisticUpdateComment(qc, taskId, commentId, body);
-
-    try {
-      await updateCommentMutation.mutateAsync({ commentId, body });
-    } catch {
-      rollbackUpdateComment(qc, taskId, commentId, oldBody);
-      toast("Failed to update comment", { variant: "error" });
-    }
-  }
-
-  async function handleDeleteComment(commentId: string) {
-    const removedComment = paginatedComments.find((c) => c.id === commentId);
-    if (!removedComment) return;
-
-    // Optimistically remove from cache
-    qc.setQueryData<{ pages: CommentsPage[]; pageParams: unknown[] }>(
-      queryKeys.tasks.comments(taskId),
-      (old) => {
-        if (!old) return old;
-        return {
-          ...old,
-          pages: old.pages.map((page) => ({
-            ...page,
-            comments: page.comments.filter((c) => c.id !== commentId),
-          })),
-        };
-      }
-    );
-    updateTaskInContext(taskId, { commentCount: Math.max(0, (task?.commentCount ?? 1) - 1) });
-
-    try {
-      await deleteCommentMutation.mutateAsync(commentId);
-    } catch {
-      // Restore on failure
-      qc.setQueryData<{ pages: CommentsPage[]; pageParams: unknown[] }>(
-        queryKeys.tasks.comments(taskId),
-        (old) => {
-          if (!old) return old;
-          const pages = [...old.pages];
-          const lastIdx = pages.length - 1;
-          pages[lastIdx] = {
-            ...pages[lastIdx],
-            comments: [...pages[lastIdx].comments, removedComment],
-          };
-          return { ...old, pages };
-        }
-      );
-      updateTaskInContext(taskId, { commentCount: (task?.commentCount ?? 0) + 1 });
-      toast("Failed to delete comment", { variant: "error" });
-    }
-  }
-
-  async function handleDuplicateTask() {
-    try {
-      const result = await api.post<{ task: Task }>(`/api/tasks/${taskId}/duplicate`, {});
-      addTaskToContext(result.task);
-      refetchTasks();
-      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
-      toast("Task duplicated", { variant: "success" });
-    } catch {
-      toast("Failed to duplicate task", { variant: "error" });
-    }
-  }
-
-  async function handleDeleteTask() {
-    try {
-      await deleteTaskMutation.mutateAsync();
-      setShowDeleteDialog(false);
-      // Cancel task queries to prevent 404 refetches while panel unmounts
-      await qc.cancelQueries({ queryKey: ["tasks", taskId] });
-      // Clear task from URL (triggers panel unmount)
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete("task");
-        return next;
-      });
-      removeTaskFromContext(taskId);
-      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
-    } catch {
-      toast("Failed to delete task", { variant: "error" });
-    }
-  }
-
-  async function handleToggleComplete() {
-    if (!task) return;
-    const wasCompleted = task.completed;
-    setLocalTask((prev) => (prev ? { ...prev, completed: !wasCompleted } : prev));
-    updateTaskInContext(taskId, { completed: !wasCompleted });
-    const endpoint = wasCompleted
-      ? `/api/tasks/${taskId}/uncomplete`
-      : `/api/tasks/${taskId}/complete`;
-    try {
-      const res = await api.post<{ task: Task; nextRecurringTask?: Task }>(endpoint, {});
-      setLocalTask((prev) => (prev ? { ...prev, ...res.task } : prev));
-      updateTaskInContext(taskId, res.task);
-      if (res.nextRecurringTask) {
-        addTaskToContext(res.nextRecurringTask);
-        toast("Next occurrence created", { variant: "success" });
-      }
-      void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
-      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id) });
-    } catch {
-      setLocalTask((prev) =>
-        prev ? { ...prev, completed: wasCompleted } : prev
-      );
-      updateTaskInContext(taskId, { completed: wasCompleted });
-      toast("Failed to update task", { variant: "error" });
-    }
-  }
 
   return (
     <>
@@ -578,140 +437,48 @@ export function TaskDetailPanelInner({
 
               {/* Properties */}
               <div className="px-r3 py-r4">
-                <Stack gap="r6">
-                  <PropertyRow label="Group">
-                    {canEditTasks ? (
-                      <GroupPicker
-                        value={task.taskGroupId}
-                        taskGroups={taskGroups}
-                        onSelect={(newGroupId) => {
-                          if (newGroupId === task.taskGroupId) return;
-                          const oldGroupId = task.taskGroupId;
-                          setLocalTask((prev) =>
-                            prev ? { ...prev, taskGroupId: newGroupId } : prev
-                          );
-                          updateTaskInContext(taskId, { taskGroupId: newGroupId });
-                          void (async () => {
-                            try {
-                              const res = await api.patch<{ task: Task }>(
-                                `/api/tasks/${taskId}/move`,
-                                {
-                                  taskGroupId: newGroupId,
-                                  position: task.position,
-                                }
-                              );
-                              setLocalTask((prev) => (prev ? { ...prev, ...res.task } : prev));
-                              updateTaskInContext(taskId, res.task);
-                            } catch {
-                              setLocalTask((prev) =>
-                                prev ? { ...prev, taskGroupId: oldGroupId } : prev
-                              );
-                              updateTaskInContext(taskId, { taskGroupId: oldGroupId });
-                              toast("Failed to move task", { variant: "error" });
-                            }
-                          })();
-                        }}
-                      />
-                    ) : (
-                      <GroupPickerReadOnly value={task.taskGroupId} taskGroups={taskGroups} />
-                    )}
-                  </PropertyRow>
-
-                  <PropertyRow label="Priority">
-                    {canEditTasks ? (
-                      <PriorityPicker
-                        value={task.priority}
-                        onSelect={(priority) => {
-                          void handlePatch({ priority });
-                        }}
-                      />
-                    ) : (
-                      <PriorityPickerReadOnly value={task.priority} />
-                    )}
-                  </PropertyRow>
-
-                  <PropertyRow label="Assigned to">
-                    {canEditTasks ? (
-                      <AssigneePicker
-                        value={task.assigneeId ?? null}
-                        members={members}
-                        onSelect={(userId) => {
-                          const member = userId
-                            ? members.find((m) => m.userId === userId)
-                            : undefined;
-                          void handlePatch({
-                            assigneeId: userId,
-                            assigneeName: member?.user.name ?? undefined,
-                            assigneeAvatarUrl: member?.user.image ?? undefined,
-                          });
-                        }}
-                      />
-                    ) : (
-                      <AssigneePickerReadOnly value={task.assigneeId ?? null} members={members} />
-                    )}
-                  </PropertyRow>
-
-                  <PropertyRow label="Due date">
-                    <Input
-                      type="date"
-                      value={task.dueDate ? task.dueDate.slice(0, 10) : ""}
-                      disabled={!canEditTasks}
-                      onChange={(e) => {
-                        void handlePatch({ dueDate: e.target.value || null });
-                      }}
-                      className="border-transparent bg-transparent hover:bg-surface-2 focus:bg-surface-0 py-1.5 px-r5 text-body-3 rounded"
-                    />
-                  </PropertyRow>
-
-                  <PropertyRow label="Repeat">
-                    {canEditTasks ? (
-                      <RecurrencePicker
-                        value={localTask.recurrenceRule ?? null}
-                        onSelect={(rule) => {
-                          void handlePatch({ recurrenceRule: rule });
-                        }}
-                      />
-                    ) : (
-                      <RecurrencePickerReadOnly value={localTask.recurrenceRule ?? null} />
-                    )}
-                  </PropertyRow>
-
-                  <PropertyRow label="Cost">
-                    <div className="relative">
-                      <span className="absolute left-r5 top-1/2 -translate-y-1/2 text-body-3 text-fg-muted pointer-events-none">
-                        $
-                      </span>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder="0.00"
-                        value={costDisplay}
-                        disabled={!canEditTasks}
-                        onChange={(e) => setCostDisplay(e.target.value)}
-                        onFocus={() => dirtyFields.current.add("cost")}
-                        onBlur={() => {
-                          void handleCostBlur();
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            (e.target as HTMLInputElement).blur();
+                <TaskDetailProperties
+                  task={task}
+                  taskGroups={taskGroups}
+                  members={members}
+                  canEditTasks={canEditTasks}
+                  costDisplay={costDisplay}
+                  setCostDisplay={setCostDisplay}
+                  onCostFocus={() => dirtyFields.current.add("cost")}
+                  onCostBlur={() => {
+                    void handleCostBlur();
+                  }}
+                  onPatch={(updates) => {
+                    void handlePatch(updates);
+                  }}
+                  onGroupChange={(newGroupId) => {
+                    const oldGroupId = task.taskGroupId;
+                    setLocalTask((prev) =>
+                      prev ? { ...prev, taskGroupId: newGroupId } : prev
+                    );
+                    updateTaskInContext(taskId, { taskGroupId: newGroupId });
+                    void (async () => {
+                      try {
+                        const res = await api.patch<{ task: Task }>(
+                          `/api/tasks/${taskId}/move`,
+                          {
+                            taskGroupId: newGroupId,
+                            position: task.position,
                           }
-                        }}
-                        className="border-transparent bg-transparent hover:bg-surface-2 focus:bg-surface-0 py-1.5 pl-6 pr-r5 text-body-3 rounded"
-                      />
-                    </div>
-                  </PropertyRow>
-
-                  <PropertyRow label="Labels">
-                    <TaskLabelPicker
-                      taskId={task.id}
-                      projectId={project.id}
-                      labels={task.labels ?? []}
-                      readOnly={!canEditTasks}
-                    />
-                  </PropertyRow>
-                </Stack>
+                        );
+                        setLocalTask((prev) => (prev ? { ...prev, ...res.task } : prev));
+                        updateTaskInContext(taskId, res.task);
+                      } catch {
+                        setLocalTask((prev) =>
+                          prev ? { ...prev, taskGroupId: oldGroupId } : prev
+                        );
+                        updateTaskInContext(taskId, { taskGroupId: oldGroupId });
+                        toast("Failed to move task", { variant: "error" });
+                      }
+                    })();
+                  }}
+                  projectId={project.id}
+                />
               </div>
 
               <Divider />
@@ -742,70 +509,21 @@ export function TaskDetailPanelInner({
                   Subtasks ({task.subtasks.length})
                 </Text>
 
-                <Stack gap="r6">
-                  <DndContext
-                    sensors={subtaskSensors}
-                    collisionDetection={closestCenter}
-                    onDragStart={handleSubtaskDragStart}
-                    onDragEnd={(event) => {
-                      void handleSubtaskDragEnd(event);
-                    }}
-                  >
-                    <SortableContext items={subtaskIds} strategy={verticalListSortingStrategy}>
-                      {sortedSubtasks.map((subtask) => (
-                        <SortableSubtaskRow
-                          key={subtask.id}
-                          subtask={subtask}
-                          onToggle={(subtask) => {
-                            void handleSubtaskToggle(subtask);
-                          }}
-                          onDelete={(id) => {
-                            void handleDeleteSubtask(id);
-                          }}
-                          onRename={(id, title) => {
-                            void handleRenameSubtask(id, title);
-                          }}
-                          readOnly={!canEditTasks}
-                        />
-                      ))}
-                    </SortableContext>
-                    <DragOverlay dropAnimation={null}>
-                      {activeSubtask && (
-                        <Row
-                          gap="r5"
-                          align="center"
-                          className="px-r5 py-r6 rounded bg-surface-1 shadow-md"
-                        >
-                          <GripVertical size={14} className="shrink-0 text-fg-muted" />
-                          <TaskCheckbox
-                            checked={activeSubtask.completed}
-                            onChange={() => {}}
-                            size="sm"
-                          />
-                          <Text variant="body-2" className="flex-1">
-                            {activeSubtask.title}
-                          </Text>
-                        </Row>
-                      )}
-                    </DragOverlay>
-                  </DndContext>
-
-                  {canEditTasks && (
-                    <Input
-                      value={newSubtaskTitle}
-                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          void handleAddSubtask();
-                        }
-                      }}
-                      enterKeyHint="done"
-                      placeholder="+ Add subtask"
-                      className="border-dashed border-border-default bg-transparent py-1.5 px-r5 text-body-3 rounded"
-                    />
-                  )}
-                </Stack>
+                <TaskSubtaskList
+                  subtaskSensors={subtaskSensors}
+                  sortedSubtasks={sortedSubtasks}
+                  subtaskIds={subtaskIds}
+                  activeSubtask={activeSubtask}
+                  newSubtaskTitle={newSubtaskTitle}
+                  setNewSubtaskTitle={setNewSubtaskTitle}
+                  onToggle={(s) => { void handleSubtaskToggle(s); }}
+                  onDelete={(id) => { void handleDeleteSubtask(id); }}
+                  onRename={(id, title) => { void handleRenameSubtask(id, title); }}
+                  onAddSubtask={() => { void handleAddSubtask(); }}
+                  onDragStart={handleSubtaskDragStart}
+                  onDragEnd={(event) => { void handleSubtaskDragEnd(event); }}
+                  canEdit={canEditTasks}
+                />
               </div>
 
               <Divider />
@@ -821,137 +539,33 @@ export function TaskDetailPanelInner({
 
               {/* Comments */}
               <div className="px-r3 py-r4">
-                <Text variant="body-3" weight="semibold" color="secondary" className="mb-r5">
-                  Comments ({task.commentCount})
-                </Text>
-                {isCommentsError && (
-                  <Text variant="body-2" color="secondary" className="mb-r4">
-                    Failed to load comments.
-                  </Text>
-                )}
-
-                <Stack gap="r4">
-                  {isCommentsLoading && <CommentSkeletonList />}
-                  {paginatedComments.map((comment) => {
-                    const author = members.find((m) => m.userId === comment.authorId);
-                    const isOwn = currentUserId === comment.authorId;
-                    const isEditing = editingCommentId === comment.id;
-                    const isOptimistic = comment.id.startsWith("optimistic-");
-                    return (
-                      <div
-                        key={comment.id}
-                        className={`group rounded-md border border-border-default p-r4${isOptimistic ? " opacity-70" : ""}`}
-                      >
-                        <Row gap="r5" align="center" className="mb-r6">
-                          <Avatar size="xs" name={comment.authorName} src={author?.user.image} />
-                          <Text variant="body-3" weight="semibold">
-                            {comment.authorName}
-                          </Text>
-                          <Text variant="body-3" color="muted" className="ml-auto">
-                            {new Date(comment.createdAt).toLocaleDateString()}
-                            {comment.updatedAt &&
-                              new Date(comment.updatedAt).getTime() !==
-                                new Date(comment.createdAt).getTime() && (
-                                <span
-                                  className="ml-1 italic"
-                                  title={`Edited ${new Date(comment.updatedAt).toLocaleDateString()}`}
-                                >
-                                  (edited)
-                                </span>
-                              )}
-                          </Text>
-                          {isOwn && !isEditing && !isOptimistic && (
-                            <Row
-                              gap="r6"
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <IconButton
-                                aria-label="Edit comment"
-                                className="p-1"
-                                onClick={() => {
-                                  setEditingCommentId(comment.id);
-                                  setEditingCommentBody(comment.body);
-                                }}
-                              >
-                                <Pencil size={14} />
-                              </IconButton>
-                              <HoldToDeleteButton
-                                onDelete={() => void handleDeleteComment(comment.id)}
-                                label={`Hold to delete comment`}
-                              />
-                            </Row>
-                          )}
-                        </Row>
-                        {isEditing ? (
-                          <Stack gap="r6">
-                            <Textarea
-                              value={editingCommentBody}
-                              onChange={(e) => setEditingCommentBody(e.target.value)}
-                              className="min-h-[2.5rem] border-border-default bg-surface-1 focus:bg-surface-0 text-body-2"
-                              autoFocus
-                            />
-                            <Row gap="r6" className="justify-end">
-                              <IconButton
-                                aria-label="Cancel editing"
-                                className="p-1"
-                                onClick={() => setEditingCommentId(null)}
-                              >
-                                <X size={14} />
-                              </IconButton>
-                              <IconButton
-                                aria-label="Save comment"
-                                className="p-1 text-status-success"
-                                onClick={() => void handleUpdateComment(comment.id)}
-                              >
-                                <Check size={14} />
-                              </IconButton>
-                            </Row>
-                          </Stack>
-                        ) : (
-                          <Text variant="body-2">
-                            <MentionText>{comment.body}</MentionText>
-                          </Text>
-                        )}
-                      </div>
-                    );
-                  })}
-
-                  {hasMoreComments && (
-                    <div className="flex justify-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => void fetchNextComments()}
-                        disabled={isFetchingMoreComments}
-                      >
-                        {isFetchingMoreComments ? "Loading..." : "Load more comments"}
-                      </Button>
-                    </div>
-                  )}
-
-                  {canEditTasks && (
-                    <>
-                      <MentionTextarea
-                        value={commentBody}
-                        onChange={setCommentBody}
-                        members={members}
-                        placeholder="Write a comment... Use @ to mention"
-                        className="min-h-[3.75rem] border-border-default bg-surface-1 focus:bg-surface-0"
-                      />
-                      <div className="flex justify-end">
-                        <Button
-                          size="sm"
-                          onClick={() => {
-                            void handleAddComment();
-                          }}
-                          disabled={!commentBody.trim() || createComment.isPending}
-                        >
-                          {createComment.isPending ? "Sending..." : "Comment"}
-                        </Button>
-                      </div>
-                    </>
-                  )}
-                </Stack>
+                <TaskCommentSection
+                  comments={paginatedComments}
+                  members={members}
+                  currentUserId={currentUserId}
+                  commentCount={task.commentCount}
+                  editingCommentId={editingCommentId}
+                  editingCommentBody={editingCommentBody}
+                  commentBody={commentBody}
+                  onEditStart={(id, body) => {
+                    setEditingCommentId(id);
+                    setEditingCommentBody(body);
+                  }}
+                  onEditCancel={() => setEditingCommentId(null)}
+                  onEditSave={handleUpdateComment}
+                  onEditBodyChange={setEditingCommentBody}
+                  onDelete={handleDeleteComment}
+                  onCommentBodyChange={setCommentBody}
+                  onAddComment={handleAddComment}
+                  isLoading={isCommentsLoading}
+                  isError={isCommentsError}
+                  hasMore={hasMoreComments ?? false}
+                  isFetchingMore={isFetchingMoreComments}
+                  onLoadMore={() => void fetchNextComments()}
+                  isAddingComment={isAddingComment}
+                  canEdit={canEditTasks}
+                  deleteVariant="hold"
+                />
               </div>
 
               <Divider />
@@ -1000,7 +614,7 @@ export function TaskDetailPanelInner({
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={() => void handleDeleteTask()}
         title="Delete Task"
-        confirming={deleteTaskMutation.isPending}
+        confirming={isDeleting}
       >
         Are you sure? This cannot be undone.
       </ConfirmDialog>

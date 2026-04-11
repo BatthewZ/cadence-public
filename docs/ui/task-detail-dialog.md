@@ -146,9 +146,11 @@ const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 - [`Dialog`](dialog.md), [`ConfirmDialog`](confirm-dialog.md), [`Avatar`](avatar.md), [`Button`](button.md), [`IconButton`](icon-button.md), [`Skeleton`](skeleton.md), [`Text`](text.md), [`Toast`](toast.md)
 - [`CoverImage`], [`IconDisplay`], [`IconGrid`](icon-picker), [`MentionText`](mention-text.md), [`Popover`](popover.md)
 - Form primitives: `Input`, `Select`, `TaskCheckbox`, `Textarea`, `MentionTextarea`
-- Shared sub-components from `pages/TaskDetail/components/`: `PropertyRow`, `SortableSubtaskRow`
+- Shared extracted components from `pages/TaskDetail/components/`: `TaskDetailProperties` (property grid), `TaskSubtaskList` (drag-and-drop subtask list), `TaskCommentSection` (comment list with edit/delete), `PropertyRow`, `SortableSubtaskRow`
 - `@dnd-kit/core`, `@dnd-kit/sortable` (subtask drag-and-drop)
 - `@tanstack/react-query` (`useQuery`, `useMutation`, `useQueryClient`)
 - [`useTaskComments`](hooks.md#usetaskcomments) (paginated comment fetching)
+- [`useTaskCommentActions`](hooks.md#usetaskcommentactions) (comment CRUD mutations + optimistic updates)
+- [`useTaskDetailActions`](hooks.md#usetaskdetailactions) (complete/duplicate/delete actions)
 - [`useTaskAttachments`](hooks.md#usetaskattachments) (attachment fetching with optimistic cache helpers)
 - `useWorkspace` context (for dashboard cache invalidation on task delete)

@@ -9,4 +9,6 @@ export interface TaskDetail extends Task {
   commentCount: number;
   cost?: number | null;
   coverImagePosition?: number | null;
+  /** Present on the `/api/tasks/:id` response; optional so list-level code isn't forced to carry it. */
+  projectId?: string;
 }

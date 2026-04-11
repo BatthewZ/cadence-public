@@ -208,5 +208,8 @@ Hooks shared across multiple UI components.
 | [useTaskCover](hooks.md#usetaskcover)                      | Task cover image upload, removal, and position-change logic with optimistic updates |
 | [useTaskEditing](hooks.md#usetaskediting)                  | Editable field management (title, description, cost) with dirty-field tracking to prevent server clobbering |
 | [useTaskSubtasks](hooks.md#usetasksubtasks)                | Subtask CRUD, DnD reorder, and optimistic updates with rollback for the task detail panel |
+| [useTaskCommentActions](hooks.md#usetaskcommentactions)    | Comment CRUD mutations + optimistic cache updates, shared between TaskDetailDialog and TaskDetailPanelInner |
+| [useTaskDetailActions](hooks.md#usetaskdetailactions)      | Task complete/duplicate/delete actions with delete dialog state, shared between TaskDetailDialog and TaskDetailPanelInner |
+| [useWorkspaceWebhooks](hooks.md#useworkspacewebhooks)      | Centralised state, queries, mutations, and handlers for the workspace webhooks settings page |
 
 [Hooks docs →](hooks.md)

@@ -173,10 +173,13 @@ src/
     │   ├── use-reduced-motion.ts
     │   ├── use-roving-focus.ts
     │   ├── use-task-actions.ts   # Optimistic task mutation handlers (priority, assign, move, due date, delete)
+    │   ├── use-task-comment-actions.ts # Comment CRUD mutations + optimistic cache updates (shared between Dialog & Panel)
     │   ├── use-task-cover.ts    # Task cover image upload, removal, and position-change logic
+    │   ├── use-task-detail-actions.ts # Task complete/duplicate/delete actions (shared between Dialog & Panel)
     │   ├── use-task-editing.ts  # Editable field management (title, description, cost) with dirty-field tracking
     │   ├── use-task-subtasks.ts # Subtask CRUD, DnD reorder, and optimistic updates with rollback
-    │   └── use-theme.ts
+    │   ├── use-theme.ts
+    │   └── use-workspace-webhooks.ts # Centralised webhook state, queries, mutations for WorkspaceSettings
     ├── contexts/                 # React context providers & query-based state
     │   ├── ProjectContext.tsx     # Active project state & data (context provider)
     │   └── WorkspaceContext.tsx   # Active workspace state & data (React Query cache, no provider)
@@ -270,11 +273,11 @@ src/
         ├── Showcase/
         ├── TaskDetail/
         │   ├── types.ts          # TaskDetail interface (extends Task with subtasks, commentCount, cost, coverImagePosition)
-        │   └── components/       # PropertyRow, PropertyEditors, PropertyDisplays, SortableSubtaskRow, attachments
+        │   └── components/       # PropertyRow, PropertyEditors, PropertyDisplays, SortableSubtaskRow, TaskCommentSection, TaskDetailProperties, TaskSubtaskList, attachments
         ├── ThemeEditor/
         │   └── components/       # LivePreview, TokenInputs, helpers, token-constants
         ├── WorkspaceSettings/
-        │   └── components/       # Member/team/webhook dialogs, TeamCard, column defs
+        │   └── components/       # Member/team/webhook dialogs, TeamCard, column defs, WebhookListView, WebhookDetailView
         └── Workspaces/
             └── components/       # CreateWorkspaceDialog, PendingInvitations
 ```

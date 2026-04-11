@@ -1408,3 +1408,103 @@ function TaskCard({ task, updateTask, removeTask, taskGroups, workspaceId }) {
   );
 }
 ```
+
+## useTaskCommentActions
+
+Encapsulates comment CRUD mutations, local editing state, and optimistic update/rollback logic for task detail views. Shared between `TaskDetailDialog` and `TaskDetailPanelInner` to eliminate duplicated comment management code. Uses the cache helpers from `useTaskComments` for optimistic cache manipulation.
+
+**Source:** `src/web/hooks/use-task-comment-actions.ts`
+
+### Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `taskId` | `string` | The task whose comments to manage. |
+| `currentUserId` | `string \| undefined` | Current user's ID (for optimistic comment authorship). |
+| `currentUserName` | `string \| undefined` | Current user's name (for optimistic comment display). |
+| `invalidateTaskQueries` | `() => void` | Callback to invalidate relevant React Query caches after mutations settle. |
+| `toast` | `(message: string, options?) => string` | Toast notification function. |
+| `updateTaskInContext` | `(taskId: string, updates: Partial<Task>) => void` | Optional context updater for comment count on board task cards. The Panel passes `updateTaskInContext`; the Dialog omits it. |
+| `commentCount` | `number` | Current comment count from `localTask`, used for optimistic count updates. |
+
+### Return Value
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `commentBody` | `string` | Current new-comment textarea value. |
+| `setCommentBody` | `(body: string) => void` | Setter for the new-comment textarea. |
+| `editingCommentId` | `string \| null` | ID of the comment currently being edited, or `null`. |
+| `setEditingCommentId` | `(id: string \| null) => void` | Enter/exit edit mode for a comment. |
+| `editingCommentBody` | `string` | Current body text of the comment being edited. |
+| `setEditingCommentBody` | `(body: string) => void` | Setter for the editing comment body. |
+| `handleAddComment` | `() => Promise<void>` | Create a comment with optimistic cache insertion and rollback on failure. |
+| `handleUpdateComment` | `(commentId: string) => Promise<void>` | Update a comment body with optimistic cache update and rollback on failure. |
+| `handleDeleteComment` | `(commentId: string) => Promise<void>` | Delete a comment with optimistic removal and rollback on failure. |
+| `resetCommentState` | `() => void` | Clears all local comment editing state (useful on dialog/panel open). |
+| `isAddingComment` | `boolean` | Whether a create-comment mutation is in flight. |
+
+## useTaskDetailActions
+
+Encapsulates task-level actions (complete/uncomplete, duplicate, delete) and the delete confirmation dialog state. Shared between `TaskDetailDialog` and `TaskDetailPanelInner`. The two consumers differ in post-success behavior (Dialog closes; Panel clears URL), handled via the `onDeleteSuccess` callback and optional context updaters.
+
+**Source:** `src/web/hooks/use-task-detail-actions.ts`
+
+### Options
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `taskId` | `string` | The task to act on. |
+| `localTask` | `TaskDetail \| null` | Local optimistic task state. |
+| `setLocalTask` | `Dispatch<SetStateAction<TaskDetail \| null>>` | Setter for `localTask`. |
+| `toast` | `(message: string, options?) => string` | Toast notification function. |
+| `workspaceId` | `string` | Workspace ID for dashboard cache invalidation. |
+| `projectId` | `string \| undefined` | Project ID for project-scoped cache invalidation (Dialog may not have one). |
+| `onDeleteSuccess` | `() => void` | Called after successful deletion (Dialog closes; Panel clears URL param). |
+| `updateTaskInContext` | `(taskId: string, updates: Partial<Task>) => void` | Optional: update task in board context (Panel has ProjectContext, Dialog doesn't). |
+| `addTaskToContext` | `(task: Task) => void` | Optional: add task to board context (for duplicate or recurring task creation). |
+| `removeTaskFromContext` | `(taskId: string) => void` | Optional: remove task from board context on delete. |
+| `refetchTasks` | `() => void` | Optional: refetch the project task list after duplication. |
+
+### Return Value
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `showDeleteDialog` | `boolean` | Delete confirmation dialog open state. |
+| `setShowDeleteDialog` | `(open: boolean) => void` | Control the delete confirmation dialog. |
+| `handleToggleComplete` | `() => Promise<void>` | Toggle task completion with optimistic update. Also handles recurring-task next-occurrence creation. |
+| `handleDuplicateTask` | `() => Promise<void>` | Duplicate the task and add to context/refetch. |
+| `handleDeleteTask` | `() => Promise<void>` | Delete the task, cancel in-flight queries, remove from context. |
+| `isDeleting` | `boolean` | Whether a delete request is in flight. |
+
+## useWorkspaceWebhooks
+
+Centralises all state, queries, mutations, and handler functions for the workspace webhooks settings page. View components (`WebhookListView`, `WebhookDetailView`) receive slices of this hook's return value as props, keeping them stateless and presentational.
+
+**Source:** `src/web/hooks/use-workspace-webhooks.ts`
+
+### Return Value
+
+The hook returns a large object grouped into logical sections:
+
+**Context** — `workspace`, `projects`, `activeProjects`, `canManageWorkspace`
+
+**View state** — `selectedWebhookId`, `handleSelectWebhook`, `createDialogOpen`, `editDialogOpen`, `deleteTarget`, `setDeleteTarget`
+
+**Form state** — `createForm` and `editForm` objects, each containing `name`, `url`, `events`, `projectId`, `active`, `secret`, and a `reset()` method.
+
+**Test state** — `testResult`, `testingId`
+
+**Queries** — `webhooks`, `listLoading`, `listError`, `detailWebhook`, `deliveries`, `detailLoading`
+
+**Mutations** — `createMutation`, `updateMutation`, `deleteMutation`
+
+**Handlers** — `handleOpenCreate`, `handleCloseCreate`, `handleCreate`, `handleOpenEdit`, `handleCloseEdit`, `handleUpdate`, `handleRegenerateSecret`, `handleTest`, `handleCopiedSecret`
+
+### Exports
+
+| Export | Description |
+| --- | --- |
+| `WebhookRow` | Interface matching the webhook API response shape. |
+| `projectName(projects, projectId)` | Look up a project name by ID from the projects list. |
+| `parseEvents(raw)` | Parse a JSON-stringified event array into `WebhookEventType[]`. |
+| `UseWorkspaceWebhooksReturn` | The full return type of `useWorkspaceWebhooks`. |
