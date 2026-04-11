@@ -1,0 +1,135 @@
+/* Paper Theme — A printed document under daylight
+   Achromatic grayscale, no hue. Serif headings for editorial clarity.
+   Fonts: Raleway (body), Libre Baskerville (headings) */
+
+:root[data-theme="paper"] {
+  color-scheme: light;
+
+  /* Fonts — classic editorial serif headings with elegant sans body */
+  --DEFAULT-FONT: "Raleway", sans-serif;
+  --DEFAULT-MONO-FONT: "Libertinus Mono", monospace;
+  --HEADING-FONT: "Libre Baskerville", serif;
+  --HEADING-LETTER-SPACING: -0.01em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas — near-white, no hue */
+  --C-CANVAS: oklch(0.993 0.002 90);
+
+  /* Brand — pure dark grays */
+  --C-PRIMARY: oklch(0.20 0 0);
+  --C-PRIMARY-HOVER: oklch(0.14 0 0);
+  --C-PRIMARY-ACTIVE: oklch(0.30 0 0);
+  --C-SECONDARY: oklch(0.935 0 0);
+  --C-SECONDARY-HOVER: oklch(0.89 0 0);
+  --C-ACCENT: oklch(0.45 0.035 260);
+  --C-ACCENT-HOVER: oklch(0.38 0.04 262);
+
+  /* Surface — achromatic gray ladder */
+  --C-SURFACE-0: oklch(0.993 0.002 90);
+  --C-SURFACE-1: oklch(0.972 0 0);
+  --C-SURFACE-2: oklch(0.948 0 0);
+  --C-SURFACE-3: oklch(0.908 0 0);
+
+  /* Text — pure grays, maximum neutrality */
+  --C-TEXT-PRIMARY: oklch(0.20 0 0);
+  --C-TEXT-SECONDARY: oklch(0.42 0 0);
+  --C-TEXT-MUTED: oklch(0.62 0 0);
+  --C-TEXT-INVERSE: oklch(0.993 0 0);
+  --C-TEXT-ON-PRIMARY: oklch(0.993 0 0);
+  --C-TEXT-ON-ACCENT: oklch(0.993 0 0);
+
+  /* Border — clean achromatic lines */
+  --C-BORDER-DEFAULT: oklch(0.908 0 0);
+  --C-BORDER-STRONG: oklch(0.84 0 0);
+  --C-BORDER-FOCUS: oklch(0.45 0.035 260);
+
+  /* Status — desaturated for tonal harmony */
+  --C-STATUS-ERROR: oklch(0.55 0.16 27);
+  --C-STATUS-ERROR-BG: oklch(0.97 0.01 20);
+  --C-STATUS-SUCCESS: oklch(0.58 0.13 148);
+  --C-STATUS-SUCCESS-BG: oklch(0.975 0.012 150);
+  --C-STATUS-WARNING: oklch(0.64 0.12 68);
+  --C-STATUS-WARNING-BG: oklch(0.98 0.014 80);
+  --C-STATUS-INFO: oklch(0.50 0.06 250);
+  --C-STATUS-INFO-BG: oklch(0.97 0.008 250);
+
+  /* Radius — small, document-like */
+  --RADIUS-SM: 0.25rem;
+  --RADIUS-MD: 0.375rem;
+  --RADIUS-LG: 0.5rem;
+  --RADIUS-XL: 0.625rem;
+
+  /* Shadows — barely there, like ink on paper */
+  --SHADOW-SM: 0 1px 2px 0 oklch(0 0 0 / 0.04);
+  --SHADOW-MD: 0 3px 8px -2px oklch(0 0 0 / 0.06), 0 1px 3px -1px oklch(0 0 0 / 0.03);
+  --SHADOW-LG: 0 10px 24px -6px oklch(0 0 0 / 0.08), 0 3px 6px -3px oklch(0 0 0 / 0.03);
+
+  /* Typography — clean, readable */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 1.875rem;
+  --BodyText-2-line-height: 1.5rem;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: paper-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: paper-page-out;
+
+  /* Motion — smooth, subtle, unobtrusive */
+  --MOTION-DURATION-ENTER: 300ms;
+  --MOTION-DURATION-EXIT: 220ms;
+  --MOTION-DURATION-SHIFT: 380ms;
+  --MOTION-DURATION-PAGE: 320ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.16, 1, 0.3, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.4, 0, 1, 1);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.22, 1.04, 0.44, 1);
+  --MOTION-DISTANCE-SM: 0.375rem;
+  --MOTION-DISTANCE-MD: 0.875rem;
+  --MOTION-DISTANCE-LG: 1.75rem;
+  --MOTION-STAGGER-DELAY: 50ms;
+  --MOTION-SCALE-HOVER: 1.015;
+  --MOTION-SCALE-PRESS: 0.985;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — neutral gray scrim */
+  --OVERLAY-SCRIM-COLOR: oklch(0.20 0 0 / 0.35);
+  --OVERLAY-GRADIENT-START: oklch(0.20 0 0 / 0);
+  --OVERLAY-GRADIENT-END: oklch(0.20 0 0 / 0.55);
+  --OVERLAY-BLUR: 0.5rem;
+  --OVERLAY-BLUR-HEAVY: 1.25rem;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.015;
+  --MEDIA-CARD-HOVER-LIFT: -0.125rem;
+
+  /* Transitions */
+  --DURATION-FAST: 110ms;
+  --DURATION-NORMAL: 210ms;
+  --DURATION-SLOW: 330ms;
+}
+
+@keyframes paper-page-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes paper-page-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

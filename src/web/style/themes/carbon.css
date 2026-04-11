@@ -1,0 +1,137 @@
+/* Carbon Theme — A pro tool at 2am
+   Darker surfaces than typical light themes, slight cool tint. Dense, precise, tool-like.
+   Fonts: Plus Jakarta Sans (body), Jost (headings) */
+
+:root[data-theme="carbon"] {
+  color-scheme: light;
+
+  /* Fonts — clean geometric body with tech-forward headings */
+  --DEFAULT-FONT: "Plus Jakarta Sans", sans-serif;
+  --DEFAULT-MONO-FONT: "Fira Code", monospace;
+  --HEADING-FONT: "Jost", sans-serif;
+  --HEADING-LETTER-SPACING: -0.02em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas — light gray, not white. Noticeably denser than typical light themes */
+  --C-CANVAS: oklch(0.96 0.003 255);
+
+  /* Brand — dark cool gray */
+  --C-PRIMARY: oklch(0.25 0.02 255);
+  --C-PRIMARY-HOVER: oklch(0.19 0.022 258);
+  --C-PRIMARY-ACTIVE: oklch(0.33 0.018 252);
+  --C-SECONDARY: oklch(0.9 0.006 255);
+  --C-SECONDARY-HOVER: oklch(0.855 0.009 253);
+  --C-ACCENT: oklch(0.5 0.08 250);
+  --C-ACCENT-HOVER: oklch(0.44 0.085 252);
+
+  /* Surface — darker gray ladder, distinctly denser */
+  --C-SURFACE-0: oklch(0.96 0.003 255);
+  --C-SURFACE-1: oklch(0.938 0.005 253);
+  --C-SURFACE-2: oklch(0.91 0.007 255);
+  --C-SURFACE-3: oklch(0.87 0.01 253);
+
+  /* Text — high contrast against gray surfaces */
+  --C-TEXT-PRIMARY: oklch(0.2 0.015 255);
+  --C-TEXT-SECONDARY: oklch(0.4 0.012 253);
+  --C-TEXT-MUTED: oklch(0.58 0.009 255);
+  --C-TEXT-INVERSE: oklch(0.96 0.003 255);
+  --C-TEXT-ON-PRIMARY: oklch(0.96 0.003 255);
+  --C-TEXT-ON-ACCENT: oklch(0.96 0.003 255);
+
+  /* Border — cool gray, visible but not harsh */
+  --C-BORDER-DEFAULT: oklch(0.87 0.01 253);
+  --C-BORDER-STRONG: oklch(0.8 0.013 255);
+  --C-BORDER-FOCUS: oklch(0.5 0.08 250);
+
+  /* Status — standard but clear against gray backgrounds */
+  --C-STATUS-ERROR: oklch(0.55 0.17 27);
+  --C-STATUS-ERROR-BG: oklch(0.95 0.012 20);
+  --C-STATUS-SUCCESS: oklch(0.58 0.13 150);
+  --C-STATUS-SUCCESS-BG: oklch(0.955 0.013 148);
+  --C-STATUS-WARNING: oklch(0.64 0.12 68);
+  --C-STATUS-WARNING-BG: oklch(0.96 0.014 80);
+  --C-STATUS-INFO: oklch(0.5 0.08 250);
+  --C-STATUS-INFO-BG: oklch(0.955 0.01 248);
+
+  /* Radius — small, precise, tool-like */
+  --RADIUS-SM: 0.25rem;
+  --RADIUS-MD: 0.375rem;
+  --RADIUS-LG: 0.5rem;
+  --RADIUS-XL: 0.75rem;
+
+  /* Shadows — subtle, cool-tinted */
+  --SHADOW-SM: 0 1px 2px 0 oklch(0.2 0.015 255 / 0.06);
+  --SHADOW-MD:
+    0 3px 8px -2px oklch(0.2 0.015 255 / 0.08), 0 1px 3px -1px oklch(0.2 0.015 255 / 0.04);
+  --SHADOW-LG:
+    0 10px 22px -6px oklch(0.2 0.015 255 / 0.1), 0 3px 6px -3px oklch(0.2 0.015 255 / 0.04);
+
+  /* Typography — precise weights */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 1.75rem;
+  --BodyText-2-line-height: 1.5rem;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: carbon-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: carbon-page-out;
+
+  /* Motion — snappy, precise, no wasted time */
+  --MOTION-DURATION-ENTER: 250ms;
+  --MOTION-DURATION-EXIT: 180ms;
+  --MOTION-DURATION-SHIFT: 320ms;
+  --MOTION-DURATION-PAGE: 270ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.16, 1, 0.3, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.4, 0, 1, 1);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.22, 1.02, 0.44, 1);
+  --MOTION-DISTANCE-SM: 0.25rem;
+  --MOTION-DISTANCE-MD: 0.75rem;
+  --MOTION-DISTANCE-LG: 1.5rem;
+  --MOTION-STAGGER-DELAY: 40ms;
+  --MOTION-SCALE-HOVER: 1.01;
+  --MOTION-SCALE-PRESS: 0.99;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — cool neutral scrim */
+  --OVERLAY-SCRIM-COLOR: oklch(0.2 0.015 255 / 0.4);
+  --OVERLAY-GRADIENT-START: oklch(0.2 0.015 255 / 0);
+  --OVERLAY-GRADIENT-END: oklch(0.2 0.015 255 / 0.6);
+  --OVERLAY-BLUR: 0.5rem;
+  --OVERLAY-BLUR-HEAVY: 1rem;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.01;
+  --MEDIA-CARD-HOVER-LIFT: -0.0625rem;
+
+  /* Transitions */
+  --DURATION-FAST: 90ms;
+  --DURATION-NORMAL: 180ms;
+  --DURATION-SLOW: 280ms;
+}
+
+@keyframes carbon-page-in {
+  0% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes carbon-page-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}

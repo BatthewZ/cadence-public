@@ -1,0 +1,135 @@
+/* Slate Theme — Monday morning in a glass-walled office
+   Cool gray canvas, deep navy primary, steel-blue accent. Clean, efficient, invisible.
+   Fonts: Outfit (body), Jost (headings) */
+
+:root[data-theme="slate"] {
+  color-scheme: light;
+
+  /* Fonts — geometric precision for both body and headings */
+  --DEFAULT-FONT: "Outfit", sans-serif;
+  --DEFAULT-MONO-FONT: "Fira Code", monospace;
+  --HEADING-FONT: "Jost", sans-serif;
+  --HEADING-LETTER-SPACING: -0.02em;
+  --HEADING-TEXT-TRANSFORM: none;
+
+  /* Canvas — near-white with the faintest blue cast */
+  --C-CANVAS: oklch(0.993 0.002 250);
+
+  /* Brand — deep authoritative navy */
+  --C-PRIMARY: oklch(0.28 0.042 248);
+  --C-PRIMARY-HOVER: oklch(0.22 0.046 252);
+  --C-PRIMARY-ACTIVE: oklch(0.35 0.038 245);
+  --C-SECONDARY: oklch(0.932 0.011 248);
+  --C-SECONDARY-HOVER: oklch(0.885 0.015 246);
+  --C-ACCENT: oklch(0.545 0.1 238);
+  --C-ACCENT-HOVER: oklch(0.485 0.105 240);
+
+  /* Surface — cool gray ladder */
+  --C-SURFACE-0: oklch(0.993 0.002 250);
+  --C-SURFACE-1: oklch(0.975 0.004 248);
+  --C-SURFACE-2: oklch(0.955 0.006 250);
+  --C-SURFACE-3: oklch(0.918 0.009 248);
+
+  /* Text — blue-gray ink */
+  --C-TEXT-PRIMARY: oklch(0.22 0.022 250);
+  --C-TEXT-SECONDARY: oklch(0.448 0.016 248);
+  --C-TEXT-MUTED: oklch(0.645 0.012 250);
+  --C-TEXT-INVERSE: oklch(0.993 0.002 250);
+  --C-TEXT-ON-PRIMARY: oklch(0.993 0.002 250);
+  --C-TEXT-ON-ACCENT: oklch(0.993 0.002 250);
+
+  /* Border — subtle cool lines */
+  --C-BORDER-DEFAULT: oklch(0.918 0.009 248);
+  --C-BORDER-STRONG: oklch(0.858 0.013 250);
+  --C-BORDER-FOCUS: oklch(0.545 0.1 238);
+
+  /* Status — slightly desaturated for corporate restraint */
+  --C-STATUS-ERROR: oklch(0.555 0.178 25);
+  --C-STATUS-ERROR-BG: oklch(0.972 0.012 20);
+  --C-STATUS-SUCCESS: oklch(0.598 0.138 150);
+  --C-STATUS-SUCCESS-BG: oklch(0.975 0.014 150);
+  --C-STATUS-WARNING: oklch(0.648 0.128 70);
+  --C-STATUS-WARNING-BG: oklch(0.982 0.016 80);
+  --C-STATUS-INFO: oklch(0.545 0.1 238);
+  --C-STATUS-INFO-BG: oklch(0.972 0.012 240);
+
+  /* Radius — tight, professional, no bubbly corners */
+  --RADIUS-SM: 0.375rem;
+  --RADIUS-MD: 0.5rem;
+  --RADIUS-LG: 0.625rem;
+  --RADIUS-XL: 0.75rem;
+
+  /* Shadows — subtle and cool-tinted */
+  --SHADOW-SM: 0 1px 3px 0 oklch(0.22 0.022 250 / 0.06);
+  --SHADOW-MD: 0 4px 10px -2px oklch(0.22 0.022 250 / 0.08), 0 2px 4px -2px oklch(0.22 0.022 250 / 0.04);
+  --SHADOW-LG: 0 12px 28px -6px oklch(0.22 0.022 250 / 0.1), 0 4px 8px -4px oklch(0.22 0.022 250 / 0.04);
+
+  /* Typography — clean weights, tight line heights */
+  --Bold-Weight: 700;
+  --Semibold-Weight: 600;
+
+  --BodyText-1-line-height: 1.75rem;
+  --BodyText-2-line-height: 1.5rem;
+
+  /* Page transitions */
+  --MOTION-PAGE-TRANSITION-IN: slate-page-in;
+  --MOTION-PAGE-TRANSITION-OUT: slate-page-out;
+
+  /* Motion — quick and efficient, no flourish */
+  --MOTION-DURATION-ENTER: 280ms;
+  --MOTION-DURATION-EXIT: 200ms;
+  --MOTION-DURATION-SHIFT: 350ms;
+  --MOTION-DURATION-PAGE: 300ms;
+  --MOTION-EASE-PAGE: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --MOTION-EASE-ENTER: cubic-bezier(0.16, 1, 0.3, 1);
+  --MOTION-EASE-EXIT: cubic-bezier(0.4, 0, 1, 1);
+  --MOTION-EASE-SHIFT: cubic-bezier(0.25, 1, 0.5, 1);
+  --MOTION-EASE-BOUNCE: cubic-bezier(0.22, 1.04, 0.44, 1);
+  --MOTION-DISTANCE-SM: 0.375rem;
+  --MOTION-DISTANCE-MD: 0.875rem;
+  --MOTION-DISTANCE-LG: 1.75rem;
+  --MOTION-STAGGER-DELAY: 45ms;
+  --MOTION-SCALE-HOVER: 1.015;
+  --MOTION-SCALE-PRESS: 0.985;
+
+  --MOTION-PAGE-NEW-ANIMATION-FILL-MODE: backwards;
+  --MOTION-PAGE-OLD-ANIMATION-FILL-MODE: forwards;
+
+  /* Overlay — cool neutral scrim */
+  --OVERLAY-SCRIM-COLOR: oklch(0.22 0.022 250 / 0.38);
+  --OVERLAY-GRADIENT-START: oklch(0.22 0.022 250 / 0);
+  --OVERLAY-GRADIENT-END: oklch(0.22 0.022 250 / 0.55);
+  --OVERLAY-BLUR: 0.625rem;
+  --OVERLAY-BLUR-HEAVY: 1.25rem;
+
+  /* Media */
+  --MEDIA-CARD-HOVER-SCALE: 1.015;
+  --MEDIA-CARD-HOVER-LIFT: -0.125rem;
+
+  /* Transitions */
+  --DURATION-FAST: 100ms;
+  --DURATION-NORMAL: 200ms;
+  --DURATION-SLOW: 320ms;
+}
+
+@keyframes slate-page-in {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slate-page-out {
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}

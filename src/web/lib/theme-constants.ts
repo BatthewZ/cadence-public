@@ -20,6 +20,9 @@ export const THEME_LABELS: Record<Theme, string> = {
   terminal: "Terminal",
   synthwave: "Synthwave",
   forest: "Forest",
+  slate: "Slate",
+  paper: "Paper",
+  carbon: "Carbon",
 };
 
 /** Accent color swatch per theme — used for visual indicators in theme selectors. */
@@ -42,6 +45,9 @@ export const THEME_SWATCHES: Record<Theme, string> = {
   terminal: "oklch(0.8755 0.2493 146.58)",
   synthwave: "oklch(0.6429 0.2436 0.71)",
   forest: "oklch(0.5637 0.1266 151.58)",
+  slate: "oklch(0.545 0.1 238)",
+  paper: "oklch(0.45 0.035 260)",
+  carbon: "oklch(0.50 0.08 250)",
 };
 
 /**
@@ -68,4 +74,7 @@ export const THEME_PALETTES: Record<Theme, [string, string, string, string]> = {
   terminal: ["oklch(0.161 0.0131 144.94)", "oklch(0.8755 0.2493 146.58)", "oklch(0.8131 0.165 75.04)", "oklch(0.2044 0.0244 144.62)"],
   synthwave: ["oklch(0.1418 0.0662 295.8)", "oklch(0.6429 0.2436 0.71)", "oklch(0.6032 0.2805 310.29)", "oklch(0.1878 0.0779 292.65)"],
   forest: ["oklch(0.1766 0.016 156.92)", "oklch(0.5637 0.1266 151.58)", "oklch(0.7043 0.1224 79.38)", "oklch(0.2223 0.0212 150.47)"],
+  slate: ["oklch(0.993 0.002 250)", "oklch(0.28 0.042 248)", "oklch(0.545 0.1 238)", "oklch(0.975 0.004 248)"],
+  paper: ["oklch(0.993 0.002 90)", "oklch(0.20 0 0)", "oklch(0.45 0.035 260)", "oklch(0.972 0 0)"],
+  carbon: ["oklch(0.96 0.003 255)", "oklch(0.25 0.02 255)", "oklch(0.50 0.08 250)", "oklch(0.938 0.005 253)"],
 };

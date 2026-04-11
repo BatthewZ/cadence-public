@@ -10,7 +10,7 @@ vi.mock("@/web/hooks/use-theme", () => ({
   useTheme: () => ({
     theme: "default" as const,
     setTheme: mockSetTheme,
-    themes: ["default", "noir", "botanical", "sunset", "candy", "cyberpunk", "pastel", "brutalist", "ocean", "ember", "luxe", "sakura", "melancholy", "storm", "dreamlike", "terminal", "synthwave", "forest"] as const,
+    themes: ["default", "noir", "botanical", "sunset", "candy", "cyberpunk", "pastel", "brutalist", "ocean", "ember", "luxe", "sakura", "melancholy", "storm", "dreamlike", "terminal", "synthwave", "forest", "slate", "paper", "carbon"] as const,
   }),
 }));
 
@@ -32,13 +32,13 @@ describe("ThemeSwitcher", () => {
     expect(screen.getByRole("menu")).toBeDefined();
   });
 
-  it("renders all 24 theme options as menu items", async () => {
+  it("renders all 20 theme options as menu items", async () => {
     const user = userEvent.setup();
     render(<ThemeSwitcher />);
 
     await user.click(screen.getByRole("button", { name: /Minimal/i }));
     const items = screen.getAllByRole("menuitem");
-    expect(items).toHaveLength(18);
+    expect(items).toHaveLength(21);
   });
 
   it("calls setTheme when a menu item is clicked", async () => {
