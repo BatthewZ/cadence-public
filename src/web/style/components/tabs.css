@@ -24,26 +24,44 @@
 /* ------------------------------------------------------------------ */
 /*  Scroll fade indicators                                             */
 /* ------------------------------------------------------------------ */
-/* Gradient fades that appear on edges when tab content overflows,
-   signaling to the user that they can scroll to reveal more tabs.    */
+/* When tab content overflows, mask the overflowing edges so the tabs
+   fade to transparent. Using mask-image (not a color overlay) means
+   the fade works against any background — no assumption that the tabs
+   sit on --C-SURFACE-0.                                                */
 
-.tabs-scroll-fade {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 2.5rem;
-  pointer-events: none;
-  z-index: 2;
+.tabs-list[data-scroll-left="true"][data-scroll-right="true"] {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black 2.5rem,
+    black calc(100% - 2.5rem),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black 2.5rem,
+    black calc(100% - 2.5rem),
+    transparent 100%
+  );
 }
 
-.tabs-scroll-fade--left {
-  left: 0;
-  background: linear-gradient(to right, var(--C-SURFACE-0), transparent);
+.tabs-list[data-scroll-left="true"][data-scroll-right="false"] {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, black 2.5rem);
+  mask-image: linear-gradient(to right, transparent 0, black 2.5rem);
 }
 
-.tabs-scroll-fade--right {
-  right: 0;
-  background: linear-gradient(to left, var(--C-SURFACE-0), transparent);
+.tabs-list[data-scroll-left="false"][data-scroll-right="true"] {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    black calc(100% - 2.5rem),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    black calc(100% - 2.5rem),
+    transparent 100%
+  );
 }
 
 /* Underline variant */

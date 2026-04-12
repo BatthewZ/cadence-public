@@ -63,13 +63,9 @@ Browser-tab style. The active tab gets a solid background, border on three sides
 
 ## Scroll Overflow
 
-When the tab list overflows its container, gradient fade indicators appear on the scrollable edges to signal that more tabs are available. The indicators update on scroll and resize.
+When the tab list overflows its container, the scrollable edges fade to transparent to signal that more tabs are available. This uses `mask-image` rather than a color overlay, so the fade works against any background — the tabs don't need to sit on a specific surface color.
 
-| CSS Class | Description |
-| --- | --- |
-| `.tabs-list-wrapper` | Relative wrapper around the tab list for positioning fade indicators. |
-| `.tabs-scroll-fade--left` | Left-edge gradient fade, shown when content is scrolled right. |
-| `.tabs-scroll-fade--right` | Right-edge gradient fade, shown when more content exists to the right. |
+The `.tabs-list` element carries `data-scroll-left` and `data-scroll-right` attributes reflecting whether each edge can scroll; CSS selectors apply the appropriate mask gradient. The attributes update on scroll and resize.
 
 ## Keyboard Navigation
 

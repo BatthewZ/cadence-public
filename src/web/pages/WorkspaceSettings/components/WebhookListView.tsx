@@ -1,4 +1,4 @@
-import { AlertTriangle, Webhook } from "lucide-react";
+import { AlertTriangle, ExternalLink, Webhook } from "lucide-react";
 
 import { Container, Row, Stack } from "@/web/components/layout";
 import {
@@ -65,7 +65,16 @@ export function WebhookListView({ hook }: { hook: UseWorkspaceWebhooksReturn }) 
           <Stack gap="r6">
             <Text variant="h5">Webhooks</Text>
             <Text variant="body-2" color="secondary">
-              Receive HTTP callbacks when events happen in your workspace.
+              Receive HTTP callbacks when events happen in your workspace.{" "}
+              <a
+                href="/api/docs/webhooks"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-r6 text-accent hover:underline"
+              >
+                View webhook docs
+                <ExternalLink size={12} />
+              </a>
             </Text>
           </Stack>
           {canManageWorkspace && (

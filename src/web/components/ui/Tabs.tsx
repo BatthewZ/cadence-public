@@ -211,6 +211,8 @@ const TabsList = forwardRef<HTMLDivElement, TabsListProps>(function TabsList(
         ref={mergeRefs(forwardedRef, listRef)}
         role="tablist"
         className={cn("tabs-list", variantListClass[variant], className)}
+        data-scroll-left={canScrollLeft}
+        data-scroll-right={canScrollRight}
         {...props}
       >
         {children}
@@ -220,12 +222,6 @@ const TabsList = forwardRef<HTMLDivElement, TabsListProps>(function TabsList(
           aria-hidden="true"
         />
       </div>
-      {canScrollLeft && (
-        <span className="tabs-scroll-fade tabs-scroll-fade--left" aria-hidden="true" />
-      )}
-      {canScrollRight && (
-        <span className="tabs-scroll-fade tabs-scroll-fade--right" aria-hidden="true" />
-      )}
     </div>
   );
 });

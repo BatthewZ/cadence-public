@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ChevronLeft,
+  ExternalLink,
   Play,
   Trash2,
   Webhook,
@@ -476,7 +477,16 @@ export function WebhooksTab({
       <Row justify="between" align="center">
         <Stack gap="r6">
           <Text variant="body-2" color="secondary">
-            Receive HTTP callbacks when events happen in this project.
+            Receive HTTP callbacks when events happen in this project.{" "}
+            <a
+              href="/api/docs/webhooks"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-r6 text-accent hover:underline"
+            >
+              View webhook docs
+              <ExternalLink size={12} />
+            </a>
           </Text>
         </Stack>
         <Button variant="primary" size="md" onClick={handleOpenCreate}>
