@@ -864,6 +864,39 @@ Lists all task groups in a project, ordered by position. Includes a task count p
 }
 ```
 
+### `GET /api/workspaces/:workspaceId/task-groups`
+
+Lists task groups belonging to a given set of projects in the workspace. Used by workspace-level views (e.g. My Tasks filter bar) where the user narrows to specific columns across one or more projects. Requested project IDs that the caller cannot see are silently dropped (mirrors `listProjects` partial-visibility behavior). Query parameters are validated via `workspaceTaskGroupsQuerySchema`.
+
+**Auth:** Required.
+**Authorization:** Workspace member. Elevated members (owner/admin) see all requested projects; non-elevated members see only projects they are a direct member of.
+
+**Query parameters:**
+
+| Param | Type | Constraints | Required |
+|-------|------|-------------|----------|
+| `projectIds` | `string` | Comma-separated list of project UUIDs (1–100) | Yes |
+
+**Response** (200):
+
+```json
+{
+  "taskGroups": [
+    {
+      "id": "uuid",
+      "name": "To Do",
+      "color": null,
+      "isCompletionGroup": false,
+      "position": "a0",
+      "projectId": "project-uuid",
+      "projectName": "My Project"
+    }
+  ]
+}
+```
+
+Task groups are ordered by `projectId` then `position` ascending.
+
 ### `PATCH /api/task-groups/:taskGroupId`
 
 Updates a task group's name, color, or completion-group flag. Access is checked inline by resolving the parent project.
@@ -1870,6 +1903,8 @@ Returns tasks assigned to the authenticated user across **active projects** in t
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
 | `period` | `string` | — | Filter by due date window: `"week"`, `"fortnight"`, or `"month"` |
+| `projectIds` | `string` | — | Comma-separated project UUIDs (max 100). When provided, only tasks from these projects are returned |
+| `taskGroupIds` | `string` | — | Comma-separated task-group UUIDs (max 100). When provided, only tasks in these task groups are returned |
 | `limit` | `number` | 50 | Number of tasks per page (1–200) |
 | `cursor` | `string` | — | Compound cursor in `"isoDate\|id"` format for pagination (paginates by `createdAt` + `id` tiebreaker) |
 

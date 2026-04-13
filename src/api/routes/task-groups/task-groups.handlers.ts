@@ -1,15 +1,21 @@
-import { asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import type { Context } from "hono";
 
 import type { Database } from "../../../db";
+import { project, projectMember } from "../../../db/schema/project";
 import { task, taskGroup } from "../../../db/schema/task";
 import { generateKeyBetween } from "../../../shared/lib/fractional-index";
-import { createTaskGroupSchema, reorderTaskGroupSchema, updateTaskGroupSchema } from "../../../shared/schemas/task-group";
+import {
+  createTaskGroupSchema,
+  reorderTaskGroupSchema,
+  updateTaskGroupSchema,
+  workspaceTaskGroupsQuerySchema,
+} from "../../../shared/schemas/task-group";
 import type { AppEnv } from "../../env";
 import { resolveProjectAccess } from "../../lib/access";
 import { errorResponse } from "../../lib/error-response";
 import { requireParam } from "../../lib/params";
-import { validJson } from "../../lib/validated";
+import { validJson, validQuery } from "../../lib/validated";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -77,6 +83,85 @@ export async function createTaskGroup(c: Context<AppEnv>) {
   await db.insert(taskGroup).values(newGroup);
 
   return c.json({ taskGroup: newGroup }, 201);
+}
+
+/**
+ * GET /workspaces/:workspaceId/task-groups?projectIds=a,b,c
+ *
+ * Workspace-scoped list of task groups belonging to a given set of projects
+ * in the workspace. Used by workspace-level views (e.g. My Tasks filter bar)
+ * where the user wants to narrow assigned tasks to specific columns across
+ * one or more projects.
+ *
+ * Access model: the caller must be a workspace member (enforced by the
+ * requireWorkspaceMember middleware on the route). For non-elevated members,
+ * only projects they are a direct member of are returned; requested ids the
+ * caller can't see are silently dropped, mirroring how listProjects handles
+ * partial visibility.
+ */
+export async function listWorkspaceTaskGroups(c: Context<AppEnv>) {
+  const db = c.get("db");
+  const workspaceId = requireParam(c, "workspaceId");
+  const user = c.get("user")!;
+  const membership = c.get("workspaceMembership")!;
+  const { projectIds } = validQuery(c, workspaceTaskGroupsQuerySchema);
+  const isElevated = membership.role === "owner" || membership.role === "admin";
+
+  // Restrict to projects in this workspace the caller can see
+  const visibleProjects = isElevated
+    ? await db
+        .select({ id: project.id, name: project.name })
+        .from(project)
+        .where(
+          and(
+            eq(project.workspaceId, workspaceId),
+            inArray(project.id, projectIds),
+          ),
+        )
+    : await db
+        .select({ id: project.id, name: project.name })
+        .from(project)
+        .innerJoin(
+          projectMember,
+          and(
+            eq(projectMember.projectId, project.id),
+            eq(projectMember.userId, user.id),
+          ),
+        )
+        .where(
+          and(
+            eq(project.workspaceId, workspaceId),
+            inArray(project.id, projectIds),
+          ),
+        );
+
+  const visibleIds = visibleProjects.map((p) => p.id);
+
+  if (visibleIds.length === 0) {
+    return c.json({ taskGroups: [] });
+  }
+
+  const projectNameById = new Map(visibleProjects.map((p) => [p.id, p.name]));
+
+  const groups = await db
+    .select({
+      id: taskGroup.id,
+      name: taskGroup.name,
+      color: taskGroup.color,
+      isCompletionGroup: taskGroup.isCompletionGroup,
+      position: taskGroup.position,
+      projectId: taskGroup.projectId,
+    })
+    .from(taskGroup)
+    .where(inArray(taskGroup.projectId, visibleIds))
+    .orderBy(asc(taskGroup.projectId), asc(taskGroup.position));
+
+  const enriched = groups.map((g) => ({
+    ...g,
+    projectName: projectNameById.get(g.projectId) ?? "",
+  }));
+
+  return c.json({ taskGroups: enriched });
 }
 
 export async function listTaskGroups(c: Context<AppEnv>) {

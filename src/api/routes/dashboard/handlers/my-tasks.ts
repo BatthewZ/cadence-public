@@ -1,11 +1,13 @@
-import { and, asc, eq, lte, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, sql } from "drizzle-orm";
 import type { Context } from "hono";
 
 import { project } from "../../../../db/schema/project";
 import { task, taskGroup } from "../../../../db/schema/task";
+import { myTasksQuerySchema } from "../../../../shared/schemas/dashboard";
 import type { AppEnv } from "../../../env";
 import { parseCursorParams } from "../../../lib/pagination";
 import { requireParam } from "../../../lib/params";
+import { validQuery } from "../../../lib/validated";
 import { DUE_DATE_SENTINEL, getPeriodCutoff } from "./helpers";
 
 /**
@@ -18,7 +20,7 @@ export async function myTasks(c: Context<AppEnv>) {
   const db = c.get("db");
   const workspaceId = requireParam(c, "workspaceId");
   const user = c.get("user")!;
-  const period = c.req.query("period");
+  const { period, projectIds, taskGroupIds } = validQuery(c, myTasksQuerySchema);
 
   const { limit, cursor } = parseCursorParams(c, { defaultLimit: 50, maxLimit: 200 });
 
@@ -34,6 +36,14 @@ export async function myTasks(c: Context<AppEnv>) {
     if (cutoff) {
       conditions.push(lte(task.dueDate, cutoff));
     }
+  }
+
+  if (projectIds.length > 0) {
+    conditions.push(inArray(task.projectId, projectIds));
+  }
+
+  if (taskGroupIds.length > 0) {
+    conditions.push(inArray(task.taskGroupId, taskGroupIds));
   }
 
   if (cursor) {

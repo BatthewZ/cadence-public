@@ -1,6 +1,7 @@
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { TaskCheckbox } from "@/web/components/form/TaskCheckbox";
 import { Container, Row, Stack } from "@/web/components/layout";
@@ -22,10 +23,14 @@ import { useToast } from "@/web/components/ui/ToastContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { usePrefersReducedMotion } from "@/web/hooks/use-reduced-motion";
+import { useWorkspaceProjects } from "@/web/hooks/use-workspace-projects";
+import { useWorkspaceTaskGroups } from "@/web/hooks/use-workspace-task-groups";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 import { formatDueDate, isDueToday, isOverdue } from "@/web/util/date";
 import { getPriorityBadgeVariant, getPriorityLabel, PRIORITY_SORT_ORDER } from "@/web/util/task-display";
+
+import { MyTasksFilterBar } from "./MyTasksFilterBar";
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -92,18 +97,120 @@ function getApiPeriod(tab: FilterTab): string | undefined {
 /*  MyTasks page                                                       */
 /* ------------------------------------------------------------------ */
 
+function parseIdList(raw: string | null): string[] {
+  return raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [];
+}
+
 export default function MyTasks() {
   useDocumentTitle("My Tasks");
   const { workspace, members } = useWorkspace();
   const qc = useQueryClient();
   const { toast } = useToast();
   const reducedMotion = usePrefersReducedMotion();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [activeTab, setActiveTab] = useState<FilterTab>("week");
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [completingIds, setCompletingIds] = useState<Set<string>>(new Set());
 
+  const selectedProjectIds = useMemo(
+    () => parseIdList(searchParams.get("project")),
+    [searchParams],
+  );
+  const selectedTaskGroupIds = useMemo(
+    () => parseIdList(searchParams.get("taskGroup")),
+    [searchParams],
+  );
+
+  const setProjectFilter = useCallback(
+    (next: string[]) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (next.length > 0) params.set("project", next.join(","));
+          else params.delete("project");
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const setTaskGroupFilter = useCallback(
+    (next: string[]) => {
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (next.length > 0) params.set("taskGroup", next.join(","));
+          else params.delete("taskGroup");
+          return params;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const projectsQuery = useWorkspaceProjects(workspace.id);
+  /**
+   * Only active projects are offered in the filter. The my-tasks handler
+   * already restricts tasks to active projects, so including archived or
+   * completed ones in the dropdown would let users pick filters that
+   * deterministically return zero results.
+   */
+  const projects = useMemo(
+    () => (projectsQuery.data?.projects ?? []).filter((p) => p.status === "active"),
+    [projectsQuery.data],
+  );
+
+  const taskGroupsQuery = useWorkspaceTaskGroups(
+    workspace.id,
+    selectedProjectIds,
+  );
+  const taskGroups = useMemo(
+    () => taskGroupsQuery.data?.taskGroups ?? [],
+    [taskGroupsQuery.data],
+  );
+
+  /**
+   * Prune selected task-group ids that are no longer valid for the current
+   * project selection. Happens when the user deselects a project whose
+   * columns were previously filtered on. Only runs once the groups query has
+   * resolved so we don't drop ids before we know the real valid set.
+   */
+  useEffect(() => {
+    if (selectedTaskGroupIds.length === 0) return;
+    if (selectedProjectIds.length === 0) {
+      setTaskGroupFilter([]);
+      return;
+    }
+    if (!taskGroupsQuery.isSuccess) return;
+    const validIds = new Set(taskGroups.map((g) => g.id));
+    const pruned = selectedTaskGroupIds.filter((id) => validIds.has(id));
+    if (pruned.length !== selectedTaskGroupIds.length) {
+      setTaskGroupFilter(pruned);
+    }
+  }, [
+    selectedProjectIds,
+    selectedTaskGroupIds,
+    taskGroups,
+    taskGroupsQuery.isSuccess,
+    setTaskGroupFilter,
+  ]);
+
   const apiPeriod = getApiPeriod(activeTab);
+  const myTasksQueryKey = useMemo(
+    () =>
+      queryKeys.workspaces.dashboardMyTasks(
+        workspace.id,
+        apiPeriod ?? "all",
+        selectedProjectIds,
+        selectedTaskGroupIds,
+      ),
+    [workspace.id, apiPeriod, selectedProjectIds, selectedTaskGroupIds],
+  );
+
   const {
     data,
     isLoading: loading,
@@ -113,11 +220,17 @@ export default function MyTasks() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery<MyTasksResponse>({
-    queryKey: queryKeys.workspaces.dashboardMyTasks(workspace.id, apiPeriod ?? "all"),
+    queryKey: myTasksQueryKey,
     queryFn: ({ pageParam }) => {
       const params = new URLSearchParams({ limit: "50" });
       if (apiPeriod) params.set("period", apiPeriod);
       if (pageParam) params.set("cursor", pageParam as string);
+      if (selectedProjectIds.length > 0) {
+        params.set("projectIds", selectedProjectIds.join(","));
+      }
+      if (selectedTaskGroupIds.length > 0) {
+        params.set("taskGroupIds", selectedTaskGroupIds.join(","));
+      }
       return api.get<MyTasksResponse>(
         `/api/workspaces/${workspace.id}/dashboard/my-tasks?${params.toString()}`,
       );
@@ -195,13 +308,14 @@ export default function MyTasks() {
       const delay = reducedMotion ? 0 : 250;
       if (delay > 0) await new Promise((r) => setTimeout(r, delay));
 
-      // Snapshot for rollback
-      const queryKey = queryKeys.workspaces.dashboardMyTasks(workspace.id, apiPeriod ?? "all");
-      const previousData = qc.getQueryData(queryKey);
+      // Snapshot for rollback. Scope to the active filter/period combo so
+      // optimistic removal and rollback target the cache entry the user is
+      // actually viewing.
+      const previousData = qc.getQueryData(myTasksQueryKey);
 
       // Optimistically remove from all pages
       qc.setQueryData<{ pages: MyTasksResponse[]; pageParams: unknown[] }>(
-        queryKey,
+        myTasksQueryKey,
         (old) => {
           if (!old) return old;
           return {
@@ -227,11 +341,11 @@ export default function MyTasks() {
           queryKey: queryKeys.workspaces.dashboard(workspace.id),
         });
       } catch {
-        qc.setQueryData(queryKey, previousData);
+        qc.setQueryData(myTasksQueryKey, previousData);
         toast("Failed to complete task", { variant: "error" });
       }
     },
-    [completingIds, reducedMotion, workspace.id, apiPeriod, qc, toast],
+    [completingIds, reducedMotion, workspace.id, myTasksQueryKey, qc, toast],
   );
 
   const columns = useMemo<ColumnDef<MyTask>[]>(
@@ -322,6 +436,17 @@ export default function MyTasks() {
             </Text>
           )}
         </Row>
+
+        <MyTasksFilterBar
+          projects={projects}
+          taskGroups={taskGroups}
+          selectedProjectIds={selectedProjectIds}
+          selectedTaskGroupIds={selectedTaskGroupIds}
+          onProjectsChange={setProjectFilter}
+          onTaskGroupsChange={setTaskGroupFilter}
+          projectsLoading={projectsQuery.isLoading}
+          taskGroupsLoading={taskGroupsQuery.isLoading}
+        />
 
         <Tabs
           defaultValue="week"

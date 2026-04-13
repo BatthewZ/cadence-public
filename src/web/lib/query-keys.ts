@@ -11,8 +11,23 @@ export const queryKeys = {
     dashboard: (id: string) => ["workspaces", id, "dashboard"] as const,
     dashboardMyTasksPrefix: (id: string) =>
       ["workspaces", id, "dashboard", "my-tasks"] as const,
-    dashboardMyTasks: (id: string, period?: string) =>
-      ["workspaces", id, "dashboard", "my-tasks", period ?? "all"] as const,
+    dashboardMyTasks: (
+      id: string,
+      period?: string,
+      projectIds?: string[],
+      taskGroupIds?: string[],
+    ) =>
+      [
+        "workspaces",
+        id,
+        "dashboard",
+        "my-tasks",
+        period ?? "all",
+        projectIds && projectIds.length > 0 ? [...projectIds].sort().join(",") : "",
+        taskGroupIds && taskGroupIds.length > 0 ? [...taskGroupIds].sort().join(",") : "",
+      ] as const,
+    taskGroups: (id: string, projectIds: string[]) =>
+      ["workspaces", id, "task-groups", projectIds.join(",")] as const,
     dashboardMyTasksPreview: (id: string) =>
       ["workspaces", id, "dashboard", "my-tasks-preview"] as const,
     dashboardUpcoming: (id: string) =>

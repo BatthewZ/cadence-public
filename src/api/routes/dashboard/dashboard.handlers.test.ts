@@ -526,6 +526,121 @@ describe("myTasks", () => {
     const body = await res.json<{ error: string }>();
     expect(body.error).toBe("Validation failed");
   });
+
+  it("filters by projectIds (restricts to listed projects)", async () => {
+    const app = workspaceApp(TEST_USER, "owner");
+    const res = await app.request(
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_A_ID}`,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      tasks: Array<{ id: string; projectId: string }>;
+    }>();
+
+    // TEST_USER has task-a1, task-a-overdue1 in Project A and task-b1 in Project B.
+    // With projectIds=Project A only, task-b1 must be excluded.
+    const ids = body.tasks.map((t) => t.id);
+    expect(ids).toContain("task-a1");
+    expect(ids).toContain("task-a-overdue1");
+    expect(ids).not.toContain("task-b1");
+    for (const t of body.tasks) {
+      expect(t.projectId).toBe(PROJECT_A_ID);
+    }
+  });
+
+  it("filters by taskGroupIds (restricts to listed columns)", async () => {
+    const app = workspaceApp(TEST_USER, "owner");
+    const res = await app.request(
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?taskGroupIds=${GROUP_TODO_B}`,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      tasks: Array<{ id: string; taskGroupId: string }>;
+    }>();
+
+    // GROUP_TODO_B only contains task-b1 for TEST_USER
+    const ids = body.tasks.map((t) => t.id);
+    expect(ids).toEqual(["task-b1"]);
+    expect(body.tasks[0].taskGroupId).toBe(GROUP_TODO_B);
+  });
+
+  it("combines projectIds and taskGroupIds filters (AND semantics)", async () => {
+    const app = workspaceApp(TEST_USER, "owner");
+    const res = await app.request(
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_A_ID}&taskGroupIds=${GROUP_TODO_A}`,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      tasks: Array<{ id: string; projectId: string; taskGroupId: string }>;
+    }>();
+
+    // All returned rows must satisfy both filters
+    for (const t of body.tasks) {
+      expect(t.projectId).toBe(PROJECT_A_ID);
+      expect(t.taskGroupId).toBe(GROUP_TODO_A);
+    }
+    const ids = body.tasks.map((t) => t.id);
+    expect(ids).toContain("task-a1");
+    expect(ids).toContain("task-a-overdue1");
+  });
+
+  it("combines period with project/taskGroup filters", async () => {
+    // TEST_USER has task-a1 (2 days out, GROUP_TODO_A) and task-a-overdue1
+    // (3 days ago, also GROUP_TODO_A) both in Project A.
+    // period=week includes both since overdue tasks are <= cutoff.
+    const app = workspaceApp(TEST_USER, "owner");
+    const res = await app.request(
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?period=week&projectIds=${PROJECT_A_ID}&taskGroupIds=${GROUP_TODO_A}`,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ tasks: Array<{ id: string }> }>();
+    const ids = body.tasks.map((t) => t.id);
+
+    expect(ids).toContain("task-a1");
+    // task-b1 excluded by project filter even though it is within the week
+    expect(ids).not.toContain("task-b1");
+  });
+
+  it("paginates correctly under project/taskGroup filters", async () => {
+    // task-a1 and task-a-overdue1 are both assigned to TEST_USER in Project A /
+    // GROUP_TODO_A, which lets us verify cursor pagination respects the
+    // combined filter set.
+    const app = workspaceApp(TEST_USER, "owner");
+    const page1 = await app.request(
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_A_ID}&taskGroupIds=${GROUP_TODO_A}&limit=1`,
+    );
+    expect(page1.status).toBe(200);
+    const body1 = await page1.json<{
+      tasks: Array<{ id: string }>;
+      nextCursor: string | null;
+    }>();
+    expect(body1.tasks).toHaveLength(1);
+    expect(body1.nextCursor).not.toBeNull();
+
+    const page2 = await app.request(
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_A_ID}&taskGroupIds=${GROUP_TODO_A}&limit=1&cursor=${encodeURIComponent(body1.nextCursor!)}`,
+    );
+    expect(page2.status).toBe(200);
+    const body2 = await page2.json<{ tasks: Array<{ id: string }> }>();
+    expect(body2.tasks).toHaveLength(1);
+    expect(body2.tasks[0].id).not.toBe(body1.tasks[0].id);
+  });
+
+  it("returns empty array when projectIds match no assigned tasks", async () => {
+    const app = workspaceApp(TEST_USER_2, "member");
+    // TEST_USER_2 has no assigned tasks in Project B
+    const res = await app.request(
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_B_ID}`,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ tasks: unknown[] }>();
+    expect(body.tasks).toHaveLength(0);
+  });
 });
 
 // ===========================================================================

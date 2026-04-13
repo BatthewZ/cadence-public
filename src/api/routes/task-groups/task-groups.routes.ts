@@ -4,18 +4,21 @@ import {
   createTaskGroupSchema,
   reorderTaskGroupSchema,
   updateTaskGroupSchema,
+  workspaceTaskGroupsQuerySchema,
 } from "../../../shared/schemas/task-group";
 import type { AppEnv } from "../../env";
 import {
   requireProjectAccess,
   requireProjectRole,
+  requireWorkspaceMember,
 } from "../../middleware/authorize";
 import { requireAuth } from "../../middleware/require-auth";
-import { validateBody } from "../../middleware/validate";
+import { validateBody, validateQuery } from "../../middleware/validate";
 import {
   createTaskGroup,
   deleteTaskGroup,
   listTaskGroups,
+  listWorkspaceTaskGroups,
   reorderTaskGroup,
   updateTaskGroup,
 } from "./task-groups.handlers";
@@ -36,6 +39,14 @@ app.get(
   requireAuth,
   requireProjectAccess(),
   listTaskGroups,
+);
+
+app.get(
+  "/workspaces/:workspaceId/task-groups",
+  requireAuth,
+  requireWorkspaceMember(),
+  validateQuery(workspaceTaskGroupsQuerySchema),
+  listWorkspaceTaskGroups,
 );
 
 // Task-group-scoped routes — no projectId in URL, so access is resolved

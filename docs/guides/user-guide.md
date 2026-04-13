@@ -192,6 +192,8 @@ Filter by time period:
 - **This Week** — Due this week
 - **Overdue** — Past due date
 
+Filter by project and task group using the filter bar above the task list. Select one or more projects to narrow to tasks from those projects. Once at least one project is selected, a task-group filter becomes available to further narrow by column. Active filters appear as removable chips. Filter selections are persisted in the URL so they survive page reloads and can be shared via link.
+
 ---
 
 ## Dashboard

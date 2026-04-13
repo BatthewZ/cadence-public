@@ -1508,3 +1508,42 @@ The hook returns a large object grouped into logical sections:
 | `projectName(projects, projectId)` | Look up a project name by ID from the projects list. |
 | `parseEvents(raw)` | Parse a JSON-stringified event array into `WebhookEventType[]`. |
 | `UseWorkspaceWebhooksReturn` | The full return type of `useWorkspaceWebhooks`. |
+
+---
+
+## useWorkspaceProjects
+
+Fetches the list of projects in a workspace that the current user can see. Workspace owners/admins see every project; non-elevated members see only projects they are a direct member of.
+
+**Source:** `src/web/hooks/use-workspace-projects.ts`
+
+### Parameters
+
+| Param | Type | Description |
+| --- | --- | --- |
+| `workspaceId` | `string` | The workspace to fetch projects for. |
+| `options.enabled` | `boolean` | Optional flag to disable the query. |
+
+### Return Value
+
+Standard React Query result. `data.projects` is a `WorkspaceProjectSummary[]` containing id, name, slug, status, icon, memberCount, taskGroupCount, and other project metadata.
+
+---
+
+## useWorkspaceTaskGroups
+
+Fetches task groups across a set of projects in a workspace. Only issues a request when at least one project ID is provided. IDs are sorted before being sent to ensure stable cache keys regardless of selection order.
+
+**Source:** `src/web/hooks/use-workspace-task-groups.ts`
+
+### Parameters
+
+| Param | Type | Description |
+| --- | --- | --- |
+| `workspaceId` | `string` | The workspace to fetch task groups for. |
+| `projectIds` | `string[]` | Project IDs whose task groups should be fetched. Empty array disables the query. |
+| `options.enabled` | `boolean` | Optional flag to disable the query. |
+
+### Return Value
+
+Standard React Query result. `data.taskGroups` is a `WorkspaceTaskGroup[]` — each entry includes `id`, `name`, `color`, `isCompletionGroup`, `position`, `projectId`, and `projectName`.

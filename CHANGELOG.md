@@ -4,6 +4,17 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.16.0] - 2026-04-13
+
+### Added
+
+- My Tasks page now supports filtering by project and task group via a filter bar with multi-select popovers and removable chips
+- `GET /api/workspaces/:workspaceId/task-groups` endpoint for listing task groups across multiple projects in a workspace
+- `projectIds` and `taskGroupIds` optional query parameters on the My Tasks endpoint for server-side filtering
+- `useWorkspaceProjects` and `useWorkspaceTaskGroups` shared hooks for workspace-level data fetching
+- Filter selections are persisted in URL search params for shareability and reload persistence
+- Auto-pruning of orphaned task-group filter selections when their parent project is deselected
+
 ## [1.14.0] - 2026-04-11
 
 ### Added

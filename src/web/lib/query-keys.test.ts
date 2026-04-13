@@ -101,9 +101,17 @@ describe("queryKeys", () => {
       expect(withoutPeriod).toHaveLength(withPeriod.length);
     });
 
-    it('defaults to "all" when no period is provided', () => {
+    it('defaults to "all" period with empty filter segments when no params provided', () => {
       const key = queryKeys.workspaces.dashboardMyTasks("ws-1");
-      expect(key).toEqual(["workspaces", "ws-1", "dashboard", "my-tasks", "all"]);
+      expect(key).toEqual([
+        "workspaces",
+        "ws-1",
+        "dashboard",
+        "my-tasks",
+        "all",
+        "",
+        "",
+      ]);
     });
 
     it("includes the provided period in the key", () => {
@@ -113,6 +121,8 @@ describe("queryKeys", () => {
         "dashboard",
         "my-tasks",
         "week",
+        "",
+        "",
       ]);
 
       expect(queryKeys.workspaces.dashboardMyTasks("ws-1", "month")).toEqual([
@@ -121,28 +131,47 @@ describe("queryKeys", () => {
         "dashboard",
         "my-tasks",
         "month",
+        "",
+        "",
       ]);
     });
 
-    it("produces distinct keys for different periods", () => {
+    it("produces distinct keys for different filter combinations", () => {
       const allKey = queryKeys.workspaces.dashboardMyTasks("ws-1");
       const weekKey = queryKeys.workspaces.dashboardMyTasks("ws-1", "week");
       const monthKey = queryKeys.workspaces.dashboardMyTasks("ws-1", "month");
+      const projectFiltered = queryKeys.workspaces.dashboardMyTasks("ws-1", "week", ["p1"]);
+      const projectAndGroupFiltered = queryKeys.workspaces.dashboardMyTasks(
+        "ws-1",
+        "week",
+        ["p1"],
+        ["g1"],
+      );
 
       expect(allKey).not.toEqual(weekKey);
       expect(allKey).not.toEqual(monthKey);
       expect(weekKey).not.toEqual(monthKey);
+      expect(weekKey).not.toEqual(projectFiltered);
+      expect(projectFiltered).not.toEqual(projectAndGroupFiltered);
     });
 
     it("shares a common prefix for invalidation", () => {
       const allKey = queryKeys.workspaces.dashboardMyTasks("ws-1");
       const weekKey = queryKeys.workspaces.dashboardMyTasks("ws-1", "week");
+      const filteredKey = queryKeys.workspaces.dashboardMyTasks(
+        "ws-1",
+        "week",
+        ["p1"],
+        ["g1"],
+      );
       const prefix = queryKeys.workspaces.dashboardMyTasksPrefix("ws-1");
 
-      // Both keys start with the same prefix — react-query invalidation
-      // with this prefix will clear all dashboardMyTasks caches
+      // All variants start with the same prefix — react-query invalidation
+      // with this prefix will clear all dashboardMyTasks caches regardless
+      // of period or project/task-group filters.
       expect(allKey.slice(0, 4)).toEqual(prefix);
       expect(weekKey.slice(0, 4)).toEqual(prefix);
+      expect(filteredKey.slice(0, 4)).toEqual(prefix);
     });
 
     it("dashboardMyTasksPrefix returns the 4-segment key without period", () => {

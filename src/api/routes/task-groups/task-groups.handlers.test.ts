@@ -15,9 +15,10 @@ import {
   createTaskGroupSchema,
   reorderTaskGroupSchema,
   updateTaskGroupSchema,
+  workspaceTaskGroupsQuerySchema,
 } from "../../../shared/schemas/task-group";
 import type { AppEnv } from "../../env";
-import { validateBody } from "../../middleware/validate";
+import { validateBody, validateQuery } from "../../middleware/validate";
 import {
   createTestD1,
   fakeAuth,
@@ -36,6 +37,7 @@ import {
   createTaskGroup,
   deleteTaskGroup,
   listTaskGroups,
+  listWorkspaceTaskGroups,
   reorderTaskGroup,
   updateTaskGroup,
 } from "./task-groups.handlers";
@@ -321,6 +323,90 @@ describe("listTaskGroups", () => {
     expect(res.status).toBe(200);
     const body = await res.json<{ taskGroups: unknown[] }>();
     expect(body.taskGroups).toEqual([]);
+  });
+});
+
+// =========================================================================
+// listWorkspaceTaskGroups
+// =========================================================================
+
+describe("listWorkspaceTaskGroups", () => {
+  /**
+   * Build a test app with the workspace membership role set appropriately.
+   * Owners/admins see all projects in the workspace; non-elevated members
+   * only see task groups for projects they directly belong to.
+   */
+  function wsApp(
+    user: typeof TEST_USER | typeof TEST_USER_2,
+    role: "owner" | "admin" | "member",
+  ) {
+    const app = new Hono<AppEnv>();
+    app.get(
+      "/workspaces/:workspaceId/task-groups",
+      fakeAuth(d1, user, { workspaceMembership: { id: "wm-fake", role } }),
+      validateQuery(workspaceTaskGroupsQuerySchema),
+      listWorkspaceTaskGroups,
+    );
+    return app;
+  }
+
+  it("returns task groups across multiple projects with project names", async () => {
+    // Workspace owner can see every project; create a second project with
+    // its own groups so we verify cross-project aggregation and ordering.
+    const otherProjectId = await seedProject(d1, workspaceId, {
+      name: "WS TG Other",
+    });
+    await seedProjectMember(d1, otherProjectId, TEST_USER.id, "admin");
+    const g1 = await seedTaskGroup(d1, projectId, {
+      name: "Primary Todo",
+      position: "m0",
+    });
+    const g2 = await seedTaskGroup(d1, otherProjectId, {
+      name: "Other Todo",
+      position: "m0",
+    });
+
+    const app = wsApp(TEST_USER, "owner");
+    const res = await app.request(
+      `/workspaces/${workspaceId}/task-groups?projectIds=${projectId},${otherProjectId}`,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      taskGroups: Array<{ id: string; projectId: string; projectName: string }>;
+    }>();
+
+    const returnedIds = body.taskGroups.map((g) => g.id);
+    expect(returnedIds).toContain(g1);
+    expect(returnedIds).toContain(g2);
+
+    // Every returned group must carry its project name for UI grouping.
+    for (const g of body.taskGroups) {
+      expect(g.projectName.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("silently drops projects the caller cannot see for non-elevated members", async () => {
+    // TEST_USER_2 is a workspace member but NOT a member of `projectId`
+    // (only user1 and user3 are). Requesting that project's groups should
+    // yield an empty list — no 403, no leak of group metadata.
+    const app = wsApp(TEST_USER_2, "member");
+    const res = await app.request(
+      `/workspaces/${workspaceId}/task-groups?projectIds=${projectId}`,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ taskGroups: unknown[] }>();
+    expect(body.taskGroups).toEqual([]);
+  });
+
+  it("returns 400 when projectIds is missing", async () => {
+    const app = wsApp(TEST_USER, "owner");
+    const res = await app.request(`/workspaces/${workspaceId}/task-groups`);
+
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("Validation failed");
   });
 });
 
