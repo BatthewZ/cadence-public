@@ -1,4 +1,4 @@
-import { type LucideIcon, Menu, PanelLeft, PanelLeftClose, X } from "lucide-react";
+import { type LucideIcon, Menu, PanelLeft, PanelLeftClose } from "lucide-react";
 import {
   type ComponentPropsWithRef,
   createContext,
@@ -227,7 +227,11 @@ const AppShellSidebar = forwardRef<HTMLElement, AppShellSidebarProps>(
       if (!open) return null;
       return (
         <Portal>
-          <div className="app-shell-scrim" aria-hidden="true" />
+          <div
+            className="app-shell-scrim"
+            aria-hidden="true"
+            onClick={() => setOpen(false)}
+          />
           <aside
             ref={merged}
             id={sidebarId}
@@ -237,14 +241,6 @@ const AppShellSidebar = forwardRef<HTMLElement, AppShellSidebarProps>(
             className={cn("app-shell-sidebar-mobile", className)}
             {...props}
           >
-            <button
-              type="button"
-              className="app-shell-sidebar-mobile-close"
-              onClick={() => setOpen(false)}
-              aria-label="Close navigation"
-            >
-              <X size={18} />
-            </button>
             {children}
           </aside>
         </Portal>

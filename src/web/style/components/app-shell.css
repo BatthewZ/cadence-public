@@ -215,35 +215,6 @@
   animation: app-shell-slide-in var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
 }
 
-.app-shell-sidebar-mobile-close {
-  position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: var(--RADIUS-MD);
-  border: none;
-  background: transparent;
-  color: var(--C-FG-MUTED);
-  cursor: pointer;
-  transition: background var(--MOTION-DURATION-FAST) var(--MOTION-EASE-DEFAULT),
-              color var(--MOTION-DURATION-FAST) var(--MOTION-EASE-DEFAULT);
-}
-
-.app-shell-sidebar-mobile-close:hover {
-  background: var(--C-SURFACE-2);
-  color: var(--C-FG-PRIMARY);
-}
-
-.app-shell-sidebar-mobile-close:focus-visible {
-  outline: 2px solid var(--C-FOCUS);
-  outline-offset: -2px;
-}
-
 @keyframes app-shell-fade-in {
   from {
     opacity: 0;
