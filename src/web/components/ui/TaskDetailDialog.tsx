@@ -457,6 +457,7 @@ export function TaskDetailDialog({
                     }}
                     placeholder={canEditTasks ? "Add a description..." : "No description"}
                     readOnly={!canEditTasks}
+                    rows={5}
                     className="resize-y min-h-[5rem] border-transparent bg-surface-1 hover:border-border-default focus:border-border-strong focus:bg-surface-0"
                   />
                 </div>
