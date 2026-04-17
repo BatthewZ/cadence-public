@@ -5,21 +5,18 @@ import {
   useState,
 } from "react";
 
-import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import { Input } from "@/web/components/form/Input";
 import { Text } from "@/web/components/ui/Text";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { type TaskGroup, useProject } from "@/web/contexts/ProjectContext";
 import { api } from "@/web/lib/api/client";
 
-import { sortByPosition } from "./dnd-helpers";
-
 // ---------------------------------------------------------------------------
 // AddGroupColumn
 // ---------------------------------------------------------------------------
 
 export function AddGroupColumn() {
-  const { project, taskGroups, addTaskGroup } = useProject();
+  const { project, addTaskGroup } = useProject();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState("");
@@ -39,14 +36,10 @@ export function AddGroupColumn() {
     const name = value.trim();
     if (!name || !project) return;
 
-    const sorted = sortByPosition(taskGroups);
-    const lastPos = sorted.length > 0 ? sorted[sorted.length - 1].position : null;
-    const position = generateKeyBetween(lastPos, null);
-
     try {
       const res = await api.post<{ taskGroup: TaskGroup }>(
         `/api/projects/${project.id}/task-groups`,
-        { name, position }
+        { name },
       );
       addTaskGroup(res.taskGroup);
       setValue("");

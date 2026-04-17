@@ -9,6 +9,7 @@ import { deferWork } from "../../../lib/defer";
 import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
 import { requireParam } from "../../../lib/params";
+import { retryOnPositionConflict } from "../../../lib/position-conflict";
 import { validJson } from "../../../lib/validated";
 import { buildTaskEventData, dispatchWebhook, resolveRecurringTaskEnrichment, resolveTaskEnrichment, resolveTaskGroup } from "../../../lib/webhook-payloads";
 import { copyTaskRelations } from "../helpers/copy-task-relations";
@@ -183,45 +184,51 @@ export async function duplicateTask(c: Context<AppEnv>) {
     return errorResponse(c, "Task not found", 404);
   }
 
-  // Determine new task position: place at end of the same task group (depends on sourceTask.taskGroupId)
-  const [lastExistingTask] = await db
-    .select({ position: task.position })
-    .from(task)
-    .where(eq(task.taskGroupId, sourceTask.taskGroupId))
-    .orderBy(desc(task.position))
-    .limit(1);
-
-  const position = generateKeyBetween(lastExistingTask?.position ?? null, null);
-
   const newTaskId = crypto.randomUUID();
   const now = new Date();
 
-  const newTask = {
-    id: newTaskId,
-    projectId: sourceTask.projectId,
-    taskGroupId: sourceTask.taskGroupId,
-    title: `${sourceTask.title} (copy)`,
-    description: sourceTask.description,
-    assigneeId: sourceTask.assigneeId,
-    priority: sourceTask.priority,
-    completed: false,
-    completedAt: null,
-    completedBy: null,
-    dueDate: sourceTask.dueDate,
-    cost: sourceTask.cost,
-    icon: sourceTask.icon,
-    coverImageKey: null,
-    coverImagePosition: null,
-    recurrenceRule: sourceTask.recurrenceRule,
-    recurrenceParentId: null,
-    recurrenceSeriesId: sourceTask.recurrenceRule ? crypto.randomUUID() : null,
-    position,
-    createdAt: now,
-    updatedAt: now,
-  };
+  // Read last position + insert inside a retry loop — concurrent
+  // duplicate/create requests in the same task group can race and both
+  // compute the same `generateKeyBetween(last, null)` result. The UNIQUE
+  // index on (taskGroupId, position) catches this; we retry with a fresh
+  // read on conflict.
+  const newTask = await retryOnPositionConflict(async () => {
+    const [lastExistingTask] = await db
+      .select({ position: task.position })
+      .from(task)
+      .where(eq(task.taskGroupId, sourceTask.taskGroupId))
+      .orderBy(desc(task.position))
+      .limit(1);
 
-  // Insert the new task
-  await db.insert(task).values(newTask);
+    const position = generateKeyBetween(lastExistingTask?.position ?? null, null);
+
+    const row = {
+      id: newTaskId,
+      projectId: sourceTask.projectId,
+      taskGroupId: sourceTask.taskGroupId,
+      title: `${sourceTask.title} (copy)`,
+      description: sourceTask.description,
+      assigneeId: sourceTask.assigneeId,
+      priority: sourceTask.priority,
+      completed: false,
+      completedAt: null,
+      completedBy: null,
+      dueDate: sourceTask.dueDate,
+      cost: sourceTask.cost,
+      icon: sourceTask.icon,
+      coverImageKey: null,
+      coverImagePosition: null,
+      recurrenceRule: sourceTask.recurrenceRule,
+      recurrenceParentId: null,
+      recurrenceSeriesId: sourceTask.recurrenceRule ? crypto.randomUUID() : null,
+      position,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await db.insert(task).values(row);
+    return row;
+  });
 
   // Copy subtasks (with completion reset) and labels from the source task
   const { subtaskCount, labels: copiedLabels } = await copyTaskRelations(

@@ -16,6 +16,24 @@ function toSec(v: number | Date): number {
   return Math.floor((typeof v === "number" ? v : v.getTime()) / 1000);
 }
 
+/**
+ * Monotonic counter that produces unique, ascending fractional-index-
+ * compatible position strings for seed helpers. Uniqueness matters because
+ * the `task_group`, `task`, and `subtask` tables now have UNIQUE indexes
+ * on (parentId, position) — tests that previously seeded multiple rows
+ * with the hardcoded "a0" default would hit constraint violations.
+ *
+ * Callers that need specific positions (e.g. to assert ordering in a list
+ * response) can still override via `opts.position`. The format mirrors
+ * the dedup migration's `a` + zero-padded digits so visual debugging of
+ * test output reads the same way as production data post-migration.
+ */
+let __positionCounter = 0;
+function nextSeedPosition(): string {
+  __positionCounter += 1;
+  return `a${String(__positionCounter).padStart(6, "0")}`;
+}
+
 /** Insert a test user into the database. */
 export async function seedUser(
   d1: D1Database,
@@ -147,7 +165,7 @@ export async function seedTaskGroup(
       projectId,
       opts?.name ?? "To Do",
       opts?.isCompletionGroup ? 1 : 0,
-      opts?.position ?? "a0",
+      opts?.position ?? nextSeedPosition(),
       toSec(Date.now()),
       toSec(Date.now()),
     )
@@ -190,7 +208,7 @@ export async function seedTask(
       opts?.priority ?? "none",
       opts?.assigneeId ?? null,
       opts?.dueDate ? toSec(opts.dueDate) : null,
-      opts?.position ?? "a0",
+      opts?.position ?? nextSeedPosition(),
       opts?.description ?? null,
       opts?.cost ?? null,
       opts?.icon ?? null,
@@ -236,7 +254,7 @@ export async function seedSubtask(
       taskId,
       opts?.title ?? "Test Subtask",
       opts?.completed ? 1 : 0,
-      opts?.position ?? "a0",
+      opts?.position ?? nextSeedPosition(),
       toSec(Date.now()),
     )
     .run();

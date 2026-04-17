@@ -229,6 +229,60 @@ describe("createTaskGroup", () => {
     expect(body.taskGroup.createdAt).toBeTruthy();
     expect(body.taskGroup.updatedAt).toBeTruthy();
   });
+
+  /**
+   * Concurrent creates used to produce duplicate position values because
+   * the "read last position + insert" sequence in createTaskGroup wasn't
+   * atomic and no UNIQUE index guarded (projectId, position). Two requests
+   * racing would both see the same last position, both compute the same
+   * `generateKeyBetween(last, null)` result, and both succeed with ties.
+   * Drag-reorder then appeared to shuffle multiple columns at once because
+   * `ORDER BY position` is unstable with tied rows.
+   *
+   * This test fires concurrent POSTs into a freshly-seeded project and
+   * asserts every resulting position is distinct. Regression guard for the
+   * retry helper + UNIQUE index in migration 0026.
+   */
+  it("produces distinct positions under concurrent creates", async () => {
+    // Fresh project so default groups don't pollute the assertion surface
+    const raceProjectId = await seedProject(d1, workspaceId, {
+      name: "Concurrency Race Project",
+    });
+    await seedProjectMember(d1, raceProjectId, TEST_USER.id, "admin");
+
+    const app = new Hono<AppEnv>();
+    app.post(
+      "/projects/:projectId/task-groups",
+      adminAuth(),
+      validateBody(createTaskGroupSchema),
+      createTaskGroup,
+    );
+
+    const N = 8;
+    const responses = await Promise.all(
+      Array.from({ length: N }, async (_, i) =>
+        app.request(
+          `/projects/${raceProjectId}/task-groups`,
+          jsonRequest("POST", `/projects/${raceProjectId}/task-groups`, {
+            name: `Race Group ${i}`,
+          }),
+        ),
+      ),
+    );
+
+    for (const res of responses) {
+      expect(res.status).toBe(201);
+    }
+
+    const bodies = await Promise.all(
+      responses.map((r) => r.json<{ taskGroup: { id: string; position: string } }>()),
+    );
+    const positions = bodies.map((b) => b.taskGroup.position);
+
+    // The defining assertion: no duplicates. Even one tie reproduces the
+    // original bug's UI symptom.
+    expect(new Set(positions).size).toBe(N);
+  });
 });
 
 // =========================================================================
@@ -773,17 +827,21 @@ describe("reorderTaskGroup", () => {
       reorderTaskGroup,
     );
 
+    // Position chosen to avoid colliding with any other task_group seeded
+    // in `projectId` by earlier tests — the UNIQUE index on
+    // (projectId, position) now rejects ties, where previously it
+    // silently allowed them.
     const res = await app.request(
       `/task-groups/${reorderGroupId}/reorder`,
       jsonRequest("PATCH", `/task-groups/${reorderGroupId}/reorder`, {
-        position: "m0",
+        position: "zz0",
       }),
     );
 
     expect(res.status).toBe(200);
     const body = await res.json<{ taskGroup: { id: string; position: string } }>();
     expect(body.taskGroup.id).toBe(reorderGroupId);
-    expect(body.taskGroup.position).toBe("m0");
+    expect(body.taskGroup.position).toBe("zz0");
   });
 
   it("returns 404 when task group does not exist", async () => {

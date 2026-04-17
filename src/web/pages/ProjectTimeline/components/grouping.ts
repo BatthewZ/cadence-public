@@ -1,5 +1,6 @@
 import type { TaskPriority } from "@/shared/types/roles";
 import type { ProjectMember, TaskGroup } from "@/web/contexts/ProjectContext";
+import { sortByPosition } from "@/web/lib/sort-by-position";
 import { endOfMonth, endOfNextWeek, endOfWeek, startOfDay } from "@/web/util/date";
 import { getPriorityLabel } from "@/web/util/task-display";
 
@@ -128,7 +129,7 @@ function groupTasksByTaskGroup(
   tasks: TimelineTask[],
   taskGroups: TaskGroup[],
 ): TimelineGroup[] {
-  const sorted = [...taskGroups].sort((a, b) => a.position.localeCompare(b.position));
+  const sorted = sortByPosition(taskGroups);
 
   const groups: TimelineGroup[] = sorted.map((tg) => ({
     label: tg.name,

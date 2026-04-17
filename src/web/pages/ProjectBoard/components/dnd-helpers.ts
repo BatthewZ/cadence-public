@@ -1,5 +1,7 @@
 import type { Task, TaskGroup } from "@/web/contexts/ProjectContext";
 
+export { sortByPosition } from "@/web/lib/sort-by-position";
+
 // ---------------------------------------------------------------------------
 // Types & helpers
 // ---------------------------------------------------------------------------
@@ -19,12 +21,6 @@ export function parseId(prefixedId: string): { type: "group" | "task"; id: strin
     return { type: "group", id: prefixedId.slice(6) };
   }
   return { type: "task", id: prefixedId.slice(5) };
-}
-
-export function sortByPosition<T extends { position: string }>(items: T[]): T[] {
-  return [...items].sort((a, b) =>
-    a.position < b.position ? -1 : a.position > b.position ? 1 : 0
-  );
 }
 
 /** Maximum number of task cards to render per column before showing a "Show more" button. */

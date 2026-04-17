@@ -8,6 +8,7 @@ import { deferWork } from "../../../lib/defer";
 import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
 import { requireParam } from "../../../lib/params";
+import { retryOnPositionConflict } from "../../../lib/position-conflict";
 import { buildTaskEventData, dispatchWebhook, resolveRecurringTaskEnrichment, resolveTaskEnrichment } from "../../../lib/webhook-payloads";
 import { logRecurringInstanceCreated, spawnNextRecurringInstance } from "../helpers/spawn-recurring-instance";
 import { type ActivityEntry, logActivityBatch } from "../log-activity";
@@ -47,10 +48,10 @@ export async function completeTask(c: Context<AppEnv>) {
         eq(taskGroup.isCompletionGroup, true),
       ),
     )
-    .orderBy(asc(taskGroup.position))
+    .orderBy(asc(taskGroup.position), asc(taskGroup.id))
     .limit(1);
 
-  const updateData: Record<string, unknown> = {
+  const baseUpdateData: Record<string, unknown> = {
     completed: true,
     completedAt: now,
     completedBy: user.id,
@@ -59,25 +60,38 @@ export async function completeTask(c: Context<AppEnv>) {
 
   // Move to completion group if one exists and task isn't already there
   const movingToCompletion = completionGroup && foundTask.taskGroupId !== completionGroup.id;
-  if (movingToCompletion) {
-    // Position at the top of the completion group
-    const [firstTask] = await db
-      .select({ position: task.position })
-      .from(task)
-      .where(eq(task.taskGroupId, completionGroup.id))
-      .orderBy(asc(task.position))
-      .limit(1);
 
-    const completionPosition = generateKeyBetween(null, firstTask?.position ?? null);
-    updateData.taskGroupId = completionGroup.id;
-    updateData.position = completionPosition;
-  }
+  // When moving to the completion group we assign a new position at the
+  // top. Concurrent completions racing to the same completion group would
+  // otherwise compute identical positions; wrap the UPDATE in a retry
+  // loop so the UNIQUE index on (taskGroupId, position) is handled
+  // gracefully.
+  const [updated] = movingToCompletion
+    ? await retryOnPositionConflict(async () => {
+        const [firstTask] = await db
+          .select({ position: task.position })
+          .from(task)
+          .where(eq(task.taskGroupId, completionGroup.id))
+          .orderBy(asc(task.position), asc(task.id))
+          .limit(1);
 
-  const [updated] = await db
-    .update(task)
-    .set(updateData)
-    .where(eq(task.id, taskId))
-    .returning();
+        const completionPosition = generateKeyBetween(null, firstTask?.position ?? null);
+
+        return db
+          .update(task)
+          .set({
+            ...baseUpdateData,
+            taskGroupId: completionGroup.id,
+            position: completionPosition,
+          })
+          .where(eq(task.id, taskId))
+          .returning();
+      })
+    : await db
+        .update(task)
+        .set(baseUpdateData)
+        .where(eq(task.id, taskId))
+        .returning();
 
   // Spawn next recurring instance if applicable.
   // Uses pre-completion taskGroupId so the new instance goes to the original group.
@@ -180,7 +194,7 @@ export async function uncompleteTask(c: Context<AppEnv>) {
 
   const now = new Date();
 
-  const updateData: Record<string, unknown> = {
+  const baseUpdateData: Record<string, unknown> = {
     completed: false,
     completedAt: null,
     completedBy: null,
@@ -198,6 +212,7 @@ export async function uncompleteTask(c: Context<AppEnv>) {
   let moveFromName: string | undefined;
   let moveToName: string | undefined;
 
+  let firstNonCompletionGroupId: string | null = null;
   if (currentGroup?.isCompletionGroup) {
     const [firstNonCompletionGroup] = await db
       .select()
@@ -208,32 +223,46 @@ export async function uncompleteTask(c: Context<AppEnv>) {
           eq(taskGroup.isCompletionGroup, false),
         ),
       )
-      .orderBy(asc(taskGroup.position))
+      .orderBy(asc(taskGroup.position), asc(taskGroup.id))
       .limit(1);
 
     if (firstNonCompletionGroup) {
-      // Position at the top of the target group
-      const [firstTask] = await db
-        .select({ position: task.position })
-        .from(task)
-        .where(eq(task.taskGroupId, firstNonCompletionGroup.id))
-        .orderBy(asc(task.position))
-        .limit(1);
-
-      const uncompletePosition = generateKeyBetween(null, firstTask?.position ?? null);
-      updateData.taskGroupId = firstNonCompletionGroup.id;
-      updateData.position = uncompletePosition;
-
+      firstNonCompletionGroupId = firstNonCompletionGroup.id;
       moveFromName = currentGroup.name;
       moveToName = firstNonCompletionGroup.name;
     }
   }
 
-  const [updated] = await db
-    .update(task)
-    .set(updateData)
-    .where(eq(task.id, taskId))
-    .returning();
+  // When moving the task into a different group we recompute "top of
+  // target group" inside a retry loop so concurrent uncomplete operations
+  // on the same target group don't collide on position. Without a move,
+  // position is untouched and the UPDATE can run once.
+  const [updated] = firstNonCompletionGroupId
+    ? await retryOnPositionConflict(async () => {
+        const [firstTask] = await db
+          .select({ position: task.position })
+          .from(task)
+          .where(eq(task.taskGroupId, firstNonCompletionGroupId))
+          .orderBy(asc(task.position), asc(task.id))
+          .limit(1);
+
+        const uncompletePosition = generateKeyBetween(null, firstTask?.position ?? null);
+
+        return db
+          .update(task)
+          .set({
+            ...baseUpdateData,
+            taskGroupId: firstNonCompletionGroupId,
+            position: uncompletePosition,
+          })
+          .where(eq(task.id, taskId))
+          .returning();
+      })
+    : await db
+        .update(task)
+        .set(baseUpdateData)
+        .where(eq(task.id, taskId))
+        .returning();
 
   // Defer activity logging — runs after response is sent
   {

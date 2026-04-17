@@ -6,20 +6,17 @@ import {
 } from "react";
 import { useSearchParams } from "react-router-dom";
 
-import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import { Input } from "@/web/components/form/Input";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { type Task, useProject } from "@/web/contexts/ProjectContext";
 import { api } from "@/web/lib/api/client";
-
-import { sortByPosition } from "./dnd-helpers";
 
 // ---------------------------------------------------------------------------
 // AddTaskInline
 // ---------------------------------------------------------------------------
 
 export function AddTaskInline({ groupId }: { groupId: string }) {
-  const { project, tasks, addTask } = useProject();
+  const { project, addTask } = useProject();
   const { toast } = useToast();
   const [, setSearchParams] = useSearchParams();
   const [isEditing, setIsEditing] = useState(false);
@@ -50,16 +47,10 @@ export function AddTaskInline({ groupId }: { groupId: string }) {
     }
     setValidationError("");
 
-    // Calculate position: after last task in this group
-    const groupTasks = sortByPosition(tasks.filter((t) => t.taskGroupId === groupId));
-    const lastPos = groupTasks.length > 0 ? groupTasks[groupTasks.length - 1].position : null;
-    const position = generateKeyBetween(lastPos, null);
-
     try {
       const res = await api.post<{ task: Task }>(`/api/projects/${project.id}/tasks`, {
         title,
         taskGroupId: groupId,
-        position,
       });
       addTask(res.task);
       setValue("");

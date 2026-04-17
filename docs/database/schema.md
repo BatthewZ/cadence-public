@@ -212,7 +212,7 @@ export * from "./workspace";
 | `createdAt` | `integer` (mode: `timestamp`) | `NOT NULL`                                   | Creation timestamp                             |
 | `updatedAt` | `integer` (mode: `timestamp`) | `NOT NULL`                                   | Last update timestamp                          |
 
-**Indexes:** index on `projectId`, composite index on (`projectId`, `updatedAt`)
+**Indexes:** index on `projectId`, composite index on (`projectId`, `updatedAt`), unique index on (`projectId`, `position`) — prevents duplicate positions from races in the read-last/write-new sequence (see migration 0026)
 
 #### `task`
 
@@ -242,7 +242,7 @@ export * from "./workspace";
 | `createdAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                        | Creation timestamp                               |
 | `updatedAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                        | Last update timestamp                            |
 
-**Indexes:** index on (`assigneeId`, `dueDate`), index on (`taskGroupId`, `position`), index on (`projectId`, `completed`), composite index on (`projectId`, `assigneeId`), composite index on (`projectId`, `dueDate`, `completed`), composite index on (`projectId`, `updatedAt`), index on (`recurrenceParentId`), unique index on (`recurrenceParentId`) where non-null, index on (`recurrenceSeriesId`)
+**Indexes:** index on (`assigneeId`, `dueDate`), index on (`taskGroupId`, `position`), index on (`projectId`, `completed`), composite index on (`projectId`, `assigneeId`), composite index on (`projectId`, `dueDate`, `completed`), composite index on (`projectId`, `updatedAt`), index on (`recurrenceParentId`), unique index on (`recurrenceParentId`) where non-null, index on (`recurrenceSeriesId`), unique index on (`taskGroupId`, `position`) — guards against duplicate positions under concurrent create/duplicate/complete (see migration 0026)
 
 #### `subtask`
 
@@ -257,7 +257,7 @@ export * from "./workspace";
 | `position`  | `text`                        | `NOT NULL`                                  | Fractional index for ordering   |
 | `createdAt` | `integer` (mode: `timestamp`) | `NOT NULL`                                  | Creation timestamp              |
 
-**Indexes:** index on `taskId`
+**Indexes:** index on `taskId`, unique index on (`taskId`, `position`) — prevents position ties under concurrent subtask creates (see migration 0026)
 
 #### `comment`
 

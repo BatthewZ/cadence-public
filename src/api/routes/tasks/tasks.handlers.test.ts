@@ -132,6 +132,53 @@ describe("createTask", () => {
     expect(body.task.completed).toBe(false);
   });
 
+  /**
+   * Regression guard for duplicate `task.position` values under concurrent
+   * creates in the same task group. Before the retry helper + UNIQUE
+   * index on (taskGroupId, position), burst creates (e.g. multi-tab) all
+   * read the same MAX(position) and produced identical `generateKeyBetween`
+   * results, leaving ties that destabilized list ordering and made
+   * drag-reorder misbehave.
+   */
+  it("produces distinct positions under concurrent task creates in the same group", async () => {
+    // Fresh task group so earlier tests' seeded positions don't pollute
+    // this assertion surface.
+    const raceGroupId = await seedTaskGroup(d1, projectId, {
+      name: "Task Create Race Group",
+    });
+
+    const app = new Hono<AppEnv>();
+    app.post(
+      "/projects/:projectId/tasks",
+      auth(),
+      validateBody(createTaskSchema),
+      createTask,
+    );
+
+    const N = 8;
+    const responses = await Promise.all(
+      Array.from({ length: N }, async (_, i) =>
+        app.request(
+          `/projects/${projectId}/tasks`,
+          jsonRequest("POST", `/projects/${projectId}/tasks`, {
+            title: `Race Task ${i}`,
+            taskGroupId: raceGroupId,
+          }),
+        ),
+      ),
+    );
+
+    for (const res of responses) {
+      expect(res.status).toBe(201);
+    }
+
+    const bodies = await Promise.all(
+      responses.map((r) => r.json<{ task: { id: string; position: string } }>()),
+    );
+    const positions = bodies.map((b) => b.task.position);
+    expect(new Set(positions).size).toBe(N);
+  });
+
   it("auto-completes task when created in a completion group", async () => {
     const app = new Hono<AppEnv>();
     app.post(
@@ -580,11 +627,16 @@ describe("moveTask", () => {
       moveTask,
     );
 
+    // Target group (completionGroupId) already has tasks at low positions
+    // from earlier tests in the suite (e.g. a task created via the
+    // createTask handler in the "auto-completes when created in
+    // completion group" test lands at "a0"). Use a high, unique position
+    // so the UNIQUE(taskGroupId, position) index doesn't reject the move.
     const res = await app.request(
       `/tasks/${taskId}/move`,
       jsonRequest("PATCH", `/tasks/${taskId}/move`, {
         taskGroupId: completionGroupId,
-        position: "a0",
+        position: "z1",
       }),
     );
 
@@ -608,11 +660,14 @@ describe("moveTask", () => {
       moveTask,
     );
 
+    // Use a unique target position — see comment on previous test for
+    // the UNIQUE-index collision that earlier tests can create in
+    // taskGroupId.
     const res = await app.request(
       `/tasks/${taskId}/move`,
       jsonRequest("PATCH", `/tasks/${taskId}/move`, {
         taskGroupId: taskGroupId,
-        position: "a0",
+        position: "z2",
       }),
     );
 

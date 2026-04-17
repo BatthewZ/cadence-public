@@ -3,6 +3,7 @@ import { asc, eq } from "drizzle-orm";
 import type { Database } from "../../../../db";
 import { label, taskLabel } from "../../../../db/schema/label";
 import { subtask, task } from "../../../../db/schema/task";
+import { generateNKeysBetween } from "../../../../shared/lib/fractional-index";
 import { throwWithContext } from "../../../lib/error-response";
 
 interface CopyTaskRelationsOptions {
@@ -28,7 +29,7 @@ export async function copyTaskRelations(
 
   // Batch-fetch subtasks and labels for the source task in a single round-trip
   const [sourceSubtasks, sourceLabels] = await db.batch([
-    db.select().from(subtask).where(eq(subtask.taskId, sourceTaskId)).orderBy(asc(subtask.position)),
+    db.select().from(subtask).where(eq(subtask.taskId, sourceTaskId)).orderBy(asc(subtask.position), asc(subtask.id)),
     db
       .select({
         labelId: taskLabel.labelId,
@@ -42,14 +43,20 @@ export async function copyTaskRelations(
 
   const now = new Date();
 
-  // Copy subtasks
+  // Copy subtasks. Positions are regenerated rather than copied verbatim:
+  // copying preserves ordering but guarantees freshly-unique positions in
+  // the target task, which matters because the UNIQUE index on
+  // (taskId, position) would reject duplicates if any source subtasks
+  // happened to share a position (possible for data created before the
+  // dedup migration).
   if (sourceSubtasks.length > 0) {
-    const newSubtasks = sourceSubtasks.map((st) => ({
+    const freshPositions = generateNKeysBetween(null, null, sourceSubtasks.length);
+    const newSubtasks = sourceSubtasks.map((st, i) => ({
       id: crypto.randomUUID(),
       taskId: targetTaskId,
       title: st.title,
       completed: resetSubtaskCompletion ? false : st.completed,
-      position: st.position,
+      position: freshPositions[i],
       createdAt: now,
     }));
     try {

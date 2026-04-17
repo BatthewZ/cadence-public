@@ -15,6 +15,7 @@ import type { AppEnv } from "../../env";
 import { resolveProjectAccess } from "../../lib/access";
 import { errorResponse } from "../../lib/error-response";
 import { requireParam } from "../../lib/params";
+import { retryOnPositionConflict } from "../../lib/position-conflict";
 import { validJson, validQuery } from "../../lib/validated";
 
 // ---------------------------------------------------------------------------
@@ -57,30 +58,35 @@ export async function createTaskGroup(c: Context<AppEnv>) {
   const projectId = requireParam(c, "projectId");
   const body = validJson(c, createTaskGroupSchema);
 
-  // Find the last task group by position to generate the next position
-  const [lastGroup] = await db
-    .select({ position: taskGroup.position })
-    .from(taskGroup)
-    .where(eq(taskGroup.projectId, projectId))
-    .orderBy(desc(taskGroup.position))
-    .limit(1);
-
-  const position = generateKeyBetween(lastGroup?.position ?? null, null);
-
   const id = crypto.randomUUID();
   const now = new Date();
 
-  const newGroup = {
-    id,
-    projectId,
-    name: body.name,
-    color: body.color ?? null,
-    position,
-    createdAt: now,
-    updatedAt: now,
-  };
+  // Read last position + insert inside a retry loop because the two steps
+  // are not atomic. The unique index on (projectId, position) catches the
+  // race; on UNIQUE violation we re-read and retry with a fresh position.
+  const newGroup = await retryOnPositionConflict(async () => {
+    const [lastGroup] = await db
+      .select({ position: taskGroup.position })
+      .from(taskGroup)
+      .where(eq(taskGroup.projectId, projectId))
+      .orderBy(desc(taskGroup.position))
+      .limit(1);
 
-  await db.insert(taskGroup).values(newGroup);
+    const position = generateKeyBetween(lastGroup?.position ?? null, null);
+
+    const row = {
+      id,
+      projectId,
+      name: body.name,
+      color: body.color ?? null,
+      position,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await db.insert(taskGroup).values(row);
+    return row;
+  });
 
   return c.json({ taskGroup: newGroup }, 201);
 }
@@ -154,7 +160,11 @@ export async function listWorkspaceTaskGroups(c: Context<AppEnv>) {
     })
     .from(taskGroup)
     .where(inArray(taskGroup.projectId, visibleIds))
-    .orderBy(asc(taskGroup.projectId), asc(taskGroup.position));
+    .orderBy(
+      asc(taskGroup.projectId),
+      asc(taskGroup.position),
+      asc(taskGroup.id),
+    );
 
   const enriched = groups.map((g) => ({
     ...g,
@@ -172,7 +182,7 @@ export async function listTaskGroups(c: Context<AppEnv>) {
   const [groups, taskCounts] = await db.batch([
     db.select().from(taskGroup)
       .where(eq(taskGroup.projectId, projectId))
-      .orderBy(asc(taskGroup.position)),
+      .orderBy(asc(taskGroup.position), asc(taskGroup.id)),
     db.select({ taskGroupId: task.taskGroupId, count: count() })
       .from(task)
       .where(eq(task.projectId, projectId))

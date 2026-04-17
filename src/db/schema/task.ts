@@ -30,6 +30,10 @@ export const taskGroup = sqliteTable(
   (table) => [
     index("task_group_project_idx").on(table.projectId),
     index("task_group_project_updated_idx").on(table.projectId, table.updatedAt),
+    uniqueIndex("task_group_project_position_unique_idx").on(
+      table.projectId,
+      table.position,
+    ),
   ],
 );
 
@@ -82,6 +86,10 @@ export const task = sqliteTable(
       .on(table.recurrenceParentId)
       .where(sql`recurrence_parent_id IS NOT NULL`),
     index("task_recurrence_series_idx").on(table.recurrenceSeriesId),
+    uniqueIndex("task_group_position_unique_idx").on(
+      table.taskGroupId,
+      table.position,
+    ),
   ],
 );
 
@@ -97,7 +105,13 @@ export const subtask = sqliteTable(
     position: text("position").notNull(),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
   },
-  (table) => [index("subtask_task_idx").on(table.taskId)],
+  (table) => [
+    index("subtask_task_idx").on(table.taskId),
+    uniqueIndex("subtask_task_position_unique_idx").on(
+      table.taskId,
+      table.position,
+    ),
+  ],
 );
 
 export const comment = sqliteTable(

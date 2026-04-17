@@ -8,6 +8,7 @@ import type { AppEnv } from "../../../env";
 import { resolveProjectAccess } from "../../../lib/access";
 import { errorResponse } from "../../../lib/error-response";
 import { requireParam } from "../../../lib/params";
+import { retryOnPositionConflict } from "../../../lib/position-conflict";
 import { validJson } from "../../../lib/validated";
 
 // ---------------------------------------------------------------------------
@@ -19,32 +20,40 @@ export async function createSubtask(c: Context<AppEnv>) {
   const taskId = requireParam(c, "taskId");
   const body = validJson(c, createSubtaskSchema);
 
-  // Generate position: place at end
-  const [lastSubtask] = await db
-    .select({ position: subtask.position })
-    .from(subtask)
-    .where(eq(subtask.taskId, taskId))
-    .orderBy(desc(subtask.position))
-    .limit(1);
-
-  const position = generateKeyBetween(lastSubtask?.position ?? null, null);
-
   const id = crypto.randomUUID();
   const now = new Date();
 
-  const newSubtask = {
-    id,
-    taskId,
-    title: body.title,
-    completed: false,
-    position,
-    createdAt: now,
-  };
+  // Read last position + insert inside a retry loop — concurrent subtask
+  // creates on the same task can race and produce identical positions.
+  // The UNIQUE index on (taskId, position) catches the race; we retry
+  // with a fresh read. The parent task's updatedAt bump is batched with
+  // the insert so both succeed atomically per attempt.
+  const newSubtask = await retryOnPositionConflict(async () => {
+    const [lastSubtask] = await db
+      .select({ position: subtask.position })
+      .from(subtask)
+      .where(eq(subtask.taskId, taskId))
+      .orderBy(desc(subtask.position))
+      .limit(1);
 
-  await db.batch([
-    db.insert(subtask).values(newSubtask),
-    db.update(task).set({ updatedAt: now }).where(eq(task.id, taskId)),
-  ] as const);
+    const position = generateKeyBetween(lastSubtask?.position ?? null, null);
+
+    const row = {
+      id,
+      taskId,
+      title: body.title,
+      completed: false,
+      position,
+      createdAt: now,
+    };
+
+    await db.batch([
+      db.insert(subtask).values(row),
+      db.update(task).set({ updatedAt: now }).where(eq(task.id, taskId)),
+    ] as const);
+
+    return row;
+  });
 
   return c.json({ subtask: newSubtask }, 201);
 }

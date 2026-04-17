@@ -22,6 +22,7 @@ import type { useToast } from "@/web/components/ui/ToastContext";
 import { type TaskGroup, useProject } from "@/web/contexts/ProjectContext";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
+import { sortByPosition } from "@/web/lib/sort-by-position";
 import { TASK_GROUP_COLORS } from "@/web/util/task-display";
 
 import type { CreateTaskGroupInput, ReorderTaskGroupInput, UpdateTaskGroupInput } from "./types";
@@ -81,9 +82,7 @@ export function TaskGroupsTab({
   });
   const updateError = updateErrorObj?.message ?? null;
 
-  const taskGroups = [...contextTaskGroups].sort(
-    (a, b) => (a.position < b.position ? -1 : a.position > b.position ? 1 : 0)
-  );
+  const taskGroups = sortByPosition(contextTaskGroups);
 
   function openCreateDialog() {
     setGroupName("");

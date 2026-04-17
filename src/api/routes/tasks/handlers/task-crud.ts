@@ -15,6 +15,7 @@ import { deferWork } from "../../../lib/defer";
 import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
 import { requireParam } from "../../../lib/params";
+import { retryOnPositionConflict } from "../../../lib/position-conflict";
 import { validJson } from "../../../lib/validated";
 import {
   buildTaskEventData,
@@ -37,8 +38,11 @@ export async function createTask(c: Context<AppEnv>) {
   const projectId = requireParam(c, "projectId");
   const body = validJson(c, createTaskSchema);
 
-  // Batch: taskGroup existence + last position + project settings (independent — all use upfront IDs)
-  const [groupResult, lastTaskResult, projectResult] = await db.batch([
+  // Batch the invariant reads (group existence + project settings). The
+  // last-task-position read is intentionally kept out of the batch because
+  // it must be re-read on every retry attempt inside the position-conflict
+  // loop below.
+  const [groupResult, projectResult] = await db.batch([
     db.select()
       .from(taskGroup)
       .where(
@@ -47,11 +51,6 @@ export async function createTask(c: Context<AppEnv>) {
           eq(taskGroup.projectId, projectId),
         ),
       )
-      .limit(1),
-    db.select({ position: task.position })
-      .from(task)
-      .where(eq(task.taskGroupId, body.taskGroupId))
-      .orderBy(desc(task.position))
       .limit(1),
     db.select({ autoAssignCreator: project.autoAssignCreator })
       .from(project)
@@ -63,8 +62,6 @@ export async function createTask(c: Context<AppEnv>) {
   if (!group) {
     return errorResponse(c, "Task group not found in this project", 404);
   }
-
-  const position = generateKeyBetween(lastTaskResult[0]?.position ?? null, null);
 
   const id = crypto.randomUUID();
   const now = new Date();
@@ -80,29 +77,44 @@ export async function createTask(c: Context<AppEnv>) {
     ? new Date(body.dueDate)
     : (body.recurrenceRule ? now : null);
 
-  const newTask = {
-    id,
-    projectId,
-    taskGroupId: body.taskGroupId,
-    title: body.title,
-    description: body.description ?? null,
-    assigneeId,
-    priority: body.priority ?? "none",
-    completed: isCompleted,
-    completedAt: isCompleted ? now : null,
-    completedBy: isCompleted ? user.id : null,
-    dueDate,
-    cost: body.cost ?? null,
-    icon: body.icon ?? null,
-    recurrenceRule: body.recurrenceRule ? JSON.stringify(body.recurrenceRule) : null,
-    recurrenceSeriesId: body.recurrenceRule ? crypto.randomUUID() : null,
-    recurrenceParentId: null,
-    position,
-    createdAt: now,
-    updatedAt: now,
-  };
+  // Read last position + insert inside a retry loop — the UNIQUE index on
+  // (taskGroupId, position) catches any race with concurrent creates in
+  // the same group and we retry with a fresh position.
+  const newTask = await retryOnPositionConflict(async () => {
+    const [lastTaskRow] = await db
+      .select({ position: task.position })
+      .from(task)
+      .where(eq(task.taskGroupId, body.taskGroupId))
+      .orderBy(desc(task.position))
+      .limit(1);
 
-  await db.insert(task).values(newTask);
+    const position = generateKeyBetween(lastTaskRow?.position ?? null, null);
+
+    const row = {
+      id,
+      projectId,
+      taskGroupId: body.taskGroupId,
+      title: body.title,
+      description: body.description ?? null,
+      assigneeId,
+      priority: body.priority ?? "none",
+      completed: isCompleted,
+      completedAt: isCompleted ? now : null,
+      completedBy: isCompleted ? user.id : null,
+      dueDate,
+      cost: body.cost ?? null,
+      icon: body.icon ?? null,
+      recurrenceRule: body.recurrenceRule ? JSON.stringify(body.recurrenceRule) : null,
+      recurrenceSeriesId: body.recurrenceRule ? crypto.randomUUID() : null,
+      recurrenceParentId: null,
+      position,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await db.insert(task).values(row);
+    return row;
+  });
 
   // Defer activity logging + notifications — runs after response is sent
   deferWork(c, async () => {
@@ -255,7 +267,7 @@ export async function listTasks(c: Context<AppEnv>) {
     .leftJoin(attachmentCounts, eq(task.id, attachmentCounts.taskId))
     .leftJoin(taskLabelsSubquery, eq(task.id, taskLabelsSubquery.taskId))
     .where(and(...conditions))
-    .orderBy(asc(task.position));
+    .orderBy(asc(task.position), asc(task.id));
 
   // Parse labels JSON and recurrenceRule JSON for each task
   const tasksWithLabels = tasks.map((t) => {
@@ -280,7 +292,7 @@ export async function getTask(c: Context<AppEnv>) {
 
   const [taskResult, subtasks, [{ value: commentCount }], taskLabels] = await db.batch([
     db.select().from(task).where(eq(task.id, taskId)).limit(1),
-    db.select().from(subtask).where(eq(subtask.taskId, taskId)).orderBy(asc(subtask.position)),
+    db.select().from(subtask).where(eq(subtask.taskId, taskId)).orderBy(asc(subtask.position), asc(subtask.id)),
     db.select({ value: count() }).from(comment).where(eq(comment.taskId, taskId)),
     db.select({
       id: label.id,

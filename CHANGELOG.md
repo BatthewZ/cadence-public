@@ -4,6 +4,19 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.16.1] - 2026-04-17
+
+### Fixed
+
+- Concurrent creates of task groups, tasks, and subtasks no longer produce duplicate fractional-index `position` values. The previous "read last position, compute next, insert" sequence was non-atomic, so burst requests (multi-tab, rapid form submits) could leave ties that destabilized `ORDER BY position` and made drag-reorder appear to move unrelated rows in lockstep.
+
+### Changed
+
+- Added `UNIQUE(parentId, position)` indexes on `task_group` (per `projectId`), `task` (per `taskGroupId`), and `subtask` (per `taskId`). Migration 0026 first rewrites every partition's positions to fixed-width `a00001`, `a00002`, … keys before adding the indexes so existing ties are broken deterministically by `(position, id)`.
+- Task-group, task, subtask, task-duplicate, and complete/uncomplete handlers now wrap their position read + write in a retry helper (`retryOnPositionConflict`) that re-reads the boundary position and retries on UNIQUE-violation. Non-UNIQUE errors propagate unchanged.
+- List queries for task groups, tasks, and subtasks now sort by `(position, id)` so any transient duplicate during optimistic UI updates resolves to the same stable order on both client and server. A shared `sortByPosition` helper applies the same tiebreaker in the web app.
+- Removed dead client-side position computation in `AddGroupColumn` and `AddTaskInline`. The server has always assigned position on these endpoints (the submitted field was silently stripped by the request schema); the client now relies on the authoritative server value.
+
 ## [1.16.0] - 2026-04-13
 
 ### Added

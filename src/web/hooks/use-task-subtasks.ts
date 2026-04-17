@@ -13,6 +13,7 @@ import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import type { Subtask, Task } from "@/web/contexts/ProjectContext";
 import { api } from "@/web/lib/api/client";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
+import { sortByPosition } from "@/web/lib/sort-by-position";
 import type { TaskDetail } from "@/web/pages/TaskDetail/types";
 
 interface UseTaskSubtasksOptions {
@@ -57,12 +58,7 @@ export function useTaskSubtasks({
 
   const subtasks = localTask?.subtasks;
   const sortedSubtasks = useMemo(
-    () =>
-      subtasks
-        ? [...subtasks].sort((a, b) =>
-            a.position < b.position ? -1 : a.position > b.position ? 1 : 0,
-          )
-        : [],
+    () => (subtasks ? sortByPosition(subtasks) : []),
     [subtasks],
   );
   const subtaskIds = useMemo(
