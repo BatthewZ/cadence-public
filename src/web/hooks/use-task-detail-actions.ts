@@ -77,13 +77,14 @@ export function useTaskDetailActions({
         toast("Next occurrence created", { variant: "success" });
       }
       void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.tasks.activity(taskId) });
       void qc.invalidateQueries({ queryKey: queryKeys.tasks.comments(taskId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspaceId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.activity(workspaceId) });
       if (projectId) {
         void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(projectId) });
+        void qc.invalidateQueries({ queryKey: queryKeys.projects.activity(projectId) });
       }
-      void qc.invalidateQueries({
-        queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspaceId),
-      });
     } catch {
       setLocalTask((prev) => (prev ? { ...prev, completed: wasCompleted } : prev));
       updateTaskInContext?.(taskId, { completed: wasCompleted });

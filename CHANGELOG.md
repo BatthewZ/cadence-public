@@ -4,6 +4,12 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.16.2] - 2026-04-18
+
+### Fixed
+
+- Toggling a task's completion state now refreshes the workspace dashboard and the workspace/project/task activity feeds. Previously only the task detail, comments, project dashboard, and the My Tasks dashboard slice were invalidated, leaving other views stale until a manual refetch.
+
 ## [1.16.1] - 2026-04-17
 
 ### Fixed
