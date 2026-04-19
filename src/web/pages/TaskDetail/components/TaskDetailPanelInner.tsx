@@ -27,6 +27,7 @@ import type { Subtask, Task } from "@/web/contexts/ProjectContext";
 import { useProject } from "@/web/contexts/ProjectContext";
 import type { WorkspaceMember } from "@/web/contexts/WorkspaceContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
+import { usePatchTaskMutation } from "@/web/hooks/use-patch-task-mutation";
 import { useProjectPermissions } from "@/web/hooks/use-permissions";
 import { useTaskCommentActions } from "@/web/hooks/use-task-comment-actions";
 import { useTaskComments } from "@/web/hooks/use-task-comments";
@@ -132,10 +133,10 @@ export function TaskDetailPanelInner({
   }, [qc, taskId]);
 
   // Mutations
-  const patchTask = useMutation({
-    mutationFn: (updates: Partial<TaskDetail>) =>
-      api.patch<{ task: TaskDetail }>(`/api/tasks/${taskId}`, updates),
-    onSuccess: invalidateTaskQueries,
+  const patchTask = usePatchTaskMutation({
+    taskId,
+    workspaceId: workspace.id,
+    projectId: project.id,
   });
   const createSubtask = useMutation({
     mutationFn: (input: { title: string }) =>

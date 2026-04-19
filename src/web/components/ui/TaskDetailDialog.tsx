@@ -20,6 +20,7 @@ import { useToast } from "@/web/components/ui/ToastContext";
 import type { Subtask, Task, TaskGroup } from "@/web/contexts/ProjectContext";
 import type { WorkspaceMember } from "@/web/contexts/WorkspaceContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
+import { usePatchTaskMutation } from "@/web/hooks/use-patch-task-mutation";
 import { useProjectPermissions } from "@/web/hooks/use-permissions";
 import { useTaskCommentActions } from "@/web/hooks/use-task-comment-actions";
 import { useTaskComments } from "@/web/hooks/use-task-comments";
@@ -196,11 +197,7 @@ export function TaskDetailDialog({
   }, [open, resetCommentState, setShowDeleteDialog]);
 
   // Mutations (non-comment/non-task-action — those live in extracted hooks)
-  const patchTask = useMutation({
-    mutationFn: (updates: Partial<TaskDetail>) =>
-      api.patch<{ task: TaskDetail }>(`/api/tasks/${taskId}`, updates),
-    onSuccess: invalidateTaskQueries,
-  });
+  const patchTask = usePatchTaskMutation({ taskId, workspaceId: workspace.id, projectId });
 
   const createSubtask = useMutation({
     mutationFn: (input: { title: string }) =>
