@@ -1476,46 +1476,6 @@ Encapsulates task-level actions (complete/uncomplete, duplicate, delete) and the
 | `handleDeleteTask` | `() => Promise<void>` | Delete the task, cancel in-flight queries, remove from context. |
 | `isDeleting` | `boolean` | Whether a delete request is in flight. |
 
-## usePatchTaskMutation
-
-Optimistic field-edit mutation for a task. Patches every React Query cache that holds the task in `onMutate` (task detail, project tasks list, workspace dashboard slices, upcoming buckets), issues the single `PATCH /api/tasks/:taskId`, and rolls back on error. Stats-bearing dashboard/project-dashboard caches are invalidated with `refetchType: 'none'` so they refresh on next mount/focus rather than cascading refetches into the current edit. Shared between [`TaskDetailDialog`](task-detail-dialog.md) and `TaskDetailPanelInner` — both edit the same fields through the same endpoint and need identical cache plumbing.
-
-**Source:** `src/web/hooks/use-patch-task-mutation.ts`
-
-### Options
-
-| Option | Type | Description |
-| --- | --- | --- |
-| `taskId` | `string` | The task being patched. Drives `queryKeys.tasks.detail(taskId)` lookups. |
-| `workspaceId` | `string` | Workspace ID — needed to patch dashboard My Tasks preview, paginated My Tasks, and Upcoming caches. |
-| `projectId` | `string?` | Project ID — when provided, also patches `queryKeys.projects.tasks(projectId)` and quiet-invalidates the project dashboard. |
-
-### Return Value
-
-A standard `useMutation` result. `mutate(updates)` / `mutateAsync(updates)` accepts a `Partial<TaskDetail>` and resolves with `{ task: TaskDetail }`.
-
-### onSuccess Merge
-
-The PATCH response is the bare task without hydrated relations (subtasks, labels). Replacing the cache would wipe them and crash `useTaskSubtasks`, so the hook spreads the response over the existing cached task instead of overwriting it.
-
-### Usage
-
-```tsx
-import { usePatchTaskMutation } from "@/web/hooks/use-patch-task-mutation";
-
-function TaskFields({ taskId, workspaceId, projectId }) {
-  const patchTask = usePatchTaskMutation({ taskId, workspaceId, projectId });
-
-  return (
-    <input
-      onBlur={(e) => void patchTask.mutateAsync({ title: e.target.value })}
-    />
-  );
-}
-```
-
----
-
 ## useWorkspaceWebhooks
 
 Centralises all state, queries, mutations, and handler functions for the workspace webhooks settings page. View components (`WebhookListView`, `WebhookDetailView`) receive slices of this hook's return value as props, keeping them stateless and presentational.
