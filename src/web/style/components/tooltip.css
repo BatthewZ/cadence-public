@@ -8,6 +8,6 @@
   line-height: var(--BodyText-2-line-height);
   max-width: 17.5rem;
   word-wrap: break-word;
-  z-index: 50;
+  z-index: 60;
   pointer-events: none;
 }
