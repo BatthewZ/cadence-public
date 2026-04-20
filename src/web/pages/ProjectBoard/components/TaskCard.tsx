@@ -206,9 +206,9 @@ export function SortableTaskCard({
           )}
 
           <div className="flex flex-col gap-1.5">
-            <div className="flex items-start gap-1.5">
+            <div className="flex items-start gap-1.5 text-body-2 leading-snug">
               <div
-                className="shrink-0 mt-0.5"
+                className="shrink-0 h-[1lh] flex items-center"
                 onClick={(e) => e.stopPropagation()}
                 onPointerDown={(e) => e.stopPropagation()}
               >
@@ -219,7 +219,7 @@ export function SortableTaskCard({
                 />
               </div>
               {task.icon && (
-                <IconDisplay name={task.icon} size={14} className="mt-0.5 text-fg-muted" />
+                <IconDisplay name={task.icon} size={14} className="h-[1lh] text-fg-muted" />
               )}
               <Text
                 variant="body-2"
