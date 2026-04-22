@@ -56,10 +56,20 @@ export function GeneralTab({
     uploading: coverUploading,
     handleUpload: handleCoverUpload,
     handleRemove: handleCoverRemove,
-  } = useProjectCover(projectId, project.coverImageKey, updateProject, () => {
-    toast("Failed to remove cover image.", { variant: "error" });
-    refetch();
-  });
+  } = useProjectCover(
+    projectId,
+    project.coverImageKey,
+    project.coverUnsplash,
+    updateProject,
+    () => {
+      toast("Failed to remove cover image.", { variant: "error" });
+      refetch();
+    },
+    () => {
+      toast("Failed to apply Unsplash cover.", { variant: "error" });
+      refetch();
+    },
+  );
 
   const qc = useQueryClient();
 

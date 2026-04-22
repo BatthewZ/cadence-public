@@ -6,6 +6,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import type { UnsplashCoverPayload } from "../../shared/schemas/unsplash";
 import type { ProjectRole } from "../../shared/types/roles";
 import { user } from "./auth";
 import { workspace } from "./workspace";
@@ -23,6 +24,7 @@ export const project = sqliteTable(
     icon: text("icon"),
     coverImageKey: text("cover_image_key"),
     coverImagePosition: integer("cover_image_position"),
+    coverUnsplash: text("cover_unsplash", { mode: "json" }).$type<UnsplashCoverPayload>(),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
     theme: text("theme"),

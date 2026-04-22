@@ -8,6 +8,7 @@ import {
   reorderProjectSchema,
   updateProjectSchema,
 } from "../../../shared/schemas/project";
+import { unsplashCoverPayloadSchema } from "../../../shared/schemas/unsplash";
 import { createWebhookSchema, updateWebhookSchema } from "../../../shared/schemas/webhook";
 import type { AppEnv } from "../../env";
 import {
@@ -35,6 +36,7 @@ import {
 } from "./project-webhooks.handlers";
 import {
   addMember,
+  applyProjectUnsplashCover,
   createProject,
   deleteProject,
   deleteProjectCover,
@@ -110,6 +112,15 @@ app.put(
   requireProjectRole("admin"),
   rateLimit({ max: 10, windowSeconds: 60, prefix: "project-cover-upload" }),
   uploadProjectCover,
+);
+
+app.put(
+  "/projects/:projectId/cover/unsplash",
+  requireAuth,
+  requireProjectRole("admin"),
+  rateLimit({ max: 10, windowSeconds: 60, prefix: "project-cover-unsplash" }),
+  validateBody(unsplashCoverPayloadSchema),
+  applyProjectUnsplashCover,
 );
 
 app.delete(

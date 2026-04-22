@@ -4,6 +4,7 @@ import { createCommentSchema, listCommentsQuerySchema, updateCommentSchema } fro
 import { assignLabelSchema } from "../../../shared/schemas/label";
 import { createSubtaskSchema, updateSubtaskSchema } from "../../../shared/schemas/subtask";
 import { createTaskSchema, listActivityQuerySchema, moveTaskSchema, updateTaskSchema } from "../../../shared/schemas/task";
+import { unsplashCoverPayloadSchema } from "../../../shared/schemas/unsplash";
 import type { AppEnv } from "../../env";
 import {
   requireProjectAccess,
@@ -17,6 +18,7 @@ import { validateBody, validateQuery } from "../../middleware/validate";
 import { deleteAttachment, listAttachments, uploadAttachment } from "./attachments.handlers";
 import { assignLabel, unassignLabel } from "./labels.handlers";
 import {
+  applyTaskUnsplashCover,
   completeTask,
   createComment,
   createSubtask,
@@ -140,6 +142,15 @@ app.put(
   requireTaskRole("admin", "member"),
   rateLimit({ max: 10, windowSeconds: 60, prefix: "task-cover-upload" }),
   uploadTaskCover,
+);
+
+app.put(
+  "/tasks/:taskId/cover/unsplash",
+  requireAuth,
+  requireTaskRole("admin", "member"),
+  rateLimit({ max: 10, windowSeconds: 60, prefix: "task-cover-unsplash" }),
+  validateBody(unsplashCoverPayloadSchema),
+  applyTaskUnsplashCover,
 );
 
 app.delete(

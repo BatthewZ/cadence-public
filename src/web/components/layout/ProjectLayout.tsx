@@ -40,10 +40,20 @@ function ProjectLayoutInner() {
   const { isProjectAdmin } = useProjectPermissions(members);
   const {
     coverUrl,
+    coverSrcSet,
+    coverAttribution,
     uploading,
     handleUpload: handleCoverUpload,
     handleRemove: handleCoverRemove,
-  } = useProjectCover(project.id, project.coverImageKey, updateProject, refetch);
+    handleApplyUnsplash: handleCoverApplyUnsplash,
+  } = useProjectCover(
+    project.id,
+    project.coverImageKey,
+    project.coverUnsplash,
+    updateProject,
+    refetch,
+    refetch,
+  );
 
   // Query project members to determine the current user's role
   const currentUserId = session?.user?.id;
@@ -202,7 +212,10 @@ function ProjectLayoutInner() {
       </Breadcrumbs>
       <CoverImage
         coverUrl={coverUrl}
+        coverSrcSet={coverSrcSet}
+        coverAttribution={coverAttribution}
         onUpload={handleCoverUpload}
+        onApplyUnsplash={(payload) => { void handleCoverApplyUnsplash(payload); }}
         onRemove={() => { void handleCoverRemove(); }}
         uploading={uploading}
         editable={isProjectAdmin}

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 
 import type { AppEnv } from "../env";
 import authRoutes from "./auth/auth.routes";
+import configRoutes from "./config/config.routes";
 import dashboardRoutes from "./dashboard/dashboard.routes";
 import invitationRoutes from "./invitations/invitations.routes";
 import legalRoutes from "./legal/legal.routes";
@@ -11,6 +12,7 @@ import searchRoutes from "./search/search.routes";
 import taskGroupRoutes from "./task-groups/task-groups.routes";
 import taskRoutes from "./tasks/tasks.routes";
 import teamRoutes from "./teams/teams.routes";
+import unsplashRoutes from "./unsplash/unsplash.routes";
 import uploadRoutes from "./uploads/uploads.routes";
 import userRoutes from "./users/users.routes";
 import webhookRoutes from "./webhooks/webhooks.routes";
@@ -32,5 +34,7 @@ app.route("/", dashboardRoutes);
 app.route("/", searchRoutes);
 app.route("/", webhookRoutes);
 app.route("/", legalRoutes);
+app.route("/", configRoutes);
+app.route("/", unsplashRoutes);
 
 export default app;

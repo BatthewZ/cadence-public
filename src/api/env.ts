@@ -15,6 +15,9 @@ export type AppBindings = {
   STORAGE?: R2Bucket;
   ANALYTICS?: AnalyticsEngineDataset;
   TELEMETRY_SINK?: string;
+  UNSPLASH_ACCESS_KEY?: string;
+  UNSPLASH_SECRET_KEY?: string;
+  UNSPLASH_APP_NAME?: string;
 };
 
 export type AuthVariables = {

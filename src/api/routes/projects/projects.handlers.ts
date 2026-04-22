@@ -13,7 +13,8 @@ import { generateKeyBetween, generateNKeysBetween } from "../../../shared/lib/fr
 import { addProjectMemberSchema, createProjectSchema, duplicateProjectSchema, reorderProjectSchema, updateProjectSchema } from "../../../shared/schemas/project";
 import type { ProjectRole } from "../../../shared/types/roles";
 import type { AppEnv } from "../../env";
-import { handleDeleteCover, handleUploadCover } from "../../lib/cover-image";
+import type { CoverSourceUpdate } from "../../lib/cover-image";
+import { handleApplyUnsplashCover, handleDeleteCover, handleUploadCover } from "../../lib/cover-image";
 import { deferWork } from "../../lib/defer";
 import { errorResponse } from "../../lib/error-response";
 import { createNotification } from "../../lib/notifications";
@@ -357,6 +358,7 @@ export async function duplicateProject(c: Context<AppEnv>) {
     autoAssignCreator: source.autoAssignCreator,
     coverImageKey: null,
     coverImagePosition: null,
+    coverUnsplash: null,
     position: dupPosition,
     createdAt: now,
     updatedAt: now,
@@ -573,24 +575,56 @@ export async function removeMember(c: Context<AppEnv>) {
 // Cover Image Handlers
 // ---------------------------------------------------------------------------
 
+/**
+ * Select both cover-source columns for a project. Callers use this to detect
+ * which cover source (R2 or Unsplash) is currently set so they can clean up
+ * the appropriate artifact when swapping sources. See XOR invariant in
+ * `src/api/lib/cover-image.ts`.
+ */
+async function selectProjectCoverEntity(db: Database, projectId: string) {
+  const [proj] = await db
+    .select({
+      id: project.id,
+      coverImageKey: project.coverImageKey,
+      coverUnsplash: project.coverUnsplash,
+    })
+    .from(project)
+    .where(eq(project.id, projectId))
+    .limit(1);
+  return proj ?? null;
+}
+
+/**
+ * Atomically write both cover-source columns for a project. Always pass BOTH
+ * fields to preserve the XOR invariant documented in `lib/cover-image.ts`.
+ */
+async function writeProjectCover(
+  db: Database,
+  projectId: string,
+  cover: CoverSourceUpdate,
+  updatedAt: Date,
+) {
+  await db
+    .update(project)
+    .set({ ...cover, updatedAt })
+    .where(eq(project.id, projectId));
+}
+
 export async function uploadProjectCover(c: Context<AppEnv>) {
   const projectId = requireParam(c, "projectId");
   return handleUploadCover(c, {
     purpose: "project-cover",
-    getEntity: async (db) => {
-      const [proj] = await db
-        .select({ id: project.id, coverImageKey: project.coverImageKey })
-        .from(project)
-        .where(eq(project.id, projectId))
-        .limit(1);
-      return proj ?? null;
-    },
-    setEntityCover: async (db, key, updatedAt) => {
-      await db
-        .update(project)
-        .set({ coverImageKey: key, updatedAt })
-        .where(eq(project.id, projectId));
-    },
+    getEntity: (db) => selectProjectCoverEntity(db, projectId),
+    setEntityCover: (db, cover, updatedAt) => writeProjectCover(db, projectId, cover, updatedAt),
+  });
+}
+
+export async function applyProjectUnsplashCover(c: Context<AppEnv>) {
+  const projectId = requireParam(c, "projectId");
+  return handleApplyUnsplashCover(c, {
+    purpose: "project-cover",
+    getEntity: (db) => selectProjectCoverEntity(db, projectId),
+    setEntityCover: (db, cover, updatedAt) => writeProjectCover(db, projectId, cover, updatedAt),
   });
 }
 
@@ -599,19 +633,7 @@ export async function deleteProjectCover(c: Context<AppEnv>) {
   return handleDeleteCover(c, {
     purpose: "project-cover",
     entityLabel: "project",
-    getEntity: async (db) => {
-      const [proj] = await db
-        .select({ id: project.id, coverImageKey: project.coverImageKey })
-        .from(project)
-        .where(eq(project.id, projectId))
-        .limit(1);
-      return proj ?? null;
-    },
-    setEntityCover: async (db, _key, updatedAt) => {
-      await db
-        .update(project)
-        .set({ coverImageKey: null, updatedAt })
-        .where(eq(project.id, projectId));
-    },
+    getEntity: (db) => selectProjectCoverEntity(db, projectId),
+    setEntityCover: (db, cover, updatedAt) => writeProjectCover(db, projectId, cover, updatedAt),
   });
 }

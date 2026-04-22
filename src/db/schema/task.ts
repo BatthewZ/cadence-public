@@ -8,6 +8,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
+import type { UnsplashCoverPayload } from "../../shared/schemas/unsplash";
 import { user } from "./auth";
 import { project } from "./project";
 
@@ -63,6 +64,7 @@ export const task = sqliteTable(
     icon: text("icon"),
     coverImageKey: text("cover_image_key"),
     coverImagePosition: integer("cover_image_position"),
+    coverUnsplash: text("cover_unsplash", { mode: "json" }).$type<UnsplashCoverPayload>(),
     recurrenceRule: text("recurrence_rule"),
     recurrenceParentId: text("recurrence_parent_id"),
     recurrenceSeriesId: text("recurrence_series_id"),

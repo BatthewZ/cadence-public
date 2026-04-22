@@ -12,6 +12,24 @@ Health check endpoint. No authentication required.
 { "ok": true }
 ```
 
+### `GET /api/config`
+
+Public runtime feature-flag endpoint. No authentication required — the values are non-sensitive (presence of server-side configuration) and must be readable before login so the UI can render correctly for unauthenticated visitors. Response is sent with `Cache-Control: private, max-age=300` so clients do not hammer the endpoint on SPA navigation while shared caches (e.g. Cloudflare edge) never store it.
+
+**Response** (200):
+
+```json
+{
+  "features": {
+    "unsplash": true
+  }
+}
+```
+
+| Flag | Type | Meaning |
+|------|------|---------|
+| `features.unsplash` | `boolean` | `true` when `UNSPLASH_ACCESS_KEY` is configured server-side. When `false`, the web client hides the Unsplash tab in the cover picker and the `/api/unsplash/*` routes return 503. |
+
 ### `POST /api/auth/**` and `GET /api/auth/**`
 
 All Better Auth endpoints are delegated to the Better Auth handler. These include:
@@ -425,8 +443,8 @@ Updates project details.
 | `description` | `string \| null` | max 1000 characters |
 | `status` | `string` | `"active"`, `"archived"`, or `"completed"` |
 | `icon` | `string \| null` | max 50 characters |
-| `coverImageKey` | `string \| null` | R2 object key for cover image |
-| `coverImagePosition` | `number \| null` | 0–100, vertical position of cover image |
+| `coverImageKey` | `string \| null` | R2 object key for cover image (mutually exclusive with `coverUnsplash`) |
+| `coverImagePosition` | `number \| null` | 0–100, vertical position of cover image (applies to either cover source) |
 | `theme` | `string \| null` | One of the supported theme names |
 | `budget` | `number \| null` | Project budget in cents (integer, >= 0) |
 | `autoAssignCreator` | `boolean` | Auto-assign new tasks to their creator |
@@ -537,7 +555,7 @@ Duplicates a project, creating a new copy with the name `"{original name} (copy)
 
 ### `PUT /api/projects/:projectId/cover`
 
-Uploads a cover image for a project. Replaces any existing cover. Rate-limited to 10 requests per minute.
+Uploads a cover image for a project. Replaces any existing cover (R2 or Unsplash). Rate-limited to 10 requests per minute.
 
 **Auth:** Required.
 **Authorization:** Project admin (or workspace owner/admin).
@@ -548,8 +566,8 @@ Uploads a cover image for a project. Replaces any existing cover. Rate-limited t
 1. Validates the file type and size.
 2. Looks up the project's previous cover image (if any) but does not delete it yet.
 3. Uploads the new file to R2 under `project-cover/{userId}/{uuid}{ext}`. If the R2 upload fails, the old cover remains intact.
-4. Creates a record in the `upload` table and sets the project's `coverImageKey` to the new R2 key. If either DB write fails, the orphaned R2 object and any partial upload record are cleaned up before returning 500.
-5. Deletes the old cover from R2 and the database only after the new one is fully saved.
+4. Creates a record in the `upload` table and atomically writes `coverImageKey = <new key>` AND `coverUnsplash = null` on the project, preserving the XOR invariant between the two cover sources. If either DB write fails, the orphaned R2 object and any partial upload record are cleaned up before returning 500.
+5. Deletes the old R2 cover object and its upload row only after the new one is fully saved. (If the previous cover was an Unsplash payload there is no R2 artifact to delete.)
 
 **Response** (200):
 
@@ -561,7 +579,9 @@ Uploads a cover image for a project. Replaces any existing cover. Rate-limited t
     "filename": "cover.jpg",
     "mimeType": "image/jpeg",
     "size": 204800
-  }
+  },
+  "coverImageKey": "project-cover/userId/uuid.jpg",
+  "coverUnsplash": null
 }
 ```
 
@@ -577,9 +597,58 @@ Uploads a cover image for a project. Replaces any existing cover. Rate-limited t
 | 500 | R2 upload failed or database write failed (with automatic cleanup) |
 | 503 | R2 storage binding not configured |
 
+### `PUT /api/projects/:projectId/cover/unsplash`
+
+Applies an Unsplash-hosted photo as the project's cover image. Replaces any existing cover (R2 or Unsplash). Rate-limited to 10 requests per minute. Returns 503 when `UNSPLASH_ACCESS_KEY` is not configured.
+
+**Auth:** Required.
+**Authorization:** Project admin (or workspace owner/admin).
+
+**Request body:** JSON payload matching `UnsplashCoverPayload` from [`src/shared/schemas/unsplash.ts`](../../src/shared/schemas/unsplash.ts) (typically the exact `result` object returned by `/api/unsplash/search` or `/api/unsplash/curated`). Includes `id`, `rawUrl`, `url`, `thumbUrl`, `width`, `height`, `color`, `blurHash`, `description`, `photoUrl`, `downloadLocation`, and `user`.
+
+**Behavior:**
+1. Validates the payload against `unsplashCoverPayloadSchema`.
+2. Atomically writes `coverUnsplash = <payload>` AND `coverImageKey = null` on the project, preserving the XOR invariant between the two cover sources.
+3. If the project previously had an R2 cover, deletes the old R2 object and its `upload` row AFTER the DB write succeeds. Failures here are logged but non-fatal (the entity already points at the new Unsplash payload).
+4. Fires a GET against `payload.downloadLocation` via `deferWork` (outside the request lifecycle in prod, inline in tests) to comply with the Unsplash API download-tracking guideline. All tracking errors are swallowed.
+
+**Response** (200):
+
+```json
+{
+  "coverImageKey": null,
+  "coverUnsplash": {
+    "id": "abc123",
+    "rawUrl": "https://images.unsplash.com/raw",
+    "url": "https://images.unsplash.com/regular",
+    "thumbUrl": "https://images.unsplash.com/thumb",
+    "width": 4000,
+    "height": 3000,
+    "color": "#aabbcc",
+    "blurHash": "...",
+    "description": "A scenic landscape",
+    "photoUrl": "https://unsplash.com/photos/abc123?utm_source=cadence&utm_medium=referral",
+    "downloadLocation": "https://api.unsplash.com/photos/abc123/download?ixid=XXX",
+    "user": { "name": "Jane Smith", "username": "janesmith", "profileUrl": "..." }
+  }
+}
+```
+
+**Error responses:**
+
+| Status | Condition |
+| --- | --- |
+| 400 | Payload failed schema validation |
+| 401 | Not authenticated |
+| 403 | Not a project admin |
+| 404 | Project not found |
+| 429 | Rate limit exceeded |
+| 500 | Database write failed |
+| 503 | `UNSPLASH_ACCESS_KEY` not configured, or R2 storage missing while an R2 cover is queued for cleanup |
+
 ### `DELETE /api/projects/:projectId/cover`
 
-Removes the cover image from a project. Idempotent -- returns success even if no cover exists.
+Removes the cover image (R2 or Unsplash) from a project. Clears both `coverImageKey` and `coverUnsplash` atomically. Idempotent -- returns success even if no cover exists.
 
 **Auth:** Required.
 **Authorization:** Project admin (or workspace owner/admin).
@@ -597,7 +666,7 @@ Removes the cover image from a project. Idempotent -- returns success even if no
 | 401 | Not authenticated |
 | 403 | Not a project admin |
 | 404 | Project not found |
-| 503 | R2 storage binding not configured |
+| 503 | R2 storage binding not configured (only required when an R2 cover exists; pure Unsplash covers delete without STORAGE) |
 
 ### `GET /api/projects/:projectId/members`
 
@@ -1084,8 +1153,8 @@ Updates task fields.
 | `dueDate` | `string \| null` | ISO 8601 datetime |
 | `cost` | `integer \| null` | Non-negative integer (cents) |
 | `icon` | `string \| null` | max 50 characters |
-| `coverImageKey` | `string \| null` | R2 object key for cover image |
-| `coverImagePosition` | `integer \| null` | 0--100, vertical position of cover image |
+| `coverImageKey` | `string \| null` | R2 object key for cover image (mutually exclusive with `coverUnsplash`) |
+| `coverImagePosition` | `integer \| null` | 0--100, vertical position of cover image (applies to either cover source) |
 | `recurrenceRule` | `object \| null` | See [Recurrence Rule](#recurrence-rule-object) below |
 
 **Response** (200):
@@ -1194,7 +1263,7 @@ Duplicates a task including its subtasks and labels. The new task is placed at t
 
 ### `PUT /api/tasks/:taskId/cover`
 
-Uploads a cover image for a task. Replaces any existing cover. Rate-limited to 10 requests per minute.
+Uploads a cover image for a task. Replaces any existing cover (R2 or Unsplash). Rate-limited to 10 requests per minute.
 
 **Auth:** Required.
 **Authorization:** Project member, or workspace owner/admin (resolved via `requireTaskAccess`).
@@ -1205,8 +1274,8 @@ Uploads a cover image for a task. Replaces any existing cover. Rate-limited to 1
 1. Validates the file type and size.
 2. Looks up the task's previous cover image (if any) but does not delete it yet.
 3. Uploads the new file to R2 under `task-cover/{userId}/{uuid}{ext}`. If the R2 upload fails, the old cover remains intact.
-4. Creates a record in the `upload` table and sets the task's `coverImageKey` to the new R2 key. If either DB write fails, the orphaned R2 object and any partial upload record are cleaned up before returning 500.
-5. Deletes the old cover from R2 and the database only after the new one is fully saved.
+4. Creates a record in the `upload` table and atomically writes `coverImageKey = <new key>` AND `coverUnsplash = null` on the task, preserving the XOR invariant between the two cover sources. If either DB write fails, the orphaned R2 object and any partial upload record are cleaned up before returning 500.
+5. Deletes the old R2 cover object and its upload row only after the new one is fully saved. (If the previous cover was an Unsplash payload there is no R2 artifact to delete.)
 
 **Response** (200):
 
@@ -1218,7 +1287,9 @@ Uploads a cover image for a task. Replaces any existing cover. Rate-limited to 1
     "filename": "cover.jpg",
     "mimeType": "image/jpeg",
     "size": 204800
-  }
+  },
+  "coverImageKey": "task-cover/userId/uuid.jpg",
+  "coverUnsplash": null
 }
 ```
 
@@ -1234,9 +1305,38 @@ Uploads a cover image for a task. Replaces any existing cover. Rate-limited to 1
 | 500 | R2 upload failed or database write failed (with automatic cleanup) |
 | 503 | R2 storage binding not configured |
 
+### `PUT /api/tasks/:taskId/cover/unsplash`
+
+Applies an Unsplash-hosted photo as the task's cover image. Replaces any existing cover (R2 or Unsplash). Rate-limited to 10 requests per minute. Returns 503 when `UNSPLASH_ACCESS_KEY` is not configured.
+
+**Auth:** Required.
+**Authorization:** Project member (admin or member), or workspace owner/admin (resolved via `requireTaskRole("admin", "member")`).
+
+**Request body:** JSON payload matching `UnsplashCoverPayload` from [`src/shared/schemas/unsplash.ts`](../../src/shared/schemas/unsplash.ts) (typically the exact `result` object returned by `/api/unsplash/search` or `/api/unsplash/curated`).
+
+**Behavior:**
+1. Validates the payload against `unsplashCoverPayloadSchema`.
+2. Atomically writes `coverUnsplash = <payload>` AND `coverImageKey = null` on the task, preserving the XOR invariant between the two cover sources.
+3. If the task previously had an R2 cover, deletes the old R2 object and its `upload` row AFTER the DB write succeeds. Failures here are logged but non-fatal.
+4. Fires a GET against `payload.downloadLocation` via `deferWork` (outside the request lifecycle in prod, inline in tests) to comply with the Unsplash API download-tracking guideline. All tracking errors are swallowed.
+
+**Response** (200): same shape as [`PUT /api/projects/:projectId/cover/unsplash`](#put-apiprojectsprojectidcoverunsplash) -- `{ "coverImageKey": null, "coverUnsplash": {...} }`.
+
+**Error responses:**
+
+| Status | Condition |
+| --- | --- |
+| 400 | Payload failed schema validation |
+| 401 | Not authenticated |
+| 403 | Not a project member |
+| 404 | Task not found |
+| 429 | Rate limit exceeded |
+| 500 | Database write failed |
+| 503 | `UNSPLASH_ACCESS_KEY` not configured, or R2 storage missing while an R2 cover is queued for cleanup |
+
 ### `DELETE /api/tasks/:taskId/cover`
 
-Removes the cover image from a task. Idempotent -- returns success even if no cover exists.
+Removes the cover image (R2 or Unsplash) from a task. Clears both `coverImageKey` and `coverUnsplash` atomically. Idempotent -- returns success even if no cover exists.
 
 **Auth:** Required.
 **Authorization:** Project member, or workspace owner/admin (resolved via `requireTaskAccess`).
@@ -1254,7 +1354,7 @@ Removes the cover image from a task. Idempotent -- returns success even if no co
 | 401 | Not authenticated |
 | 403 | Not a project member |
 | 404 | Task not found |
-| 503 | R2 storage binding not configured |
+| 503 | R2 storage binding not configured (only required when an R2 cover exists; pure Unsplash covers delete without STORAGE) |
 
 ---
 
@@ -1680,6 +1780,46 @@ Removes a member from a team.
 ```json
 { "ok": true }
 ```
+
+---
+
+## Unsplash
+
+Proxy endpoints in front of the [Unsplash REST API](https://unsplash.com/documentation). They exist as a proxy (rather than calling Unsplash from the browser) so the `UNSPLASH_ACCESS_KEY` is never exposed to the client, so we can apply our own per-user rate limit against our shared Unsplash quota, and so the raw payload is normalised into the `UnsplashCoverPayload` shape stored in `project.coverUnsplash` / `task.coverUnsplash` — including mandatory UTM attribution parameters on every user-visible outbound link.
+
+Both endpoints share a single rate limit (30 requests per minute per user, combined across search and curated). When `UNSPLASH_ACCESS_KEY` is not configured server-side, both endpoints return `503`. Upstream Unsplash errors are remapped: `429` is surfaced verbatim so clients can back off; all other upstream failures return `502` with `{ "upstreamStatus": <code> }` — upstream response bodies are logged server-side but never echoed to clients.
+
+### `GET /api/unsplash/search`
+
+Searches Unsplash photos and returns a normalised, paginated result. Requires auth.
+
+**Query parameters:**
+
+| Field | Type | Constraints | Required |
+|-------|------|-------------|----------|
+| `query` | `string` | 1--100 characters, trimmed | Yes |
+| `page` | `integer` | 1--50, defaults to `1` | No |
+| `perPage` | `integer` | 1--30, defaults to `24` | No |
+| `orientation` | `string` | one of `"landscape"`, `"portrait"`, `"squarish"` | No |
+
+**Response** (200): See [Unsplash Search Response](#unsplash-search-response) below.
+
+**Errors:** `401` unauthenticated, `429` rate-limited (local) or upstream rate-limited (Unsplash), `502` upstream failure, `503` Unsplash not configured.
+
+### `GET /api/unsplash/curated`
+
+Returns the latest curated Unsplash photos in the same normalised shape as search. Used as the default picker view before the user types a query. Requires auth.
+
+**Query parameters:**
+
+| Field | Type | Constraints | Required |
+|-------|------|-------------|----------|
+| `page` | `integer` | 1--50, defaults to `1` | No |
+| `perPage` | `integer` | 1--30, defaults to `24` | No |
+
+**Response** (200): See [Unsplash Search Response](#unsplash-search-response) below. The Unsplash `/photos` endpoint does not report a total, so `totalPages` is a bounded default (50) and `total = totalPages × perPage`.
+
+**Errors:** same as `/api/unsplash/search`.
 
 ---
 
@@ -2286,6 +2426,41 @@ Any `/api/*` request that does not match a defined route returns a 404:
 ---
 
 ## Shared Types
+
+### Unsplash Search Response
+
+Returned by both `/api/unsplash/search` and `/api/unsplash/curated`.
+
+```json
+{
+  "page": 1,
+  "perPage": 24,
+  "total": 1200,
+  "totalPages": 50,
+  "results": [
+    {
+      "id": "abc123",
+      "rawUrl": "https://images.unsplash.com/raw",
+      "url": "https://images.unsplash.com/regular",
+      "thumbUrl": "https://images.unsplash.com/thumb",
+      "blurHash": "LEHV6nWB2yk8pyo0adR*.7kCMdnj",
+      "color": "#abcdef",
+      "description": "A mountain",
+      "width": 4000,
+      "height": 3000,
+      "photoUrl": "https://unsplash.com/photos/abc123?utm_source=cadence&utm_medium=referral",
+      "downloadLocation": "https://api.unsplash.com/photos/abc123/download?ixid=XXX",
+      "user": {
+        "name": "Jane Smith",
+        "username": "janesmith",
+        "profileUrl": "https://unsplash.com/@janesmith?utm_source=cadence&utm_medium=referral"
+      }
+    }
+  ]
+}
+```
+
+Each `result` entry matches the `UnsplashCoverPayload` shape in [`src/shared/schemas/unsplash.ts`](../../src/shared/schemas/unsplash.ts) and is the exact shape persisted to `project.coverUnsplash` / `task.coverUnsplash`. `photoUrl` and `user.profileUrl` always carry `utm_source=<UNSPLASH_APP_NAME>&utm_medium=referral` (defaults to `cadence`) to comply with Unsplash attribution guidelines. `downloadLocation` is passed verbatim to `service.trackDownload()` when a user applies a photo as a cover. `rawUrl` is the imgix-backed source URL used by the web client (via `buildUnsplashDisplayUrl` in `src/shared/lib/unsplash-display.ts`) to compose context-appropriate renditions — e.g. a 1600px-wide `cover` preset for banners and a 500px-wide `card` preset for picker thumbnails — instead of hotlinking the fixed 1080px `url` (now kept only as a legacy fallback).
 
 ### Recurrence Rule Object
 

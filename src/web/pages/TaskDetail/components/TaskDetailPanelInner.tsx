@@ -170,12 +170,18 @@ export function TaskDetailPanelInner({
   // Cover image upload, removal, and position changes
   const patchTaskMutateAsync = patchTask.mutateAsync;
   const {
+    coverUrl,
+    coverSrcSet,
+    coverAttribution,
     coverUploading,
     handleCoverUpload,
+    handleCoverApplyUnsplash,
     handleCoverRemove,
     handleCoverPositionChange,
   } = useTaskCover({
     taskId,
+    coverImageKey: task?.coverImageKey ?? null,
+    coverUnsplash: task?.coverUnsplash ?? null,
     setLocalTask,
     updateTaskInContext,
     invalidateTaskQueries,
@@ -306,9 +312,14 @@ export function TaskDetailPanelInner({
         {/* Cover Image */}
         {task && (
           <CoverImage
-            coverUrl={task.coverImageKey ? `/api/uploads/${task.coverImageKey}` : null}
+            coverUrl={coverUrl}
+            coverSrcSet={coverSrcSet}
+            coverAttribution={coverAttribution}
             onUpload={(file: File) => {
               void handleCoverUpload(file);
+            }}
+            onApplyUnsplash={(payload) => {
+              void handleCoverApplyUnsplash(payload);
             }}
             onRemove={() => {
               void handleCoverRemove();

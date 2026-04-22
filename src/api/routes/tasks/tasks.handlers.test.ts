@@ -8,9 +8,11 @@
  * query-shape regressions that mocks would miss.
  */
 
+import type { MiddlewareHandler } from "hono";
 import { Hono } from "hono";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
+import { createDb } from "../../../db";
 import { createCommentSchema, listCommentsQuerySchema, updateCommentSchema } from "../../../shared/schemas/comment";
 import { createSubtaskSchema, updateSubtaskSchema } from "../../../shared/schemas/subtask";
 import {
@@ -19,12 +21,18 @@ import {
   moveTaskSchema,
   updateTaskSchema,
 } from "../../../shared/schemas/task";
+import type { UnsplashCoverPayload } from "../../../shared/schemas/unsplash";
+import { unsplashCoverPayloadSchema } from "../../../shared/schemas/unsplash";
 import type { AppEnv } from "../../env";
 import { validateBody, validateQuery } from "../../middleware/validate";
 import {
   createTestD1,
+  createTestD1WithR2,
   fakeAuth,
+  fakeCoverPngFile,
+  installFetchSpy,
   jsonRequest,
+  sampleUnsplashPayload,
   seedComment,
   seedProject,
   seedProjectMember,
@@ -37,6 +45,7 @@ import {
   TEST_USER_2,
 } from "../../test-utils";
 import {
+  applyTaskUnsplashCover,
   completeTask,
   createComment,
   createSubtask,
@@ -44,6 +53,7 @@ import {
   deleteComment,
   deleteSubtask,
   deleteTask,
+  deleteTaskCover,
   duplicateTask,
   getTask,
   getTaskActivity,
@@ -54,6 +64,7 @@ import {
   updateComment,
   updateSubtask,
   updateTask,
+  uploadTaskCover,
 } from "./tasks.handlers";
 
 // ---------------------------------------------------------------------------
@@ -1778,7 +1789,7 @@ describe("duplicateTask", () => {
     expect(body.task.completed).toBe(false);
   });
 
-  it("does not copy cover image", async () => {
+  it("does not copy cover image (R2 or Unsplash)", async () => {
     const sourceId = await seedTask(d1, projectId, taskGroupId, {
       title: "With Cover",
       coverImageKey: "some-cover-key",
@@ -1793,8 +1804,56 @@ describe("duplicateTask", () => {
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ task: { coverImageKey: string | null } }>();
+    const body = await res.json<{
+      task: {
+        id: string;
+        coverImageKey: string | null;
+        coverUnsplash: UnsplashCoverPayload | null;
+      };
+    }>();
     expect(body.task.coverImageKey).toBeNull();
+    expect(body.task.coverUnsplash).toBeNull();
+
+    // Verify at the DB layer too — duplication of a task that had an Unsplash
+    // cover should null the JSON column on the new row.
+    const unsplashSource = await seedTask(d1, projectId, taskGroupId, {
+      title: "With Unsplash Cover",
+      coverUnsplash: {
+        id: "src-photo",
+        rawUrl: "https://images.unsplash.com/src-photo/raw",
+        url: "https://images.unsplash.com/src-photo",
+        thumbUrl: "https://images.unsplash.com/src-photo/thumb",
+        blurHash: null,
+        color: null,
+        description: null,
+        width: 100,
+        height: 100,
+        photoUrl:
+          "https://unsplash.com/photos/src-photo?utm_source=cadence&utm_medium=referral",
+        downloadLocation:
+          "https://api.unsplash.com/photos/src-photo/download?ixid=x",
+        user: {
+          name: "N",
+          username: "u",
+          profileUrl:
+            "https://unsplash.com/@u?utm_source=cadence&utm_medium=referral",
+        },
+      },
+    });
+    const dupRes = await app.request(
+      `/tasks/${unsplashSource}/duplicate`,
+      jsonRequest("POST", `/tasks/${unsplashSource}/duplicate`),
+    );
+    expect(dupRes.status).toBe(201);
+    const dupBody = await dupRes.json<{
+      task: { id: string; coverUnsplash: UnsplashCoverPayload | null };
+    }>();
+    expect(dupBody.task.coverUnsplash).toBeNull();
+    const row = await d1
+      .prepare("SELECT cover_unsplash AS u FROM task WHERE id = ?")
+      .bind(dupBody.task.id)
+      .first<{ u: string | null }>();
+    expect(row?.u).toBeNull();
   });
 
   it("returns 404 for non-existent task", async () => {
@@ -1881,5 +1940,340 @@ describe("duplicateTask", () => {
     );
     const commBody = await commRes.json<{ comments: unknown[] }>();
     expect(commBody.comments).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task cover image handlers — upload / apply-Unsplash / delete + XOR invariant
+// ---------------------------------------------------------------------------
+
+describe("task cover image handlers", () => {
+  // These tests need both D1 and R2; use the shared `createTestD1WithR2`
+  // helper so the migration + Miniflare plumbing lives in one place.
+  let coverD1: D1Database;
+  let coverStorage: R2Bucket;
+  let coverDispose: () => Promise<void>;
+  let coverProjectId: string;
+  let coverTaskGroupId: string;
+
+  beforeAll(async () => {
+    const result = await createTestD1WithR2();
+    coverD1 = result.d1;
+    coverStorage = result.storage;
+    coverDispose = result.dispose;
+
+    await seedUser(coverD1);
+    await seedUser(coverD1, TEST_USER_2);
+    const wsId = await seedWorkspace(coverD1, TEST_USER.id);
+    coverProjectId = await seedProject(coverD1, wsId);
+    await seedProjectMember(coverD1, coverProjectId, TEST_USER.id, "admin");
+    await seedProjectMember(coverD1, coverProjectId, TEST_USER_2.id, "viewer");
+    coverTaskGroupId = await seedTaskGroup(coverD1, coverProjectId);
+  });
+
+  afterAll(async () => {
+    await coverDispose();
+  });
+
+  /**
+   * Auth middleware for the cover tests: wires real D1 + R2 + (optionally)
+   * Unsplash config into c.env, and sets the `projectAccess` variable so the
+   * task cover helpers' fast-path (skipping the re-query) is exercised.
+   */
+  function coverAuth(opts?: {
+    user?: typeof TEST_USER | typeof TEST_USER_2;
+    unsplashAccessKey?: string | null;
+    projectAccess?: { role: "admin" | "member" | "viewer"; source: "workspace" | "project" };
+  }): MiddlewareHandler<AppEnv> {
+    return async (c, next) => {
+      if (!c.env) {
+        (c as unknown as { env: Record<string, unknown> }).env = {};
+      }
+      const envRec = c.env as Record<string, unknown>;
+      envRec.DB = coverD1;
+      envRec.STORAGE = coverStorage;
+      if (opts?.unsplashAccessKey !== null) {
+        envRec.UNSPLASH_ACCESS_KEY = opts?.unsplashAccessKey ?? "test-access-key";
+        envRec.UNSPLASH_APP_NAME = "cadence-test";
+      }
+
+      c.set("db", createDb(coverD1));
+      c.set("user", (opts?.user ?? TEST_USER) as never);
+      c.set("session", null);
+      c.set("requestId", "test-request-id");
+      // Default: admin via direct project membership (allows writes).
+      c.set(
+        "projectAccess",
+        opts?.projectAccess ?? { role: "admin", source: "project" },
+      );
+
+      await next();
+    };
+  }
+
+  function unsplashRequest(taskIdParam: string, payload: UnsplashCoverPayload): Request {
+    return new Request(`http://localhost/tasks/${taskIdParam}/cover/unsplash`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
+  function uploadRequest(taskIdParam: string, file: File): Request {
+    const form = new FormData();
+    form.append("file", file);
+    return new Request(`http://localhost/tasks/${taskIdParam}/cover`, {
+      method: "PUT",
+      body: form,
+    });
+  }
+
+  async function readCoverState(taskIdParam: string) {
+    const row = await coverD1
+      .prepare(
+        "SELECT cover_image_key AS k, cover_unsplash AS u FROM task WHERE id = ?",
+      )
+      .bind(taskIdParam)
+      .first<{ k: string | null; u: string | null }>();
+    return {
+      coverImageKey: row?.k ?? null,
+      coverUnsplash: row?.u ? (JSON.parse(row.u) as UnsplashCoverPayload) : null,
+    };
+  }
+
+  // `trackDownload` issues a real HTTP GET. The shared `installFetchSpy`
+  // replaces `globalThis.fetch` per-test and records every call.
+  let fetchSpy: ReturnType<typeof installFetchSpy>;
+
+  beforeEach(() => {
+    fetchSpy = installFetchSpy();
+  });
+
+  afterEach(() => {
+    fetchSpy.restore();
+  });
+
+  // -------------------------------------------------------------------------
+  // applyTaskUnsplashCover
+  // -------------------------------------------------------------------------
+
+  it("applies an Unsplash cover on a task with no existing cover and tracks download once", async () => {
+    const tId = await seedTask(coverD1, coverProjectId, coverTaskGroupId, {
+      title: "No Cover",
+    });
+
+    const app = new Hono<AppEnv>();
+    app.put(
+      "/tasks/:taskId/cover/unsplash",
+      coverAuth(),
+      validateBody(unsplashCoverPayloadSchema),
+      applyTaskUnsplashCover,
+    );
+
+    const payload = sampleUnsplashPayload("t-apply-fresh");
+    const res = await app.request(unsplashRequest(tId, payload));
+    expect(res.status).toBe(200);
+
+    const body = await res.json<{
+      coverImageKey: string | null;
+      coverUnsplash: UnsplashCoverPayload | null;
+    }>();
+    expect(body.coverImageKey).toBeNull();
+    expect(body.coverUnsplash?.id).toBe("t-apply-fresh");
+
+    const state = await readCoverState(tId);
+    expect(state.coverImageKey).toBeNull();
+    expect(state.coverUnsplash?.id).toBe("t-apply-fresh");
+
+    const matching = fetchSpy.calls.filter(
+      ([url]) => typeof url === "string" && url.startsWith(payload.downloadLocation),
+    );
+    expect(matching.length).toBe(1);
+    const init = matching[0][1] as RequestInit;
+    const headers = init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Client-ID test-access-key");
+  });
+
+  it("applies an Unsplash cover on a task that had an R2 upload, cleaning the R2 object", async () => {
+    const tId = await seedTask(coverD1, coverProjectId, coverTaskGroupId, {
+      title: "Swap R2 -> Unsplash",
+    });
+
+    const uploadApp = new Hono<AppEnv>();
+    uploadApp.put("/tasks/:taskId/cover", coverAuth(), uploadTaskCover);
+    const uploadRes = await uploadApp.request(
+      uploadRequest(tId, fakeCoverPngFile()),
+    );
+    expect(uploadRes.status).toBe(200);
+    const { coverImageKey: oldKey } = await uploadRes.json<{
+      coverImageKey: string;
+    }>();
+    expect(await coverStorage.get(oldKey)).not.toBeNull();
+
+    const app = new Hono<AppEnv>();
+    app.put(
+      "/tasks/:taskId/cover/unsplash",
+      coverAuth(),
+      validateBody(unsplashCoverPayloadSchema),
+      applyTaskUnsplashCover,
+    );
+    const res = await app.request(
+      unsplashRequest(tId, sampleUnsplashPayload("t-swap-r2-us")),
+    );
+    expect(res.status).toBe(200);
+
+    const state = await readCoverState(tId);
+    expect(state.coverImageKey).toBeNull();
+    expect(state.coverUnsplash?.id).toBe("t-swap-r2-us");
+
+    expect(await coverStorage.get(oldKey)).toBeNull();
+    const uploadRow = await coverD1
+      .prepare("SELECT id FROM upload WHERE key = ?")
+      .bind(oldKey)
+      .first();
+    expect(uploadRow).toBeNull();
+  });
+
+  it("uploading an R2 cover after an Unsplash cover clears coverUnsplash (XOR)", async () => {
+    const tId = await seedTask(coverD1, coverProjectId, coverTaskGroupId, {
+      title: "Swap Unsplash -> R2",
+      coverUnsplash: sampleUnsplashPayload("t-pre-existing"),
+    });
+
+    const app = new Hono<AppEnv>();
+    app.put("/tasks/:taskId/cover", coverAuth(), uploadTaskCover);
+    const res = await app.request(uploadRequest(tId, fakeCoverPngFile()));
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      coverImageKey: string;
+      coverUnsplash: UnsplashCoverPayload | null;
+    }>();
+    expect(body.coverImageKey).toMatch(/^task-cover\//);
+    expect(body.coverUnsplash).toBeNull();
+
+    const state = await readCoverState(tId);
+    expect(state.coverImageKey).toBe(body.coverImageKey);
+    expect(state.coverUnsplash).toBeNull();
+  });
+
+  // -------------------------------------------------------------------------
+  // deleteTaskCover
+  // -------------------------------------------------------------------------
+
+  it("deleting a task cover when Unsplash was set nulls both columns", async () => {
+    const tId = await seedTask(coverD1, coverProjectId, coverTaskGroupId, {
+      title: "Delete Unsplash",
+      coverUnsplash: sampleUnsplashPayload("t-del-us"),
+    });
+
+    const app = new Hono<AppEnv>();
+    app.delete("/tasks/:taskId/cover", coverAuth(), deleteTaskCover);
+    const res = await app.request(
+      new Request(`http://localhost/tasks/${tId}/cover`, { method: "DELETE" }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json<{ ok: boolean }>();
+    expect(body.ok).toBe(true);
+
+    const state = await readCoverState(tId);
+    expect(state.coverImageKey).toBeNull();
+    expect(state.coverUnsplash).toBeNull();
+  });
+
+  it("deleting a task cover when R2 was set removes the R2 object and nulls both columns", async () => {
+    const tId = await seedTask(coverD1, coverProjectId, coverTaskGroupId, {
+      title: "Delete R2",
+    });
+
+    const uploadApp = new Hono<AppEnv>();
+    uploadApp.put("/tasks/:taskId/cover", coverAuth(), uploadTaskCover);
+    const uploadRes = await uploadApp.request(
+      uploadRequest(tId, fakeCoverPngFile()),
+    );
+    expect(uploadRes.status).toBe(200);
+    const { coverImageKey: key } = await uploadRes.json<{
+      coverImageKey: string;
+    }>();
+
+    const delApp = new Hono<AppEnv>();
+    delApp.delete("/tasks/:taskId/cover", coverAuth(), deleteTaskCover);
+    const res = await delApp.request(
+      new Request(`http://localhost/tasks/${tId}/cover`, { method: "DELETE" }),
+    );
+    expect(res.status).toBe(200);
+
+    const state = await readCoverState(tId);
+    expect(state.coverImageKey).toBeNull();
+    expect(state.coverUnsplash).toBeNull();
+    expect(await coverStorage.get(key)).toBeNull();
+  });
+
+  // -------------------------------------------------------------------------
+  // Config / availability
+  // -------------------------------------------------------------------------
+
+  it("returns 503 when UNSPLASH_ACCESS_KEY is absent", async () => {
+    const tId = await seedTask(coverD1, coverProjectId, coverTaskGroupId, {
+      title: "No Unsplash",
+    });
+
+    const app = new Hono<AppEnv>();
+    app.put(
+      "/tasks/:taskId/cover/unsplash",
+      coverAuth({ unsplashAccessKey: null }),
+      validateBody(unsplashCoverPayloadSchema),
+      applyTaskUnsplashCover,
+    );
+    const res = await app.request(
+      unsplashRequest(tId, sampleUnsplashPayload("t-503")),
+    );
+    expect(res.status).toBe(503);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toContain("Unsplash");
+  });
+
+  // -------------------------------------------------------------------------
+  // Read shape audit
+  // -------------------------------------------------------------------------
+
+  it("task detail response includes coverUnsplash (null when unset, object when applied)", async () => {
+    const tId = await seedTask(coverD1, coverProjectId, coverTaskGroupId, {
+      title: "Detail Reads",
+    });
+
+    const getApp = new Hono<AppEnv>();
+    getApp.get("/tasks/:taskId", coverAuth(), getTask);
+
+    const r1 = await getApp.request(
+      `/tasks/${tId}`,
+      jsonRequest("GET", `/tasks/${tId}`),
+    );
+    expect(r1.status).toBe(200);
+    const body1 = await r1.json<{
+      task: { coverUnsplash: UnsplashCoverPayload | null };
+    }>();
+    expect(body1.task).toHaveProperty("coverUnsplash");
+    expect(body1.task.coverUnsplash).toBeNull();
+
+    const applyApp = new Hono<AppEnv>();
+    applyApp.put(
+      "/tasks/:taskId/cover/unsplash",
+      coverAuth(),
+      validateBody(unsplashCoverPayloadSchema),
+      applyTaskUnsplashCover,
+    );
+    const applyRes = await applyApp.request(
+      unsplashRequest(tId, sampleUnsplashPayload("t-detail-reads")),
+    );
+    expect(applyRes.status).toBe(200);
+
+    const r2 = await getApp.request(
+      `/tasks/${tId}`,
+      jsonRequest("GET", `/tasks/${tId}`),
+    );
+    const body2 = await r2.json<{
+      task: { coverUnsplash: UnsplashCoverPayload | null };
+    }>();
+    expect(body2.task.coverUnsplash?.id).toBe("t-detail-reads");
   });
 });

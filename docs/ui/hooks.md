@@ -1193,17 +1193,101 @@ function BoardView() {
 }
 ```
 
+## useProjectCover
+
+Encapsulates project cover upload, Unsplash-payload apply, removal, and URL/attribution derivation. Both `ProjectLayout` and `ProjectSettings` use this hook so the optimistic-update contract stays identical across the two surfaces.
+
+**Source:** `src/web/hooks/use-project-cover.ts`
+
+### Cover source XOR invariant
+
+A project has at most one cover source active at any time: either an uploaded R2 key (`coverImageKey`) or an Unsplash payload (`coverUnsplash`), never both. The backend enforces this atomically; the hook mirrors it in every optimistic path:
+
+- **Upload:** writes `coverImageKey = <new key>` AND `coverUnsplash = null`.
+- **Apply Unsplash:** writes `coverUnsplash = <payload>` AND `coverImageKey = null`.
+- **Remove:** clears both.
+
+Consumers therefore never observe a transient "both set" state.
+
+### Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `projectId` | `string` | Project id for the cover endpoints. |
+| `coverImageKey` | `string \| null \| undefined` | Current R2 key from server state. |
+| `coverUnsplash` | `UnsplashCoverPayload \| null \| undefined` | Current Unsplash payload from server state. |
+| `updateProject` | `(updates: { coverImageKey?: string \| null; coverUnsplash?: UnsplashCoverPayload \| null }) => void` | Optimistic cache writer. Must accept both fields so XOR clears apply in a single call. |
+| `onRemoveError` | `() => void?` | Fires when `DELETE /api/projects/:id/cover` fails. Typical callers refetch and/or show a toast. |
+| `onApplyError` | `() => void?` | Fires when `PUT /api/projects/:id/cover/unsplash` fails. The hook doesn't track the prior state, so callers are expected to refetch to re-sync. |
+
+### Return Value
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `coverUrl` | `string \| null` | Resolved URL — for Unsplash payloads, composed from `rawUrl` via `buildUnsplashDisplayUrl(payload, "cover")` (imgix `w=1600&q=80&auto=format&fit=max`), falling back to the legacy `url` field for rows written before `rawUrl` existed. For R2 covers, `/api/uploads/<key>`, otherwise `null`. Unsplash takes precedence if both are (transiently) present. |
+| `coverSrcSet` | `string \| null` | Multi-width `<img srcSet>` for Unsplash covers (800/1600/2400w), composed from `rawUrl` via `buildUnsplashDisplaySrcSet`. `null` for R2 uploads (single resolution) and for legacy Unsplash rows without `rawUrl` — in that case callers fall back to plain `src`. Pair with `sizes="100vw"` at the `<img>` site. |
+| `coverAttribution` | `CoverAttribution \| null` | `{ name, username, profileUrl, photoUrl }` derived from the Unsplash payload for rendering the required "Photo by X on Unsplash" credit; `null` for R2 covers. |
+| `uploading` | `boolean` | Whether an upload is in flight. |
+| `handleUpload` | `(file: File) => Promise<void>` | Upload via `PUT /api/projects/:id/cover`; on success clears the Unsplash payload. |
+| `handleRemove` | `() => Promise<void>` | Optimistic remove via `DELETE /api/projects/:id/cover`; clears both cover fields. |
+| `handleApplyUnsplash` | `(payload: UnsplashCoverPayload) => Promise<void>` | Optimistic apply via `PUT /api/projects/:id/cover/unsplash`; clears `coverImageKey`. |
+
+### Usage
+
+```tsx
+import { useProjectCover } from "@/web/hooks/use-project-cover";
+
+function ProjectHeader({ project, updateProject, refetch }) {
+  const {
+    coverUrl,
+    coverSrcSet,
+    coverAttribution,
+    uploading,
+    handleUpload,
+    handleRemove,
+    handleApplyUnsplash,
+  } = useProjectCover(
+    project.id,
+    project.coverImageKey,
+    project.coverUnsplash,
+    updateProject,
+    refetch,
+    refetch,
+  );
+
+  return (
+    <CoverImage
+      coverUrl={coverUrl}
+      coverSrcSet={coverSrcSet}
+      coverAttribution={coverAttribution}
+      uploading={uploading}
+      onUpload={handleUpload}
+      onRemove={handleRemove}
+      onApplyUnsplash={handleApplyUnsplash}
+    />
+  );
+}
+```
+
+---
+
 ## useTaskCover
 
-Encapsulates cover image upload, removal, and position-change logic for a task's detail panel. Mirrors the pattern established by `useProjectCover` but is task-specific: upload goes to `/api/tasks/:id/cover`, position changes persist through the task patch mutation, and removals optimistically clear the cover then rollback on failure.
+Encapsulates cover image upload, Unsplash-payload apply, removal, and position-change logic for a task's detail panel. Mirrors the pattern established by [`useProjectCover`](#useprojectcover) but is task-specific: uploads hit `/api/tasks/:id/cover`, Unsplash applies hit `/api/tasks/:id/cover/unsplash` (a JSON `PUT` — `useFileUpload` is skipped for this path since the payload isn't multipart), and position changes persist through the task patch mutation.
 
 **Source:** `src/web/hooks/use-task-cover.ts`
+
+### Cover source XOR invariant
+
+Same XOR rule as [`useProjectCover`](#useprojectcover). On upload we clear `coverUnsplash`; on Unsplash apply we clear `coverImageKey`; on remove we clear both. Each optimistic write updates both the local panel state (`setLocalTask`) and the board/list context (`updateTaskInContext`) with both cover fields so board cards never show a stale source.
 
 ### Options
 
 | Option | Type | Description |
 | --- | --- | --- |
 | `taskId` | `string` | The task to manage cover images for. |
+| `coverImageKey` | `string \| null \| undefined` | Current R2 key for the task's cover (pass the live task state so optimistic updates flow through). |
+| `coverUnsplash` | `UnsplashCoverPayload \| null \| undefined` | Current Unsplash payload for the task. Takes precedence over `coverImageKey` when both are transiently set. |
 | `setLocalTask` | `Dispatch<SetStateAction<TaskDetail \| null>>` | Local state setter for optimistic updates. |
 | `updateTaskInContext` | `(taskId: string, updates: Partial<Task>) => void` | Board/list context updater. |
 | `invalidateTaskQueries` | `() => void` | Cache invalidation callback. |
@@ -1215,9 +1299,13 @@ Encapsulates cover image upload, removal, and position-change logic for a task's
 
 | Field | Type | Description |
 | --- | --- | --- |
+| `coverUrl` | `string \| null` | Resolved URL — for Unsplash payloads, composed from `rawUrl` via `buildUnsplashDisplayUrl(payload, "cover")` (imgix 1600px preset), falling back to the legacy `url` field. For R2 covers, `/api/uploads/<key>`, otherwise `null`. Derived by the shared `resolveCoverDisplay` helper so the rule matches `useProjectCover`. |
+| `coverSrcSet` | `string \| null` | Multi-width `<img srcSet>` for Unsplash covers (800/1600/2400w) composed from `rawUrl`. `null` for R2 uploads and legacy Unsplash rows without `rawUrl`. Same semantics as `useProjectCover.coverSrcSet`. |
+| `coverAttribution` | `CoverAttribution \| null` | `{ name, username, profileUrl, photoUrl }` bundle for the required "Photo by X on Unsplash" credit when an Unsplash cover is active; `null` for R2 covers. |
 | `coverUploading` | `boolean` | Whether a cover upload is in progress. |
-| `handleCoverUpload` | `(file: File) => Promise<void>` | Upload a new cover image. |
-| `handleCoverRemove` | `() => Promise<void>` | Optimistically remove the cover image with rollback on failure. |
+| `handleCoverUpload` | `(file: File) => Promise<void>` | Upload a new cover image; clears any prior Unsplash payload. |
+| `handleCoverApplyUnsplash` | `(payload: UnsplashCoverPayload) => Promise<void>` | Apply an Unsplash cover payload; clears any prior `coverImageKey`. On failure, shows an error toast and refetches to re-sync. |
+| `handleCoverRemove` | `() => Promise<void>` | Optimistically clear both cover fields, with refetch-based rollback on failure. |
 | `handleCoverPositionChange` | `(pos: number) => Promise<void>` | Update the cover image vertical focal-point position. |
 
 ### Usage
@@ -1225,13 +1313,144 @@ Encapsulates cover image upload, removal, and position-change logic for a task's
 ```tsx
 import { useTaskCover } from "@/web/hooks/use-task-cover";
 
-function TaskDetailPanel({ taskId }) {
-  const { coverUploading, handleCoverUpload, handleCoverRemove, handleCoverPositionChange } =
-    useTaskCover({ taskId, setLocalTask, updateTaskInContext, invalidateTaskQueries, patchTaskMutateAsync, toast, refetch });
+function TaskDetailPanel({ task }) {
+  const {
+    coverUrl,
+    coverSrcSet,
+    coverAttribution,
+    coverUploading,
+    handleCoverUpload,
+    handleCoverApplyUnsplash,
+    handleCoverRemove,
+    handleCoverPositionChange,
+  } = useTaskCover({
+    taskId: task.id,
+    coverImageKey: task.coverImageKey,
+    coverUnsplash: task.coverUnsplash,
+    setLocalTask,
+    updateTaskInContext,
+    invalidateTaskQueries,
+    patchTaskMutateAsync,
+    toast,
+    refetch,
+  });
+
+  return (
+    <CoverImage
+      coverUrl={coverUrl}
+      coverSrcSet={coverSrcSet}
+      coverAttribution={coverAttribution}
+      onUpload={handleCoverUpload}
+      onApplyUnsplash={handleCoverApplyUnsplash}
+      onRemove={handleCoverRemove}
+      onPositionChange={handleCoverPositionChange}
+      uploading={coverUploading}
+    />
+  );
+}
+```
+
+---
+
+## useFeatures
+
+Fetches server-side feature flags from [`GET /api/config`](../api/endpoints.md). Used to gate UI that depends on optional integrations (currently `features.unsplash`). The endpoint is unauthenticated and cached server-side (`Cache-Control: private, max-age=300`); the hook caches aggressively (`staleTime: 5 min`, `gcTime: 30 min`, no refetch-on-focus) since the flag set is effectively static for a session.
+
+**Source:** `src/web/hooks/use-features.ts`
+
+### Return Value
+
+Standard `UseQueryResult<Features, Error>`. When the query errors (one retry then gives up) callers should treat missing `data` as "feature disabled" — the canonical default for every flag is `false`.
+
+### Features shape
+
+| Flag | Type | Description |
+| --- | --- | --- |
+| `unsplash` | `boolean` | `true` when `UNSPLASH_ACCESS_KEY` is configured server-side. When `false`, hide the Unsplash tab in the cover picker — the `/api/unsplash/*` routes return 503 in that state. |
+
+### Usage
+
+```tsx
+import { useFeatures } from "@/web/hooks/use-features";
+
+function CoverPickerTabs() {
+  const { data: features } = useFeatures();
+  const unsplashEnabled = features?.unsplash ?? false;
+
+  return (
+    <Tabs>
+      <Tab value="upload">Upload</Tab>
+      {unsplashEnabled && <Tab value="unsplash">Unsplash</Tab>}
+    </Tabs>
+  );
+}
+```
+
+---
+
+## useUnsplashSearch
+
+Infinite-query wrapper around the Unsplash proxy endpoints for the cover picker. Transparently switches between `GET /api/unsplash/curated` (default view, no query) and `GET /api/unsplash/search` based on whether the debounced query is non-empty. Query keys embed the effective mode, query string, and orientation so mode switches reuse cached pages where possible and isolate them where they must (e.g. changing orientation forces a refetch).
+
+**Source:** `src/web/hooks/use-unsplash-search.ts`
+
+### Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `query` | `string` | — | Raw search input. Debounced internally by 300 ms and trimmed — callers can bind the input value directly. Empty/whitespace falls back to the curated feed. |
+| `orientation` | `"landscape" \| "portrait" \| "squarish"?` | — | Orientation filter; applied to search only (curated does not support it). |
+| `enabled` | `boolean` | `true` | Typically tied to picker open state so the initial request doesn't fire for every mounted task card. |
+
+### Return Value
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `results` | `UnsplashCoverPayload[]` | Flattened list of results across every loaded page. |
+| `debouncedQuery` | `string` | Trimmed, debounced query — useful for rendering "Results for X". |
+| `isCurated` | `boolean` | `true` when the curated feed is active (no effective query). |
+| `isLoading` / `isError` / `error` | React Query state flags. |
+| `fetchNextPage` | `() => void` | Trigger the next page fetch. |
+| `hasNextPage` | `boolean` | More pages are available. |
+| `isFetchingNextPage` | `boolean` | A next-page fetch is in flight. |
+| `refetch` | `() => void` | Force refetch (e.g. after clearing a 503 by configuring `UNSPLASH_ACCESS_KEY`). |
+| `totalPages` | `number` | Total pages available (curated returns a bounded default of 50 since the Unsplash `/photos` endpoint has no count). |
+| `total` | `number` | Total matching photos (curated computes `totalPages × perPage`). |
+
+### Rate-limit behaviour
+
+`retry: 0` — both 503 (Unsplash not configured) and 429 (rate limited) are surfaced immediately instead of retrying. Retrying in either case would waste the shared 30 req/min per-user quota and muddy the error UX. `staleTime: 60_000` keeps recent queries warm for rapid open/close cycles of the picker.
+
+### Usage
+
+```tsx
+import { useUnsplashSearch } from "@/web/hooks/use-unsplash-search";
+
+function UnsplashPicker({ open, onApply }) {
+  const [query, setQuery] = useState("");
+  const {
+    results,
+    isLoading,
+    isError,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useUnsplashSearch({ query, enabled: open });
 
   return (
     <>
-      <CoverImage onUpload={handleCoverUpload} onRemove={handleCoverRemove} onPositionChange={handleCoverPositionChange} uploading={coverUploading} />
+      <SearchInput value={query} onChange={(e) => setQuery(e.target.value)} />
+      {isError && <Alert variant="error">Couldn't reach Unsplash.</Alert>}
+      <Grid>
+        {results.map((photo) => (
+          <PhotoTile key={photo.id} photo={photo} onClick={() => onApply(photo)} />
+        ))}
+      </Grid>
+      {hasNextPage && (
+        <Button onClick={() => fetchNextPage()} disabled={isFetchingNextPage}>
+          {isFetchingNextPage ? "Loading…" : "Load more"}
+        </Button>
+      )}
     </>
   );
 }

@@ -95,6 +95,21 @@ describe("withSpaSecurityHeaders", () => {
     expect(csp).toContain("frame-ancestors 'none'");
   });
 
+  /**
+   * Unsplash covers hotlink from `images.unsplash.com` per Unsplash API
+   * guidelines (no self-hosted caching). If the CSP is ever tightened and
+   * this host is dropped, every Unsplash-backed cover silently breaks in
+   * production — this test locks in the allowlist entry.
+   */
+  it("SPA CSP allows https://images.unsplash.com for hotlinked cover images", () => {
+    const original = new Response("<html></html>", { status: 200 });
+    const wrapped = withSpaSecurityHeaders(original, "/workspaces");
+    const csp = wrapped.headers.get("Content-Security-Policy");
+
+    expect(csp).toContain("img-src");
+    expect(csp).toContain("https://images.unsplash.com");
+  });
+
   it("preserves original response status and body", async () => {
     const original = new Response("hello", { status: 200, statusText: "OK" });
     const wrapped = withSpaSecurityHeaders(original, "/");

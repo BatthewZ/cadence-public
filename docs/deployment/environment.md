@@ -28,6 +28,9 @@ Production secrets are managed via `wrangler secret put`:
 | `TRUSTED_ORIGINS` | No | Comma-separated list of additional trusted origins for CORS. |
 | `RESEND_API_KEY` | No | API key for [Resend](https://resend.com) email delivery. Without this, auth emails are logged to the console. |
 | `EMAIL_FROM` | No | Sender address for auth emails (e.g. `noreply@yourdomain.com`). Defaults to `noreply@example.com`. |
+| `UNSPLASH_ACCESS_KEY` | No | Unsplash API access key. Register an app at [unsplash.com/oauth/applications](https://unsplash.com/oauth/applications). When this or `UNSPLASH_SECRET_KEY` is omitted, the Unsplash photo picker is hidden in the UI and `/api/unsplash/*` returns 503 (safe default for mirror / self-hosted installs). |
+| `UNSPLASH_SECRET_KEY` | No | Unsplash API secret key, paired with `UNSPLASH_ACCESS_KEY`. |
+| `UNSPLASH_APP_NAME` | No | UTM source used on Unsplash attribution links. Defaults to `cadence`. |
 
 | `TELEMETRY_SINK` | No | Telemetry backend override. Values: `console` (structured JSON to stdout), `noop` (discard). When unset, auto-detects the `ANALYTICS` binding or falls back to `console`. |
 

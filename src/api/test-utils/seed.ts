@@ -1,3 +1,4 @@
+import type { UnsplashCoverPayload } from "../../shared/schemas/unsplash";
 import type { NotificationType } from "../../shared/types/roles";
 import { TEST_USER, TEST_USER_2 } from "./fakes";
 
@@ -102,15 +103,40 @@ export async function seedWorkspaceMember(
 export async function seedProject(
   d1: D1Database,
   workspaceId: string,
-  opts?: { id?: string; name?: string; description?: string; icon?: string; theme?: string; budget?: number; autoAssignCreator?: boolean; status?: string },
+  opts?: {
+    id?: string;
+    name?: string;
+    description?: string;
+    icon?: string;
+    theme?: string;
+    budget?: number;
+    autoAssignCreator?: boolean;
+    status?: string;
+    coverImageKey?: string;
+    coverUnsplash?: UnsplashCoverPayload;
+  },
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = toSec(Date.now());
   await d1
     .prepare(
-      "INSERT INTO project (id, workspaceId, name, description, icon, theme, status, budget, auto_assign_creator, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO project (id, workspaceId, name, description, icon, theme, status, budget, auto_assign_creator, cover_image_key, cover_unsplash, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
     )
-    .bind(id, workspaceId, opts?.name ?? "Test Project", opts?.description ?? null, opts?.icon ?? null, opts?.theme ?? null, opts?.status ?? "active", opts?.budget ?? null, opts?.autoAssignCreator ? 1 : 0, now, now)
+    .bind(
+      id,
+      workspaceId,
+      opts?.name ?? "Test Project",
+      opts?.description ?? null,
+      opts?.icon ?? null,
+      opts?.theme ?? null,
+      opts?.status ?? "active",
+      opts?.budget ?? null,
+      opts?.autoAssignCreator ? 1 : 0,
+      opts?.coverImageKey ?? null,
+      opts?.coverUnsplash ? JSON.stringify(opts.coverUnsplash) : null,
+      now,
+      now,
+    )
     .run();
   return id;
 }
@@ -190,14 +216,15 @@ export async function seedTask(
     cost?: number;
     icon?: string;
     coverImageKey?: string;
+    coverUnsplash?: UnsplashCoverPayload;
   },
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = toSec(Date.now());
   await d1
     .prepare(
-      `INSERT INTO task (id, projectId, taskGroupId, title, completed, priority, assigneeId, dueDate, position, description, cost, icon, cover_image_key, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO task (id, projectId, taskGroupId, title, completed, priority, assigneeId, dueDate, position, description, cost, icon, cover_image_key, cover_unsplash, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
@@ -213,6 +240,7 @@ export async function seedTask(
       opts?.cost ?? null,
       opts?.icon ?? null,
       opts?.coverImageKey ?? null,
+      opts?.coverUnsplash ? JSON.stringify(opts.coverUnsplash) : null,
       now,
       now,
     )

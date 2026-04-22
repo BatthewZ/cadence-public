@@ -21,7 +21,7 @@ The dialog fetches project members via `GET /api/projects/:projectId/members` an
 
 ### Cover Image
 
-Renders a `CoverImage` component at the top of the dialog. Supports upload, removal, and repositioning via drag. Cover images are uploaded to `/api/uploads` and stored as a `coverImageKey` on the task.
+Renders a `CoverImage` component at the top of the dialog. Supports upload, Unsplash photo apply, removal, and repositioning via drag. A cover is persisted as either a `coverImageKey` (R2 upload) or a `coverUnsplash` payload — never both at once; the XOR invariant is enforced by the backend and mirrored in every optimistic path of [`useTaskCover`](./hooks.md#usetaskcover). Uploads go to `PUT /api/tasks/:taskId/cover`; Unsplash applies go to `PUT /api/tasks/:taskId/cover/unsplash`; both clear the opposing cover source.
 
 ### Header
 

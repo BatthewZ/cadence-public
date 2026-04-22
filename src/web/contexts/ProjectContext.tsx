@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo } from "react";
 
 import type { TaskLabelInfo } from "@/shared/schemas/label";
+import type { UnsplashCoverPayload } from "@/shared/schemas/unsplash";
 import type { RecurrenceRule } from "@/shared/types/recurrence";
 import type { ProjectStatus, TaskPriority } from "@/shared/types/roles";
 import { Center } from "@/web/components/layout";
@@ -47,6 +48,12 @@ interface Project {
   theme?: string | null;
   icon?: string | null;
   coverImageKey?: string | null;
+  /**
+   * Optional Unsplash cover payload. Mutually exclusive with `coverImageKey`
+   * (XOR invariant enforced by the backend): at most one cover source is
+   * active at any time. When both are null/undefined the project has no cover.
+   */
+  coverUnsplash?: UnsplashCoverPayload | null;
   coverImagePosition?: number | null;
   budget?: number | null;
   autoAssignCreator?: boolean;
@@ -80,6 +87,11 @@ export interface Task {
   position: string;
   icon?: string | null;
   coverImageKey?: string | null;
+  /**
+   * Optional Unsplash cover payload. Mutually exclusive with `coverImageKey`
+   * (XOR invariant enforced by the backend).
+   */
+  coverUnsplash?: UnsplashCoverPayload | null;
   coverImagePosition?: number | null;
   subtaskCount?: number;
   subtaskCompletedCount?: number;

@@ -172,8 +172,9 @@ export * from "./workspace";
 | `description` | `text`                        |                                                | Project description                      |
 | `status`      | `text`                        | `NOT NULL`, default `"active"`                 | Project status (e.g. `"active"`, `"archived"`) |
 | `icon`          | `text`                        |                                                | Project icon (e.g. emoji or icon identifier)   |
-| `coverImageKey` | `text`                        |                                                | R2 object key for the project cover image      |
+| `coverImageKey` | `text`                        |                                                | R2 object key for the project cover image (mutually exclusive with `coverUnsplash`) |
 | `coverImagePosition` | `integer`               |                                                | Vertical position of the cover image (0–100)   |
+| `coverUnsplash` | `text` (mode: `json`)         |                                                | JSON-encoded Unsplash cover payload (`UnsplashCoverPayload` from `src/shared/schemas/unsplash.ts`); mutually exclusive with `coverImageKey` |
 | `createdAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                     | Creation timestamp                       |
 | `updatedAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                     | Last update timestamp                    |
 | `theme`       | `text`                        |                                                | Project theme name                       |
@@ -233,8 +234,9 @@ export * from "./workspace";
 | `dueDate`     | `integer` (mode: `timestamp`) |                                                   | Task due date                                    |
 | `cost`          | `integer`                     |                                                   | Task cost in cents (nullable, optional)            |
 | `icon`          | `text`                        |                                                   | Task icon (e.g. emoji or icon identifier)          |
-| `coverImageKey` | `text`                        |                                                   | R2 object key for the task cover image             |
+| `coverImageKey` | `text`                        |                                                   | R2 object key for the task cover image (mutually exclusive with `coverUnsplash`) |
 | `coverImagePosition` | `integer`               |                                                   | Vertical position of the cover image               |
+| `coverUnsplash` | `text` (mode: `json`)         |                                                   | JSON-encoded Unsplash cover payload (`UnsplashCoverPayload` from `src/shared/schemas/unsplash.ts`); mutually exclusive with `coverImageKey` |
 | `recurrenceRule` | `text`                     |                                                   | JSON-encoded recurrence rule (frequency, interval, etc.) |
 | `recurrenceParentId` | `text`                  | **FK** -> `task.id` (set null), unique (non-null) | References the parent task in a recurrence chain |
 | `recurrenceSeriesId` | `text`                  |                                                   | Groups all tasks belonging to the same recurrence series |

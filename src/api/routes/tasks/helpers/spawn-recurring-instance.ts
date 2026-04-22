@@ -80,6 +80,7 @@ export async function spawnNextRecurringInstance(
     icon: completedTask.icon,
     coverImageKey: null,
     coverImagePosition: null,
+    coverUnsplash: null,
     recurrenceRule: completedTask.recurrenceRule, // Keep the same JSON string
     recurrenceSeriesId: completedTask.recurrenceSeriesId,
     recurrenceParentId: completedTask.id, // Link to previous instance

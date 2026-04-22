@@ -259,12 +259,18 @@ export function TaskDetailDialog({
   });
 
   const {
+    coverUrl,
+    coverSrcSet,
+    coverAttribution,
     coverUploading,
     handleCoverUpload,
+    handleCoverApplyUnsplash,
     handleCoverRemove,
     handleCoverPositionChange,
   } = useTaskCover({
     taskId,
+    coverImageKey: task?.coverImageKey ?? null,
+    coverUnsplash: task?.coverUnsplash ?? null,
     setLocalTask,
     updateTaskInContext: noopUpdateContext,
     invalidateTaskQueries,
@@ -317,9 +323,14 @@ export function TaskDetailDialog({
             <Stack gap="r4">
               {/* Cover Image */}
               <CoverImage
-                coverUrl={task.coverImageKey ? `/api/uploads/${task.coverImageKey}` : null}
+                coverUrl={coverUrl}
+                coverSrcSet={coverSrcSet}
+                coverAttribution={coverAttribution}
                 onUpload={(file: File) => {
                   void handleCoverUpload(file);
+                }}
+                onApplyUnsplash={(payload) => {
+                  void handleCoverApplyUnsplash(payload);
                 }}
                 onRemove={() => {
                   void handleCoverRemove();

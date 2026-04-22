@@ -462,6 +462,12 @@ export async function updateTask(c: Context<AppEnv>) {
   {
     const updatedEnrichment = await resolveTaskEnrichment(db, updated);
     const data = buildTaskEventData(updated, updatedEnrichment);
+    // Why: `coverUnsplash` is a JSON object (not a scalar) and is only written
+    // via the dedicated PUT /tasks/:taskId/cover/unsplash endpoint — it never
+    // changes through this PATCH handler, so diffing it here would never fire
+    // and `computeChanges` is scalar-only (it reports `{from, to}` pairs which
+    // don't render meaningfully for arbitrary JSON). The swap between cover
+    // sources is observable via `coverImageKey` toggling on/off below.
     const changes = computeChanges(
       currentTask as Record<string, unknown>,
       updated as Record<string, unknown>,

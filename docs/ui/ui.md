@@ -59,6 +59,7 @@ General-purpose interactive and display primitives.
 | [Portal](portal.md)               | Renders children into a DOM node via `createPortal`    |
 | [FileUpload](file-upload.md)      | Drag-and-drop file upload dropzone                     |
 | [AvatarUpload](avatar-upload.md)  | Circular avatar upload with optimistic preview         |
+| [CoverImagePicker](cover-image-picker.md) | Modal with Upload + Unsplash tabs for selecting a cover image; Unsplash tab gated by `features.unsplash` |
 | [MentionText](mention-text.md)     | Renders `@mention` syntax as styled inline badges                          |
 | BulkActionBar                      | Fixed bottom toolbar for multi-select task actions (priority, assign, move, due date, duplicate, delete) with optimistic updates |
 | DueDatePopover                     | Shared date-picker popover for setting task due dates, with optional custom trigger and current-date display |
@@ -205,7 +206,10 @@ Hooks shared across multiple UI components.
 | [useProjectActivity](hooks.md#useprojectactivity)         | Infinite-scroll activity feed across all tasks in a project        |
 | [useMultiSelect](hooks.md#usemultiselect)                 | Multi-select state management for task views with Escape-to-clear and optional event preventDefault |
 | [useTaskActions](hooks.md#usetaskactions)                  | Centralized optimistic-update handlers for task mutations (priority, assignee, move, due date, delete) with rollback |
-| [useTaskCover](hooks.md#usetaskcover)                      | Task cover image upload, removal, and position-change logic with optimistic updates |
+| [useProjectCover](hooks.md#useprojectcover)                | Project cover upload, Unsplash apply, remove, and URL/attribution derivation with XOR invariant |
+| [useTaskCover](hooks.md#usetaskcover)                      | Task cover upload, Unsplash apply, remove, and position-change logic with XOR invariant |
+| [useFeatures](hooks.md#usefeatures)                        | Fetches server-side feature flags from `/api/config` (e.g. `features.unsplash`) with aggressive caching |
+| [useUnsplashSearch](hooks.md#useunsplashsearch)            | Infinite-query wrapper for the Unsplash cover picker (curated ↔ search switch, no retry on 429/503) |
 | [useTaskEditing](hooks.md#usetaskediting)                  | Editable field management (title, description, cost) with dirty-field tracking to prevent server clobbering |
 | [useTaskSubtasks](hooks.md#usetasksubtasks)                | Subtask CRUD, DnD reorder, and optimistic updates with rollback for the task detail panel |
 | [useTaskCommentActions](hooks.md#usetaskcommentactions)    | Comment CRUD mutations + optimistic cache updates, shared between TaskDetailDialog and TaskDetailPanelInner |

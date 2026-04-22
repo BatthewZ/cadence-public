@@ -218,6 +218,7 @@ export async function duplicateTask(c: Context<AppEnv>) {
       icon: sourceTask.icon,
       coverImageKey: null,
       coverImagePosition: null,
+      coverUnsplash: null,
       recurrenceRule: sourceTask.recurrenceRule,
       recurrenceParentId: null,
       recurrenceSeriesId: sourceTask.recurrenceRule ? crypto.randomUUID() : null,

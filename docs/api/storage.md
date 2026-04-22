@@ -105,8 +105,8 @@ Uploads a project cover image. Requires authentication and project admin role. R
 1. Validates the file type and size.
 2. Looks up the project's previous cover image (if any) but does **not** delete it yet.
 3. Uploads the new file to R2 under `project-cover/{userId}/{uuid}{ext}`. If the R2 upload fails, returns 500 and the old cover remains intact.
-4. Creates a record in the `upload` table and updates the project's `coverImageKey` field to the new R2 key. If either DB write fails, the orphaned R2 object and any partial upload record are cleaned up before returning 500.
-5. Deletes the old cover from R2 and the database only **after** the new one is fully saved. Cleanup errors are swallowed to avoid failing the overall request.
+4. Creates a record in the `upload` table and atomically writes `coverImageKey = <new key>` AND `coverUnsplash = null` on the project, preserving the XOR invariant between the two cover sources. If either DB write fails, the orphaned R2 object and any partial upload record are cleaned up before returning 500.
+5. Deletes the old R2 cover from R2 and the database only **after** the new one is fully saved (no-op when the prior source was an Unsplash payload). Cleanup errors are swallowed to avoid failing the overall request.
 
 **Response** (200):
 
@@ -136,7 +136,7 @@ Uploads a project cover image. Requires authentication and project admin role. R
 
 ### `DELETE /api/projects/:projectId/cover`
 
-Removes a project's cover image. Idempotent -- returns success even if no cover exists. Clears the project's `coverImageKey`, deletes the R2 object, and removes the upload record.
+Removes a project's cover image (R2 or Unsplash). Idempotent -- returns success even if no cover exists. Clears both `coverImageKey` and `coverUnsplash` atomically; when an R2 cover existed, also deletes the R2 object and removes the upload record. The R2 storage binding is only required when an R2 cover actually exists (pure Unsplash covers delete without `STORAGE`). See also [`PUT /api/projects/:projectId/cover/unsplash`](./endpoints.md#put-apiprojectsprojectidcoverunsplash) in the endpoints reference.
 
 **Error responses:**
 
@@ -185,7 +185,7 @@ Uploads a task cover image. Requires authentication and project membership. Rate
 
 ### `DELETE /api/tasks/:taskId/cover`
 
-Removes a task's cover image. Idempotent -- returns success even if no cover exists. Clears the task's `coverImageKey`, deletes the R2 object, and removes the upload record.
+Removes a task's cover image (R2 or Unsplash). Idempotent -- returns success even if no cover exists. Clears both `coverImageKey` and `coverUnsplash` atomically; when an R2 cover existed, also deletes the R2 object and removes the upload record. The R2 storage binding is only required when an R2 cover actually exists (pure Unsplash covers delete without `STORAGE`). See also [`PUT /api/tasks/:taskId/cover/unsplash`](./endpoints.md#put-apitaskstaskidcoverunsplash) in the endpoints reference.
 
 **Error responses:**
 
