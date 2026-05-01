@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Row, Stack } from "@/web/components/layout";
@@ -39,7 +39,16 @@ export default function ProjectList() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<WorkspaceProject | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [hiddenProjectIds, setHiddenProjectIds] = useState<Set<string>>(new Set());
+  // Tracks optimistic status changes per project so tab counts and tab membership
+  // (Active/Completed/Archived) update instantly without waiting for the refetch.
+  // We can't merely *hide* the project from the source tab, because that would
+  // also hide it from the target tab — leaving the target count stale until a
+  // full page reload. Storing the new status here makes the project move to the
+  // correct tab immediately. Entries are cleared after the refetch settles
+  // (success path) or on failure (rollback).
+  const [statusOverrides, setStatusOverrides] = useState<
+    Map<string, "active" | "completed" | "archived">
+  >(new Map());
   const [renameTarget, setRenameTarget] = useState<WorkspaceProject | null>(null);
   const [duplicateTarget, setDuplicateTarget] = useState<WorkspaceProject | null>(null);
   const { isFavorite, toggleFavorite } = useFavorites(workspace?.id ?? "");
@@ -50,29 +59,63 @@ export default function ProjectList() {
     void navigate(`/w/${workspace.slug}/projects/${projectId}/board`);
   }
 
+  function clearStatusOverride(projectId: string) {
+    setStatusOverrides((prev) => {
+      if (!prev.has(projectId)) return prev;
+      const next = new Map(prev);
+      next.delete(projectId);
+      return next;
+    });
+  }
+
   async function handleChangeProjectStatus(
     projectId: string,
     status: "active" | "completed" | "archived",
     successMessage: string,
     failureMessage: string,
   ) {
-    setHiddenProjectIds((prev) => new Set(prev).add(projectId));
+    setStatusOverrides((prev) => new Map(prev).set(projectId, status));
     toast(successMessage, { variant: "success" });
     try {
       await api.patch(`/api/projects/${projectId}`, { status });
-      refetchProjects();
       if (workspace) {
         void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
       }
+      // Don't clear the override here — the refetch may still be in flight, and
+      // dropping the override before upstream carries the new status would let
+      // the project briefly snap back to its previous tab. The reconciliation
+      // useEffect below clears the override the moment upstream agrees with it
+      // (or the project is gone), which keeps tests deterministic too: in unit
+      // tests where the upstream `projects` mock never updates, the override
+      // simply persists, preserving the optimistic state under assertion.
+      void refetchProjects();
     } catch {
-      setHiddenProjectIds((prev) => {
-        const next = new Set(prev);
-        next.delete(projectId);
-        return next;
-      });
+      clearStatusOverride(projectId);
       toast(failureMessage, { variant: "error" });
     }
   }
+
+  // Reconcile optimistic status overrides with the upstream `projects` list:
+  // drop an override entry once the server-confirmed project carries the same
+  // status (refetch caught up), or once the project no longer exists upstream
+  // (e.g. it was deleted). This avoids stale overrides "pinning" a project to
+  // the wrong tab if the server-side status diverges from our local guess.
+  useEffect(() => {
+    if (statusOverrides.size === 0) return;
+    setStatusOverrides((prev) => {
+      if (prev.size === 0) return prev;
+      let changed = false;
+      const next = new Map(prev);
+      for (const [id, status] of prev) {
+        const project = projects.find((p) => p.id === id);
+        if (!project || project.status === status) {
+          next.delete(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [projects, statusOverrides]);
 
   async function handleDeleteProject() {
     if (!deleteTarget) return;
@@ -81,7 +124,7 @@ export default function ProjectList() {
       await api.delete(`/api/projects/${deleteTarget.id}`);
       toast("Project deleted", { variant: "success" });
       setDeleteTarget(null);
-      refetchProjects();
+      void refetchProjects();
     } catch {
       toast("Failed to delete project", { variant: "error" });
     } finally {
@@ -89,7 +132,15 @@ export default function ProjectList() {
     }
   }
 
-  const visibleProjects = projects?.filter((p) => !hiddenProjectIds.has(p.id));
+  // Apply optimistic status overrides on top of upstream projects so the
+  // Active/Completed/Archived tabs reflect the target state instantly.
+  const visibleProjects = useMemo(() => {
+    if (statusOverrides.size === 0) return projects;
+    return projects.map((p) => {
+      const override = statusOverrides.get(p.id);
+      return override ? { ...p, status: override } : p;
+    });
+  }, [projects, statusOverrides]);
 
   const activeProjects = useMemo(
     () => visibleProjects?.filter((p) => p.status === "active") ?? [],
@@ -241,7 +292,7 @@ export default function ProjectList() {
       <RenameProjectDialog
         renameTarget={renameTarget}
         onClose={() => setRenameTarget(null)}
-        onRenamed={() => refetchProjects()}
+        onRenamed={() => void refetchProjects()}
       />
 
       <ConfirmDialog

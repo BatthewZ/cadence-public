@@ -62,7 +62,7 @@ export interface WorkspaceContextValue {
   workspace: Workspace;
   members: WorkspaceMember[];
   projects: WorkspaceProject[];
-  refetchProjects: () => void;
+  refetchProjects: () => Promise<void>;
   refetch: () => void;
   loading: boolean;
   error: string | null;
@@ -152,9 +152,9 @@ function useWorkspaceQueries(workspaceId: string | null) {
     }
   }, [qc, workspaceId]);
 
-  const refetchProjects = useCallback(() => {
+  const refetchProjects = useCallback(async () => {
     if (workspaceId) {
-      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.projects(workspaceId) });
+      await qc.invalidateQueries({ queryKey: queryKeys.workspaces.projects(workspaceId) });
     }
   }, [qc, workspaceId]);
 
