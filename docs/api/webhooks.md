@@ -395,12 +395,23 @@ Dev mode is detected by checking whether the `BETTER_AUTH_URL` environment varia
 
 ### SSRF Protection (Production)
 
-In production, webhook URLs are validated against:
+Webhook URLs are validated against an extensive set of bypass classes so a compromised PAT with `webhook:write` cannot register an exfiltration endpoint pointing at internal infrastructure:
 
 - **HTTPS required** -- HTTP URLs are rejected.
-- **Blocked hostnames** -- `localhost`, `127.0.0.1`, `::1`, `[::1]`, `0.0.0.0`.
-- **Blocked IP ranges** -- `127.0.0.0/8` (loopback), `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` (private), `169.254.0.0/16` (link-local / cloud metadata).
+- **No userinfo** -- URLs containing `user:password@` are rejected; the credentials would leak to the receiver on every delivery.
+- **Blocked hostnames** -- `localhost`, `127.0.0.1`, `::1`, `0.0.0.0`, `::`.
+- **Blocked IPv4 ranges** -- `127.0.0.0/8` (loopback), `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16` (private), `169.254.0.0/16` (link-local / cloud metadata — AWS IMDS, GCP), `100.64.0.0/10` (CGNAT), `0.0.0.0` (unspecified).
+- **Non-standard IPv4 encodings** -- decimal (`http://2130706433/`), hex (`http://0x7f000001/`), octal (`http://0177.0.0.1/`), and short forms (`http://127.1/`) are canonicalised back to dotted decimal before checking, so the same range rules apply.
+- **Blocked IPv6 ranges** -- `::1` (loopback), `::` (unspecified), `fc00::/7` (unique-local), `fe80::/10` (link-local), plus IPv4-mapped IPv6 (`::ffff:127.0.0.1` or `::ffff:7f00:1`) where the embedded IPv4 is re-checked against the IPv4 private ranges.
 - **Blocked domains** -- `*.local` (mDNS / Bonjour).
+
+> **DNS rebinding caveat:** the validator runs against the URL as supplied. The Cloudflare Workers `fetch` runtime resolves the hostname fresh at delivery time, so an attacker who controls a DNS record can in principle flip a public IP to a private one between validation and delivery. The residual risk is small (Workers' egress is public-internet-only — there is no in-VPC IMDS to attack) but if you move off Workers, add a resolve-and-recheck step at delivery time.
+
+### Security Email on Creation
+
+Every webhook creation -- via cookie session or via PAT -- triggers an out-of-band security email to the actor (the human responsible for the credential). The email surfaces the webhook name, destination URL, scope (workspace-wide vs project), event list, and **whether the webhook was created via a cookie session or via a named API token**. Receiving an unexpected email is the recipient's fastest signal that a credential they hold has been used to set up a new exfiltration pipe; the `createdVia` field is the high-signal triage hint to match against the user's integration inventory.
+
+The email is dispatched via `deferWork`, so a slow/dead email provider can never block the API response. Self-hosted installs that don't configure `RESEND_API_KEY` fall through to the console transport, where the signal is preserved in logs.
 
 ---
 

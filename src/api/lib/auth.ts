@@ -101,6 +101,24 @@ export function createAuth(env: AppBindings) {
       deleteUser: {
         enabled: true,
         beforeDelete: async (deletedUser) => {
+          // task_activity.apiTokenId references api_token with ORM intent
+          // "ON DELETE SET NULL", but because the column was added via
+          // SQLite `ALTER TABLE ADD COLUMN` (which cannot encode that
+          // behaviour at the SQL level) the actual on-disk cascade is
+          // NO ACTION. Without this step the user-delete cascade chain
+          //   user → api_token (cascade) → task_activity (NO ACTION)
+          // raises a foreign-key violation and aborts user deletion.
+          // Explicitly NULL the column for any activity rows that point
+          // at tokens the user owns before letting the cascade run.
+          const userTokenIds = db
+            .select({ id: schema.apiToken.id })
+            .from(schema.apiToken)
+            .where(eq(schema.apiToken.userId, deletedUser.id));
+          await db
+            .update(schema.taskActivity)
+            .set({ apiTokenId: null })
+            .where(inArray(schema.taskActivity.apiTokenId, userTokenIds));
+
           // Must delete tasks before the user cascade reaches task_group,
           // because task.taskGroupId has onDelete:"restrict" which blocks
           // the cascade path: user → workspace → project → task_group.

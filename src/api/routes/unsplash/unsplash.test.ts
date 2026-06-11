@@ -109,6 +109,7 @@ const buildEnv = (overrides: Partial<AppBindings> = {}): AppBindings =>
     DB: d1,
     BETTER_AUTH_SECRET: "test",
     BETTER_AUTH_URL: "http://localhost",
+    TOKEN_HASH_PEPPER: "test-pepper",
     ASSETS: {} as Fetcher,
     ...overrides,
   }) as AppBindings;

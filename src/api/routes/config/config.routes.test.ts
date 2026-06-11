@@ -18,6 +18,7 @@ function buildEnv(overrides: Partial<AppBindings> = {}): AppBindings {
     DB: {} as D1Database,
     BETTER_AUTH_SECRET: "test",
     BETTER_AUTH_URL: "http://localhost",
+    TOKEN_HASH_PEPPER: "test-pepper",
     ASSETS: {} as Fetcher,
     ...overrides,
   };

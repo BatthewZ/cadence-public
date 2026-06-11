@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 
 import type { AppEnv } from "../env";
-import { cacheControl } from "./cache-control";
+import { cacheControl, noStoreCacheControl } from "./cache-control";
 
 describe("cacheControl middleware", () => {
   function createApp(maxAge: number) {
@@ -86,5 +86,40 @@ describe("cacheControl middleware", () => {
     const res = await app.request("/ok");
 
     expect(res.headers.get("Cache-Control")).toBe("private, max-age=0");
+  });
+});
+
+describe("noStoreCacheControl middleware", () => {
+  function createApp() {
+    const app = new Hono<AppEnv>();
+    app.use("*", noStoreCacheControl());
+    app.get("/list", (c) => c.json({ ok: true }));
+    app.post("/mint", (c) => c.json({ token: "xxx" }, 201));
+    app.delete("/revoke", (c) => c.json({ ok: true }));
+    app.get("/error", (c) => c.json({ error: "boom" }, 500));
+    return app;
+  }
+
+  it("sets Cache-Control: no-store on GET responses", async () => {
+    const res = await createApp().request("/list");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+    expect(res.headers.get("Pragma")).toBe("no-cache");
+  });
+
+  it("sets Cache-Control: no-store on POST responses", async () => {
+    const res = await createApp().request("/mint", { method: "POST" });
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("sets Cache-Control: no-store on DELETE responses", async () => {
+    const res = await createApp().request("/revoke", { method: "DELETE" });
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
+  });
+
+  it("sets Cache-Control: no-store even on error responses", async () => {
+    // Token-management surface should never cache, including errors that
+    // might disclose whether a token id exists.
+    const res = await createApp().request("/error");
+    expect(res.headers.get("Cache-Control")).toBe("no-store");
   });
 });

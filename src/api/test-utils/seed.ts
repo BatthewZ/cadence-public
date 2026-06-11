@@ -411,14 +411,15 @@ export async function seedTaskActivity(
     oldValue?: string;
     newValue?: string;
     createdAt?: Date;
+    apiTokenId?: string | null;
   },
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = opts?.createdAt ? toSec(opts.createdAt) : toSec(Date.now());
   await d1
     .prepare(
-      `INSERT INTO task_activity (id, taskId, actorId, action, field, oldValue, newValue, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO task_activity (id, taskId, actorId, action, field, oldValue, newValue, apiTokenId, createdAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
@@ -428,6 +429,7 @@ export async function seedTaskActivity(
       opts?.field ?? "title",
       opts?.oldValue ?? null,
       opts?.newValue ?? null,
+      opts?.apiTokenId ?? null,
       now,
     )
     .run();

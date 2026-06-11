@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 import { Row, Stack } from "@/web/components/layout";
 import { Avatar, Button, Card, Skeleton, Text } from "@/web/components/ui";
-import { formatRelativeTime } from "@/web/util/activity";
+import { formatRelativeTime, formatTokenAttribution } from "@/web/util/activity";
 
 /**
  * Base activity fields that every feed item must provide.
@@ -16,6 +16,13 @@ interface BaseActivityItem {
   actorName: string | null;
   actorImage: string | null;
   createdAt: string;
+  /**
+   * Set when the action was performed via a Personal Access Token —
+   * surfaces the "(via <TokenName>)" attribution suffix.
+   */
+  apiTokenId?: string | null;
+  /** Joined token display name; null when no token or hard-deleted. */
+  tokenName?: string | null;
 }
 
 /**
@@ -132,6 +139,7 @@ function ActivityFeed<T extends BaseActivityItem>({
             <div className="space-y-4">
               {rows.map((row) => {
                 const { activity, message } = row;
+                const tokenAttribution = formatTokenAttribution(activity);
                 return (
                   <div
                     key={row.key}
@@ -148,7 +156,13 @@ function ActivityFeed<T extends BaseActivityItem>({
                       <Text variant="body-3">
                         <span className="font-semibold">
                           {activity.actorName ?? "Someone"}
-                        </span>{" "}
+                        </span>
+                        {tokenAttribution && (
+                          <>
+                            {" "}
+                            <span className="text-fg-muted">{tokenAttribution}</span>
+                          </>
+                        )}{" "}
                         {message}
                       </Text>
                       <div className="flex items-center gap-r6 mt-0.5">

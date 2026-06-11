@@ -42,8 +42,8 @@ import { MyTasksPreview, TimeGroupedTaskList } from "./components/TaskLists";
 import type { DashboardStatsResponse } from "./components/types";
 
 export default function Dashboard() {
-  useDocumentTitle("Dashboard");
   const { workspace, projects, members } = useWorkspace();
+  useDocumentTitle(`${workspace.name} — Dashboard`);
   const navigate = useNavigate();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);

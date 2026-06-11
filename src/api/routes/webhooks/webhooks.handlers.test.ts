@@ -1,12 +1,14 @@
 /// <reference types="@cloudflare/workers-types" />
 import { Hono } from "hono";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { ApiToken } from "../../../db/schema";
 import {
   createWebhookSchema,
   updateWebhookSchema,
 } from "../../../shared/schemas/webhook";
 import type { AppBindings, AppEnv } from "../../env";
+import type { EmailMessage, EmailSendResult } from "../../lib/email/types";
 import { validateBody } from "../../middleware/validate";
 import {
   createTestD1,
@@ -20,6 +22,19 @@ import {
   TEST_USER,
   TEST_USER_2,
 } from "../../test-utils";
+
+// Mock the email service so we can assert that the out-of-band security
+// notification is dispatched on every successful webhook creation. The
+// mock must be installed BEFORE the handler module is imported (vitest
+// hoists vi.mock automatically) so the handler's `createEmailService`
+// call resolves to the stub.
+const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<EmailSendResult>>(
+  () => Promise.resolve({ id: "test-email-id" }),
+);
+vi.mock("../../lib/email", () => ({
+  createEmailService: vi.fn(() => ({ send: mockEmailSend })),
+}));
+
 import {
   createWebhook,
   deleteWebhook,
@@ -53,10 +68,44 @@ afterAll(async () => {
 // createWebhook
 // ---------------------------------------------------------------------------
 
+/**
+ * Poll until a condition is true (or timeout) with short backoff.
+ *
+ * `deferWork` runs inline in the test env but the handler does not await
+ * the resulting promise, so the email send can land any time after the
+ * HTTP response resolves. Under parallel-suite load the deferred work
+ * can take materially longer than a fixed `setTimeout(25)`, which made
+ * the original asserts flaky. Polling lets us wait until the side-effect
+ * is actually visible (or fail fast after a generous budget).
+ */
+async function waitFor(
+  predicate: () => boolean,
+  opts: { timeoutMs?: number; intervalMs?: number } = {},
+): Promise<void> {
+  const timeoutMs = opts.timeoutMs ?? 1000;
+  const intervalMs = opts.intervalMs ?? 10;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (predicate()) return;
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+}
+
 describe("createWebhook", () => {
+  beforeEach(async () => {
+    // Drain any pending deferred email work from previous tests before
+    // clearing the mock. `deferWork` runs inline in the test env but the
+    // promise chain is not awaited by the handler, so a previous test's
+    // email can still be in-flight when the next test begins. Waiting
+    // first ensures the mock count only reflects this test's activity.
+    await new Promise((r) => setTimeout(r, 50));
+    mockEmailSend.mockClear();
+  });
+
   function buildApp(
     role: "owner" | "admin" | "member" = "owner",
     user: typeof TEST_USER | typeof TEST_USER_2 = TEST_USER,
+    opts: { apiToken?: ApiToken | null } = {},
   ) {
     const app = new Hono<AppEnv>();
     app.use(
@@ -65,12 +114,45 @@ describe("createWebhook", () => {
         workspaceMembership: { id: "wm-1", role },
       }),
     );
+    // Provide BETTER_AUTH_URL so the email helper composes a sensible
+    // settings link; without it the helper still runs but the URL is "/".
+    app.use("/*", async (c, next) => {
+      (c.env as Record<string, unknown>).BETTER_AUTH_URL = "https://cadence.example.com";
+      if (opts.apiToken !== undefined) {
+        c.set("apiToken", opts.apiToken);
+      }
+      await next();
+    });
     app.post(
       "/workspaces/:workspaceId/webhooks",
       validateBody(createWebhookSchema),
       createWebhook,
     );
     return app;
+  }
+
+  /**
+   * Build a fake PAT row so the email helper can read `token.name` when
+   * deriving the `createdVia.tokenName` field.
+   */
+  function fakeApiToken(name: string): ApiToken {
+    return {
+      id: "tok_test",
+      userId: TEST_USER.id,
+      workspaceId,
+      name,
+      tokenHash: "hash-x",
+      tokenPrefix: "cdn_pat_xxxx",
+      scopes: JSON.stringify(["webhook:write"]),
+      projectScope: "all",
+      projectIds: null,
+      lastUsedAt: null,
+      expiresAt: null,
+      revokeAt: null,
+      revokedAt: null,
+      rotatedToId: null,
+      createdAt: new Date(),
+    } as ApiToken;
   }
 
   it("creates a webhook successfully and returns 201 with secret", async () => {
@@ -146,6 +228,75 @@ describe("createWebhook", () => {
     expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
     expect(body.error).toContain("private");
+  });
+
+  // -------------------------------------------------------------------------
+  // Out-of-band security email — every successful webhook creation must
+  // send a notification to the actor so an unexpected registration is
+  // visible out-of-band. Webhooks are exfiltration pipes by design, and
+  // the email is the recipient's first signal that a credential they
+  // hold has been used to set one up.
+  // -------------------------------------------------------------------------
+
+  it("dispatches the security notification email on successful cookie-authed creation", async () => {
+    const app = buildApp();
+    const req = jsonRequest("POST", `/workspaces/${workspaceId}/webhooks`, {
+      name: "Slack alerts",
+      url: "https://hooks.example.com/slack",
+      events: ["task.created", "task.completed"],
+    });
+    const res = await app.request(req, undefined, env);
+    expect(res.status).toBe(201);
+
+    // Wait for the deferred work to settle. Polling rather than a fixed
+    // sleep so we tolerate the variable scheduling delay under parallel
+    // test-suite load.
+    await waitFor(() => mockEmailSend.mock.calls.length >= 1);
+    expect(mockEmailSend).toHaveBeenCalledTimes(1);
+    const call = mockEmailSend.mock.calls[0][0];
+    expect(call.to).toBe(TEST_USER.email);
+    expect(call.subject).toContain("webhook was created");
+    expect(call.text).toContain("Slack alerts");
+    expect(call.text).toContain("https://hooks.example.com/slack");
+    expect(call.text).toContain("task.created");
+    expect(call.text).toContain("a browser session");
+  });
+
+  it("dispatches the security email with the PAT name when created via API token", async () => {
+    const app = buildApp("owner", TEST_USER, {
+      apiToken: fakeApiToken("Slackbot prod"),
+    });
+    const req = jsonRequest("POST", `/workspaces/${workspaceId}/webhooks`, {
+      name: "Slackbot inbound sync",
+      url: "https://hooks.example.com/slackbot",
+      events: ["task.updated"],
+    });
+    const res = await app.request(req, undefined, env);
+    expect(res.status).toBe(201);
+
+    await waitFor(() => mockEmailSend.mock.calls.length >= 1);
+    expect(mockEmailSend).toHaveBeenCalledTimes(1);
+    const call = mockEmailSend.mock.calls[0][0];
+    expect(call.to).toBe(TEST_USER.email);
+    // The PAT name is the high-signal triage hint — recipients can match
+    // this against their integration inventory.
+    expect(call.text).toContain(`API token "Slackbot prod"`);
+  });
+
+  it("does NOT dispatch the email when creation fails (URL validation)", async () => {
+    const app = buildApp();
+    const req = jsonRequest("POST", `/workspaces/${workspaceId}/webhooks`, {
+      name: "Blocked",
+      url: "https://localhost/exfil",
+      events: ["task.created"],
+    });
+    const res = await app.request(req, undefined, env);
+    // Validation rejects before the handler reaches the email path.
+    expect(res.status).toBe(400);
+
+    // Give any deferred work a generous window to NOT fire.
+    await new Promise((r) => setTimeout(r, 100));
+    expect(mockEmailSend).not.toHaveBeenCalled();
   });
 
   it("enforces max 20 webhooks per workspace with 409", async () => {

@@ -17,6 +17,7 @@ import {
   isDevMode,
   MAX_WEBHOOKS_PER_WORKSPACE,
   omitSecret,
+  scheduleWebhookCreatedEmail,
   validateWebhookUrl,
 } from "../../lib/webhooks";
 
@@ -111,6 +112,19 @@ export async function createProjectWebhook(c: Context<AppEnv>) {
       updatedAt: now,
     })
     .returning();
+
+  // Out-of-band security email — same rationale as the workspace-scoped
+  // handler. Project-scoped webhooks are narrower than workspace-wide,
+  // but still represent an exfiltration pipe for project data the
+  // recipient should be aware of.
+  scheduleWebhookCreatedEmail(c, {
+    workspaceId,
+    webhookName: created.name,
+    webhookUrl: created.url,
+    events: body.events,
+    projectId: created.projectId,
+    createdAt: created.createdAt,
+  });
 
   return c.json({ webhook: created }, 201);
 }

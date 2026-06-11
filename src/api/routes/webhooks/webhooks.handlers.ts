@@ -16,6 +16,7 @@ import {
   isDevMode,
   MAX_WEBHOOKS_PER_WORKSPACE,
   omitSecret,
+  scheduleWebhookCreatedEmail,
   validateWebhookUrl,
 } from "../../lib/webhooks";
 
@@ -97,6 +98,20 @@ export async function createWebhook(c: Context<AppEnv>) {
       updatedAt: now,
     })
     .returning();
+
+  // Out-of-band security email. Webhooks are exfiltration pipes by design,
+  // so an unexpected registration is a high-signal indicator that a
+  // session or PAT may be compromised. We notify the actor so they can
+  // cross-check against their integration inventory. Deferred so a slow
+  // email provider never blocks the API response.
+  scheduleWebhookCreatedEmail(c, {
+    workspaceId,
+    webhookName: created.name,
+    webhookUrl: created.url,
+    events: body.events,
+    projectId: created.projectId,
+    createdAt: created.createdAt,
+  });
 
   // Return the secret on creation — this is the only time it is exposed
   return c.json({ webhook: created }, 201);

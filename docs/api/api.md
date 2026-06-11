@@ -2,7 +2,14 @@
 
 ## Overview
 
-The API is a Hono application running inside a Cloudflare Worker. All API endpoints are mounted under `/api/*`. The entry point is `src/api/index.ts`. There are 97 endpoints across workspaces, projects, tasks, labels, attachments, teams, invitations, dashboard, activity, webhooks, freshness, runtime config, and Unsplash cover photo search.
+The API is a Hono application running inside a Cloudflare Worker. All API endpoints are mounted under `/api/*`. The entry point is `src/api/index.ts`. There are 102 endpoints across workspaces, projects, tasks, labels, attachments, teams, invitations, dashboard, activity, webhooks, freshness, runtime config, Unsplash cover photo search, and API tokens for machine clients.
+
+Two authentication primitives are supported simultaneously:
+
+- **Cookie sessions** for browser-based human users (managed by Better Auth — see [Auth](../auth/auth.md)).
+- **Personal Access Tokens (PATs)** for machine clients — Slackbots, GitHub Actions, internal tools, AI agents. See [API Tokens](./api-tokens.md) and [Integrations](./integrations.md).
+
+A PAT in `Authorization: Bearer cdn_pat_…` takes precedence over any cookie on the same request. The two paths never mix — a malformed Bearer token returns `401` immediately rather than silently downgrading to cookie auth, which would otherwise enable a downgrade attack.
 
 ## Documentation
 
@@ -22,7 +29,9 @@ The API is a Hono application running inside a Cloudflare Worker. All API endpoi
 - [Email Service](./email.md) -- email delivery via Resend (production) or console (development)
 - [File Storage](./storage.md) -- file uploads via Cloudflare R2 with upload endpoints
 - [Webhooks](./webhooks.md) -- event types, payload format, signature verification, retry/delivery, auto-disable, retention, dev mode, limits, OpenAPI spec
-- [Interactive API Docs](./webhooks.md#interactive-api-documentation) -- Scalar-powered OpenAPI 3.1 reference at `/api/docs` (spec at `/api/openapi.json`)
+- [API Tokens](./api-tokens.md) -- Personal Access Tokens for machine clients: format, scopes, project scoping, expiry, rotation, revocation, rate limits, and security best practices
+- [Integrations](./integrations.md) -- end-to-end walkthroughs for Slackbots and GitHub Actions combining PATs (inbound) with webhooks (outbound)
+- [Interactive API Docs](./webhooks.md#interactive-api-documentation) -- Scalar-powered OpenAPI 3.1 reference at `/api/docs` (spec at `/api/openapi.json`); the **Authorize** button accepts either a PAT (Bearer) or the cookie session
 - [Webhook Internals](../../src/api/lib/webhooks.ts) -- re-export barrel for `webhooks/` sub-modules: delivery with exponential-backoff retries and cron-driven retry processing ([delivery.ts](../../src/api/lib/webhooks/delivery.ts)), HMAC-SHA256 signing, SSRF-safe URL validation, and secret generation ([utils.ts](../../src/api/lib/webhooks/utils.ts))
 - [Webhook Payloads](../../src/api/lib/webhook-payloads.ts) -- payload envelope builder, change detection (`computeChanges`), domain-specific data extractors (task, project, invitation, member), enrichment resolvers (`resolveUser`, `resolveTaskGroup`, `resolveTaskEnrichment`), secondary event detection, context fetcher, `fireWebhookEvent` fire-and-forget dispatch, and `dispatchWebhook` convenience wrapper for Hono handlers
 - [Project Webhook Handlers](../../src/api/routes/projects/project-webhooks.handlers.ts) -- CRUD + test delivery for project-scoped webhooks (6 endpoints mounted under `/api/projects/:projectId/webhooks`)

@@ -46,6 +46,7 @@ function fakeEnv(overrides?: Partial<Record<string, unknown>>) {
     DB: {} as D1Database,
     BETTER_AUTH_SECRET: "test-secret",
     BETTER_AUTH_URL: "http://localhost:8787",
+    TOKEN_HASH_PEPPER: "test-pepper",
     ASSETS: {} as Fetcher,
     ...overrides,
   };

@@ -11,6 +11,7 @@ import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { ThemeGrid } from "@/web/components/ui/ThemeGrid";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { useWorkspace, type Workspace } from "@/web/contexts/WorkspaceContext";
+import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useWorkspacePermissions } from "@/web/hooks/use-permissions";
 import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
@@ -26,6 +27,7 @@ interface UpdateWorkspaceInput {
 
 export default function WorkspaceSettings() {
   const { workspace, members, refetch } = useWorkspace();
+  useDocumentTitle(`${workspace.name} — Settings`);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { canManageWorkspace, canDeleteWorkspace } = useWorkspacePermissions();

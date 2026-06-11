@@ -73,6 +73,7 @@ export async function moveTask(c: Context<AppEnv>) {
 
   // Defer activity logging — runs after the response is sent
   const movedBetweenGroups = foundTask.taskGroupId !== body.taskGroupId;
+  const moveApiTokenId = c.get("apiToken")?.id ?? null;
   if (movedBetweenGroups) {
     const targetGroupName = targetGroup.name;
     const oldTaskGroupId = foundTask.taskGroupId;
@@ -98,13 +99,24 @@ export async function moveTask(c: Context<AppEnv>) {
           field: "taskGroupId",
           oldValue: oldGroup?.name ?? oldTaskGroupId,
           newValue: targetGroupName,
+          apiTokenId: moveApiTokenId,
         },
       ];
 
       if (isCompletionTarget && !wasCompleted) {
-        activities.push({ taskId, actorId: user.id, action: "completed" });
+        activities.push({
+          taskId,
+          actorId: user.id,
+          action: "completed",
+          apiTokenId: moveApiTokenId,
+        });
       } else if (!isCompletionTarget && wasCompleted) {
-        activities.push({ taskId, actorId: user.id, action: "reopened" });
+        activities.push({
+          taskId,
+          actorId: user.id,
+          action: "reopened",
+          apiTokenId: moveApiTokenId,
+        });
       }
 
       await logActivityBatch(db, activities);
@@ -117,6 +129,7 @@ export async function moveTask(c: Context<AppEnv>) {
           assigneeId,
           taskTitle,
           projectId,
+          apiTokenId: moveApiTokenId,
         });
       }
     });
@@ -137,6 +150,7 @@ export async function moveTask(c: Context<AppEnv>) {
         assigneeId,
         taskTitle,
         projectId,
+        apiTokenId: moveApiTokenId,
       });
     });
   }
@@ -243,6 +257,7 @@ export async function duplicateTask(c: Context<AppEnv>) {
       actorId: user.id,
       action: "created",
       newValue: `Duplicated from: ${sourceTask.title}`,
+      apiTokenId: c.get("apiToken")?.id ?? null,
     });
   } catch (error) {
     console.error("Failed to log activity for duplicateTask:", { sourceTaskId: taskId, newTaskId, userId: user.id }, error);

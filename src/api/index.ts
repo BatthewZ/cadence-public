@@ -1,5 +1,6 @@
 import { Scalar } from "@scalar/hono-api-reference";
 import { sql } from "drizzle-orm";
+import type { MiddlewareHandler } from "hono";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
@@ -7,6 +8,7 @@ import { createDb } from "../db";
 import type { AppBindings, AppEnv } from "./env";
 import { resolveAllowedOrigin } from "./lib/auth";
 import { errorResponse } from "./lib/error-response";
+import { auditPatMutations } from "./middleware/audit-pat";
 import { authSessionMiddleware } from "./middleware/auth";
 import { requestLogger } from "./middleware/logger";
 import { requestIdMiddleware } from "./middleware/request-id";
@@ -59,13 +61,62 @@ app.use(
   })
 );
 
-// Interactive API documentation (Scalar)
+// Interactive API documentation (Scalar).
+//
+// `/api/docs` renders the full Cadence API reference (workspaces, projects,
+// tasks, labels, API tokens, webhooks) — this is the entry point linked from
+// the workspace API Tokens settings and from the public docs.
+//
+// `/api/docs/webhooks` is kept as an alias (same underlying OpenAPI spec, just
+// a webhook-focused page title) because the Project Settings → Webhooks UI
+// links there. Both serve the same `/api/openapi.json` spec; Scalar's left-hand
+// nav lets the reader jump straight to the webhook section.
+//
+// Scalar's `getHtmlDocument` template does not expose a favicon hook, so we
+// wrap the middleware: render Scalar's HTML, then splice in the same favicon
+// links the SPA uses (`/favicon.svg` + `/favicon.png` fallback) right before
+// `</head>` so the docs tab shows the Cadence mark instead of the browser
+// default. The favicon files themselves are served from `dist/` via the
+// ASSETS binding — they aren't `/api/*` paths so they bypass the worker and
+// fall through to static assets normally.
+const FAVICON_LINKS =
+  '<link rel="icon" type="image/svg+xml" href="/favicon.svg" />' +
+  '<link rel="icon" type="image/png" href="/favicon.png" />';
+
+const withCadenceFavicon = (
+  handler: MiddlewareHandler<AppEnv>,
+): MiddlewareHandler<AppEnv> => {
+  return async (c, next) => {
+    const response = await handler(c, next);
+    if (!response) {
+      return response;
+    }
+    const html = await response.text();
+    const patched = html.includes("</head>")
+      ? html.replace("</head>", `${FAVICON_LINKS}</head>`)
+      : html;
+    return c.html(patched);
+  };
+};
+
+app.get(
+  "/api/docs",
+  withCadenceFavicon(
+    Scalar<AppEnv>({
+      url: "/api/openapi.json",
+      pageTitle: "Cadence API",
+    }),
+  ),
+);
+
 app.get(
   "/api/docs/webhooks",
-  Scalar({
-    url: "/api/openapi.json",
-    pageTitle: "Cadence Webhook API",
-  }),
+  withCadenceFavicon(
+    Scalar<AppEnv>({
+      url: "/api/openapi.json",
+      pageTitle: "Cadence Webhook API",
+    }),
+  ),
 );
 
 app.get("/api/health", async (c) => {
@@ -82,6 +133,14 @@ app.get("/api/health", async (c) => {
 });
 
 app.use("/api/*", authSessionMiddleware);
+
+// PAT audit ledger — runs after the handler resolves so we can attribute
+// every successful 2xx mutation that arrived with a Bearer cdn_pat_ token.
+// No-op on cookie traffic and on non-mutating methods, so it costs nothing
+// for the vast majority of requests. Mount order matters: this must come
+// AFTER `authSessionMiddleware` (so `c.get("apiToken")` is populated) but
+// BEFORE `app.route("/api", routes)` (so it wraps every route handler).
+app.use("/api/*", auditPatMutations);
 
 app.route("/api", routes);
 

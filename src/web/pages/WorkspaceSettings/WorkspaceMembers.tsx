@@ -16,6 +16,7 @@ import {
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { useWorkspace, type WorkspaceMember } from "@/web/contexts/WorkspaceContext";
+import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useWorkspacePermissions } from "@/web/hooks/use-permissions";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
@@ -34,6 +35,7 @@ interface InvitationInput {
 
 export default function WorkspaceMembers() {
   const { workspace, members } = useWorkspace();
+  useDocumentTitle(`${workspace.name} — Members`);
   const { toast } = useToast();
   const { canManageWorkspace } = useWorkspacePermissions();
 

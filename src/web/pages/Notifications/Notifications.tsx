@@ -30,8 +30,6 @@ interface NotificationsPage {
 }
 
 export default function Notifications() {
-  useDocumentTitle("Notifications");
-
   const navigate = useNavigate();
   const { data: session } = useSession();
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -40,6 +38,13 @@ export default function Notifications() {
   // When rendered at the standalone /notifications route, it is null.
   const workspaceCtx = useOptionalWorkspace();
   const isInsideWorkspace = workspaceCtx !== null;
+
+  // Prefix the workspace name when this page is mounted inside a workspace so
+  // the tab reads "Acme — Notifications"; on the standalone /notifications
+  // route there is no workspace context, so fall back to the plain label.
+  useDocumentTitle(
+    workspaceCtx ? `${workspaceCtx.workspace.name} — Notifications` : "Notifications",
+  );
 
   const { data: wsData } = useQuery({
     queryKey: queryKeys.workspaces.all,

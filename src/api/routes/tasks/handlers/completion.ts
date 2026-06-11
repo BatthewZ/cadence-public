@@ -109,9 +109,15 @@ export async function completeTask(c: Context<AppEnv>) {
     const taskTitle = foundTask.title;
     const projectId = foundTask.projectId;
     const capturedNextRecurringTask = nextRecurringTask;
+    const completeApiTokenId = c.get("apiToken")?.id ?? null;
 
     deferWork(c, async () => {
-      const activities: ActivityEntry[] = [{ taskId, actorId: user.id, action: "completed" }];
+      const activities: ActivityEntry[] = [{
+        taskId,
+        actorId: user.id,
+        action: "completed",
+        apiTokenId: completeApiTokenId,
+      }];
 
       if (movingToCompletion) {
         const [oldGroup] = await db
@@ -127,6 +133,7 @@ export async function completeTask(c: Context<AppEnv>) {
           field: "taskGroupId",
           oldValue: oldGroup?.name ?? oldTaskGroupId,
           newValue: completionGroupName,
+          apiTokenId: completeApiTokenId,
         });
       }
 
@@ -151,6 +158,7 @@ export async function completeTask(c: Context<AppEnv>) {
           assigneeId,
           taskTitle,
           projectId,
+          apiTokenId: completeApiTokenId,
         });
       }
     });
@@ -268,6 +276,7 @@ export async function uncompleteTask(c: Context<AppEnv>) {
   {
     const capturedMoveFrom = moveFromName;
     const capturedMoveTo = moveToName;
+    const uncompleteApiTokenId = c.get("apiToken")?.id ?? null;
 
     deferWork(c, async () => {
       const activities: ActivityEntry[] = [];
@@ -279,9 +288,15 @@ export async function uncompleteTask(c: Context<AppEnv>) {
           field: "taskGroupId",
           oldValue: capturedMoveFrom,
           newValue: capturedMoveTo,
+          apiTokenId: uncompleteApiTokenId,
         });
       }
-      activities.push({ taskId, actorId: user.id, action: "reopened" });
+      activities.push({
+        taskId,
+        actorId: user.id,
+        action: "reopened",
+        apiTokenId: uncompleteApiTokenId,
+      });
       await logActivityBatch(db, activities);
     });
   }

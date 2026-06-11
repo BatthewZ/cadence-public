@@ -75,11 +75,13 @@ export async function assignLabel(c: Context<AppEnv>) {
     db.update(task).set({ updatedAt: now }).where(eq(task.id, taskId)),
   ] as const);
 
+  const assignApiTokenId = c.get("apiToken")?.id ?? null;
   deferWork(c, () => logActivity(db, {
     taskId,
     actorId: user.id,
     action: "label_added",
     newValue: foundLabel.name,
+    apiTokenId: assignApiTokenId,
   }));
 
   // Non-blocking webhook dispatch for task.label_added
@@ -123,11 +125,13 @@ export async function unassignLabel(c: Context<AppEnv>) {
     db.update(task).set({ updatedAt: now }).where(eq(task.id, taskId)),
   ] as const);
 
+  const unassignApiTokenId = c.get("apiToken")?.id ?? null;
   deferWork(c, () => logActivity(db, {
     taskId,
     actorId: user.id,
     action: "label_removed",
     newValue: foundLabel?.name ?? "unknown",
+    apiTokenId: unassignApiTokenId,
   }));
 
   // Non-blocking webhook dispatch for task.label_removed

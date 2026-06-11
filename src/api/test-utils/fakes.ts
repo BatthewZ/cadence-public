@@ -87,7 +87,19 @@ export function fakeEnv(d1: D1Database): MiddlewareHandler<AppEnv> {
       (c as unknown as { env: Record<string, unknown> }).env = {};
     }
     (c.env as Record<string, unknown>).DB = d1;
+    (c.env as Record<string, unknown>).TOKEN_HASH_PEPPER = TEST_TOKEN_HASH_PEPPER;
     c.set("db", createDb(d1));
     await next();
   };
 }
+
+/**
+ * Pepper used by every PAT hash test in the suite. A fixed value is fine
+ * because tests run in isolation against an ephemeral in-memory D1 — what
+ * matters is that the SAME pepper feeds both `generateApiToken` (at seed
+ * time) and `verifyToken` (at assertion time), so the hashes line up.
+ *
+ * Production deployments must supply their own high-entropy `TOKEN_HASH_PEPPER`
+ * environment variable; see `.dev.vars.example`.
+ */
+export const TEST_TOKEN_HASH_PEPPER = "test-token-hash-pepper-do-not-use-in-production";

@@ -9,6 +9,7 @@ import {
 } from "drizzle-orm/sqlite-core";
 
 import type { UnsplashCoverPayload } from "../../shared/schemas/unsplash";
+import { apiToken } from "./api-token";
 import { user } from "./auth";
 import { project } from "./project";
 
@@ -147,6 +148,7 @@ export const taskActivity = sqliteTable(
     field: text("field"),
     oldValue: text("oldValue"),
     newValue: text("newValue"),
+    apiTokenId: text("apiTokenId").references(() => apiToken.id, { onDelete: "set null" }),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
   },
   (table) => [index("task_activity_task_idx").on(table.taskId, table.createdAt)],

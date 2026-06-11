@@ -3,6 +3,7 @@
 All table definitions live in `src/db/schema/`. The barrel file `src/db/schema/index.ts` re-exports everything:
 
 ```ts
+export * from "./api-token";
 export * from "./auth";
 export * from "./invitation";
 export * from "./label";
@@ -282,14 +283,15 @@ export * from "./workspace";
 
 | Column      | Type                          | Constraints                                | Description                                  |
 | ----------- | ----------------------------- | ------------------------------------------ | -------------------------------------------- |
-| `id`        | `text`                        | **Primary key**                            | Unique activity entry identifier             |
-| `taskId`    | `text`                        | `NOT NULL`, **FK** -> `task.id` (cascade)  | References the parent task                   |
-| `actorId`   | `text`                        | **FK** -> `user.id` (set null)             | References the user who performed the action |
-| `action`    | `text`                        | `NOT NULL`                                 | Action type (e.g. `"completed"`, `"moved"`, `"reopened"`, `"comment_added"`, `"comment_updated"`, `"comment_deleted"`, `"label_added"`, `"label_removed"`, `"attachment_added"`, `"attachment_removed"`, `"recurrence_changed"`, `"recurrence_removed"`) |
-| `field`     | `text`                        |                                            | Field that was changed (e.g. `"taskGroupId"`, `"priority"`) |
-| `oldValue`  | `text`                        |                                            | Previous value of the changed field          |
-| `newValue`  | `text`                        |                                            | New value of the changed field               |
-| `createdAt` | `integer` (mode: `timestamp`) | `NOT NULL`                                 | Activity timestamp                           |
+| `id`         | `text`                        | **Primary key**                                | Unique activity entry identifier             |
+| `taskId`     | `text`                        | `NOT NULL`, **FK** -> `task.id` (cascade)      | References the parent task                   |
+| `actorId`    | `text`                        | **FK** -> `user.id` (set null)                 | References the user who performed the action |
+| `apiTokenId` | `text`                        | **FK** -> `api_token.id` (set null)            | The PAT used to perform the action (null for cookie-authed mutations). Set null on token delete so historical attribution survives — the UI renders `"(via deleted token)"` |
+| `action`     | `text`                        | `NOT NULL`                                     | Action type (e.g. `"completed"`, `"moved"`, `"reopened"`, `"comment_added"`, `"comment_updated"`, `"comment_deleted"`, `"label_added"`, `"label_removed"`, `"attachment_added"`, `"attachment_removed"`, `"recurrence_changed"`, `"recurrence_removed"`) |
+| `field`      | `text`                        |                                                | Field that was changed (e.g. `"taskGroupId"`, `"priority"`) |
+| `oldValue`   | `text`                        |                                                | Previous value of the changed field          |
+| `newValue`   | `text`                        |                                                | New value of the changed field               |
+| `createdAt`  | `integer` (mode: `timestamp`) | `NOT NULL`                                     | Activity timestamp                           |
 
 **Indexes:** composite index on (`taskId`, `createdAt`)
 
@@ -429,6 +431,40 @@ export * from "./workspace";
 
 **Indexes:** composite index on (`webhookId`, `createdAt`), composite index on (`success`, `nextRetryAt`)
 
+#### `apiToken`
+
+**File:** `src/db/schema/api-token.ts`
+
+| Column          | Type                          | Constraints                                          | Description                                                                                                |
+| --------------- | ----------------------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `id`            | `text`                        | **Primary key**                                      | ULID                                                                                                       |
+| `userId`        | `text`                        | `NOT NULL`, **FK** -> `user.id` (cascade)            | Owning user. PATs are user-scoped — there is no synthetic bot identity                                     |
+| `workspaceId`   | `text`                        | `NOT NULL`, **FK** -> `workspace.id` (cascade)       | The token's bound workspace. Requests against any other workspace return `403`                             |
+| `name`          | `text`                        | `NOT NULL`                                           | User-supplied label (e.g. `"Slackbot prod"`) — rendered in the UI and in activity attribution              |
+| `tokenHash`     | `text`                        | `NOT NULL`, `UNIQUE`                                 | `sha256(plaintext)` as hex. The plaintext is **never** persisted — a DB exfil yields hashes, not tokens    |
+| `tokenPrefix`   | `text`                        | `NOT NULL`                                           | First 12 characters of the plaintext (e.g. `cdn_pat_a4kZ`). Safe to log; displayed in the UI for identification |
+| `scopes`        | `text`                        | `NOT NULL`                                           | JSON string array of granted scopes (e.g. `["task:read","task:write"]`). Self-describing, evolvable; debuggable in raw DB queries; allows forward-compatible scope reads |
+| `projectScope`  | `text`                        | `NOT NULL`                                           | Either `"all"` or `"selected"`                                                                             |
+| `projectIds`    | `text`                        |                                                      | JSON array of project IDs when `projectScope = "selected"`; `NULL` when `projectScope = "all"`. Max 50 entries; avoids a join on the hot path |
+| `lastUsedAt`    | `integer` (mode: `timestamp`) |                                                      | Updated via fire-and-forget `deferWork()` on every successful auth. Powers stale-token warnings in the UI  |
+| `expiresAt`     | `integer` (mode: `timestamp`) |                                                      | Hard expiry. Required in v1 (UI defaults to 365 days; max 3650 days). Rejected at auth with `401` once past |
+| `revokeAt`      | `integer` (mode: `timestamp`) |                                                      | Scheduled future revocation. Set by the **rotate** action to `now + 7d`. The scheduled handler sweeps tokens where `revokeAt < now AND revokedAt IS NULL` |
+| `revokedAt`     | `integer` (mode: `timestamp`) |                                                      | Soft-delete timestamp. Once set, the token is rejected at auth with `401`; the row is retained for audit   |
+| `rotatedToId`   | `text`                        | **FK** -> `api_token.id` (self-reference)            | Points from the old token to its rotated sibling, preserving the audit lineage across rotations            |
+| `createdAt`     | `integer` (mode: `timestamp`) | `NOT NULL`                                           | Creation timestamp                                                                                         |
+
+**Indexes:** `(userId)`, `(workspaceId)`, `(revokeAt)` (drives the scheduled revocation sweep efficiently)
+
+**Why this shape:**
+
+- **Hash, not plaintext.** Modeled on GitHub, Stripe, and Linear. Plaintext is shown to the user exactly once at creation; thereafter only the SHA-256 hash exists in the DB. Limits the blast radius of any DB exfil.
+- **Scope strings in a JSON array, not bitmasks.** Self-describing, evolvable across versions without a migration, debuggable when inspecting raw rows. The bitmask "performance win" is illusory once the row has already been fetched.
+- **Opaque tokens looked up in the DB, not signed JWTs.** Allows instant revocation, scope updates without reissuing the secret, and a centralized audit trail. JWT-style tokens require a denylist anyway, which is just an opaque-token lookup with extra cryptographic steps.
+- **Soft delete via `revokedAt`.** A hard delete would drop activity attribution and `lastUsedAt` history. The UI filters revoked rows out by default and lets ops view them under a "Revoked" tab.
+- **`revokeAt` separate from `revokedAt`.** Lets rotation schedule a future revocation while the old token continues to work during the 7-day grace window. The scheduled handler that runs every 5 minutes closes the gap.
+
+See [API Tokens](../api/api-tokens.md) for the full lifecycle, scope reference, and security best practices.
+
 ### Relationships
 
 - `session.userId` -> `user.id` (foreign key, cascade delete)
@@ -472,8 +508,12 @@ export * from "./workspace";
 - `webhook.projectId` -> `project.id` (foreign key, cascade delete)
 - `webhookDelivery.webhookId` -> `webhook.id` (foreign key, cascade delete)
 - `legalAcceptance.userId` -> `user.id` (foreign key, cascade delete)
+- `apiToken.userId` -> `user.id` (foreign key, cascade delete)
+- `apiToken.workspaceId` -> `workspace.id` (foreign key, cascade delete)
+- `apiToken.rotatedToId` -> `apiToken.id` (foreign key, self-reference)
+- `taskActivity.apiTokenId` -> `apiToken.id` (foreign key, set null on delete — so historical attribution survives token deletion)
 
-The `user`, `session`, `account`, and `verification` tables are managed by **Better Auth** and follow its expected schema conventions. The `upload` table is application-managed. The `workspace`, `workspaceMember`, `team`, `teamMember`, `project`, `projectMember`, `taskGroup`, `task`, `subtask`, `comment`, `taskActivity`, `taskAttachment`, `label`, `taskLabel`, `notification`, `invitation`, `webhook`, `webhookDelivery`, and `legalAcceptance` tables are application-managed.
+The `user`, `session`, `account`, and `verification` tables are managed by **Better Auth** and follow its expected schema conventions. The `upload` table is application-managed. The `workspace`, `workspaceMember`, `team`, `teamMember`, `project`, `projectMember`, `taskGroup`, `task`, `subtask`, `comment`, `taskActivity`, `taskAttachment`, `label`, `taskLabel`, `notification`, `invitation`, `webhook`, `webhookDelivery`, `legalAcceptance`, and `apiToken` tables are application-managed.
 
 ### Role & Status Types
 

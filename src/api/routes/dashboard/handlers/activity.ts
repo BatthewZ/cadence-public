@@ -1,6 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import type { Context } from "hono";
 
+import { apiToken } from "../../../../db/schema/api-token";
 import { user as userTable } from "../../../../db/schema/auth";
 import { project, projectMember } from "../../../../db/schema/project";
 import { task, taskActivity } from "../../../../db/schema/task";
@@ -30,6 +31,10 @@ export async function projectActivity(c: Context<AppEnv>) {
     );
   }
 
+  // LEFT JOIN api_token so requests authenticated via a Personal Access
+  // Token surface the token's display name to the UI, enabling
+  // "via <TokenName>" attribution. A NULL apiTokenId or a hard-deleted
+  // token row both produce a null tokenName, which the UI handles.
   const activities = await db
     .select({
       id: taskActivity.id,
@@ -43,10 +48,13 @@ export async function projectActivity(c: Context<AppEnv>) {
       oldValue: taskActivity.oldValue,
       newValue: taskActivity.newValue,
       createdAt: taskActivity.createdAt,
+      apiTokenId: taskActivity.apiTokenId,
+      tokenName: apiToken.name,
     })
     .from(taskActivity)
     .innerJoin(task, eq(taskActivity.taskId, task.id))
     .leftJoin(userTable, eq(taskActivity.actorId, userTable.id))
+    .leftJoin(apiToken, eq(taskActivity.apiTokenId, apiToken.id))
     .where(and(...conditions))
     .orderBy(desc(taskActivity.createdAt), desc(taskActivity.id))
     .limit(limit);
@@ -99,8 +107,13 @@ export async function workspaceActivity(c: Context<AppEnv>) {
     oldValue: taskActivity.oldValue,
     newValue: taskActivity.newValue,
     createdAt: taskActivity.createdAt,
+    apiTokenId: taskActivity.apiTokenId,
+    tokenName: apiToken.name,
   };
 
+  // LEFT JOIN api_token to surface the token display name for
+  // PAT-authored activity rows. NULL apiTokenId (cookie-auth) and
+  // hard-deleted tokens both produce a null tokenName.
   const activitiesQuery = isElevated
     ? db
         .select(activityFields)
@@ -108,6 +121,7 @@ export async function workspaceActivity(c: Context<AppEnv>) {
         .innerJoin(task, eq(taskActivity.taskId, task.id))
         .innerJoin(project, eq(task.projectId, project.id))
         .leftJoin(userTable, eq(taskActivity.actorId, userTable.id))
+        .leftJoin(apiToken, eq(taskActivity.apiTokenId, apiToken.id))
         .where(and(...conditions))
         .orderBy(desc(taskActivity.createdAt), desc(taskActivity.id))
         .limit(limit)
@@ -121,6 +135,7 @@ export async function workspaceActivity(c: Context<AppEnv>) {
           and(eq(projectMember.projectId, project.id), eq(projectMember.userId, user.id))
         )
         .leftJoin(userTable, eq(taskActivity.actorId, userTable.id))
+        .leftJoin(apiToken, eq(taskActivity.apiTokenId, apiToken.id))
         .where(and(...conditions))
         .orderBy(desc(taskActivity.createdAt), desc(taskActivity.id))
         .limit(limit);

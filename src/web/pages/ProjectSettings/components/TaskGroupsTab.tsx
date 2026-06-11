@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp, Check, Pencil, Trash2 as Trash2Icon } from "lucide-
 import { type FormEvent, useState } from "react";
 
 import { generateKeyBetween } from "@/shared/lib/fractional-index";
-import { Field, Input, Label, Select } from "@/web/components/form";
+import { Field, Input, Label, Select, Toggle } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
 import {
   Alert,
@@ -366,21 +366,15 @@ export function TaskGroupsTab({
                     Tasks moved into this group will automatically be marked as completed
                   </Text>
                 </div>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={groupIsCompletion}
-                  onClick={() => setGroupIsCompletion(!groupIsCompletion)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    groupIsCompletion ? 'bg-status-success' : 'bg-border-default'
-                  }`}
-                >
-                  <span
-                    className={`inline-block size-4 transform rounded-full bg-white transition-transform ${
-                      groupIsCompletion ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
+                {/* tone="success" — green carries semantic weight here
+                    ("this group marks tasks as completed"), unlike the
+                    settings-page toggles which use the default accent. */}
+                <Toggle
+                  checked={groupIsCompletion}
+                  onCheckedChange={setGroupIsCompletion}
+                  tone="success"
+                  aria-label="Completion Group"
+                />
               </Row>
             </Field>
 

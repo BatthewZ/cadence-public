@@ -15,6 +15,10 @@ export interface ProjectActivityItem {
   oldValue: string | null;
   newValue: string | null;
   createdAt: string;
+  /** Set when the action was performed by a Personal Access Token. */
+  apiTokenId: string | null;
+  /** Display name of the token, joined server-side; null when no token or token deleted. */
+  tokenName: string | null;
 }
 
 interface ProjectActivityPage {

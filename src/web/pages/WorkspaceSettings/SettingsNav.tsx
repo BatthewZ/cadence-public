@@ -7,6 +7,7 @@ const TABS = [
   { label: "Members", path: "/members" },
   { label: "Teams", path: "/teams" },
   { label: "Webhooks", path: "/webhooks" },
+  { label: "API Tokens", path: "/api-tokens" },
 ];
 
 export function SettingsNav({ basePath }: { basePath: string }) {

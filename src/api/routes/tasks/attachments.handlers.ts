@@ -113,11 +113,13 @@ export async function uploadAttachment(c: Context<AppEnv>) {
     return errorResponse(c, "Failed to save attachment", 500);
   }
 
+  const uploadApiTokenId = c.get("apiToken")?.id ?? null;
   deferWork(c, () => logActivity(db, {
     taskId,
     actorId: user.id,
     action: "attachment_added",
     newValue: file.name,
+    apiTokenId: uploadApiTokenId,
   }));
 
   return c.json(
@@ -226,11 +228,13 @@ export async function deleteAttachment(c: Context<AppEnv>) {
     ),
   ]);
 
+  const deleteApiTokenId = c.get("apiToken")?.id ?? null;
   deferWork(c, () => logActivity(db, {
     taskId,
     actorId: user.id,
     action: "attachment_removed",
     newValue: record.filename,
+    apiTokenId: deleteApiTokenId,
   }));
 
   return c.json({ ok: true, deletedId: attachmentId });

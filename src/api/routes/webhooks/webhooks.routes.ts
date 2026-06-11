@@ -17,8 +17,12 @@ import {
   webhookPayloadEnvelopeSchema,
 } from "../../../shared/schemas/webhook-responses";
 import type { AppEnv } from "../../env";
-import { requireWorkspaceRole } from "../../middleware/authorize";
-import { rateLimit } from "../../middleware/rate-limit";
+import {
+  requireReadScopeForResource,
+  requireWorkspaceRole,
+  requireWriteScopeForResource,
+} from "../../middleware/authorize";
+import { defaultRateLimitKey, rateLimit } from "../../middleware/rate-limit";
 import { requireAuth } from "../../middleware/require-auth";
 import { validationHook } from "../../middleware/validate";
 import {
@@ -76,9 +80,9 @@ const rateLimitedResponse = {
 
 const authSecurity = [{ bearerAuth: [] }];
 const baseAuth = [requireAuth, requireWorkspaceRole("owner", "admin")];
-const readMiddleware = [...baseAuth, rateLimit({ max: 60, windowSeconds: 60, prefix: "webhook-read" })];
-const writeMiddleware = [...baseAuth, rateLimit({ max: 20, windowSeconds: 60, prefix: "webhook-write" })];
-const testMiddleware = [...baseAuth, rateLimit({ max: 5, windowSeconds: 60, prefix: "webhook-test" })];
+const readMiddleware = [...baseAuth, rateLimit({ max: 60, windowSeconds: 60, prefix: "webhook-read", keyFn: defaultRateLimitKey })];
+const writeMiddleware = [...baseAuth, rateLimit({ max: 20, windowSeconds: 60, prefix: "webhook-write", keyFn: defaultRateLimitKey })];
+const testMiddleware = [...baseAuth, rateLimit({ max: 5, windowSeconds: 60, prefix: "webhook-test", keyFn: defaultRateLimitKey })];
 
 // ---------------------------------------------------------------------------
 // Route definitions
@@ -262,6 +266,21 @@ const app = new OpenAPIHono<AppEnv>({
   defaultHook: validationHook,
 });
 
+// ---------------------------------------------------------------------------
+// PAT scope enforcement
+// ---------------------------------------------------------------------------
+//
+// Workspace-level webhook CRUD requires the `webhook` scope per the doc.
+// The `/test` action is treated as a write (it emits a synthetic delivery
+// to the registered URL — effectively a controlled mutation of the
+// integration partner's state).
+const webhookReadScope = requireReadScopeForResource("webhook");
+const webhookWriteScope = requireWriteScopeForResource({ resource: "webhook" });
+
+app.use("/workspaces/:workspaceId/webhooks", webhookReadScope, webhookWriteScope);
+app.use("/workspaces/:workspaceId/webhooks/:webhookId", webhookReadScope, webhookWriteScope);
+app.use("/workspaces/:workspaceId/webhooks/:webhookId/test", webhookReadScope, webhookWriteScope);
+
 // Register routes
 app.openapi(createWebhookRoute, asRouteHandler<typeof createWebhookRoute>(createWebhook));
 app.openapi(listWebhooksRoute, asRouteHandler<typeof listWebhooksRoute>(listWebhooks));
@@ -272,28 +291,14 @@ app.openapi(testWebhookRoute, asRouteHandler<typeof testWebhookRoute>(testWebhoo
 
 // Register the webhook payload envelope as a standalone schema for documentation.
 // This documents what subscribers receive — it is not tied to any CRUD endpoint.
+//
+// Security schemes (bearerAuth / cookieAuth) and the `/openapi.json`
+// endpoint now live on the parent route aggregator (see
+// `src/api/routes/index.ts`) so the spec served at `/api/openapi.json`
+// reflects every documented surface — not just webhooks. P3 originally
+// registered both schemes here; Batch 5 D1 hoisted them to the parent
+// so the workspace/project/task/label/api-token surfaces appear in the
+// same Authorize button.
 app.openAPIRegistry.register("WebhookPayloadEnvelope", webhookPayloadEnvelopeSchema);
-
-// Register security scheme
-app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
-  type: "http",
-  scheme: "bearer",
-  description:
-    "Authentication via session cookie or Authorization header with Bearer token",
-});
-
-// OpenAPI spec endpoint — served at /api/openapi.json
-app.doc("/openapi.json", {
-  openapi: "3.1.0",
-  info: {
-    title: "Cadence Webhook API",
-    version: "1.0.0",
-    description:
-      "API for managing webhook subscriptions, viewing delivery history, and testing integrations. " +
-      "Webhooks allow you to receive real-time HTTP POST notifications when events occur in your workspace. " +
-      "See the WebhookPayloadEnvelope schema for the shape of payloads delivered to your endpoint.",
-  },
-  servers: [{ url: "/api", description: "Relative API base" }],
-});
 
 export default app;

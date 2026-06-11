@@ -5,8 +5,11 @@ import {
   createInvitationSchema,
 } from "../../../shared/schemas/invitation";
 import type { AppEnv } from "../../env";
-import { requireWorkspaceRole } from "../../middleware/authorize";
-import { rateLimit } from "../../middleware/rate-limit";
+import {
+  requireWorkspaceRole,
+  requireWriteScopeForResource,
+} from "../../middleware/authorize";
+import { defaultRateLimitKey, rateLimit } from "../../middleware/rate-limit";
 import { requireAuth } from "../../middleware/require-auth";
 import { validateBody } from "../../middleware/validate";
 import {
@@ -19,6 +22,22 @@ import {
 } from "./invitations.handlers";
 
 const app = new Hono<AppEnv>();
+
+// ---------------------------------------------------------------------------
+// PAT scope enforcement
+// ---------------------------------------------------------------------------
+//
+// Per the doc, `invitation:write` is the only invitation scope — there is
+// no `invitation:read` in v1 because listing invitations is admin-only and
+// admins can use a cookie session for that view. The mounts below apply
+// only to workspace-scoped invitation routes; the public `/invitations/*`
+// lookup/accept paths do not require a PAT scope (they cannot be reached
+// by a PAT — `getInvitation` is unauthenticated and `acceptInvitation`
+// runs in the cookie-auth user context).
+const invitationWriteScope = requireWriteScopeForResource({ resource: "invitation" });
+
+app.use("/workspaces/:workspaceId/invitations", invitationWriteScope);
+app.use("/workspaces/:workspaceId/invitations/:id", invitationWriteScope);
 
 // Create invitation
 app.post(
@@ -59,7 +78,7 @@ app.get(
 app.post(
   "/invitations/accept",
   requireAuth,
-  rateLimit({ max: 10, windowSeconds: 60, prefix: "invitation-accept" }),
+  rateLimit({ max: 10, windowSeconds: 60, prefix: "invitation-accept", keyFn: defaultRateLimitKey }),
   validateBody(acceptInvitationSchema),
   acceptInvitation,
 );

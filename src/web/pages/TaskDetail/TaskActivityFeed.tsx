@@ -14,6 +14,7 @@ import {
   type ActivityItem,
   formatActivityMessage,
   formatRelativeTime,
+  formatTokenAttribution,
 } from "@/web/util/activity";
 
 const INITIAL_LIMIT = 4;
@@ -107,28 +108,37 @@ export function TaskActivityFeed({ taskId, members }: TaskActivityFeedProps) {
             <div className="absolute left-3 top-6 bottom-6 w-px bg-border-default" />
           )}
           <div className="space-y-4">
-            {visibleActivities.map((activity) => (
-              <div key={activity.id} className="relative flex items-start gap-r5">
-                <div className="relative z-10 shrink-0 rounded-full bg-surface-0">
-                  <Avatar
-                    size="xs"
-                    name={activity.actorName ?? undefined}
-                    src={activity.actorImage ?? undefined}
-                  />
+            {visibleActivities.map((activity) => {
+              const tokenAttribution = formatTokenAttribution(activity);
+              return (
+                <div key={activity.id} className="relative flex items-start gap-r5">
+                  <div className="relative z-10 shrink-0 rounded-full bg-surface-0">
+                    <Avatar
+                      size="xs"
+                      name={activity.actorName ?? undefined}
+                      src={activity.actorImage ?? undefined}
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1 pt-px">
+                    <Text variant="body-3">
+                      <span className="font-semibold">
+                        {activity.actorName ?? "Someone"}
+                      </span>
+                      {tokenAttribution && (
+                        <>
+                          {" "}
+                          <span className="text-fg-muted">{tokenAttribution}</span>
+                        </>
+                      )}{" "}
+                      {formatActivityMessage(activity, members)}
+                    </Text>
+                    <Text variant="body-3" color="muted">
+                      {formatRelativeTime(activity.createdAt)}
+                    </Text>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1 pt-px">
-                  <Text variant="body-3">
-                    <span className="font-semibold">
-                      {activity.actorName ?? "Someone"}
-                    </span>{" "}
-                    {formatActivityMessage(activity, members)}
-                  </Text>
-                  <Text variant="body-3" color="muted">
-                    {formatRelativeTime(activity.createdAt)}
-                  </Text>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* Show more / Show less toggle for initially loaded items */}

@@ -43,6 +43,7 @@ const WorkspaceSettings = lazy(() => import("./pages/WorkspaceSettings/Workspace
 const WorkspaceMembers = lazy(() => import("./pages/WorkspaceSettings/WorkspaceMembers"));
 const WorkspaceTeams = lazy(() => import("./pages/WorkspaceSettings/WorkspaceTeams"));
 const WorkspaceWebhooks = lazy(() => import("./pages/WorkspaceSettings/WorkspaceWebhooks"));
+const WorkspaceApiTokens = lazy(() => import("./pages/WorkspaceSettings/WorkspaceApiTokens"));
 
 const GUEST_PATHS = ["/login", "/register", "/forgot-password", "/reset-password"];
 
@@ -176,6 +177,7 @@ export function App() {
                     <Route path="settings/members" element={<WorkspaceMembers />} />
                     <Route path="settings/teams" element={<WorkspaceTeams />} />
                     <Route path="settings/webhooks" element={<WorkspaceWebhooks />} />
+                    <Route path="settings/api-tokens" element={<WorkspaceApiTokens />} />
                     <Route path="notifications" element={<Notifications />} />
                     <Route path="account" element={<Settings />} />
                   </Route>

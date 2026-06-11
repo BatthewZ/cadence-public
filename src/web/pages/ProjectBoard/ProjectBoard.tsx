@@ -29,6 +29,7 @@ import { BulkActionBar } from "@/web/components/ui/BulkActionBar";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { type Task, useProject } from "@/web/contexts/ProjectContext";
+import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useMultiSelect } from "@/web/hooks/use-multi-select";
 import { useProjectPermissions } from "@/web/hooks/use-permissions";
 import { useTaskFilters } from "@/web/hooks/use-task-filters";
@@ -66,6 +67,7 @@ export default function ProjectBoard() {
     updateTask: ctxUpdateTask,
     updateTaskGroup: ctxUpdateTaskGroup,
   } = useProject();
+  useDocumentTitle(`${project.name} — Board`);
   const { canEditTasks, isProjectAdmin } = useProjectPermissions(members);
   const { filteredTasks, hasActiveFilters, clearFilters } = useTaskFilters(tasks);
   const { toast } = useToast();

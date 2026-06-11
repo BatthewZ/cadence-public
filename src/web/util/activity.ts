@@ -12,6 +12,18 @@ export interface ActivityItem {
   oldValue: string | null;
   newValue: string | null;
   createdAt: string;
+  /**
+   * Populated when the action was performed by a Personal Access Token
+   * instead of a regular user session. Null for cookie-authenticated
+   * actions and for internal system writes.
+   */
+  apiTokenId?: string | null;
+  /**
+   * Display name of the API token from the JOIN; null when there is no
+   * apiTokenId, or when the token row has been hard-deleted (we keep
+   * the activity row so historical attribution survives).
+   */
+  tokenName?: string | null;
 }
 
 /**
@@ -120,6 +132,26 @@ export function formatGroupedLabelMessage(
 }
 
 /**
+ * Build the "(via <TokenName>)" suffix shown after an actor's name when
+ * the activity was performed by a Personal Access Token. Returns null
+ * when the activity has no apiTokenId so the caller can omit the suffix
+ * entirely (and avoid a stray pair of parens for normal cookie auth).
+ *
+ * - apiTokenId present + tokenName present → "(via <name>)"
+ * - apiTokenId present + tokenName null    → "(via deleted token)"
+ *   (the token row was hard-deleted but the activity row's apiTokenId
+ *    was preserved by the SET NULL contract in the schema)
+ * - apiTokenId null                        → null  (cookie auth)
+ */
+export function formatTokenAttribution(
+  activity: Pick<ActivityItem, "apiTokenId" | "tokenName">,
+): string | null {
+  if (!activity.apiTokenId) return null;
+  const name = activity.tokenName?.trim();
+  return name ? `(via ${name})` : "(via deleted token)";
+}
+
+/**
  * Format a timestamp into a human-readable relative time string.
  * Returns "just now", "Xm ago", "Xh ago", "yesterday", "Xd ago",
  * or a short date for older timestamps.
@@ -140,6 +172,40 @@ export function formatRelativeTime(timestamp: string | number): string {
   if (diffDays < 30) return `${diffDays}d ago`;
 
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/**
+ * Format a future-or-past timestamp into a human-readable expression of
+ * remaining (or elapsed) time: "in 3 days", "in 1 year", "1 month ago",
+ * "expired today". Use this when the timestamp could be on either side of now
+ * (e.g. token `expiresAt`, scheduled `revokeAt`); use `formatRelativeTime`
+ * for strictly past timestamps (activity, attachments, lastUsedAt).
+ */
+export function formatRelativeFuture(timestamp: string | number): string {
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffMs = date.getTime() - now.getTime();
+  const past = diffMs < 0;
+  const absMs = Math.abs(diffMs);
+  const absSeconds = Math.floor(absMs / 1000);
+  const absMinutes = Math.floor(absSeconds / 60);
+  const absHours = Math.floor(absMinutes / 60);
+  const absDays = Math.floor(absHours / 24);
+
+  const phrase = (qty: number, unit: string): string => {
+    const plural = qty === 1 ? unit : `${unit}s`;
+    return past ? `${qty} ${plural} ago` : `in ${qty} ${plural}`;
+  };
+
+  if (absSeconds < 60) return past ? "just now" : "in a moment";
+  if (absMinutes < 60) return phrase(absMinutes, "minute");
+  if (absHours < 24) return phrase(absHours, "hour");
+  // Round when promoting to coarser units so we never report "in 0 years"
+  // for a token that expires in 364 days; the rounding bias matches the
+  // visual expectation that "almost a year" reads as "in 1 year".
+  if (absDays < 30) return phrase(absDays, "day");
+  if (absDays < 365) return phrase(Math.round(absDays / 30), "month");
+  return phrase(Math.round(absDays / 365), "year");
 }
 
 /**

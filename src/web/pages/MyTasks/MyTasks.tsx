@@ -102,8 +102,8 @@ function parseIdList(raw: string | null): string[] {
 }
 
 export default function MyTasks() {
-  useDocumentTitle("My Tasks");
   const { workspace, members } = useWorkspace();
+  useDocumentTitle(`${workspace.name} — My Tasks`);
   const qc = useQueryClient();
   const { toast } = useToast();
   const reducedMotion = usePrefersReducedMotion();

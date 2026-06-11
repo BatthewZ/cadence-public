@@ -186,6 +186,99 @@ describe("validateWebhookUrl", () => {
     const result = expectInvalid(validateWebhookUrl(""));
     expect(result.error).toContain("Invalid URL");
   });
+
+  // -------------------------------------------------------------------------
+  // SSRF bypass classes — added when the API token PAT audit pass closed
+  // these gaps. Each test below would have bypassed the previous
+  // dotted-decimal-only regex check.
+  // -------------------------------------------------------------------------
+
+  it("rejects decimal-encoded IPv4 loopback (http://2130706433/)", () => {
+    // 2130706433 == 0x7f000001 == 127.0.0.1. A naive regex check on the
+    // literal hostname misses this; the canonicaliser converts it back.
+    const result = expectInvalid(validateWebhookUrl("https://2130706433/exfil"));
+    expect(result.error).toMatch(/private|local/);
+  });
+
+  it("rejects hex-encoded IPv4 loopback (https://0x7f000001/)", () => {
+    const result = expectInvalid(validateWebhookUrl("https://0x7f000001/exfil"));
+    expect(result.error).toMatch(/private|local/);
+  });
+
+  it("rejects short-form IPv4 (https://127.1/)", () => {
+    // 127.1 historically resolves to 127.0.0.1 in many TCP stacks.
+    const result = expectInvalid(validateWebhookUrl("https://127.1/exfil"));
+    expect(result.error).toMatch(/private|local/);
+  });
+
+  it("rejects octal-encoded IPv4 (https://0177.0.0.1/)", () => {
+    // 0177 == 127 octal.
+    const result = expectInvalid(validateWebhookUrl("https://0177.0.0.1/exfil"));
+    expect(result.error).toMatch(/private|local/);
+  });
+
+  it("rejects IPv4-mapped IPv6 with dotted IPv4 (::ffff:127.0.0.1)", () => {
+    const result = expectInvalid(
+      validateWebhookUrl("https://[::ffff:127.0.0.1]/exfil"),
+    );
+    expect(result.error).toContain("private");
+  });
+
+  it("rejects IPv4-mapped IPv6 with hex form (::ffff:7f00:1)", () => {
+    // ::ffff:7f00:1 == ::ffff:127.0.0.1
+    const result = expectInvalid(validateWebhookUrl("https://[::ffff:7f00:1]/exfil"));
+    expect(result.error).toContain("private");
+  });
+
+  it("rejects IPv4-mapped IPv6 reaching a private IPv4 range (::ffff:10.0.0.1)", () => {
+    const result = expectInvalid(
+      validateWebhookUrl("https://[::ffff:10.0.0.1]/exfil"),
+    );
+    expect(result.error).toContain("private");
+  });
+
+  it("rejects IPv6 unique-local address (fc00::1)", () => {
+    const result = expectInvalid(validateWebhookUrl("https://[fc00::1]/exfil"));
+    expect(result.error).toContain("private");
+  });
+
+  it("rejects IPv6 link-local address (fe80::1)", () => {
+    const result = expectInvalid(validateWebhookUrl("https://[fe80::1]/exfil"));
+    expect(result.error).toContain("private");
+  });
+
+  it("rejects IPv6 unspecified address (::)", () => {
+    const result = expectInvalid(validateWebhookUrl("https://[::]/exfil"));
+    expect(result.error).toContain("local");
+  });
+
+  it("rejects URLs containing userinfo (credential leakage)", () => {
+    const result = expectInvalid(
+      validateWebhookUrl("https://attacker:password@public.example.com/exfil"),
+    );
+    expect(result.error).toContain("userinfo");
+  });
+
+  it("rejects URLs with only a username (no password)", () => {
+    const result = expectInvalid(
+      validateWebhookUrl("https://attacker@public.example.com/exfil"),
+    );
+    expect(result.error).toContain("userinfo");
+  });
+
+  it("rejects CGNAT range 100.64.0.0/10", () => {
+    // CGNAT addresses sit between operators and end users; a webhook
+    // pointing at one is almost certainly an internal-network mistake.
+    const result = expectInvalid(validateWebhookUrl("https://100.64.0.1/exfil"));
+    expect(result.error).toContain("private");
+  });
+
+  it("accepts public IPv6 addresses", () => {
+    // 2606:2800:220:1:248:1893:25c8:1946 is iana.org's public IPv6.
+    // Sanity check that we don't over-block public IPv6.
+    const result = validateWebhookUrl("https://[2606:2800:220:1:248:1893:25c8:1946]/ok");
+    expect(result).toEqual({ valid: true });
+  });
 });
 
 // ---------------------------------------------------------------------------

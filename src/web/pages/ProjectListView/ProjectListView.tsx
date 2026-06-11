@@ -16,6 +16,7 @@ import {
 import type { Task } from "@/web/contexts/ProjectContext";
 import { useProject } from "@/web/contexts/ProjectContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
+import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useTaskFilters } from "@/web/hooks/use-task-filters";
 import { getPriorityBadgeVariant, getPriorityLabel } from "@/web/util/task-display";
 
@@ -33,9 +34,10 @@ function formatDate(dateStr: string | null | undefined): string {
 /* ------------------------------------------------------------------ */
 
 export default function ProjectListView() {
-  const { tasks, taskGroups } = useProject();
+  const { project, tasks, taskGroups } = useProject();
   const { filteredTasks: filterBarTasks } = useTaskFilters(tasks);
   const { members } = useWorkspace();
+  useDocumentTitle(`${project.name} — List`);
   const [, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(new Set());

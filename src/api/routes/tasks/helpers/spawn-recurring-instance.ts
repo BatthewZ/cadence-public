@@ -149,6 +149,13 @@ export async function logRecurringInstanceCreated(
     assigneeId: string | null;
     taskTitle: string;
     projectId: string;
+    /**
+     * When the human triggering the completion that spawned this instance
+     * was authenticated via a Personal Access Token, the id is propagated
+     * here so the spawned task's "created" activity is attributed to the
+     * same token. Pass null for scheduled jobs / system-triggered spawns.
+     */
+    apiTokenId?: string | null;
   },
 ): Promise<void> {
   await logActivity(db, {
@@ -156,6 +163,7 @@ export async function logRecurringInstanceCreated(
     actorId: opts.actorId,
     action: "created",
     newValue: "Recurring",
+    apiTokenId: opts.apiTokenId ?? null,
   });
   if (opts.assigneeId && opts.assigneeId !== opts.actorId) {
     await createNotification(db, {

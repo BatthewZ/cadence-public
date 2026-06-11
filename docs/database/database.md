@@ -2,6 +2,8 @@
 
 This project uses **Drizzle ORM** with **Cloudflare D1** (SQLite) as the database layer. D1 is a serverless SQL database built on SQLite, available as a Cloudflare Workers binding.
 
+There are **25 application + auth tables**: workspaces, projects, tasks (with subtasks, comments, activity, attachments, labels), teams, invitations, notifications, webhooks (and their deliveries), legal acceptance, uploads, Better Auth's user/session/account/verification, and `api_token` for machine clients. See [Schema](./schema.md) for the full table reference and [Migration Workflow](./migrations.md) for the development cycle.
+
 ## Documentation
 
 - [Configuration](./configuration.md) -- architecture overview, config files, and the `createDb` factory

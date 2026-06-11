@@ -4,6 +4,7 @@ import { Container, Stack } from "@/web/components/layout";
 import { Alert, Tabs, Text } from "@/web/components/ui";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { useProject } from "@/web/contexts/ProjectContext";
+import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useProjectPermissions } from "@/web/hooks/use-permissions";
 
 import { AppearanceTab } from "./components/AppearanceTab";
@@ -14,6 +15,7 @@ import { WebhooksTab } from "./components/WebhooksTab";
 
 export default function ProjectSettings() {
   const { project, members, refetch, updateProject } = useProject();
+  useDocumentTitle(`${project.name} — Settings`);
   const { isProjectAdmin } = useProjectPermissions(members);
   const { toast } = useToast();
   const navigate = useNavigate();

@@ -3,6 +3,7 @@ import type { AppBindings } from "../env";
 import { createTelemetrySink } from "../lib/telemetry";
 import type { TelemetrySink } from "../lib/telemetry/types";
 import { processWebhookRetries } from "../lib/webhooks";
+import { processScheduledTokenRevocations } from "./api-token-revocation";
 import { cleanupAuthTables } from "./auth-cleanup";
 import { cleanupInvitations } from "./invitation-cleanup";
 import { cleanupNotifications } from "./notification-cleanup";
@@ -29,6 +30,9 @@ import { cleanupWebhookDeliveries } from "./webhook-cleanup";
  *    days and enforces a per-task cap of 500 records.
  * 6. **Invitation cleanup** -- Removes non-pending expired invitations and
  *    pending invitations expired beyond a 7-day grace period.
+ * 7. **API token revocation** -- Finalises scheduled token revocations
+ *    queued by the rotation flow (sets `revokedAt = now` for any token
+ *    whose 7-day grace window has elapsed).
  */
 /** Run a cleanup task, logging results. Catches so one failure doesn't block the rest. */
 async function runTask(name: string, fn: () => Promise<number>, sink?: TelemetrySink): Promise<{ success: boolean }> {
@@ -81,6 +85,7 @@ export async function handleScheduled(
   await track("Cleaned up old notifications", () => cleanupNotifications(db));
   await track("Cleaned up old task activity records", () => cleanupTaskActivity(db));
   await track("Cleaned up expired invitations", () => cleanupInvitations(db));
+  await track("api-token-revocation", () => processScheduledTokenRevocations(db));
 
   sink.track({
     type: "cron_run",

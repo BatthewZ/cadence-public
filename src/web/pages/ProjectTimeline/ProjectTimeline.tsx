@@ -38,8 +38,12 @@ import { TimelineTaskRow } from "./components/TimelineTaskRow";
 /* ------------------------------------------------------------------ */
 
 export default function ProjectTimeline() {
-  useDocumentTitle("Timeline");
   const { project, tasks, updateTask, members, taskGroups, tasksError, refetchTasks } = useProject();
+  // ProjectContext's type says `project: Project`, but the underlying React
+  // Query fetch can transiently produce a null project (see the `!project`
+  // spinner guard below and the loading-state test). Fall back to a bare
+  // "Timeline" title in that window rather than blow up on `null.name`.
+  useDocumentTitle(project ? `${project.name} — Timeline` : "Timeline");
   const { toast } = useToast();
   const qc = useQueryClient();
   const { filteredTasks, filters } = useTaskFilters(tasks);

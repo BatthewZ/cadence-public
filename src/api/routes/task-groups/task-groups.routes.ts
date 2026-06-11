@@ -10,7 +10,9 @@ import type { AppEnv } from "../../env";
 import {
   requireProjectAccess,
   requireProjectRole,
+  requireReadScopeForResource,
   requireWorkspaceMember,
+  requireWriteScopeForResource,
 } from "../../middleware/authorize";
 import { requireAuth } from "../../middleware/require-auth";
 import { validateBody, validateQuery } from "../../middleware/validate";
@@ -24,6 +26,24 @@ import {
 } from "./task-groups.handlers";
 
 const app = new Hono<AppEnv>();
+
+// ---------------------------------------------------------------------------
+// PAT scope enforcement
+// ---------------------------------------------------------------------------
+//
+// Task groups organise tasks within a project — they have no dedicated
+// scope in the doc's grammar, so they fall under `task:*`. A PAT with
+// `task:write` can rearrange task groups (which is functionally a task
+// organisation change). `allowDelete: true` because DELETE on a task
+// group is a destructive operation that maps to `task:delete` for
+// consistency with task deletion.
+const taskReadScope = requireReadScopeForResource("task");
+const taskWriteScope = requireWriteScopeForResource({ resource: "task", allowDelete: true });
+
+app.use("/projects/:projectId/task-groups", taskReadScope, taskWriteScope);
+app.use("/workspaces/:workspaceId/task-groups", taskReadScope, taskWriteScope);
+app.use("/task-groups/:taskGroupId", taskReadScope, taskWriteScope);
+app.use("/task-groups/:taskGroupId/reorder", taskReadScope, taskWriteScope);
 
 // Project-scoped routes (projectId in URL, middleware resolves access)
 app.post(

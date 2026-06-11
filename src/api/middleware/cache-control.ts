@@ -34,3 +34,25 @@ export function cacheControl(maxAge: number): MiddlewareHandler<AppEnv> {
     }
   };
 }
+
+/**
+ * Force `Cache-Control: no-store` on every response. Use on routes that
+ * return sensitive credential metadata — most notably the PAT management
+ * surface (`/workspaces/:id/api-tokens/*`).
+ *
+ * Even though token plaintext is never returned outside of mint/rotate,
+ * the list and detail responses still include `tokenPrefix`, scopes, and
+ * `lastUsedAt` — information that a misconfigured intermediate cache (CDN,
+ * corporate proxy) must not retain across users. Setting `no-store`
+ * unconditionally is the cheapest, most-auditable guarantee.
+ *
+ * Distinct from `cacheControl(maxAge)` which is opt-in caching with
+ * `private, max-age=…`. This middleware is opt-in lockdown.
+ */
+export function noStoreCacheControl(): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    await next();
+    c.res.headers.set("Cache-Control", "no-store");
+    c.res.headers.set("Pragma", "no-cache");
+  };
+}

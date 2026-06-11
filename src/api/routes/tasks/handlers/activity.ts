@@ -1,6 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import type { Context } from "hono";
 
+import { apiToken } from "../../../../db/schema/api-token";
 import { user as userTable } from "../../../../db/schema/auth";
 import { taskActivity } from "../../../../db/schema/task";
 import type { AppEnv } from "../../../env";
@@ -23,6 +24,10 @@ export async function getTaskActivity(c: Context<AppEnv>) {
     conditions.push(compoundCursorCondition(compound, taskActivity.createdAt, taskActivity.id, "desc"));
   }
 
+  // LEFT JOIN api_token so revoked-and-cleaned-up tokens still render
+  // with a null tokenName (UI shows "via deleted token") instead of
+  // dropping the row entirely. Token rows are kept soft-revoked, but
+  // a future hard cleanup is foreseeable.
   const activities = await db
     .select({
       id: taskActivity.id,
@@ -35,9 +40,12 @@ export async function getTaskActivity(c: Context<AppEnv>) {
       oldValue: taskActivity.oldValue,
       newValue: taskActivity.newValue,
       createdAt: taskActivity.createdAt,
+      apiTokenId: taskActivity.apiTokenId,
+      tokenName: apiToken.name,
     })
     .from(taskActivity)
     .leftJoin(userTable, eq(taskActivity.actorId, userTable.id))
+    .leftJoin(apiToken, eq(taskActivity.apiTokenId, apiToken.id))
     .where(and(...conditions))
     .orderBy(desc(taskActivity.createdAt), desc(taskActivity.id))
     .limit(limit);

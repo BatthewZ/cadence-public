@@ -1,6 +1,6 @@
 {
   "name": "cadence",
-  "version": "1.17.1",
+  "version": "1.19.2",
   "private": true,
   "type": "module",
   "scripts": {

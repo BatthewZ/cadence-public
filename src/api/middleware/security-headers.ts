@@ -39,7 +39,11 @@ const SPA_CSP = [
 
 /** Returns true for paths that serve the interactive API documentation UI (Scalar). */
 function isDocsPath(path: string): boolean {
-  return path.startsWith("/api/docs/") || path === "/api/openapi.json";
+  return (
+    path === "/api/docs" ||
+    path.startsWith("/api/docs/") ||
+    path === "/api/openapi.json"
+  );
 }
 
 const DOCS_CSP = [

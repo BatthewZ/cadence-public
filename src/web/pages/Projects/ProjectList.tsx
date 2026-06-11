@@ -30,10 +30,10 @@ import { ProjectCardGrid } from "./components/ProjectCardGrid";
 import { RenameProjectDialog } from "./components/RenameProjectDialog";
 
 export default function ProjectList() {
-  useDocumentTitle("Projects");
-
   const navigate = useNavigate();
   const { workspace, projects, loading, error, refetchProjects } = useWorkspace();
+  useDocumentTitle(`${workspace.name} — Projects`);
+
   const { toast } = useToast();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);

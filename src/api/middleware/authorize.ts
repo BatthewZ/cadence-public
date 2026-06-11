@@ -7,6 +7,7 @@ import { workspaceMember } from "../../db/schema/workspace";
 import type { ProjectRole, WorkspaceRole } from "../../shared/types/roles";
 import type { AppEnv } from "../env";
 import { resolveProjectAccess, resolveTaskAccess } from "../lib/access";
+import { canAccessProject, hasScope } from "../lib/api-tokens";
 import { errorResponse } from "../lib/error-response";
 import { requireParam } from "../lib/params";
 
@@ -106,6 +107,16 @@ export function requireWorkspaceMember(): MiddlewareHandler<AppEnv> {
     const membership = await getOrResolveWorkspaceMembership(c, workspaceId, user.id);
     if (!membership) return errorResponse(c, "Forbidden", 403);
 
+    // PAT workspace-scope guard. A token bound to workspace A may never act
+    // on workspace B even if its user is also a member of B — the token is
+    // the workspace boundary, not the user. We return the same generic 403
+    // as the no-membership case so the response shape never reveals the
+    // distinction between "wrong token" and "no membership" to a probe.
+    const token = c.get("apiToken");
+    if (token && token.workspaceId !== workspaceId) {
+      return errorResponse(c, "Forbidden", 403);
+    }
+
     await next();
   };
 }
@@ -128,6 +139,13 @@ export function requireWorkspaceRole(
     const membership = await getOrResolveWorkspaceMembership(c, workspaceId, user.id);
     if (!membership) return errorResponse(c, "Forbidden", 403);
     if (!allowedRoles.includes(membership.role)) return errorResponse(c, "Forbidden", 403);
+
+    // PAT workspace-scope guard. See `requireWorkspaceMember` for the why
+    // behind the generic 403 (no information disclosure).
+    const token = c.get("apiToken");
+    if (token && token.workspaceId !== workspaceId) {
+      return errorResponse(c, "Forbidden", 403);
+    }
 
     await next();
   };
@@ -153,6 +171,17 @@ export function requireProjectAccess(): MiddlewareHandler<AppEnv> {
     if (access === "not_found") return errorResponse(c, "Not found", 404);
     if (!access) return errorResponse(c, "Forbidden", 403);
 
+    // PAT project-scope guard. A token minted with `projectScope: "selected"`
+    // only sees the explicit id list; "all" always passes. We delegate the
+    // check to `canAccessProject` so the policy logic stays single-sourced
+    // in api-tokens.ts (Rule 4: no migrations/adapters, single source of
+    // truth). Same generic 403 as the membership-failure path to avoid
+    // disclosing scope-list shape to an attacker.
+    const token = c.get("apiToken");
+    if (token && !canAccessProject(token, projectId)) {
+      return errorResponse(c, "Forbidden", 403);
+    }
+
     await next();
   };
 }
@@ -176,6 +205,12 @@ export function requireProjectRole(
     if (access === "not_found") return errorResponse(c, "Not found", 404);
     if (!access) return errorResponse(c, "Forbidden", 403);
     if (!allowedRoles.includes(access.role)) return errorResponse(c, "Forbidden", 403);
+
+    // PAT project-scope guard — see `requireProjectAccess` for rationale.
+    const token = c.get("apiToken");
+    if (token && !canAccessProject(token, projectId)) {
+      return errorResponse(c, "Forbidden", 403);
+    }
 
     await next();
   };
@@ -213,6 +248,16 @@ export function requireTaskAccess(): MiddlewareHandler<AppEnv> {
 
     c.set("projectAccess", { role: result.access.role, source: result.access.source });
     c.set("currentProject", result.access.project);
+
+    // PAT project-scope guard. We use the project resolved from the task
+    // (the URL only gives us a taskId) so the token's `selected` list must
+    // cover the *owning* project. Same generic 403 to keep the response
+    // shape uniform with the membership-failure path.
+    const token = c.get("apiToken");
+    if (token && !canAccessProject(token, result.access.project.id)) {
+      return errorResponse(c, "Forbidden", 403);
+    }
+
     await next();
   };
 }
@@ -257,6 +302,178 @@ export function requireTaskRole(
 
     c.set("projectAccess", { role: result.access.role, source: result.access.source });
     c.set("currentProject", result.access.project);
+
+    // PAT project-scope guard — mirrors requireTaskAccess. Applied here too
+    // because this guard is the mutating-endpoint variant of the same check
+    // and must enforce the token's selected-project list identically.
+    const token = c.get("apiToken");
+    if (token && !canAccessProject(token, result.access.project.id)) {
+      return errorResponse(c, "Forbidden", 403);
+    }
+
+    await next();
+  };
+}
+
+// ---------------------------------------------------------------------------
+// PAT lockout middleware
+// ---------------------------------------------------------------------------
+
+/**
+ * Rejects any request that arrived with a Personal Access Token (PAT) with
+ * a uniform 403. Mount this on routes that must NEVER be reachable via
+ * machine credentials — the canonical case is the PAT-management surface
+ * itself, where allowing PAT callers would let a leaked token mint
+ * siblings, rotate itself out of the audit window, or enumerate the rest
+ * of the workspace's tokens.
+ *
+ * Why this lives as middleware instead of a per-handler guard: every
+ * handler in `api-tokens.handlers.ts` currently calls `rejectPatCaller(c)`
+ * as its first line. That pattern is correct but fragile — a future
+ * handler that forgets the call silently exposes the surface. Mounting
+ * the check once at the route-group level enforces the policy by
+ * construction. Per CLAUDE.md Rule 4 (single source of truth), the policy
+ * lives here so the routes file does not encode its own copy.
+ */
+export function rejectPatAuth(): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    if (c.get("apiToken")) {
+      return errorResponse(c, "API tokens cannot manage other tokens", 403);
+    }
+    await next();
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Token scope middleware
+// ---------------------------------------------------------------------------
+
+/**
+ * Enforce a required scope on PAT-authenticated requests. No-op for cookie-
+ * authenticated requests, which inherit full user permissions.
+ *
+ * Why this exists: scope checks must be independent of role checks. A user
+ * may legitimately hold workspace-admin role, but a token they mint with
+ * only `task:read` must NOT be able to write tasks just because the
+ * underlying human can. The middleware enforces `min(token scopes, user
+ * role)` (per the design doc) at the route level — the role half is handled
+ * by `requireWorkspaceRole` / `requireProjectRole`, and this middleware
+ * supplies the scope half.
+ *
+ * Cookie auth bypass is deliberate: legacy sessions did not have scopes and
+ * grandfathering them in at "full" preserves existing behavior. Adding
+ * scopes to cookies is a separate, larger conversation.
+ *
+ * The 403 message names the missing scope by design — for PATs we WANT the
+ * caller (an integration developer) to know exactly which scope to request.
+ * Unlike anonymous workspace probes there is no enumeration risk: the
+ * caller has already proven token possession.
+ */
+export function requireTokenScope(scope: string): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    const token = c.get("apiToken");
+    if (token && !hasScope(token, scope)) {
+      return errorResponse(c, `Insufficient scope: requires ${scope}`, 403);
+    }
+    await next();
+  };
+}
+
+/**
+ * Options for `requireWriteScopeForResource`.
+ *
+ * `resource` is the singular noun the scope grammar uses (e.g. `task`,
+ * `project`, `label`). `allowDelete: true` opts the route group into the
+ * stricter `<resource>:delete` scope on DELETE requests; without it,
+ * DELETE just requires `<resource>:write` like every other mutation. Only
+ * `task` and `project` define a separate `:delete` scope in the v1 grammar
+ * (per docs/api/api.md scope table) — `allowDelete` exists so callers
+ * declare the policy at the route mount and we do not have to bake the
+ * grammar into the middleware itself.
+ */
+export type WriteScopeOptions = { resource: string; allowDelete?: boolean };
+
+/**
+ * Auto-apply the correct write scope for a mutating request, based on the
+ * HTTP method. Designed to be mounted once per resource at the route group
+ * level so individual handlers do not have to repeat scope wiring.
+ *
+ * Mapping:
+ *  - GET / HEAD / OPTIONS → no check (read scopes are wired explicitly via
+ *    `requireReadScopeForResource` so opt-in is visible at the route).
+ *  - DELETE with `allowDelete: true` → `<resource>:delete`
+ *  - DELETE without `allowDelete` → `<resource>:write`
+ *  - POST / PUT / PATCH / any other mutation → `<resource>:write`
+ *
+ * No-op when no PAT is present, so cookie sessions remain unaffected.
+ *
+ * Why we centralize this: every mutating route would otherwise need a
+ * hand-rolled scope check, and the consistency cost of doing 80 of those
+ * is a guaranteed bug surface. One mount per resource is auditable in a
+ * single grep.
+ */
+export function requireWriteScopeForResource(
+  opts: WriteScopeOptions,
+): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    const token = c.get("apiToken");
+    if (!token) {
+      await next();
+      return;
+    }
+
+    const method = c.req.method.toUpperCase();
+    // Safe methods — leave read-scope enforcement to the explicit factory.
+    if (method === "GET" || method === "HEAD" || method === "OPTIONS") {
+      await next();
+      return;
+    }
+
+    const scope =
+      method === "DELETE" && opts.allowDelete
+        ? `${opts.resource}:delete`
+        : `${opts.resource}:write`;
+
+    if (!hasScope(token, scope)) {
+      return errorResponse(c, `Insufficient scope: requires ${scope}`, 403);
+    }
+
+    await next();
+  };
+}
+
+/**
+ * Auto-apply the `<resource>:read` scope check. Mount alongside
+ * `requireWriteScopeForResource` at the route group so both reads and
+ * writes are scope-gated symmetrically.
+ *
+ * Like the write factory: no-op on cookie auth, no-op on non-safe methods
+ * (those are the write factory's responsibility). Splitting read vs write
+ * into two factories keeps each mount focused and makes it explicit at
+ * the call site that the route group intends to enforce BOTH directions.
+ */
+export function requireReadScopeForResource(
+  resource: string,
+): MiddlewareHandler<AppEnv> {
+  return async (c, next) => {
+    const token = c.get("apiToken");
+    if (!token) {
+      await next();
+      return;
+    }
+
+    const method = c.req.method.toUpperCase();
+    // Only enforce on safe methods — writes are handled by the write factory.
+    if (method !== "GET" && method !== "HEAD") {
+      await next();
+      return;
+    }
+
+    const scope = `${resource}:read`;
+    if (!hasScope(token, scope)) {
+      return errorResponse(c, `Insufficient scope: requires ${scope}`, 403);
+    }
+
     await next();
   };
 }

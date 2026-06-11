@@ -116,12 +116,15 @@ export async function createTask(c: Context<AppEnv>) {
     return row;
   });
 
+  const createApiTokenId = c.get("apiToken")?.id ?? null;
+
   // Defer activity logging + notifications — runs after response is sent
   deferWork(c, async () => {
     await logActivity(db, {
       taskId: id,
       actorId: user.id,
       action: "created",
+      apiTokenId: createApiTokenId,
     });
     if (newTask.assigneeId && newTask.assigneeId !== user.id) {
       await createNotification(db, {
@@ -368,6 +371,7 @@ export async function updateTask(c: Context<AppEnv>) {
 
   // Defer activity logging + notifications — runs after response is sent
   {
+    const updateApiTokenId = c.get("apiToken")?.id ?? null;
     const activities: ActivityEntry[] = [];
 
     if (body.assigneeId !== undefined && body.assigneeId !== currentTask.assigneeId) {
@@ -378,6 +382,7 @@ export async function updateTask(c: Context<AppEnv>) {
         field: "assigneeId",
         oldValue: currentTask.assigneeId,
         newValue: body.assigneeId,
+        apiTokenId: updateApiTokenId,
       });
     }
     if (body.priority !== undefined && body.priority !== currentTask.priority) {
@@ -388,6 +393,7 @@ export async function updateTask(c: Context<AppEnv>) {
         field: "priority",
         oldValue: currentTask.priority,
         newValue: body.priority,
+        apiTokenId: updateApiTokenId,
       });
     }
     if (body.title !== undefined && body.title !== currentTask.title) {
@@ -398,6 +404,7 @@ export async function updateTask(c: Context<AppEnv>) {
         field: "title",
         oldValue: currentTask.title,
         newValue: body.title,
+        apiTokenId: updateApiTokenId,
       });
     }
     if (body.dueDate !== undefined) {
@@ -411,6 +418,7 @@ export async function updateTask(c: Context<AppEnv>) {
           field: "dueDate",
           oldValue: oldDue,
           newValue: newDue,
+          apiTokenId: updateApiTokenId,
         });
       }
     }
@@ -420,6 +428,7 @@ export async function updateTask(c: Context<AppEnv>) {
         actorId: user.id,
         action: "description_updated",
         field: "description",
+        apiTokenId: updateApiTokenId,
       });
     }
     if (body.recurrenceRule !== undefined) {
@@ -431,6 +440,7 @@ export async function updateTask(c: Context<AppEnv>) {
           actorId: user.id,
           action: body.recurrenceRule ? "recurrence_changed" : "recurrence_removed",
           field: "recurrenceRule",
+          apiTokenId: updateApiTokenId,
         });
       }
     }

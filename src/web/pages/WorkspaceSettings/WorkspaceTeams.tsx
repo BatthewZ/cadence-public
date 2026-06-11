@@ -14,6 +14,7 @@ import {
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { useWorkspace, type WorkspaceTeam } from "@/web/contexts/WorkspaceContext";
+import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 
@@ -35,6 +36,7 @@ interface UpdateTeamInput {
 
 export default function WorkspaceTeams() {
   const { workspace, members, refetch } = useWorkspace();
+  useDocumentTitle(`${workspace.name} — Teams`);
   const { toast } = useToast();
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);

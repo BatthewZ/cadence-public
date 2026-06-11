@@ -74,6 +74,7 @@ export async function createComment(c: Context<AppEnv>) {
       actorId: user.id,
       action: "comment_added",
       newValue: body.body.substring(0, 100),
+      apiTokenId: c.get("apiToken")?.id ?? null,
     });
   } catch (error) {
     console.error("Failed to log activity for createComment:", { taskId, userId: user.id, commentId: id }, error);
@@ -153,6 +154,7 @@ export async function updateComment(c: Context<AppEnv>) {
       taskId: found.taskId,
       actorId: user.id,
       action: "comment_updated",
+      apiTokenId: c.get("apiToken")?.id ?? null,
     });
   } catch (error) {
     console.error("Failed to log activity for updateComment:", error);
@@ -208,6 +210,7 @@ export async function deleteComment(c: Context<AppEnv>) {
       taskId: found.taskId,
       actorId: user.id,
       action: "comment_deleted",
+      apiTokenId: c.get("apiToken")?.id ?? null,
     });
   } catch (error) {
     console.error("Failed to log activity for deleteComment:", error);

@@ -26,7 +26,7 @@ Request
 6. CORS                    -- validates origin, sets CORS headers
   |
   v
-7. authSessionMiddleware   -- extracts user/session from cookies (skips DB when no credentials)
+7. authSessionMiddleware   -- resolves PAT (Bearer) OR cookie session, sets user/session/apiToken
   |
   v
 Route Handler (or 404 catch-all)
@@ -178,9 +178,31 @@ CORS is configured using Hono's built-in `cors()` middleware. See [CORS](./cors.
 
 ### 7. Auth Session (`src/api/middleware/auth.ts`)
 
-Extracts the user session from cookies on every request. Sets `c.get("user")` and `c.get("session")` -- either with valid session data or `null`. Does not block unauthenticated requests. See the [Auth documentation](../auth/auth.md) for details.
+Resolves the authenticated identity for every request. Two paths are supported, evaluated in priority order:
 
-**Early exit optimization:** When neither a `cookie` header nor an `authorization` header is present on the request, the middleware sets both context values to `null` and skips the `getSession()` DB call entirely. This avoids unnecessary database round-trips for unauthenticated preflight and public requests.
+1. **Personal Access Token** — if the request carries `Authorization: Bearer cdn_pat_…`, the middleware calls `verifyToken()` from [`src/api/lib/api-tokens.ts`](../../src/api/lib/api-tokens.ts). On success it sets `c.set("user", result.user)`, `c.set("session", null)`, `c.set("apiToken", result.token)`, pre-caches `c.set("workspaceMembership", result.workspaceMembership)` to spare a downstream DB lookup, and schedules a fire-and-forget `bumpLastUsedAt()` via `deferWork()` so the request itself never blocks on the write. On failure (malformed, unknown, expired, revoked) the middleware returns `401 Invalid API token` **immediately** — it does **not** fall through to the cookie path. Falling through would let an attacker present a stale PAT and silently ride a victim's cookie session (a downgrade attack).
+2. **Cookie session** — if no Bearer token is present, the middleware extracts the Better Auth session from cookies. Sets `c.get("user")` and `c.get("session")` -- either with valid session data or `null`. Does not block unauthenticated requests. See the [Auth documentation](../auth/auth.md) for details.
+
+**Context set:**
+
+| Key | Type | Value |
+|---|---|---|
+| `user` | `User \| null` | The authenticated user (same shape for cookie and PAT branches) |
+| `session` | `Session \| null` | The session record on the cookie branch; `null` on the PAT branch |
+| `apiToken` | `ApiToken \| null` | The verified PAT row on the PAT branch; `null` on the cookie branch |
+| `workspaceMembership` | optional pre-cached membership | Pre-populated on the PAT branch because the token already encodes the workspace |
+
+Downstream middleware can branch on `c.get("apiToken")` to apply PAT-specific behavior:
+
+- `requireWorkspaceMember()` rejects with `403` if `apiToken.workspaceId !== requestedWorkspaceId`.
+- `requireProjectAccess()` / `requireTaskAccess()` reject with `403` if the token is in `projectScope: "selected"` mode and the resolved project is not in `apiToken.projectIds`.
+- `requireTokenScope(scope)` and the auto-derived `requireWriteScope` middleware enforce the `scopes` array. Cookie auth bypasses these checks entirely — they are a no-op when no `apiToken` is in context.
+- Rate-limit key resolution prefers `pat:<tokenId>` over `user:<userId>` over IP, and PAT requests get a higher quota (600/min default vs 120/min for cookies). See [API Tokens § Rate Limits](./api-tokens.md#rate-limits).
+- Activity attribution captures `c.get("apiToken")?.id` so mutations made via a PAT render as `"Jane (via Slackbot)"` in the feed.
+
+**Early exit optimization:** When neither a `cookie` header nor an `authorization` header is present on the request, the middleware sets all context values to `null` and skips both the PAT lookup and the `getSession()` DB call. This avoids unnecessary database round-trips for unauthenticated preflight and public requests.
+
+For the full PAT model — format, scopes, project scoping, expiry, rotation, revocation, and security best practices — see [API Tokens](./api-tokens.md).
 
 ---
 

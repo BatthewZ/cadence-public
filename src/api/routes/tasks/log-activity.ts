@@ -8,6 +8,16 @@ export interface ActivityEntry {
   field?: string;
   oldValue?: string | null;
   newValue?: string | null;
+  /**
+   * If the request was authenticated via a Personal Access Token,
+   * the token's id is recorded here for activity attribution.
+   *
+   * Why: lets the activity feed render "<User> (via <TokenName>)" so
+   * humans can tell apart actions taken by integrations vs. real user
+   * sessions. Null when the request was made via a regular cookie
+   * session or by an internal/system code path (e.g. scheduled jobs).
+   */
+  apiTokenId?: string | null;
 }
 
 /** Insert a task activity record */
@@ -23,6 +33,7 @@ export async function logActivity(
     field: opts.field ?? null,
     oldValue: opts.oldValue ?? null,
     newValue: opts.newValue ?? null,
+    apiTokenId: opts.apiTokenId ?? null,
     createdAt: new Date(),
   });
 }
@@ -48,6 +59,7 @@ export async function logActivityBatch(
       field: opts.field ?? null,
       oldValue: opts.oldValue ?? null,
       newValue: opts.newValue ?? null,
+      apiTokenId: opts.apiTokenId ?? null,
       createdAt: now,
     })),
   );
