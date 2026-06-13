@@ -10,8 +10,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { Input } from "@/web/components/form/Input";
-import { Textarea } from "@/web/components/form/Textarea";
 import { Divider, Stack } from "@/web/components/layout";
+import { EditableMarkdown } from "@/web/components/markdown/EditableMarkdown";
 import { useAppShell } from "@/web/components/ui/AppShell";
 import { Button } from "@/web/components/ui/Button";
 import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
@@ -197,13 +197,10 @@ export function TaskDetailPanelInner({
     setEditingTitle,
     titleValue,
     setTitleValue,
-    descriptionValue,
-    setDescriptionValue,
     costDisplay,
     setCostDisplay,
     handlePatch,
     handleTitleSave,
-    handleDescriptionBlur,
     handleCostBlur,
   } = useTaskEditing({
     taskId,
@@ -284,13 +281,12 @@ export function TaskDetailPanelInner({
       setLocalTask(cached?.task ?? null);
       setEditingTitle(false);
       setTitleValue(cached?.task?.title ?? "");
-      setDescriptionValue(cached?.task?.description ?? "");
       setCostDisplay(cached?.task?.cost != null ? (cached.task.cost / 100).toFixed(2) : "");
       setNewSubtaskTitle("");
       resetCommentState();
       setShowDeleteDialog(false);
     });
-  }, [taskId, qc, dirtyFields, setEditingTitle, setTitleValue, setDescriptionValue, setCostDisplay, setNewSubtaskTitle, resetCommentState, setShowDeleteDialog]);
+  }, [taskId, qc, dirtyFields, setEditingTitle, setTitleValue, setCostDisplay, setNewSubtaskTitle, resetCommentState, setShowDeleteDialog]);
 
   // Keyboard escape to close
   useEffect(() => {
@@ -499,17 +495,15 @@ export function TaskDetailPanelInner({
                 <Text variant="body-3" weight="semibold" color="secondary" className="mb-r5">
                   Description
                 </Text>
-                <Textarea
-                  value={descriptionValue}
-                  onChange={(e) => setDescriptionValue(e.target.value)}
-                  onFocus={() => dirtyFields.current.add("description")}
-                  onBlur={() => {
-                    void handleDescriptionBlur();
+                <EditableMarkdown
+                  value={task.description ?? ""}
+                  onSave={async (next) => {
+                    await handlePatch({ description: next || null });
                   }}
-                  placeholder={canEditTasks ? "Add a description..." : "No description"}
+                  members={members}
                   readOnly={!canEditTasks}
-                  rows={5}
-                  className="resize-y min-h-[5rem] border-transparent bg-surface-1 hover:border-border-default focus:border-border-strong focus:bg-surface-0"
+                  density="compact"
+                  placeholder={canEditTasks ? "Add a description…" : "No description"}
                 />
               </div>
 

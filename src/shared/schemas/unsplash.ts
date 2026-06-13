@@ -44,6 +44,33 @@ export const unsplashCoverPayloadSchema = z.object({
   }),
 });
 
+/**
+ * Persistence / read variant of {@link unsplashCoverPayloadSchema}.
+ *
+ * Identical to the strict schema EXCEPT `rawUrl` is OPTIONAL, because rows
+ * written before `rawUrl` was introduced (see the `rawUrl` field doc above)
+ * never stored it. This is the honest shape of every place that reads or
+ * round-trips a STORED cover rather than accepting a freshly-picked one:
+ *  - the `cover_unsplash` DB column (`$type`),
+ *  - project/task API responses, and
+ *  - workspace export → import round-trips.
+ *
+ * Why this is a SEPARATE schema and not just `rawUrl.optional()` on the one
+ * above: the strict schema is the *write* contract. The `PUT .../cover/unsplash`
+ * apply endpoints validate their request body with it, so every NEW cover is
+ * guaranteed full-fidelity (carries `rawUrl`). Keeping the two distinct
+ * preserves that creation guarantee while letting legacy rows round-trip
+ * instead of failing import with
+ * `coverUnsplash.rawUrl: expected string, received undefined`.
+ *
+ * The runtime read path already treats `rawUrl` as optional and falls back to
+ * `url`/`thumbUrl` for these rows (see `buildUnsplashDisplayUrl`), so this
+ * merely makes the type system agree with behavior that already shipped.
+ */
+export const storedUnsplashCoverPayloadSchema = unsplashCoverPayloadSchema.extend({
+  rawUrl: z.url().optional(),
+});
+
 export const unsplashSearchResponseSchema = z.object({
   page: z.number().int().positive(),
   perPage: z.number().int().positive(),
@@ -55,4 +82,5 @@ export const unsplashSearchResponseSchema = z.object({
 export type UnsplashSearchInput = z.infer<typeof unsplashSearchSchema>;
 export type UnsplashCuratedInput = z.infer<typeof unsplashCuratedQuerySchema>;
 export type UnsplashCoverPayload = z.infer<typeof unsplashCoverPayloadSchema>;
+export type StoredUnsplashCoverPayload = z.infer<typeof storedUnsplashCoverPayloadSchema>;
 export type UnsplashSearchResponse = z.infer<typeof unsplashSearchResponseSchema>;

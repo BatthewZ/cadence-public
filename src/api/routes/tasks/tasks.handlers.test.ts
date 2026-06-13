@@ -21,7 +21,10 @@ import {
   moveTaskSchema,
   updateTaskSchema,
 } from "../../../shared/schemas/task";
-import type { UnsplashCoverPayload } from "../../../shared/schemas/unsplash";
+import type {
+  StoredUnsplashCoverPayload,
+  UnsplashCoverPayload,
+} from "../../../shared/schemas/unsplash";
 import { unsplashCoverPayloadSchema } from "../../../shared/schemas/unsplash";
 import type { AppEnv } from "../../env";
 import { validateBody, validateQuery } from "../../middleware/validate";
@@ -40,6 +43,7 @@ import {
   seedTask,
   seedTaskGroup,
   seedUser,
+  seedWebhook,
   seedWorkspace,
   TEST_USER,
   TEST_USER_2,
@@ -543,6 +547,413 @@ describe("updateTask", () => {
     );
 
     expect(res.status).toBe(404);
+  });
+});
+
+// =========================================================================
+// startDate (date-range) behaviour
+// =========================================================================
+
+/**
+ * startDate and dueDate are each INDEPENDENTLY optional — a task may carry a
+ * start date alone (work that begins on a day with no deadline), a due date
+ * alone, both (a start → due range), or neither. The ONLY cross-field rule is
+ * ordering: when both are present, start must be on or before due. These tests
+ * pin the two layers that enforce just that ordering, plus the independence:
+ *
+ * 1. Schema refinements (create always; update only when both fields appear in
+ *    the payload — a partial PATCH can't see stored values). Start-only is
+ *    accepted; only an inverted range (both present, start > due) is rejected.
+ * 2. The updateTask merged-state backstop — MANDATORY, because without it
+ *    `PATCH {startDate}` against an earlier stored dueDate would persist an
+ *    inverted range that the schema can never catch. A start-only PATCH against
+ *    a task with no stored dueDate is fine (start can stand alone).
+ *
+ * Independence also means clearing the due date leaves a surviving start date
+ * in place — there is no auto-clear, because a due-less start is now valid.
+ *
+ * Calendar validation (rejecting 2030-02-30) matters because the handler feeds
+ * the string straight into `new Date()` — a shape-only check would store a
+ * silently rolled-forward date.
+ */
+describe("startDate", () => {
+  function createApp() {
+    const app = new Hono<AppEnv>();
+    app.post(
+      "/projects/:projectId/tasks",
+      auth(),
+      validateBody(createTaskSchema),
+      createTask,
+    );
+    return app;
+  }
+
+  function updateApp() {
+    const app = new Hono<AppEnv>();
+    app.patch("/tasks/:taskId", auth(), validateBody(updateTaskSchema), updateTask);
+    return app;
+  }
+
+  /**
+   * ExecutionContext whose waitUntil promises can be flushed. Passing this to
+   * `app.request` routes deferWork (activity logging) and webhook dispatch
+   * through waitUntil so tests can deterministically await those side-effects
+   * instead of racing the inline fire-and-forget fallback.
+   */
+  function createAwaitableExecutionCtx() {
+    const promises: Promise<unknown>[] = [];
+    return {
+      ctx: {
+        waitUntil: (p: Promise<unknown>) => {
+          promises.push(p);
+        },
+        passThroughOnException: () => {},
+      } as ExecutionContext,
+      flush: async () => {
+        // Loop: a flushed promise may schedule further waitUntil work
+        // (e.g. webhook delivery recording) that must also settle.
+        let awaited = 0;
+        while (awaited < promises.length) {
+          const batch = promises.slice(awaited);
+          awaited = promises.length;
+          await Promise.all(batch);
+        }
+      },
+    };
+  }
+
+  async function fetchActivities(taskId: string) {
+    const activityApp = new Hono<AppEnv>();
+    activityApp.get("/tasks/:taskId/activity", auth(), getTaskActivity);
+    const res = await activityApp.request(`/tasks/${taskId}/activity?limit=50`);
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      activities: { action: string; field: string | null; oldValue: string | null; newValue: string | null }[];
+    }>();
+    return body.activities;
+  }
+
+  // -------------------------------------------------------------------------
+  // createTask
+  // -------------------------------------------------------------------------
+
+  it("creates a task with startDate and dueDate, persisting both as UTC-midnight timestamps", async () => {
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projectId}/tasks`,
+      jsonRequest("POST", `/projects/${projectId}/tasks`, {
+        title: "Ranged task",
+        taskGroupId,
+        startDate: "2030-03-01",
+        dueDate: "2030-03-05",
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json<{ task: { id: string; startDate: string | null; dueDate: string | null } }>();
+    expect(body.task.startDate).toBe("2030-03-01T00:00:00.000Z");
+    expect(body.task.dueDate).toBe("2030-03-05T00:00:00.000Z");
+
+    // Round-trip through getTask to confirm the stored row (not just the
+    // in-memory insert object) carries both dates.
+    const getApp = new Hono<AppEnv>();
+    getApp.get("/tasks/:taskId", auth(), getTask);
+    const getRes = await getApp.request(`/tasks/${body.task.id}`);
+    expect(getRes.status).toBe(200);
+    const getBody = await getRes.json<{ task: { startDate: string | null; dueDate: string | null } }>();
+    expect(getBody.task.startDate).toBe("2030-03-01T00:00:00.000Z");
+    expect(getBody.task.dueDate).toBe("2030-03-05T00:00:00.000Z");
+  });
+
+  it("creates a start-only task (startDate without dueDate) and persists it as UTC-midnight", async () => {
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projectId}/tasks`,
+      jsonRequest("POST", `/projects/${projectId}/tasks`, {
+        title: "Start only",
+        taskGroupId,
+        startDate: "2030-03-01",
+      }),
+    );
+
+    // A start date no longer requires a due date — this is a valid task.
+    expect(res.status).toBe(201);
+    const body = await res.json<{ task: { id: string; startDate: string | null; dueDate: string | null } }>();
+    expect(body.task.startDate).toBe("2030-03-01T00:00:00.000Z");
+    expect(body.task.dueDate).toBeNull();
+
+    // Confirm the stored row (not just the insert object) carries start-only.
+    const getApp = new Hono<AppEnv>();
+    getApp.get("/tasks/:taskId", auth(), getTask);
+    const getRes = await getApp.request(`/tasks/${body.task.id}`);
+    const getBody = await getRes.json<{ task: { startDate: string | null; dueDate: string | null } }>();
+    expect(getBody.task.startDate).toBe("2030-03-01T00:00:00.000Z");
+    expect(getBody.task.dueDate).toBeNull();
+  });
+
+  it("returns 400 when startDate is after dueDate on create", async () => {
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projectId}/tasks`,
+      jsonRequest("POST", `/projects/${projectId}/tasks`, {
+        title: "Inverted range",
+        taskGroupId,
+        startDate: "2030-03-06",
+        dueDate: "2030-03-05",
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string; details: { path: string; message: string }[] }>();
+    expect(body.details.some((d) => /on or before the due date/i.test(d.message))).toBe(true);
+  });
+
+  it("does not fabricate a dueDate for a recurring start-only task (no inverted range)", async () => {
+    // Recurrence normally defaults a missing dueDate to today so the series has
+    // an anchor. But a future start date is the anchor for a start-only series,
+    // so defaulting dueDate to today would store start(future) > due(today) —
+    // an inverted range the schema's start ≤ due check (run before the default)
+    // can't catch. The handler must leave the task start-only instead.
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projectId}/tasks`,
+      jsonRequest("POST", `/projects/${projectId}/tasks`, {
+        title: "Recurring start-only",
+        taskGroupId,
+        startDate: "2030-03-07",
+        recurrenceRule: { frequency: "weekly", interval: 1 },
+      }),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json<{ task: { startDate: string | null; dueDate: string | null } }>();
+    expect(body.task.startDate).toBe("2030-03-07T00:00:00.000Z");
+    expect(body.task.dueDate).toBeNull();
+  });
+
+  it("returns 400 for a calendar-invalid startDate (2030-02-30)", async () => {
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projectId}/tasks`,
+      jsonRequest("POST", `/projects/${projectId}/tasks`, {
+        title: "Impossible date",
+        taskGroupId,
+        startDate: "2030-02-30",
+        dueDate: "2030-03-05",
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("Validation failed");
+  });
+
+  // -------------------------------------------------------------------------
+  // updateTask — merged-state backstop
+  // -------------------------------------------------------------------------
+
+  it("rejects a startDate-only PATCH that lands after the STORED dueDate (merged-state backstop)", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Backstop invalid",
+      dueDate: new Date("2030-03-04"),
+    });
+
+    const app = updateApp();
+    const res = await app.request(
+      `/tasks/${taskId}`,
+      jsonRequest("PATCH", `/tasks/${taskId}`, { startDate: "2030-03-05" }),
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toMatch(/start date must be on or before the due date/i);
+  });
+
+  it("accepts a startDate-only PATCH when the task has no stored dueDate (start can stand alone)", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Start stands alone",
+    });
+
+    const app = updateApp();
+    const res = await app.request(
+      `/tasks/${taskId}`,
+      jsonRequest("PATCH", `/tasks/${taskId}`, { startDate: "2030-03-01" }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ task: { startDate: string | null; dueDate: string | null } }>();
+    expect(body.task.startDate).toBe("2030-03-01T00:00:00.000Z");
+    expect(body.task.dueDate).toBeNull();
+  });
+
+  it("accepts a startDate-only PATCH that is valid against the stored dueDate and logs start_date_changed", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Backstop valid",
+      dueDate: new Date("2030-03-04"),
+    });
+
+    const { ctx, flush } = createAwaitableExecutionCtx();
+    const app = updateApp();
+    const res = await app.request(
+      `/tasks/${taskId}`,
+      jsonRequest("PATCH", `/tasks/${taskId}`, { startDate: "2030-03-03" }),
+      {},
+      ctx,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ task: { startDate: string | null; dueDate: string | null } }>();
+    expect(body.task.startDate).toBe("2030-03-03T00:00:00.000Z");
+    expect(body.task.dueDate).toBe("2030-03-04T00:00:00.000Z");
+
+    await flush();
+    const activities = await fetchActivities(taskId);
+    const startChanged = activities.find(
+      (a) => a.action === "start_date_changed" && a.field === "startDate",
+    );
+    expect(startChanged).toBeDefined();
+    expect(startChanged!.oldValue).toBeNull();
+    expect(startChanged!.newValue).toBe("2030-03-03");
+  });
+
+  it("clearing dueDate leaves a surviving startDate intact and logs only the due removal", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Due cleared, start kept",
+      startDate: new Date("2030-03-01"),
+      dueDate: new Date("2030-03-05"),
+    });
+
+    const { ctx, flush } = createAwaitableExecutionCtx();
+    const app = updateApp();
+    const res = await app.request(
+      `/tasks/${taskId}`,
+      jsonRequest("PATCH", `/tasks/${taskId}`, { dueDate: null }),
+      {},
+      ctx,
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ task: { startDate: string | null; dueDate: string | null } }>();
+    // The start date stands alone now — clearing the due date does not touch it.
+    expect(body.task.startDate).toBe("2030-03-01T00:00:00.000Z");
+    expect(body.task.dueDate).toBeNull();
+
+    await flush();
+    const activities = await fetchActivities(taskId);
+    const dueRemoved = activities.find((a) => a.action === "due_date_removed");
+    const startRemoved = activities.find((a) => a.action === "start_date_removed");
+    expect(dueRemoved).toBeDefined();
+    // No phantom start_date_removed: the start date was never cleared.
+    expect(startRemoved).toBeUndefined();
+  });
+
+  it("rejects an update where both fields appear and startDate is after dueDate (schema refinement)", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Schema refinement update",
+    });
+
+    const app = updateApp();
+    const res = await app.request(
+      `/tasks/${taskId}`,
+      jsonRequest("PATCH", `/tasks/${taskId}`, {
+        startDate: "2030-03-09",
+        dueDate: "2030-03-08",
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string; details: { message: string }[] }>();
+    expect(body.error).toBe("Validation failed");
+    expect(body.details.some((d) => /on or before the due date/i.test(d.message))).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // duplicateTask
+  // -------------------------------------------------------------------------
+
+  it("copies startDate (alongside dueDate) when duplicating a task", async () => {
+    const sourceId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Range source",
+      startDate: new Date("2030-04-01"),
+      dueDate: new Date("2030-04-10"),
+    });
+
+    const app = new Hono<AppEnv>();
+    app.post("/tasks/:taskId/duplicate", auth(), duplicateTask);
+    const res = await app.request(
+      `/tasks/${sourceId}/duplicate`,
+      jsonRequest("POST", `/tasks/${sourceId}/duplicate`),
+    );
+
+    expect(res.status).toBe(201);
+    const body = await res.json<{ task: { startDate: string | null; dueDate: string | null } }>();
+    expect(body.task.startDate).toBe("2030-04-01T00:00:00.000Z");
+    expect(body.task.dueDate).toBe("2030-04-10T00:00:00.000Z");
+  });
+
+  // -------------------------------------------------------------------------
+  // Webhook payload
+  // -------------------------------------------------------------------------
+
+  it("includes startDate in the task.updated webhook payload data and changes", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Webhook range",
+      startDate: new Date("2030-03-01"),
+      dueDate: new Date("2030-03-10"),
+    });
+
+    await seedWebhook(d1, workspaceId, {
+      url: "https://hooks.example.com/start-date",
+      events: JSON.stringify(["task.updated"]),
+    });
+
+    // Replace global fetch so the webhook delivery is captured instead of
+    // hitting the network; restore in finally so other tests are unaffected.
+    const fetchSpy = installFetchSpy();
+    try {
+      const { ctx, flush } = createAwaitableExecutionCtx();
+      const app = new Hono<AppEnv>();
+      app.patch(
+        "/tasks/:taskId",
+        // currentProject is required for dispatchWebhook to resolve the
+        // workspace; without it the dispatch silently no-ops.
+        fakeAuth(d1, TEST_USER, {
+          workspaceMembership: { id: "wm-1", role: "owner" },
+          currentProject: { id: projectId, workspaceId },
+        }),
+        validateBody(updateTaskSchema),
+        updateTask,
+      );
+
+      const res = await app.request(
+        `/tasks/${taskId}`,
+        jsonRequest("PATCH", `/tasks/${taskId}`, { startDate: "2030-03-02" }),
+        {},
+        ctx,
+      );
+      expect(res.status).toBe(200);
+      await flush();
+
+      const deliveryCall = fetchSpy.calls.find(
+        ([url]) => url === "https://hooks.example.com/start-date",
+      );
+      expect(deliveryCall).toBeDefined();
+      const init = deliveryCall![1] as RequestInit;
+      const payload = JSON.parse(init.body as string) as {
+        event: string;
+        data: { startDate: string | null; dueDate: string | null };
+        changes?: Record<string, { from: unknown; to: unknown }>;
+      };
+      expect(payload.event).toBe("task.updated");
+      expect(payload.data.startDate).toBe("2030-03-02T00:00:00.000Z");
+      expect(payload.data.dueDate).toBe("2030-03-10T00:00:00.000Z");
+      expect(payload.changes?.startDate).toEqual({
+        from: "2030-03-01T00:00:00.000Z",
+        to: "2030-03-02T00:00:00.000Z",
+      });
+    } finally {
+      fetchSpy.restore();
+    }
   });
 });
 
@@ -1396,9 +1807,15 @@ describe("updateComment", () => {
     );
 
     expect(res.status).toBe(200);
-    const data = await res.json<{ comment: { id: string; body: string } }>();
+    const data = await res.json<{ comment: { id: string; body: string; authorName: string } }>();
     expect(data.comment.id).toBe(commentId);
     expect(data.comment.body).toBe("Updated body");
+    // Pins authorName enrichment on the PATCH response: createComment and
+    // listComments both resolve authorName, and the web Comment interface
+    // requires it — the update response must not be the one sibling surface
+    // missing the field. The author-only guard (403 for non-authors) makes
+    // the acting user's name correct by construction.
+    expect(data.comment.authorName).toBe(TEST_USER.name);
   });
 
   it("returns 404 for non-existent comment", async () => {
@@ -1808,7 +2225,7 @@ describe("duplicateTask", () => {
       task: {
         id: string;
         coverImageKey: string | null;
-        coverUnsplash: UnsplashCoverPayload | null;
+        coverUnsplash: StoredUnsplashCoverPayload | null;
       };
     }>();
     expect(body.task.coverImageKey).toBeNull();
@@ -1846,7 +2263,7 @@ describe("duplicateTask", () => {
     );
     expect(dupRes.status).toBe(201);
     const dupBody = await dupRes.json<{
-      task: { id: string; coverUnsplash: UnsplashCoverPayload | null };
+      task: { id: string; coverUnsplash: StoredUnsplashCoverPayload | null };
     }>();
     expect(dupBody.task.coverUnsplash).toBeNull();
     const row = await d1
@@ -2037,7 +2454,9 @@ describe("task cover image handlers", () => {
       .first<{ k: string | null; u: string | null }>();
     return {
       coverImageKey: row?.k ?? null,
-      coverUnsplash: row?.u ? (JSON.parse(row.u) as UnsplashCoverPayload) : null,
+      // Stored (lenient) shape: this is a raw DB read — legacy rows may lack
+      // `rawUrl`, so casting to the strict apply-payload type would be a lie.
+      coverUnsplash: row?.u ? (JSON.parse(row.u) as StoredUnsplashCoverPayload) : null,
     };
   }
 
@@ -2076,7 +2495,7 @@ describe("task cover image handlers", () => {
 
     const body = await res.json<{
       coverImageKey: string | null;
-      coverUnsplash: UnsplashCoverPayload | null;
+      coverUnsplash: StoredUnsplashCoverPayload | null;
     }>();
     expect(body.coverImageKey).toBeNull();
     expect(body.coverUnsplash?.id).toBe("t-apply-fresh");
@@ -2146,7 +2565,7 @@ describe("task cover image handlers", () => {
     expect(res.status).toBe(200);
     const body = await res.json<{
       coverImageKey: string;
-      coverUnsplash: UnsplashCoverPayload | null;
+      coverUnsplash: StoredUnsplashCoverPayload | null;
     }>();
     expect(body.coverImageKey).toMatch(/^task-cover\//);
     expect(body.coverUnsplash).toBeNull();
@@ -2250,7 +2669,7 @@ describe("task cover image handlers", () => {
     );
     expect(r1.status).toBe(200);
     const body1 = await r1.json<{
-      task: { coverUnsplash: UnsplashCoverPayload | null };
+      task: { coverUnsplash: StoredUnsplashCoverPayload | null };
     }>();
     expect(body1.task).toHaveProperty("coverUnsplash");
     expect(body1.task.coverUnsplash).toBeNull();
@@ -2272,8 +2691,139 @@ describe("task cover image handlers", () => {
       jsonRequest("GET", `/tasks/${tId}`),
     );
     const body2 = await r2.json<{
-      task: { coverUnsplash: UnsplashCoverPayload | null };
+      task: { coverUnsplash: StoredUnsplashCoverPayload | null };
     }>();
     expect(body2.task.coverUnsplash?.id).toBe("t-detail-reads");
+  });
+});
+
+// =========================================================================
+// completeTask — recurring spawn preserves start→due offset
+// =========================================================================
+
+/**
+ * A recurring task advances its PRIMARY date. For a ranged task (start + due)
+ * the due date is the anchor (`computeNextDueDate`) and the spawned start is
+ * derived by carrying the previous start→due whole-day span forward
+ * (`computeNextStartDate`). These tests exercise the full handler path —
+ * complete a recurring task over real D1 — because no unit test can catch the
+ * spawn wiring itself: an earlier bug had the new-row literal simply omit
+ * startDate, silently dropping the date range from every recurring instance.
+ *
+ * Two date-shape cases are pinned separately:
+ * - start-only (now reachable — a startDate no longer requires a dueDate): the
+ *   recurrence anchors on the START date, advances it, and the spawn stays
+ *   due-less, so a start-only series never silently grows a due date.
+ * - fully date-less: the spawn anchors on completionDate (the "N days after I
+ *   finish" pattern) and materialises a due date, with startDate null.
+ */
+describe("completeTask (recurring spawn startDate)", () => {
+  /** Attach a recurrence rule directly — seedTask has no recurrence support. */
+  async function setRecurrenceRule(taskId: string, rule: object): Promise<void> {
+    await d1
+      .prepare("UPDATE task SET recurrence_rule = ? WHERE id = ?")
+      .bind(JSON.stringify(rule), taskId)
+      .run();
+  }
+
+  it("spawns the next instance with startDate preserving the start→due day offset", async () => {
+    // Previous instance spans Thu 2030-03-07 → Sun 2030-03-10 (3 whole days).
+    // Weekly recurrence anchored on the (future) due date → next due is
+    // 2030-03-17, so the spawned start must be 2030-03-14.
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Recurring Range Task",
+      startDate: new Date(Date.UTC(2030, 2, 7)),
+      dueDate: new Date(Date.UTC(2030, 2, 10)),
+    });
+    await setRecurrenceRule(taskId, { frequency: "weekly", interval: 1 });
+
+    const app = new Hono<AppEnv>();
+    app.post("/tasks/:taskId/complete", auth(), completeTask);
+
+    const res = await app.request(
+      `/tasks/${taskId}/complete`,
+      jsonRequest("POST", `/tasks/${taskId}/complete`),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      task: { completed: boolean };
+      nextRecurringTask: { id: string; startDate: string | null; dueDate: string | null } | null;
+    }>();
+    expect(body.task.completed).toBe(true);
+    expect(body.nextRecurringTask).not.toBeNull();
+    expect(body.nextRecurringTask!.dueDate).toBe("2030-03-17T00:00:00.000Z");
+    expect(body.nextRecurringTask!.startDate).toBe("2030-03-14T00:00:00.000Z");
+
+    // The offset must survive persistence, not just the response shape —
+    // timestamps are stored as Unix seconds (UTC midnight).
+    const row = await d1
+      .prepare("SELECT startDate, dueDate FROM task WHERE recurrence_parent_id = ?")
+      .bind(taskId)
+      .first<{ startDate: number; dueDate: number }>();
+    expect(row).not.toBeNull();
+    expect(row!.startDate).toBe(Date.UTC(2030, 2, 14) / 1000);
+    expect(row!.dueDate).toBe(Date.UTC(2030, 2, 17) / 1000);
+  });
+
+  it("spawns a start-only series by advancing the start date and leaving the due date null", async () => {
+    // A start-only recurring task (start 2030-03-07, no due) anchors the
+    // recurrence on its START date. Daily/1 advances it to 2030-03-08; the
+    // spawned instance stays due-less rather than inventing a due date.
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Recurring Start-Only Task",
+      startDate: new Date(Date.UTC(2030, 2, 7)),
+    });
+    await setRecurrenceRule(taskId, { frequency: "daily", interval: 1 });
+
+    const app = new Hono<AppEnv>();
+    app.post("/tasks/:taskId/complete", auth(), completeTask);
+
+    const res = await app.request(
+      `/tasks/${taskId}/complete`,
+      jsonRequest("POST", `/tasks/${taskId}/complete`),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      nextRecurringTask: { id: string; startDate: string | null; dueDate: string | null } | null;
+    }>();
+    expect(body.nextRecurringTask).not.toBeNull();
+    expect(body.nextRecurringTask!.startDate).toBe("2030-03-08T00:00:00.000Z");
+    expect(body.nextRecurringTask!.dueDate).toBeNull();
+
+    // Survives persistence: start advanced one day, due still null.
+    const row = await d1
+      .prepare("SELECT startDate, dueDate FROM task WHERE recurrence_parent_id = ?")
+      .bind(taskId)
+      .first<{ startDate: number | null; dueDate: number | null }>();
+    expect(row).not.toBeNull();
+    expect(row!.startDate).toBe(Date.UTC(2030, 2, 8) / 1000);
+    expect(row!.dueDate).toBeNull();
+  });
+
+  it("spawns with startDate null when the completed task has no dates (completionDate-anchored)", async () => {
+    // A fully date-less recurring task anchors on completionDate and
+    // materialises a due date; there is no start to carry forward.
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Recurring Date-less Task",
+    });
+    await setRecurrenceRule(taskId, { frequency: "daily", interval: 1 });
+
+    const app = new Hono<AppEnv>();
+    app.post("/tasks/:taskId/complete", auth(), completeTask);
+
+    const res = await app.request(
+      `/tasks/${taskId}/complete`,
+      jsonRequest("POST", `/tasks/${taskId}/complete`),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{
+      nextRecurringTask: { id: string; startDate: string | null; dueDate: string | null } | null;
+    }>();
+    expect(body.nextRecurringTask).not.toBeNull();
+    expect(body.nextRecurringTask!.dueDate).not.toBeNull();
+    expect(body.nextRecurringTask!.startDate).toBeNull();
   });
 });

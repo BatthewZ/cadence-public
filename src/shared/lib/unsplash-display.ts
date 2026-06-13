@@ -25,7 +25,7 @@
  * (CoverImage, CoverImagePicker) and future backend tests depend on it.
  */
 
-import type { UnsplashCoverPayload } from "../schemas/unsplash";
+import type { StoredUnsplashCoverPayload } from "../schemas/unsplash";
 
 export type UnsplashDisplayPreset = "cover" | "card";
 
@@ -49,12 +49,15 @@ const COVER_SRCSET_WIDTHS = [800, 1600, 2400] as const;
 /**
  * `rawUrl` is schema-required for *new* payloads (the apply endpoint
  * validates it), but may be `undefined` at runtime when reading a row
- * written before this field existed. Declaring it optional here keeps the
- * fallback branch below from being dead code.
+ * written before this field existed. Derived from
+ * `StoredUnsplashCoverPayload` — the lenient persistence/read schema where
+ * `rawUrl` is optional for exactly that reason — so the fallback branch
+ * below stays honest by construction rather than via a hand-written type.
  */
-type SourceWithFallback = Pick<UnsplashCoverPayload, "url" | "thumbUrl"> & {
-  rawUrl?: string | undefined;
-};
+type SourceWithFallback = Pick<
+  StoredUnsplashCoverPayload,
+  "url" | "thumbUrl" | "rawUrl"
+>;
 
 /**
  * Compose a display URL from an Unsplash payload and a preset.

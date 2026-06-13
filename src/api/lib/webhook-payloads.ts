@@ -233,6 +233,7 @@ export function buildTaskEventData(
     assigneeId: taskRow.assigneeId,
     assignee: enrichment?.assignee ?? null,
     priority: taskRow.priority,
+    startDate: taskRow.startDate?.toISOString() ?? null,
     dueDate: taskRow.dueDate?.toISOString() ?? null,
     cost: taskRow.cost,
     completed: taskRow.completed,
@@ -244,6 +245,11 @@ export function buildTaskEventData(
     recurrenceRule: taskRow.recurrenceRule ?? null,
     recurrenceParentId: taskRow.recurrenceParentId ?? null,
     recurrenceSeriesId: taskRow.recurrenceSeriesId ?? null,
+    // Import provenance (ICS UID) — included so webhook consumers can match
+    // a task back to the calendar event it was imported from without an API
+    // round-trip. Deliberately NOT in any computeChanges field list: it is
+    // set once at import and immutable thereafter, so it can never diff.
+    sourceUid: taskRow.sourceUid ?? null,
     createdAt: taskRow.createdAt.toISOString(),
     updatedAt: taskRow.updatedAt.toISOString(),
   };

@@ -252,21 +252,21 @@ Jane Smith (via Slackbot prod) created task "Fix login bug"
 
 `task_activity.apiTokenId` is a `set null` FK to the token, so the attribution survives revocation. If the token is later hard-deleted, the activity record still shows `(via deleted token)`. PATs do **not** generate synthetic bot users — the owning human remains the actor on every record, with the token name as a parenthetical. This keeps `assigneeId`, mention notifications, and existing `createdBy` logic working without special cases.
 
-### 2. Cross-resource PAT audit ledger (`audit_log`)
+### 2. Data egress & cross-resource audit ledger (`audit_log`)
 
 For every other resource a PAT can touch (workspaces, projects, labels, teams, webhooks, invitations, attachments, the api-tokens management surface itself), a row is appended to `audit_log` on every successful 2xx mutation. This is the source of truth for "what has this token done?" — exactly the question an operator needs answered when deciding whether to revoke a misbehaving integration.
 
 The ledger captures:
 
-- `apiTokenId`, `actorUserId`, `workspaceId` — the principal trio
+- `apiTokenId`, `actorUserId`, `workspaceId` — the principal trio. `apiTokenId` is **nullable**: it is the token id for PAT-attributed events, and `null` for cookie-session events (e.g. a human-initiated workspace export), so human-initiated activity is attributable without a token.
 - `resourceType` / `resourceId` — derived from the matched route pattern
-- `action` — `create` / `update` / `delete` for collection / item ops, plus verbs like `complete`, `rotate`, `move`
+- `action` — `create` / `update` / `delete` for collection / item ops, plus verbs like `complete`, `rotate`, `move`, and the data-movement verbs `export` / `import`
 - `method`, `path`, `status` — the raw HTTP envelope so an investigator can reconstruct the exact request
-- `metadata` — JSON-encoded route params for additional context (workspaceId, projectId, etc.)
+- `metadata` — JSON-encoded context (route params for mutations; for an export, the `includeActivity` flag plus project/task counts)
 
-Writes happen through a post-response middleware via `deferWork`, so they never block the response. Failed audit inserts are logged and dropped — the audit signal must never break the API surface. Indexes target the three queries that matter: `(workspaceId, createdAt)`, `(apiTokenId, createdAt)`, and `(resourceType, resourceId)`.
+Writes happen through a post-response middleware via `deferWork`, so they never block the response. Failed audit inserts are logged and dropped — the audit signal must never break the API surface. Indexes target the three queries that matter: `(workspaceId, createdAt)`, `(apiTokenId, createdAt)`, and `(resourceType, resourceId)`. Both the PAT writer (`recordPatAuditLog`) and the data-egress writer (`recordWorkspaceDataEvent`) delegate to one shared insert path, so there is a single source of truth for how a row is persisted (CLAUDE.md rule 4).
 
-Reads, GETs, and non-2xx responses are deliberately **not** audited: read traffic belongs in the access log; failed requests don't represent state changes and would let an attacker flood the audit table.
+Reads, GETs, and non-2xx responses are deliberately **not** audited: read traffic belongs in the access log; failed requests don't represent state changes and would let an attacker flood the audit table. **The one deliberate exception is workspace data egress** — `GET /api/workspaces/:workspaceId/export` writes an `export` row (via `recordWorkspaceDataEvent`) even though it is a read, because a full-workspace download is precisely the event an operator must be able to reconstruct after a suspected leak. It is recorded whether the caller authenticated with a PAT or a cookie session.
 
 ---
 

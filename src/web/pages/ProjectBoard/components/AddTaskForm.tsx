@@ -54,8 +54,16 @@ export function AddTaskInline({ groupId }: { groupId: string }) {
       });
       addTask(res.task);
       setValue("");
-      // Open the new task's detail panel
-      setSearchParams({ task: res.task.id });
+      // Open the new task's detail panel. Functional updater that only SETS
+      // `task` — the object form `setSearchParams({ task: ... })` replaces
+      // the whole query string, silently wiping any active filter params.
+      // The panel's close handler deletes only `task`, so the user's filters
+      // must survive the open (see TaskCard.handleClick for the same rule).
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("task", res.task.id);
+        return next;
+      });
     } catch {
       toast("Failed to create task", { variant: "error" });
     }

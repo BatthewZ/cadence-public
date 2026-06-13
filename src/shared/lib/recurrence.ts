@@ -1,4 +1,8 @@
-import type { RecurrenceRule } from "@/shared/types/recurrence";
+// Relative import, not the `@/` alias — type-only so esbuild erases it today,
+// but worker-reachable modules avoid the alias entirely: wrangler's esbuild
+// can't resolve it, and converting this to a value import with the alias
+// would crash `wrangler dev` while every CI gate stays green.
+import type { RecurrenceRule } from "../types/recurrence";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
@@ -92,6 +96,39 @@ export function computeNextDueDate(
     }
   }
 
+  return result;
+}
+
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * Computes the start date for the next instance of a recurring task by
+ * preserving the whole-day span between the previous instance's start and
+ * due dates (e.g. a Mon–Thu task recurs as a Mon–Thu task).
+ *
+ * Recurrence itself stays anchored on due dates — `computeNextDueDate` is
+ * the single source of truth for scheduling — and the start date is purely
+ * derived: `nextDueDate` minus the previous span.
+ *
+ * Why UTC day math matters: task dates are stored as UTC-midnight
+ * timestamps, so the millisecond delta between two of them is always an
+ * exact multiple of 86,400,000 and `Math.round` recovers the whole-day
+ * count losslessly. Local-time arithmetic would let DST transitions inside
+ * the span perturb the delta by an hour, and rounding/truncation could then
+ * silently drift the spawned instance's start date by a day. The subtraction
+ * uses `setUTCDate` for the same reason, consistent with every other date
+ * computation in this module.
+ */
+export function computeNextStartDate(
+  nextDueDate: Date,
+  prevStartDate: Date,
+  prevDueDate: Date,
+): Date {
+  const durationDays = Math.round(
+    (prevDueDate.getTime() - prevStartDate.getTime()) / MS_PER_DAY,
+  );
+  const result = new Date(nextDueDate.getTime());
+  result.setUTCDate(result.getUTCDate() - durationDays);
   return result;
 }
 

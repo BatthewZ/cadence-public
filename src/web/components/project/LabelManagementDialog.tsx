@@ -2,7 +2,7 @@ import { Check, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { LABEL_COLORS } from "@/shared/schemas/label";
-import { FormActions, Input } from "@/web/components/form";
+import { FormActions } from "@/web/components/form";
 import { Stack } from "@/web/components/layout";
 import { Button } from "@/web/components/ui/Button";
 import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
@@ -64,9 +64,16 @@ export function LabelManagementDialog({
 
   return (
     <>
-      <Dialog open={open} onClose={onClose}>
-        <Stack gap="r4">
-          <Text variant="h4">Manage Labels</Text>
+      <Dialog open={open} onClose={onClose} className="max-w-104">
+        <Stack gap="r5">
+          <div className="label-mgmt__header">
+            <Text variant="h4">Manage Labels</Text>
+            <Text variant="body-3" color="muted">
+              {labels.length === 0
+                ? "No labels yet"
+                : `${labels.length} label${labels.length === 1 ? "" : "s"}`}
+            </Text>
+          </div>
 
           <div className="label-mgmt__list">
             {labels.map((lbl) => (
@@ -80,26 +87,24 @@ export function LabelManagementDialog({
 
             {labels.length === 0 && (
               <Text variant="body-2" color="muted" className="py-r3 text-center">
-                No labels yet. Create one below.
+                Add your first label below.
               </Text>
             )}
           </div>
 
           <form
-            className="label-mgmt__add-row"
+            className="label-mgmt__composer"
             onSubmit={(e) => {
               e.preventDefault();
               void handleCreate();
             }}
           >
-            <ColorPickerButton
-              color={newColor}
-              onChange={setNewColor}
-            />
-            <Input
+            <ColorPickerButton color={newColor} onChange={setNewColor} />
+            <input
               ref={nameInputRef}
               type="text"
-              placeholder="New label name..."
+              className="label-mgmt__composer-input"
+              placeholder="New label name…"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               maxLength={30}
@@ -116,8 +121,8 @@ export function LabelManagementDialog({
             </Button>
           </form>
 
-          <FormActions>
-            <Button variant="ghost" onClick={onClose}>
+          <FormActions className="pt-r5">
+            <Button variant="secondary" onClick={onClose}>
               Done
             </Button>
           </FormActions>

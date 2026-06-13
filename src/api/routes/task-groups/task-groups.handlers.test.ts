@@ -222,12 +222,18 @@ describe("createTaskGroup", () => {
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ taskGroup: { id: string; projectId: string; name: string; createdAt: string; updatedAt: string } }>();
+    const body = await res.json<{ taskGroup: { id: string; projectId: string; name: string; isCompletionGroup: boolean; createdAt: string; updatedAt: string } }>();
     expect(body.taskGroup.id).toBeTruthy();
     expect(body.taskGroup.projectId).toBe(projectId);
     expect(body.taskGroup.name).toBe("Status Check Group");
     expect(body.taskGroup.createdAt).toBeTruthy();
     expect(body.taskGroup.updatedAt).toBeTruthy();
+    // Pins the create response carrying isCompletionGroup explicitly: list
+    // (full-row select) and update (.returning()) responses include it and
+    // the web TaskGroup interface requires it, so the create response must
+    // not be the one surface that omits the field (new groups are never
+    // completion groups, hence always false here).
+    expect(body.taskGroup.isCompletionGroup).toBe(false);
   });
 
   /**

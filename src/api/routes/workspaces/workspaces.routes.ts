@@ -35,10 +35,13 @@ import {
   requireWorkspaceRole,
   requireWriteScopeForResource,
 } from "../../middleware/authorize";
+import { defaultRateLimitKey, rateLimit } from "../../middleware/rate-limit";
 import { requireAuth } from "../../middleware/require-auth";
 import { validateBody, validationHook } from "../../middleware/validate";
 import apiTokensRoutes from "./api-tokens.routes";
+import { exportWorkspace } from "./export.handlers";
 import { getWorkspaceFreshness } from "./freshness.handler";
+import { importWorkspaceData } from "./import.handlers";
 import {
   createWorkspace,
   deleteWorkspace,
@@ -152,6 +155,14 @@ app.use("/workspaces/:workspaceId", workspaceReadScope, workspaceWriteScope);
 app.use("/workspaces/:workspaceId/freshness", workspaceReadScope, workspaceWriteScope);
 app.use("/workspaces/:workspaceId/members", workspaceReadScope, workspaceWriteScope);
 app.use("/workspaces/:workspaceId/members/:userId", workspaceReadScope, workspaceWriteScope);
+// Export is a GET, so only the read scope can ever fire — but a PAT with
+// `workspace:read` can pull the workspace-wide archive, which is exactly
+// why the route ALSO requires owner/admin role + a 5/hour rate limit below.
+app.use("/workspaces/:workspaceId/export", workspaceReadScope, workspaceWriteScope);
+// Import is a POST, so the WRITE scope fires: a PAT needs `workspace:write`
+// to ingest data — mirroring export's mount so the two halves of the
+// data-portability surface live under the same scope policy.
+app.use("/workspaces/:workspaceId/import", workspaceReadScope, workspaceWriteScope);
 
 // Mount the API token management sub-resource. The sub-app declares its
 // own per-route `requireAuth` + `requireWorkspaceMember` middleware so it
@@ -176,6 +187,44 @@ app.get(
   requireAuth,
   requireWorkspaceMember(),
   getWorkspaceFreshness,
+);
+
+// Workspace export — the most privileged READ in the API (full data
+// egress), so it carries the strictest stack: owner/admin role only and a
+// hard 5/hour limit keyed by PAT > user > IP (`defaultRateLimitKey`).
+// Every successful export is additionally written to the audit ledger by
+// the handler itself.
+app.get(
+  "/workspaces/:workspaceId/export",
+  requireAuth,
+  requireWorkspaceRole("owner", "admin"),
+  rateLimit({
+    max: 5,
+    windowSeconds: 3600,
+    prefix: "workspace-export",
+    keyFn: defaultRateLimitKey,
+  }),
+  exportWorkspace,
+);
+
+// Workspace import — the write-side counterpart of export: a multipart
+// file upload that creates NEW projects in this workspace (Cadence or
+// Trello files; `?dryRun=true` previews without writing). Owner/admin only
+// and 10/hour — slightly looser than export's 5 because the stateless
+// preview→confirm flow legitimately costs two requests per real import.
+// Commits are written to the audit ledger by the handler (dry runs are
+// not — see import.handlers.ts for the rationale).
+app.post(
+  "/workspaces/:workspaceId/import",
+  requireAuth,
+  requireWorkspaceRole("owner", "admin"),
+  rateLimit({
+    max: 10,
+    windowSeconds: 3600,
+    prefix: "workspace-import",
+    keyFn: defaultRateLimitKey,
+  }),
+  importWorkspaceData,
 );
 
 app.patch(

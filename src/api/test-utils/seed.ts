@@ -210,6 +210,7 @@ export async function seedTask(
     assigneeId?: string;
     completed?: boolean;
     priority?: string;
+    startDate?: Date;
     dueDate?: Date;
     position?: string;
     description?: string;
@@ -223,8 +224,8 @@ export async function seedTask(
   const now = toSec(Date.now());
   await d1
     .prepare(
-      `INSERT INTO task (id, projectId, taskGroupId, title, completed, priority, assigneeId, dueDate, position, description, cost, icon, cover_image_key, cover_unsplash, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO task (id, projectId, taskGroupId, title, completed, priority, assigneeId, startDate, dueDate, position, description, cost, icon, cover_image_key, cover_unsplash, createdAt, updatedAt)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       id,
@@ -234,6 +235,7 @@ export async function seedTask(
       opts?.completed ? 1 : 0,
       opts?.priority ?? "none",
       opts?.assigneeId ?? null,
+      opts?.startDate ? toSec(opts.startDate) : null,
       opts?.dueDate ? toSec(opts.dueDate) : null,
       opts?.position ?? nextSeedPosition(),
       opts?.description ?? null,

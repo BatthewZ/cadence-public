@@ -28,6 +28,7 @@ const NotFound = lazy(() => import("./pages/NotFound/NotFound"));
 const Notifications = lazy(() => import("./pages/Notifications/Notifications"));
 const Privacy = lazy(() => import("./pages/Privacy/Privacy"));
 const ProjectBoard = lazy(() => import("./pages/ProjectBoard/ProjectBoard"));
+const ProjectCalendar = lazy(() => import("./pages/ProjectCalendar/ProjectCalendar"));
 const ProjectDashboard = lazy(() => import("./pages/ProjectDashboard/ProjectDashboard"));
 const ProjectList = lazy(() => import("./pages/Projects/ProjectList"));
 const ProjectListView = lazy(() => import("./pages/ProjectListView/ProjectListView"));
@@ -44,6 +45,7 @@ const WorkspaceMembers = lazy(() => import("./pages/WorkspaceSettings/WorkspaceM
 const WorkspaceTeams = lazy(() => import("./pages/WorkspaceSettings/WorkspaceTeams"));
 const WorkspaceWebhooks = lazy(() => import("./pages/WorkspaceSettings/WorkspaceWebhooks"));
 const WorkspaceApiTokens = lazy(() => import("./pages/WorkspaceSettings/WorkspaceApiTokens"));
+const WorkspaceData = lazy(() => import("./pages/WorkspaceSettings/WorkspaceData"));
 
 const GUEST_PATHS = ["/login", "/register", "/forgot-password", "/reset-password"];
 
@@ -171,6 +173,7 @@ export function App() {
                       <Route path="board" element={<ProjectBoard />} />
                       <Route path="list" element={<ProjectListView />} />
                       <Route path="timeline" element={<ProjectTimeline />} />
+                      <Route path="calendar" element={<ProjectCalendar />} />
                       <Route path="settings" element={<ProjectSettings />} />
                     </Route>
                     <Route path="settings" element={<WorkspaceSettings />} />
@@ -178,6 +181,7 @@ export function App() {
                     <Route path="settings/teams" element={<WorkspaceTeams />} />
                     <Route path="settings/webhooks" element={<WorkspaceWebhooks />} />
                     <Route path="settings/api-tokens" element={<WorkspaceApiTokens />} />
+                    <Route path="settings/data" element={<WorkspaceData />} />
                     <Route path="notifications" element={<Notifications />} />
                     <Route path="account" element={<Settings />} />
                   </Route>

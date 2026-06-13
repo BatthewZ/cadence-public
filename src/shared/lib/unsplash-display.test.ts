@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { UnsplashCoverPayload } from "../schemas/unsplash";
+import type {
+  StoredUnsplashCoverPayload,
+  UnsplashCoverPayload,
+} from "../schemas/unsplash";
 import {
   buildUnsplashDisplaySrcSet,
   buildUnsplashDisplayUrl,
@@ -55,15 +58,17 @@ describe("buildUnsplashDisplayUrl", () => {
   });
 
   it("falls back to `url` for the cover preset when rawUrl is absent (legacy row)", () => {
-    // Cast through unknown to simulate a row that pre-dates rawUrl — at
-    // runtime drizzle returns `undefined` for columns not present in the JSON.
-    const legacy = { ...makePayload(), rawUrl: undefined } as unknown as UnsplashCoverPayload;
+    // A row that pre-dates rawUrl — at runtime drizzle returns `undefined`
+    // for columns not present in the JSON. `StoredUnsplashCoverPayload` (the
+    // lenient persistence/read shape) expresses this honestly, so no cast is
+    // needed to construct the legacy fixture.
+    const legacy: StoredUnsplashCoverPayload = { ...makePayload(), rawUrl: undefined };
     const url = buildUnsplashDisplayUrl(legacy, "cover");
     expect(url).toBe("https://images.unsplash.com/photo-1-regular");
   });
 
   it("falls back to `thumbUrl` for the card preset when rawUrl is absent", () => {
-    const legacy = { ...makePayload(), rawUrl: undefined } as unknown as UnsplashCoverPayload;
+    const legacy: StoredUnsplashCoverPayload = { ...makePayload(), rawUrl: undefined };
     const url = buildUnsplashDisplayUrl(legacy, "card");
     expect(url).toBe("https://images.unsplash.com/photo-1-thumb");
   });
@@ -134,7 +139,7 @@ describe("buildUnsplashDisplaySrcSet", () => {
   });
 
   it("returns null when rawUrl is absent (legacy row — caller falls back to plain src)", () => {
-    const legacy = { ...makePayload(), rawUrl: undefined } as unknown as UnsplashCoverPayload;
+    const legacy: StoredUnsplashCoverPayload = { ...makePayload(), rawUrl: undefined };
     expect(buildUnsplashDisplaySrcSet(legacy)).toBeNull();
   });
 

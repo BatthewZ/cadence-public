@@ -70,6 +70,21 @@ import { deferWork } from "./defer";
 export const TOKEN_PREFIX = "cdn_pat_";
 
 /**
+ * Prefix for calendar feed tokens (`cdn_cal_<43 base64url chars>`).
+ *
+ * Feed tokens are a deliberately separate credential class from PATs: they
+ * live inside ICS subscription URLs that calendar providers (Google, Apple,
+ * Outlook) store in plaintext and echo into request logs, so they must never
+ * grant API access. The distinct prefix serves two purposes:
+ *
+ * 1. `verifyToken` keeps cheap-rejecting them — a leaked feed URL can only
+ *    ever unlock the read-only feed endpoint, never a bearer-auth API call.
+ * 2. Secret scanners (gitleaks et al.) get a deterministic anchor for this
+ *    token family, same as `cdn_pat_`.
+ */
+export const CALENDAR_FEED_TOKEN_PREFIX = "cdn_cal_";
+
+/**
  * Random byte count behind every token. 32 bytes = 256 bits of entropy,
  * matching SHA-256 and the industry standard for opaque API tokens.
  */
@@ -213,6 +228,38 @@ export function requireTokenHashPepper(pepper: string | undefined): string {
 }
 
 /**
+ * Mint a fresh opaque token under the given prefix.
+ *
+ * This is the single source of truth for token generation across every
+ * credential class we issue (`cdn_pat_` PATs, `cdn_cal_` calendar feed
+ * tokens). Centralizing it matters: the entropy source (32 CSPRNG bytes),
+ * the base64url encoding, and the peppered HMAC-SHA256 storage hash are
+ * exactly the security properties an audit needs to verify once — a
+ * duplicated mint path could silently drift (shorter entropy, unpeppered
+ * hash) for one token family without failing any PAT test.
+ *
+ * Returns the plaintext (show once, never persist) and the HMAC-SHA256 hex
+ * hash (the only value that may be stored). The `prefix` decides which
+ * credential class the token belongs to — `verifyToken` only ever accepts
+ * `TOKEN_PREFIX`, so minting under any other prefix produces a token that
+ * structurally cannot authenticate against the API. The `pepper` MUST come
+ * from server-controlled env (never a request-controlled value).
+ */
+export async function mintToken(
+  prefix: string,
+  pepper: string,
+): Promise<{
+  plaintext: string;
+  hash: string;
+}> {
+  const random = new Uint8Array(TOKEN_RANDOM_BYTES);
+  crypto.getRandomValues(random);
+  const plaintext = prefix + bytesToBase64Url(random);
+  const hash = await hashToken(plaintext, pepper);
+  return { plaintext, hash };
+}
+
+/**
  * Generate a fresh API token.
  *
  * Returns the plaintext (to show to the user once), the HMAC-SHA256 hex
@@ -220,16 +267,16 @@ export function requireTokenHashPepper(pepper: string | undefined): string {
  * plaintext is the only sensitive value — callers MUST NOT persist it
  * anywhere. The `pepper` MUST come from server-controlled env (never a
  * request-controlled value).
+ *
+ * Delegates to `mintToken` so PATs and feed tokens share one mint path —
+ * see `mintToken` for why that single source of truth is load-bearing.
  */
 export async function generateApiToken(pepper: string): Promise<{
   plaintext: string;
   hash: string;
   prefix: string;
 }> {
-  const random = new Uint8Array(TOKEN_RANDOM_BYTES);
-  crypto.getRandomValues(random);
-  const plaintext = TOKEN_PREFIX + bytesToBase64Url(random);
-  const hash = await hashToken(plaintext, pepper);
+  const { plaintext, hash } = await mintToken(TOKEN_PREFIX, pepper);
   const prefix = plaintext.slice(0, TOKEN_DISPLAY_PREFIX_LENGTH);
   return { plaintext, hash, prefix };
 }

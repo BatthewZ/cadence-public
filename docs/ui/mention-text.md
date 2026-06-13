@@ -1,45 +1,16 @@
-# MentionText
+# MentionText (removed)
 
-Renders `@mention` syntax within a text string as styled inline badges. Plain text is passed through unchanged; `@name` and `@"name with spaces"` patterns are highlighted with a primary-tinted background.
+> **This component no longer exists.** `src/web/components/ui/MentionText.tsx` was deleted when the markdown feature shipped. `@mention` syntax is now handled in two places, both single sources of truth:
+>
+> - **Rendering** — the `mention` AST node in the [Markdown renderer](markdown.md) emits the same styled inline badge that `MentionText` used to. Anywhere a comment or description is *displayed*, use [`<Markdown>`](markdown.md#markdown--renderer).
+> - **Authoring autocomplete** — the `@` trigger, caret-anchored dropdown, keyboard navigation, and `@"Name"` quoting live in the shared [`useMentionAutocomplete`](hooks.md) hook (`src/web/hooks/use-mention-autocomplete.ts`) plus the `MentionSuggestions` dropdown, consumed by `MarkdownEditor` — the single authoring surface behind task descriptions and the comment composer/edit form alike.
 
-**Source:** `src/web/components/ui/MentionText.tsx`
+## Migration
 
-## Props
+| Old usage | New usage |
+| --- | --- |
+| `<MentionText>{body}</MentionText>` (display) | `<Markdown density="compact" members={members}>{body}</Markdown>` |
+| Mention regex / highlight logic | `parseMarkdown` + the `mention` AST node (see [markdown.md](markdown.md#ast-contract)) |
+| Mention autocomplete in a textarea | [`MarkdownEditor`](markdown.md#markdowneditor--textarea--toolbar--writepreview) (wraps [`useMentionAutocomplete`](hooks.md) + `MentionSuggestions`) |
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `children` | `string` | The text content to parse for `@mention` patterns. |
-
-## Mention Syntax
-
-Matches two patterns via regex:
-
-| Pattern | Example | Extracted name |
-| --- | --- | --- |
-| `@word` | `@alice` | `alice` |
-| `@"quoted name"` | `@"Alice Smith"` | `Alice Smith` |
-
-## Rendering
-
-- Text between mentions is rendered as plain text nodes.
-- Each mention is wrapped in a `<span>` with classes: `inline-flex items-center rounded px-1 py-0.5 text-fg-primary bg-primary/10 font-medium`.
-- If no mentions are found, the original string is returned as-is.
-
-## Usage
-
-```tsx
-import { MentionText } from "@/web/components/ui/MentionText";
-
-<Text variant="body-2">
-  <MentionText>{"Hello @alice and @\"Bob Smith\", check this out"}</MentionText>
-</Text>
-```
-
-## Where Used
-
-- **TaskDetailDialog** — comment body rendering.
-- **TaskDetailPanel** — comment body rendering.
-
-## Dependencies
-
-None (pure React, no external dependencies).
+See [Markdown](markdown.md) for the full renderer/editor documentation, including why mention rendering and autocomplete were each unified into a single source of truth.

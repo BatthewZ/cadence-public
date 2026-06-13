@@ -1020,5 +1020,10 @@ describe("processWebhookRetries", () => {
     expect(count).toBeLessThanOrEqual(50);
     // And at least some were processed
     expect(count).toBeGreaterThan(0);
-  });
+    // Heavy integration test: 60 sequential D1 seeds + processing 50 HMAC-signed
+    // retries. Passes in ~3s isolated, but the 60 round-trips through Miniflare's
+    // D1 stub can exceed the 5s default timeout under full-suite parallel load
+    // (187 files contending for the workers pool). 30s gives ample margin while
+    // still failing fast on a genuine hang, since the work is strictly finite.
+  }, 30_000);
 });

@@ -94,6 +94,33 @@ describe("useClickOutside", () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  it("does not call handler when a press starts inside and releases outside (drag-to-select)", () => {
+    // Reproduces the UX bug where selecting text inside the panel and dragging
+    // the cursor past its edge before releasing the mouse closed the panel and
+    // discarded the in-progress edit. A browser `click` fires on the common
+    // ancestor of mousedown/mouseup, so the click target is outside the ref
+    // even though the interaction began inside it.
+    const handler = vi.fn();
+    render(<TestComponent handler={handler} />);
+
+    // Press begins inside the ref...
+    fireEvent.mouseDown(screen.getByTestId("inside"));
+    // ...but the resulting click resolves to an element outside the ref.
+    fireEvent.click(screen.getByTestId("outside"));
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it("still calls handler for a genuine outside press-and-click", () => {
+    const handler = vi.fn();
+    render(<TestComponent handler={handler} />);
+
+    fireEvent.mouseDown(screen.getByTestId("outside"));
+    fireEvent.click(screen.getByTestId("outside"));
+
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
   it("does not call handler when clicking inside a floating-ui portal", () => {
     const handler = vi.fn();
     render(<TestComponent handler={handler} />);

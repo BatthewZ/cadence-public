@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { FolderKanban, ImagePlus, X } from "lucide-react";
+import { Download, FolderKanban, ImagePlus, X } from "lucide-react";
 import { type FormEvent, useCallback, useRef, useState } from "react";
 import type { useNavigate } from "react-router-dom";
 
@@ -381,6 +381,37 @@ export function GeneralTab({
             </Button>
           </Stack>
         </form>
+      </Card>
+
+      {/*
+        Data export lives on the General tab because it is project-level
+        housekeeping, not membership/groups/webhooks/theming — the same
+        judgment that puts the budget and Danger Zone here. A plain anchor
+        (Button as="a") is deliberate: the endpoint responds with
+        Content-Disposition: attachment, so the browser downloads natively —
+        no fetch/blob plumbing, and the download keeps working even if JS
+        state is wedged.
+      */}
+      <Card>
+        <Stack gap="r4">
+          <Text variant="h5">Export</Text>
+          <Text variant="body-2" color="secondary">
+            Download every task in this project as a CSV spreadsheet, including
+            group, assignee, due date, priority, labels, completion state, and
+            cost.
+          </Text>
+          <div>
+            <Button
+              as="a"
+              variant="secondary"
+              size="md"
+              href={`/api/projects/${projectId}/export/csv`}
+            >
+              <Download size={16} className="mr-1" />
+              Export tasks (CSV)
+            </Button>
+          </div>
+        </Stack>
       </Card>
 
       <Card className="border border-status-error/30">

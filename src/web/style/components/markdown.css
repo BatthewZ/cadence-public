@@ -1,0 +1,270 @@
+/* Prose typography for the markdown renderer (<Markdown>).
+ *
+ * The global `@layer base` (responsive/text.css) styles bare h1..h6 on a
+ * *display* scale (h1 = 4rem on desktop). Markdown emits real <h1>..<h6>, so
+ * un-scoped they would inherit that huge display size. Every prose heading
+ * here is scoped under `.md`, which beats the base `h1..h6` selectors on
+ * specificity AND loads later (this file imports after responsive/), so the
+ * content scale wins. Heading sizes are exposed as `.md`-scoped custom
+ * properties so the `.md--compact` density modifier (task sidebar, ~380px)
+ * only has to override the vars, not re-declare each rule. */
+
+.md {
+  /* Comfortable (default) heading scale — content, not display. */
+  --md-h1-size: 1.5rem;
+  --md-h1-lh: 2rem;
+  --md-h2-size: 1.25rem;
+  --md-h2-lh: 1.75rem;
+  --md-h3-size: 1.125rem;
+  --md-h3-lh: 1.625rem;
+  --md-h4-size: 1rem;
+  --md-h4-lh: 1.5rem;
+  --md-h5-size: 0.9375rem;
+  --md-h5-lh: 1.375rem;
+  --md-h6-size: 0.875rem;
+  --md-h6-lh: 1.25rem;
+
+  --md-body-size: var(--BodyText-2);
+  --md-body-lh: var(--BodyText-2-line-height);
+
+  color: var(--C-TEXT-SECONDARY);
+  font-family: var(--DEFAULT-FONT);
+  font-size: var(--md-body-size);
+  line-height: var(--md-body-lh);
+  /* Long words / URLs / mention tokens must never blow out the container. */
+  overflow-wrap: anywhere;
+}
+
+/* Compact density — tighter scale + tighter leading for the sidebar. */
+.md--compact {
+  --md-h1-size: 1.125rem;
+  --md-h1-lh: 1.5rem;
+  --md-h2-size: 1rem;
+  --md-h2-lh: 1.375rem;
+  --md-h3-size: 0.9375rem;
+  --md-h3-lh: 1.3125rem;
+  --md-h4-size: 0.875rem;
+  --md-h4-lh: 1.25rem;
+  --md-h5-size: 0.875rem;
+  --md-h5-lh: 1.25rem;
+  --md-h6-size: 0.8125rem;
+  --md-h6-lh: 1.125rem;
+
+  --md-body-size: var(--BodyText-3);
+  --md-body-lh: var(--BodyText-3-line-height);
+}
+
+/* Zero the UA margins on every prose element at 0-specificity (`:where`) so the
+ * flow-spacing rules below ALWAYS win the cascade. The per-element rules further
+ * down set padding/colour/borders but deliberately NOT margin — if they reset
+ * `margin: 0` themselves (specificity 0,1,1) they would beat `.md > * + *`
+ * (0,1,0) and silently flatten all block spacing. Centralising the reset here
+ * keeps the single owl-margin model intact. */
+.md :where(h1, h2, h3, h4, h5, h6, p, pre, blockquote, hr, ul, ol, figure) {
+  margin: 0;
+}
+
+/* Block flow: stacked blocks breathe; edges stay flush to the container. */
+.md > * + * {
+  margin-top: var(--R-SIZE-5);
+}
+
+.md > :first-child {
+  margin-top: 0;
+}
+
+.md > :last-child {
+  margin-bottom: 0;
+}
+
+/* Headings ------------------------------------------------------------- */
+.md h1,
+.md h2,
+.md h3,
+.md h4,
+.md h5,
+.md h6 {
+  color: var(--C-TEXT-PRIMARY);
+  font-family: var(--HEADING-FONT);
+  font-weight: var(--Bold-Weight);
+}
+
+.md h1 {
+  font-size: var(--md-h1-size);
+  line-height: var(--md-h1-lh);
+}
+
+.md h2 {
+  font-size: var(--md-h2-size);
+  line-height: var(--md-h2-lh);
+}
+
+.md h3 {
+  font-size: var(--md-h3-size);
+  line-height: var(--md-h3-lh);
+}
+
+.md h4 {
+  font-size: var(--md-h4-size);
+  line-height: var(--md-h4-lh);
+}
+
+.md h5 {
+  font-size: var(--md-h5-size);
+  line-height: var(--md-h5-lh);
+}
+
+.md h6 {
+  font-size: var(--md-h6-size);
+  line-height: var(--md-h6-lh);
+}
+
+/* Give a heading a little extra air when it follows other content. */
+.md > * + :is(h1, h2, h3, h4, h5, h6) {
+  margin-top: var(--R-SIZE-4);
+}
+
+/* Block-level elements — blockquotes, code blocks, horizontal rules, and whole
+ * lists — read as distinct blocks, so they get a touch more air above AND below
+ * than the default paragraph rhythm (matches the list-view spacing feel). The
+ * "+ *" half supplies the space *below* a block via the next element's margin,
+ * which keeps everything on a single collapsing-free top-margin model and stays
+ * flush at the container's first/last edge. */
+.md > * + :is(blockquote, pre, hr, ul, ol),
+.md > :is(blockquote, pre, hr, ul, ol) + * {
+  margin-top: var(--R-SIZE-4);
+}
+
+/* Body ----------------------------------------------------------------- */
+.md p {
+  font-size: var(--md-body-size);
+  line-height: var(--md-body-lh);
+}
+
+/* Links ---------------------------------------------------------------- */
+.md a {
+  color: var(--C-ACCENT);
+  font-weight: var(--Bold-Weight);
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.md a:hover {
+  text-decoration: underline;
+}
+
+/* Inline code ---------------------------------------------------------- */
+.md code {
+  padding: 0.1em 0.35em;
+  background: var(--C-SURFACE-2);
+  border-radius: var(--RADIUS-SM);
+  color: var(--C-TEXT-PRIMARY);
+  font-family: var(--DEFAULT-MONO-FONT);
+  font-size: 0.875em;
+}
+
+/* Code block ----------------------------------------------------------- */
+.md pre {
+  padding: var(--R-SIZE-4);
+  background: var(--C-SURFACE-2);
+  border-radius: var(--RADIUS-MD);
+  color: var(--C-TEXT-PRIMARY);
+  font-family: var(--DEFAULT-MONO-FONT);
+  font-size: 0.875em;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Inside a <pre>, <code> is the raw glyph stream — drop the inline chrome. */
+.md pre code {
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  font-size: inherit;
+}
+
+/* Blockquote ----------------------------------------------------------- */
+.md blockquote {
+  padding-left: var(--R-SIZE-4);
+  border-left: 3px solid var(--C-BORDER-STRONG);
+  color: var(--C-TEXT-SECONDARY);
+}
+
+/* Stacked quote children keep their own rhythm. */
+.md blockquote > * + * {
+  margin-top: var(--R-SIZE-5);
+}
+
+/* Horizontal rule ------------------------------------------------------ */
+.md hr {
+  border: none;
+  border-top: 1px solid var(--C-BORDER-DEFAULT);
+}
+
+/* Lists ---------------------------------------------------------------- */
+.md ul,
+.md ol {
+  /* Left padding so the marker sits inside the container, not clipped. */
+  padding-left: var(--R-SIZE-2);
+}
+
+.md ul {
+  list-style: disc;
+}
+
+.md ol {
+  list-style: decimal;
+}
+
+.md li {
+  font-size: var(--md-body-size);
+  line-height: var(--md-body-lh);
+}
+
+.md li + li {
+  margin-top: var(--R-SIZE-6);
+}
+
+/* Nested lists sit tight under their parent item. */
+.md li > ul,
+.md li > ol {
+  margin-top: var(--R-SIZE-6);
+}
+
+/* Media ---------------------------------------------------------------- */
+.md img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--RADIUS-SM);
+}
+
+/* Emphasis ------------------------------------------------------------- */
+.md strong {
+  color: var(--C-TEXT-PRIMARY);
+  font-weight: var(--Bold-Weight);
+}
+
+/*
+ * Editor textarea scrollbar — match the app's thin scrollbar treatment (see
+ * app.css `html`) so a long description that exceeds the auto-grow max-height
+ * scrolls with the same 6px styled bar instead of the chunky native one with
+ * arrow buttons. Keeps the editor surface feeling first-party, not default-OS.
+ */
+.md-editor__textarea {
+  scrollbar-width: thin;
+  scrollbar-color: var(--C-BORDER-STRONG) transparent;
+}
+
+.md-editor__textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.md-editor__textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.md-editor__textarea::-webkit-scrollbar-thumb {
+  background: var(--C-BORDER-STRONG);
+  border-radius: var(--RADIUS-FULL);
+}

@@ -1,3 +1,5 @@
+import { X } from "lucide-react";
+
 import type { TaskLabelInfo } from "@/shared/schemas/label";
 import type { RecurrenceRule } from "@/shared/types/recurrence";
 import type { TaskPriority } from "@/shared/types/roles";
@@ -21,15 +23,70 @@ import { RecurrencePicker, RecurrencePickerReadOnly } from "./RecurrencePicker";
 /**
  * Shared property grid rendered in both TaskDetailDialog and TaskDetailPanelInner.
  *
- * Centralises the Group, Priority, Assignee, Due date, Repeat, Cost, and Labels
- * property rows so that both views stay in sync without duplicating markup or logic.
+ * Centralises the Group, Priority, Assignee, Start/Due date, Repeat, Cost, and
+ * Labels property rows so that both views stay in sync without duplicating
+ * markup or logic.
+ *
+ * Start date and Due date are each ALWAYS rendered and each independently
+ * optional — set either, both, or neither. This matches every other row in the
+ * panel (Priority, Assignee, Repeat, Cost, Labels all show even when unset), so
+ * the available properties are legible at a glance rather than hidden behind a
+ * progressive-disclosure affordance. The server enforces only the ordering rule
+ * (start ≤ due) when both are present, so a start date can stand alone.
+ *
+ * The two rows share one layout contract: a flex row of [date input][24px clear
+ * slot], where the slot always renders — as a clear (×) button when that row
+ * holds a value, or as an invisible placeholder when it is empty or read-only.
+ * Because the underlying Input is `w-full`, dropping the slot from one row would
+ * widen that row's input and visibly misalign the two rows' native calendar
+ * icons and right edges. Start sits above Due (chronological order), and native
+ * `min`/`max` plumbing between the two inputs lets the browser block an inverted
+ * range before the server-side refinement ever has to fire.
  */
+
+/**
+ * Shared styling for the transparent inline date inputs. The Start and Due
+ * rows render structurally identical inputs, so the class lives here once —
+ * a divergence between the two would be a silent visual inconsistency.
+ *
+ * The fixed `h-8` (2rem) is deliberate and matches `.task-property-picker__trigger`'s
+ * `min-height: 2rem`. Without it the input's intrinsic height is set by
+ * `text-body-3`'s 1.75rem line-height plus vertical padding (~42px), which made
+ * the input rows visibly taller than the dropdown rows (Group, Priority, Repeat
+ * — all 32px). Pinning the box to 2rem and dropping the vertical padding (the
+ * border-box height now drives layout, and the UA vertically centres the value)
+ * makes every property row exactly the same height.
+ */
+const dateInputClass =
+  "h-8 border-transparent bg-transparent hover:bg-surface-1 focus:bg-surface-0 px-r5 text-body-3 rounded";
+
+/**
+ * The clear (×) icon button shared by the Start and Due rows. A fixed 24px
+ * square (rather than icon + tiny padding) gives a real click target and a
+ * hover surface, so the control reads as a deliberate button instead of a
+ * floating glyph.
+ */
+const dateClearButtonClass =
+  "shrink-0 flex items-center justify-center size-6 rounded text-fg-muted hover:text-fg-secondary hover:bg-surface-2 duration-fast cursor-pointer";
+
+/**
+ * Invisible placeholder rendered in place of the clear button whenever a row
+ * has nothing to clear (or the viewer is read-only). The Input component is
+ * `w-full`, so a row WITH a trailing button lays out its input narrower than
+ * a row without one — which visibly misaligns the two rows' native calendar
+ * icons and right edges. Reserving the slot unconditionally keeps the Start
+ * and Due inputs pixel-identical in every state.
+ */
+function DateClearSlot() {
+  return <span aria-hidden="true" className="shrink-0 size-6" />;
+}
 
 interface TaskPropertyData {
   id: string;
   taskGroupId: string;
   priority: TaskPriority;
   assigneeId?: string | null;
+  startDate?: string | null;
   dueDate?: string | null;
   recurrenceRule?: RecurrenceRule | null;
   labels?: TaskLabelInfo[];
@@ -59,6 +116,7 @@ export interface TaskDetailPropertiesProps {
       assigneeId: string | null;
       assigneeName: string | undefined;
       assigneeAvatarUrl: string | undefined;
+      startDate: string | null;
       dueDate: string | null;
       recurrenceRule: RecurrenceRule | null;
     }>
@@ -135,16 +193,71 @@ export function TaskDetailProperties({
         )}
       </PropertyRow>
 
+      <PropertyRow label="Start date">
+        <div className="flex items-center gap-1">
+          <Input
+            type="date"
+            value={task.startDate ? task.startDate.slice(0, 10) : ""}
+            // Browser-side guard: a start date can't be picked past the due
+            // date. Absent when there is no due date — a start date may stand
+            // alone.
+            max={task.dueDate?.slice(0, 10)}
+            disabled={!canEditTasks}
+            onChange={(e) => {
+              onPatch({ startDate: e.target.value || null });
+            }}
+            className={dateInputClass}
+          />
+          {canEditTasks && task.startDate ? (
+            <button
+              type="button"
+              aria-label="Clear start date"
+              title="Clear start date"
+              className={dateClearButtonClass}
+              onClick={() => {
+                onPatch({ startDate: null });
+              }}
+            >
+              <X size={14} />
+            </button>
+          ) : (
+            <DateClearSlot />
+          )}
+        </div>
+      </PropertyRow>
+
       <PropertyRow label="Due date">
-        <Input
-          type="date"
-          value={task.dueDate ? task.dueDate.slice(0, 10) : ""}
-          disabled={!canEditTasks}
-          onChange={(e) => {
-            onPatch({ dueDate: e.target.value || null });
-          }}
-          className="border-transparent bg-transparent hover:bg-surface-2 focus:bg-surface-0 py-1.5 px-r5 text-body-3 rounded"
-        />
+        <div className="flex items-center gap-1">
+          <Input
+            type="date"
+            value={task.dueDate ? task.dueDate.slice(0, 10) : ""}
+            // Browser-side guard: a due date can't be picked before the start
+            // date. Absent when there is no start date.
+            min={task.startDate?.slice(0, 10)}
+            disabled={!canEditTasks}
+            onChange={(e) => {
+              onPatch({ dueDate: e.target.value || null });
+            }}
+            className={dateInputClass}
+          />
+          {canEditTasks && task.dueDate ? (
+            <button
+              type="button"
+              aria-label="Clear due date"
+              title="Clear due date"
+              className={dateClearButtonClass}
+              // Clears only the due date — a surviving start date is left in
+              // place, since a start date no longer requires a due date.
+              onClick={() => {
+                onPatch({ dueDate: null });
+              }}
+            >
+              <X size={14} />
+            </button>
+          ) : (
+            <DateClearSlot />
+          )}
+        </div>
       </PropertyRow>
 
       <PropertyRow label="Repeat">
@@ -178,7 +291,7 @@ export function TaskDetailProperties({
                 (e.target as HTMLInputElement).blur();
               }
             }}
-            className="border-transparent bg-transparent hover:bg-surface-2 focus:bg-surface-0 py-1.5 pl-6 pr-r5 text-body-3 rounded"
+            className="h-8 border-transparent bg-transparent hover:bg-surface-1 focus:bg-surface-0 pl-6 pr-r5 text-body-3 rounded"
           />
         </div>
       </PropertyRow>

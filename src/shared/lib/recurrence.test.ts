@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { RecurrenceRule } from "@/shared/types/recurrence";
 
-import { computeNextDueDate, formatRecurrenceRule } from "./recurrence";
+import { computeNextDueDate, computeNextStartDate, formatRecurrenceRule } from "./recurrence";
 
 /** Helper: create a UTC date from "YYYY-MM-DD" */
 function utc(iso: string): Date {
@@ -575,6 +575,99 @@ describe("computeNextDueDate", () => {
       const result = computeNextDueDate(utc("2025-03-28"), utc("2025-03-28"), rule);
       expect(result!.getTime()).toBeGreaterThan(utc("2025-03-28").getTime());
       expect(fmt(result)).toBe("2025-04-07");
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// computeNextStartDate
+// ---------------------------------------------------------------------------
+
+/**
+ * computeNextStartDate derives the spawned instance's startDate from the next
+ * due date by preserving the previous start→due whole-day span. These tests
+ * matter because recurrence is anchored exclusively on due dates — if the
+ * derived offset drifted (month boundaries, DST), recurring date-range tasks
+ * would silently shrink or grow their planned duration on every completion.
+ */
+describe("computeNextStartDate", () => {
+  it("3-day span with weekly recurrence: next start = next due − 3 days", () => {
+    // Previous instance spans Fri 3/7 → Mon 3/10 (3 whole days).
+    const prevStart = utc("2025-03-07");
+    const prevDue = utc("2025-03-10");
+    const rule: RecurrenceRule = { frequency: "weekly", interval: 1 };
+    const nextDue = computeNextDueDate(prevDue, prevDue, rule);
+    expect(fmt(nextDue)).toBe("2025-03-17");
+
+    const nextStart = computeNextStartDate(nextDue!, prevStart, prevDue);
+    expect(fmt(nextStart)).toBe("2025-03-14"); // 3 days before next due
+  });
+
+  it("zero-duration span (start === due): next start equals next due", () => {
+    const sameDay = utc("2025-03-10");
+    const nextDue = utc("2025-03-17");
+
+    const nextStart = computeNextStartDate(nextDue, sameDay, sameDay);
+    expect(fmt(nextStart)).toBe("2025-03-17");
+    expect(nextStart.getTime()).toBe(nextDue.getTime());
+  });
+
+  it("month-boundary span: start Jan 30 → due Feb 2 keeps a 3-day span", () => {
+    const prevStart = utc("2025-01-30");
+    const prevDue = utc("2025-02-02");
+    // Monthly on the 2nd: next due is March 2.
+    const rule: RecurrenceRule = { frequency: "monthly", interval: 1, dayOfMonth: 2 };
+    const nextDue = computeNextDueDate(prevDue, prevDue, rule);
+    expect(fmt(nextDue)).toBe("2025-03-02");
+
+    // Subtracting 3 days from March 2 must roll back across the month
+    // boundary into February (non-leap 2025 → Feb 27).
+    const nextStart = computeNextStartDate(nextDue!, prevStart, prevDue);
+    expect(fmt(nextStart)).toBe("2025-02-27");
+  });
+
+  it("year-boundary subtraction: next start rolls back into the previous year", () => {
+    // 5-day span ending Jan 2 → start must land in the previous December.
+    const nextStart = computeNextStartDate(
+      utc("2026-01-02"),
+      utc("2025-12-22"),
+      utc("2025-12-27"),
+    );
+    expect(fmt(nextStart)).toBe("2025-12-28");
+  });
+
+  describe("DST windows (UTC math is drift-free)", () => {
+    it("span straddling US spring-forward (2025-03-09) stays exactly 3 days", () => {
+      // US DST starts Sun 2025-03-09 (local clocks lose an hour). In local
+      // time the start→due delta would be 71h ≠ 3 days; in UTC-midnight
+      // timestamps it is exactly 72h, so the span is recovered losslessly.
+      const prevStart = utc("2025-03-08");
+      const prevDue = utc("2025-03-11");
+      expect(prevDue.getTime() - prevStart.getTime()).toBe(3 * 86_400_000);
+
+      const nextStart = computeNextStartDate(utc("2025-03-18"), prevStart, prevDue);
+      expect(fmt(nextStart)).toBe("2025-03-15");
+    });
+
+    it("span straddling US fall-back (2025-11-02) stays exactly 3 days", () => {
+      // US DST ends Sun 2025-11-02 (local clocks gain an hour → 73h locally).
+      const prevStart = utc("2025-11-01");
+      const prevDue = utc("2025-11-04");
+      expect(prevDue.getTime() - prevStart.getTime()).toBe(3 * 86_400_000);
+
+      const nextStart = computeNextStartDate(utc("2025-11-11"), prevStart, prevDue);
+      expect(fmt(nextStart)).toBe("2025-11-08");
+    });
+
+    it("next due itself inside a DST window subtracts whole UTC days", () => {
+      // EU DST starts Sun 2025-03-30. Next due Mon 3/31 with a 2-day span
+      // must give Sat 3/29 — crossing the transition without drift.
+      const nextStart = computeNextStartDate(
+        utc("2025-03-31"),
+        utc("2025-03-24"),
+        utc("2025-03-26"),
+      );
+      expect(fmt(nextStart)).toBe("2025-03-29");
     });
   });
 });

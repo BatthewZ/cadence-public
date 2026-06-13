@@ -19,11 +19,12 @@ import {
   apiValidationErrorResponseSchema,
   createTaskResponseSchema,
   getTaskResponseSchema,
+  importTasksResponseSchema,
   listTasksResponseSchema,
   updateTaskResponseSchema,
 } from "../../../shared/schemas/openapi-responses";
 import { createSubtaskSchema, updateSubtaskSchema } from "../../../shared/schemas/subtask";
-import { createTaskSchema, listActivityQuerySchema, moveTaskSchema, updateTaskSchema } from "../../../shared/schemas/task";
+import { createTaskSchema, importTasksSchema, listActivityQuerySchema, moveTaskSchema, updateTaskSchema } from "../../../shared/schemas/task";
 import { unsplashCoverPayloadSchema } from "../../../shared/schemas/unsplash";
 import type { AppEnv } from "../../env";
 import {
@@ -52,6 +53,7 @@ import {
   duplicateTask,
   getTask,
   getTaskActivity,
+  importTasks,
   listComments,
   listTasks,
   moveTask,
@@ -218,6 +220,50 @@ const createTaskRoute = createRoute({
   },
 });
 
+const importTasksRoute = createRoute({
+  method: "post",
+  path: "/projects/{projectId}/tasks/import",
+  tags: ["Tasks"],
+  summary: "Bulk-import tasks from a parsed calendar",
+  description:
+    "Create up to 500 tasks in one request from a client-parsed .ics calendar (the server only accepts validated JSON, never the raw file). Events carrying a `sourceUid` (the ICS `UID`) are deduplicated per project: re-importing the same file skips previously imported events instead of duplicating them. Events without a `sourceUid` cannot be recognised on re-import and are created again. Imported tasks are appended to the end of the target task group in payload order. No `task.created` webhooks are dispatched for imports (bulk fan-out would flood subscribers); imported tasks appear in subsequent reads and carry `sourceUid` in later webhook payloads.",
+  security,
+  middleware: [
+    requireAuth,
+    requireProjectRole("admin", "member"),
+    // Bulk endpoint, so unlike single-task create it IS rate limited — one
+    // request can write 500 rows plus 500 activity entries, and a runaway
+    // integration retrying imports would otherwise hammer D1. 10/min mirrors
+    // the in-file precedent for expensive writes (cover upload) while still
+    // allowing a large calendar split into 10×500-event requests per minute.
+    rateLimit({ max: 10, windowSeconds: 60, prefix: "task-import", keyFn: defaultRateLimitKey }),
+  ],
+  request: {
+    params: projectIdParam,
+    body: {
+      content: { "application/json": { schema: importTasksSchema } },
+      required: true,
+    },
+  },
+  responses: {
+    201: {
+      content: { "application/json": { schema: importTasksResponseSchema } },
+      description: "Import processed — counters for created and skipped (already-imported) events",
+    },
+    400: validationFailedResponse,
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+    404: {
+      content: { "application/json": { schema: apiErrorResponseSchema } },
+      description: "Task group not found in this project",
+    },
+    429: {
+      content: { "application/json": { schema: apiErrorResponseSchema } },
+      description: "Rate limit exceeded (10 imports per minute)",
+    },
+  },
+});
+
 const updateTaskRoute = createRoute({
   method: "patch",
   path: "/tasks/{taskId}",
@@ -275,6 +321,9 @@ const attachmentWriteScope = requireWriteScopeForResource({ resource: "attachmen
 
 // Task collection + individual task ops
 app.use("/projects/:projectId/tasks", taskReadScope, taskWriteScope);
+// Bulk import creates tasks, so it sits under the same task scopes as the
+// single-task create route (PAT clients need `task:write` / `write:*`).
+app.use("/projects/:projectId/tasks/import", taskReadScope, taskWriteScope);
 app.use("/tasks/:taskId", taskReadScope, taskWriteScope);
 app.use("/tasks/:taskId/move", taskReadScope, taskWriteScope);
 app.use("/tasks/:taskId/duplicate", taskReadScope, taskWriteScope);
@@ -305,6 +354,7 @@ app.use("/tasks/:taskId/labels/:labelId", labelWriteScope);
 app.openapi(listTasksRoute, asRouteHandler<typeof listTasksRoute>(listTasks));
 app.openapi(getTaskRoute, asRouteHandler<typeof getTaskRoute>(getTask));
 app.openapi(createTaskRoute, asRouteHandler<typeof createTaskRoute>(createTask));
+app.openapi(importTasksRoute, asRouteHandler<typeof importTasksRoute>(importTasks));
 app.openapi(updateTaskRoute, asRouteHandler<typeof updateTaskRoute>(updateTask));
 
 // ---------------------------------------------------------------------------

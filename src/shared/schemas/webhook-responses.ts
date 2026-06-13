@@ -8,9 +8,9 @@ import { WEBHOOK_EVENT_TYPES } from "../types/webhook";
 
 export const webhookResponseSchema = z
   .object({
-    id: z.string().uuid(),
-    workspaceId: z.string().uuid(),
-    projectId: z.string().uuid().nullable().openapi({
+    id: z.uuid(),
+    workspaceId: z.uuid(),
+    projectId: z.uuid().nullable().openapi({
       description:
         "When set, the webhook only fires for events from this project. Null means all workspace events.",
     }),
@@ -45,8 +45,8 @@ export const webhookWithSecretResponseSchema = webhookResponseSchema
 
 export const webhookDeliveryResponseSchema = z
   .object({
-    id: z.string().uuid(),
-    webhookId: z.string().uuid(),
+    id: z.uuid(),
+    webhookId: z.uuid(),
     event: z.string(),
     payload: z.string().openapi({ description: "JSON-encoded payload" }),
     statusCode: z.number().int().nullable(),
@@ -66,7 +66,7 @@ export const webhookDeliveryResponseSchema = z
 
 export const testDeliveryResultSchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.uuid(),
     success: z.boolean(),
     statusCode: z.number().int().nullable(),
     response: z.string().nullable(),
@@ -99,7 +99,7 @@ export const validationErrorResponseSchema = z
  */
 export const webhookPayloadEnvelopeSchema = z
   .object({
-    id: z.string().uuid().openapi({ description: "Delivery ID" }),
+    id: z.uuid().openapi({ description: "Delivery ID" }),
     event: z.enum(WEBHOOK_EVENT_TYPES).openapi({
       description: "The event type that triggered this delivery",
     }),
@@ -108,20 +108,20 @@ export const webhookPayloadEnvelopeSchema = z
       example: "2025-01-15T09:30:00.000Z",
     }),
     workspace: z.object({
-      id: z.string().uuid(),
+      id: z.uuid(),
       name: z.string(),
       slug: z.string(),
     }),
     project: z
       .object({
-        id: z.string().uuid(),
+        id: z.uuid(),
         name: z.string(),
       })
       .optional()
       .openapi({ description: "Present for project-scoped events" }),
     actor: z
       .object({
-        id: z.string().uuid(),
+        id: z.uuid(),
         name: z.string(),
         email: z.string().email(),
       })

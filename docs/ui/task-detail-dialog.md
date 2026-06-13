@@ -78,7 +78,7 @@ File attachments section powered by `TaskAttachmentSection` (`src/web/pages/Task
 - The comment count in the section header displays `task.commentCount` (server-provided total) rather than the length of the loaded array.
 - If the comments query fails, an inline "Failed to load comments." message is shown above the comment list.
 - Existing comments with author avatar, name, date, and "(edited)" indicator when `updatedAt` differs from `createdAt`.
-- Comment body rendered with [`MentionText`](mention-text.md) for `@mention` highlighting.
+- Comment body rendered with [`Markdown`](markdown.md) (lite-markdown + `@mention` highlighting).
 - Own comments show hover-reveal Edit and Delete actions.
 - Edit mode: inline textarea with save/cancel icons.
 - Add comment: textarea + "Comment" button. Creates via `POST /api/tasks/:taskId/comments`.
@@ -144,8 +144,8 @@ const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 ## Dependencies
 
 - [`Dialog`](dialog.md), [`ConfirmDialog`](confirm-dialog.md), [`Avatar`](avatar.md), [`Button`](button.md), [`IconButton`](icon-button.md), [`Skeleton`](skeleton.md), [`Text`](text.md), [`Toast`](toast.md)
-- [`CoverImage`], [`IconDisplay`], [`IconGrid`](icon-picker), [`MentionText`](mention-text.md), [`Popover`](popover.md)
-- Form primitives: `Input`, `Select`, `TaskCheckbox`, `Textarea`, `MentionTextarea`
+- [`CoverImage`], [`IconDisplay`], [`IconGrid`](icon-picker), [`Markdown` / `EditableMarkdown`](markdown.md), [`Popover`](popover.md)
+- Form primitives: `Input`, `Select`, `TaskCheckbox`, `Textarea`; `MarkdownEditor` for comment authoring
 - Shared extracted components from `pages/TaskDetail/components/`: `TaskDetailProperties` (property grid), `TaskSubtaskList` (drag-and-drop subtask list), `TaskCommentSection` (comment list with edit/delete), `PropertyRow`, `SortableSubtaskRow`
 - `@dnd-kit/core`, `@dnd-kit/sortable` (subtask drag-and-drop)
 - `@tanstack/react-query` (`useQuery`, `useMutation`, `useQueryClient`)

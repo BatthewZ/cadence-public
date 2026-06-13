@@ -9,7 +9,7 @@ import { taskAttachment } from "../../../../db/schema/task-attachment";
 import { generateKeyBetween } from "../../../../shared/lib/fractional-index";
 import { parseRecurrenceRule } from "../../../../shared/lib/recurrence";
 import type { TaskLabelInfo } from "../../../../shared/schemas/label";
-import { createTaskSchema, updateTaskSchema } from "../../../../shared/schemas/task";
+import { createTaskSchema, dateRangeError, updateTaskSchema } from "../../../../shared/schemas/task";
 import type { AppEnv } from "../../../env";
 import { deferWork } from "../../../lib/defer";
 import { errorResponse } from "../../../lib/error-response";
@@ -72,10 +72,23 @@ export async function createTask(c: Context<AppEnv>) {
     ? (body.assigneeId ?? null)
     : (projectResult[0]?.autoAssignCreator ? user.id : null);
 
-  // If recurrence is set but no dueDate provided, default dueDate to today
+  // A recurring task needs an anchor date. When neither date is supplied we
+  // default dueDate to today so the series has somewhere to recur from. But if
+  // the payload already carries a startDate, that IS the anchor (the spawn path
+  // recurs a start-only task on its start date), so we must NOT fabricate a
+  // dueDate — doing so could store an inverted range when the start date is in
+  // the future, and the schema's start ≤ due refinement ran before this default
+  // existed so it cannot catch it.
   const dueDate = body.dueDate
     ? new Date(body.dueDate)
-    : (body.recurrenceRule ? now : null);
+    : (body.recurrenceRule && !body.startDate ? now : null);
+
+  // startDate is independently optional (it may be set without a dueDate); the
+  // only cross-field rule, start <= due when both are present, is enforced by
+  // createTaskSchema's superRefine before this handler runs, so the value can
+  // be inserted as-is. Parsing "YYYY-MM-DD" with `new Date()` yields a
+  // UTC-midnight timestamp, matching the dueDate convention.
+  const startDate = body.startDate ? new Date(body.startDate) : null;
 
   // Read last position + insert inside a retry loop — the UNIQUE index on
   // (taskGroupId, position) catches any race with concurrent creates in
@@ -101,12 +114,18 @@ export async function createTask(c: Context<AppEnv>) {
       completed: isCompleted,
       completedAt: isCompleted ? now : null,
       completedBy: isCompleted ? user.id : null,
+      startDate,
       dueDate,
       cost: body.cost ?? null,
       icon: body.icon ?? null,
       recurrenceRule: body.recurrenceRule ? JSON.stringify(body.recurrenceRule) : null,
       recurrenceSeriesId: body.recurrenceRule ? crypto.randomUUID() : null,
       recurrenceParentId: null,
+      // Always null here: sourceUid is import provenance, settable only by
+      // the bulk import endpoint. Explicit (not left to the column default)
+      // because this literal IS the create response body and the documented
+      // Task schema declares the field as always present.
+      sourceUid: null,
       position,
       createdAt: now,
       updatedAt: now,
@@ -342,6 +361,37 @@ export async function updateTask(c: Context<AppEnv>) {
     return errorResponse(c, "Task not found", 404);
   }
 
+  // -------------------------------------------------------------------------
+  // startDate/dueDate merged-state backstop (mandatory, not belt-and-braces)
+  //
+  // startDate and dueDate are each independently optional; the ONLY cross-field
+  // rule is ordering — when both are present, start must be on or before due.
+  // updateTaskSchema can only enforce that when BOTH fields appear in the
+  // payload (a partial PATCH can't see stored values), so without this check
+  // `PATCH {startDate}` against an earlier stored dueDate (or `PATCH {dueDate}`
+  // against a later stored startDate) would persist an inverted range. We merge
+  // the payload with the stored row and run the same `dateRangeError` predicate
+  // the schema uses, so the 400 wording can never drift between the two
+  // enforcement points.
+  //
+  // Note: clearing the due date does NOT touch a surviving startDate — a start
+  // date can stand on its own now (work that begins on a day with no deadline),
+  // so there is nothing to auto-clear.
+  // -------------------------------------------------------------------------
+  if (body.startDate !== undefined || body.dueDate !== undefined) {
+    const effectiveStart = body.startDate !== undefined
+      ? body.startDate
+      : (currentTask.startDate?.toISOString() ?? null);
+    const effectiveDue = body.dueDate !== undefined
+      ? body.dueDate
+      : (currentTask.dueDate?.toISOString() ?? null);
+
+    const rangeError = dateRangeError(effectiveStart, effectiveDue);
+    if (rangeError) {
+      return errorResponse(c, rangeError, 400);
+    }
+  }
+
   const now = new Date();
 
   const updateData = {
@@ -350,6 +400,7 @@ export async function updateTask(c: Context<AppEnv>) {
     ...(body.description !== undefined && { description: body.description }),
     ...(body.assigneeId !== undefined && { assigneeId: body.assigneeId }),
     ...(body.priority !== undefined && { priority: body.priority }),
+    ...(body.startDate !== undefined && { startDate: body.startDate ? new Date(body.startDate) : null }),
     ...(body.dueDate !== undefined && { dueDate: body.dueDate ? new Date(body.dueDate) : null }),
     ...(body.cost !== undefined && { cost: body.cost }),
     ...(body.icon !== undefined && { icon: body.icon }),
@@ -406,6 +457,21 @@ export async function updateTask(c: Context<AppEnv>) {
         newValue: body.title,
         apiTokenId: updateApiTokenId,
       });
+    }
+    if (body.startDate !== undefined) {
+      const oldStart = currentTask.startDate ? currentTask.startDate.toISOString() : null;
+      const newStart = body.startDate ?? null;
+      if (oldStart !== newStart) {
+        activities.push({
+          taskId,
+          actorId: user.id,
+          action: newStart ? "start_date_changed" : "start_date_removed",
+          field: "startDate",
+          oldValue: oldStart,
+          newValue: newStart,
+          apiTokenId: updateApiTokenId,
+        });
+      }
     }
     if (body.dueDate !== undefined) {
       const oldDue = currentTask.dueDate ? currentTask.dueDate.toISOString() : null;
@@ -481,7 +547,7 @@ export async function updateTask(c: Context<AppEnv>) {
     const changes = computeChanges(
       currentTask as Record<string, unknown>,
       updated as Record<string, unknown>,
-      ["title", "description", "assigneeId", "priority", "dueDate", "cost", "icon", "taskGroupId", "coverImageKey", "coverImagePosition", "recurrenceRule"],
+      ["title", "description", "assigneeId", "priority", "startDate", "dueDate", "cost", "icon", "taskGroupId", "coverImageKey", "coverImagePosition", "recurrenceRule"],
     );
 
     // Enrich ID-only changes with human-readable objects

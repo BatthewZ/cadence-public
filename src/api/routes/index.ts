@@ -20,6 +20,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 
 import type { AppEnv } from "../env";
 import authRoutes from "./auth/auth.routes";
+import calendarRoutes from "./calendar/calendar.routes";
 import configRoutes from "./config/config.routes";
 import dashboardRoutes from "./dashboard/dashboard.routes";
 import invitationRoutes from "./invitations/invitations.routes";
@@ -54,6 +55,7 @@ app.route("/", webhookRoutes);
 app.route("/", legalRoutes);
 app.route("/", configRoutes);
 app.route("/", unsplashRoutes);
+app.route("/", calendarRoutes);
 
 // ---------------------------------------------------------------------------
 // OpenAPI security schemes

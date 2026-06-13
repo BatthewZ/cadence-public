@@ -79,6 +79,12 @@ export async function createTaskGroup(c: Context<AppEnv>) {
       projectId,
       name: body.name,
       color: body.color ?? null,
+      // Explicit (not left to the DB default) because this literal IS the
+      // response body: list and update responses include isCompletionGroup
+      // (full-row selects / .returning()), and the web TaskGroup interface
+      // pins it as a required boolean — omitting it here would make the
+      // create response the one sibling surface where the field is missing.
+      isCompletionGroup: false,
       position,
       createdAt: now,
       updatedAt: now,

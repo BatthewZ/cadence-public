@@ -319,6 +319,86 @@ Removes a member from the workspace. Cannot remove the workspace owner.
 { "ok": true }
 ```
 
+### `GET /api/workspaces/:workspaceId/export`
+
+Downloads a canonical, versioned JSON archive of the entire workspace (`Content-Type: application/json; charset=utf-8`, `Content-Disposition: attachment; filename="<slug>-export-<YYYY-MM-DD>.json"`). The document is defined by `workspaceExportSchema` (`src/shared/schemas/workspace-export.ts`) — the single source of truth — and contains the workspace, members, teams, webhooks, invitations, and every project with its task groups, labels, tasks, subtasks, comments, and attachment manifests. A top-level `users` ref directory resolves every referenced user id — including **ex-members** who are no longer in the workspace but who created or were assigned work — to `{ ref, email, name }`, so the archive never loses the answer to "who did this work?".
+
+**Auth:** Required. Reachable by a `workspace:read` PAT, but only when the owning user is an owner/admin (PAT scopes are AND-ed with the user's role).
+**Authorization:** Workspace **owner or admin** only — the most privileged read in the API (full data egress).
+**Rate limit:** 5 requests/hour per caller, keyed PAT > user > IP (`defaultRateLimitKey`).
+
+**Query parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `includeActivity` | `"true"` / `"1"` | Include each task's activity history. Omitted by default — `task_activity` routinely outnumbers tasks 10–20×, so the default export stays small. When omitted, a task's `activity` field is **absent** (not `[]`), so consumers distinguish "exported without history" from "no history". |
+
+**Secrets never serialize.** Webhook `secret` and invitation `token` are structurally excluded — every builder projects rows down to the strict (`z.strictObject`) contract fields, so a future bug that spreads a raw DB row fails the contract test loudly instead of leaking quietly. Attachments export as **manifests** (`key` + authenticated relative `url`), never binaries.
+
+**Auditing.** Every successful export writes a row to `audit_log` via `recordWorkspaceDataEvent` (action `export`) — for cookie sessions **and** PATs alike — answering "who pulled a full copy of this workspace, and when". See [API Tokens § audit ledger](./api-tokens.md#2-data-egress--cross-resource-audit-ledger-audit_log).
+
+The body is streamed one project at a time as a single valid JSON document, so a large workspace never materializes the full object graph and the full serialized string in the 128 MB Worker isolate simultaneously.
+
+**Response** (200) — shape (abridged):
+
+```json
+{
+  "format": "cadence.workspace",
+  "formatVersion": 1,
+  "exportedAt": "2026-06-12T12:00:00.000Z",
+  "exportedBy": "owner@example.com",
+  "workspace": { "name": "...", "slug": "...", "description": null, "theme": null },
+  "users": [{ "ref": "userId", "email": "...", "name": "..." }],
+  "members": [{ "userRef": "userId", "role": "owner", "joinedAt": "..." }],
+  "teams": [],
+  "webhooks": [],
+  "invitations": [],
+  "projects": [
+    { "id": "...", "name": "...", "taskGroups": [], "labels": [], "tasks": [] }
+  ]
+}
+```
+
+### `POST /api/workspaces/:workspaceId/import`
+
+Creates **new** projects in the workspace from an uploaded export file — the write-side counterpart of [`GET …/export`](#get-apiworkspacesworkspaceidexport). The request is `multipart/form-data` with a single `file` field containing either a **Cadence workspace export** (recognized by its `format: "cadence.workspace"` field) or a **Trello single-board JSON export** (sniffed — Trello files carry no such field). The file is converted to one canonical document and its `projects` subtree is created fresh; existing workspace content is never read for merge and never mutated. Every imported entity gets a new UUID, so an import can never collide with or overwrite anything already present. Contracts are `importPreviewSchema` / `importResultSchema` (`src/shared/schemas/workspace-import.ts`), a discriminated union over the `dryRun` literal the client sent.
+
+**Auth:** Required. Reachable by a `workspace:write` PAT, but only when the owning user is an owner/admin (PAT scopes are AND-ed with the user's role).
+**Authorization:** Workspace **owner or admin** only — a workspace-wide data ingress, gated like export's egress.
+**Rate limit:** 10 requests/hour per caller, keyed PAT > user > IP (`defaultRateLimitKey`) — one notch looser than export's 5 because the stateless preview→confirm flow legitimately costs two requests per real import.
+
+**Query parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `dryRun` | `"true"` / `"1"` | Run the identical parse → validate → convert → user-match → repair pipeline with **zero writes** and return an `importPreviewSchema` body (detected format, would-create counts, unmatched users, skipped sections, warnings). The preview is **stateless** — nothing is persisted between the preview and the commit, so confirming re-uploads the same file. Omitted/false commits the import and returns `importResultSchema`. |
+
+**User matching is email-only and member-scoped.** A file `ref` resolves through the document's `users` directory to an email, then to a member **of the target workspace** (case-insensitive). Unmatched users are not an error — their task references fall back to unassigned and each is reported with the count of references it loses. Matching never reaches platform-wide accounts, so an import cannot probe whether an email has an account. The importing user is added as admin of every created project.
+
+**All-or-nothing per project.** Each project's graph is written in FK-ordered batches; a mid-project failure rolls the partial graph back (compensating delete) and lists that project in `failedProjects` while the remaining projects still import.
+
+**Skipped by design** (counted, never silent): workspace metadata, members, teams, webhooks, invitations, attachment binaries, and activity history — secrets such as webhook signing keys and invitation tokens never travel at all (the export schema is strict). See the [Export & Import guide](../guides/export-import.md#what-round-trips--and-what-doesnt) for the full round-trip table and the Trello field mapping.
+
+**Auditing.** A successful **commit** writes one `audit_log` row via `recordWorkspaceDataEvent` (action `import`, with the created counts and rolled-back-project count); dry runs write nothing, because a preview is not an ingress event. See [API Tokens § audit ledger](./api-tokens.md#2-data-egress--cross-resource-audit-ledger-audit_log).
+
+**Errors:** `413` when the file exceeds **20 MB** (checked on byte length *before* any decode/parse); `400` for a non-multipart body, a missing `file` field, malformed JSON, an unrecognized format, or a document that fails schema/referential-integrity validation — the response carries an `errors[]` array of human-readable lines (e.g. `projects[0].tasks[2].title: …`) locating the offending value.
+
+**Response** (200) — commit, shape (abridged):
+
+```json
+{
+  "dryRun": false,
+  "sourceFormat": "cadence",
+  "counts": { "projects": 3, "taskGroups": 9, "tasks": 142, "labels": 7, "subtasks": 38, "comments": 21 },
+  "unmatchedUsers": [{ "email": "ex@example.com", "name": "Ex Teammate", "taskCount": 12 }],
+  "skipped": { "webhooks": 2, "teams": 1, "invitations": 0, "attachments": 5, "activity": 0, "closedItems": 0 },
+  "warnings": ["…"],
+  "failedProjects": [{ "name": "Roadmap", "error": "…" }]
+}
+```
+
+A dry-run response (`?dryRun=true`) is identical minus `failedProjects` — nothing executed, so nothing can have failed — and with `"dryRun": true`.
+
 ---
 
 ## Projects
@@ -730,6 +810,24 @@ Removes a member from the project.
 { "ok": true }
 ```
 
+### `GET /api/projects/:projectId/export/csv`
+
+Downloads every task in the project as a CSV spreadsheet (`Content-Type: text/csv; charset=utf-8`, `Content-Disposition: attachment; filename="<project>.csv"`). One row per task in **board reading order** (group position, then task position). Columns: `title`, `group`, `assignee_email`, `due_date` (`YYYY-MM-DD`), `priority`, `labels` (`;`-joined, name-sorted), `completed` (`true`/`false`), and `cost` (fixed-decimal currency units, e.g. `10.50`). Unassigned tasks emit an empty `assignee_email`; tasks with no due date / cost emit empty cells.
+
+**Auth:** Required. A `project:read` PAT may export — the CSV contains nothing a project member cannot already page through one task at a time via [`GET /api/projects/:projectId/tasks`](#get-apiprojectsprojectidtasks), so a tighter scope here would be theatre, not a control.
+**Authorization:** Any project member, **including viewers**.
+**Rate limit:** 30 requests/hour per caller (each export is a full project table scan).
+
+User-controlled string cells (`title`, `group`, `labels`) are hardened against **CSV formula injection** (OWASP): a cell beginning `=`, `+`, `-`, `@`, tab, or CR is prefixed with `'` so a spreadsheet renders it as text instead of executing it. Numeric (`cost`) and boolean (`completed`) cells are typed and exempt. Hardening lives in the shared serializer — see [`toCsv`](../../src/api/lib/csv.ts).
+
+**Response** (200) — example body:
+
+```csv
+title,group,assignee_email,due_date,priority,labels,completed,cost
+"Fix login bug",In Progress,jane@example.com,2026-06-20,high,backend;urgent,false,
+"Ship release",Done,,2026-06-12,medium,,true,150.00
+```
+
 ---
 
 ## Labels
@@ -787,6 +885,30 @@ Lists all labels for a project, ordered by name. Each label includes a `taskCoun
   ]
 }
 ```
+
+### `GET /api/workspaces/:workspaceId/labels`
+
+Lists labels across **every active project the caller can see** in the workspace, deduplicated by case-insensitive name. Intended for workspace-level filter UIs (e.g. the My Tasks label filter) where a user narrows tasks by label without caring which project a label row physically lives in. Read-only — only the label read scope is mounted on this route.
+
+Labels are project-scoped rows and name uniqueness is only enforced case-insensitively *within* a project, so the same conceptual label (`"Bug"` in one project, `"bug"` in another) exists as distinct rows with distinct ids. For cross-project filtering the **name** is the label's identity, so rows are collapsed on `LOWER(name)` and each group reports `MIN(name)` / `MIN(color)` as a deterministic representative (stable across requests regardless of insert order). Results are ordered case-insensitively by name. Because the entries represent multiple underlying rows, the response carries **no `id`, `projectId`, `createdAt`, or `taskCount`** — only `name` and `color`.
+
+Archived projects are excluded: their tasks no longer appear in workspace task views, so offering their labels as filter options would only produce dead filters.
+
+**Auth:** Required.
+**Authorization:** Workspace member. Owners/admins see labels from all workspace projects; non-elevated members only from projects they are a direct member of (mirrors `GET /api/workspaces/:workspaceId/task-groups` visibility), so a plain member can never enumerate label names from projects they cannot open.
+
+**Response** (200):
+
+```json
+{
+  "labels": [
+    { "name": "Bug", "color": "#ef4444" },
+    { "name": "Frontend", "color": "#3b82f6" }
+  ]
+}
+```
+
+When the caller can see no active projects, `labels` is `[]`.
 
 ### `PATCH /api/projects/:projectId/labels/:labelId`
 
@@ -875,6 +997,103 @@ Removes a label from a task. Logs a `label_removed` activity entry.
 
 ---
 
+## Saved Views
+
+Private, per-user-per-project bookmarks of the task board's URL view state (active tab + filter/grouping params). The URL is the runtime source of truth; a saved view is a named snapshot a user can re-apply. Backed by `src/api/routes/projects/saved-views.handlers.ts`; the stored `state` shape and bounds live in `src/shared/schemas/saved-view.ts`.
+
+Two authorization properties are load-bearing and pinned by the handler tests:
+
+- **Creator scoping is the cross-user guard.** Every query filters by BOTH `projectId` AND the caller's `creatorId`. Route-level access is the lenient `requireProjectAccess()` (any project member, *including viewers* — a saved view only bookmarks read-only board state), so the real isolation is the handler's creator filter: another member's view id must be indistinguishable from a missing one. Update/delete on a teammate's (or non-existent) view therefore return **404, never 403** — a member can neither read, modify, nor even *confirm the existence of* another user's private views by guessing ids.
+- **No project-freshness bump.** Unlike label mutations (which touch `project.updatedAt` so the team's freshness poller notices shared data changed), saved-view writes never touch the `project` table. Bumping it would invalidate freshness polling for the *whole team* every time one user saved a private bookmark. See [Project Freshness](#get-apiprojectsprojectidfreshness).
+
+The `state` snapshot is `{ tab, params }`: `tab` is a bounded string (not an enum — a future client may save `"calendar"`), and `params` is a bounded **open** string-record (≤16 entries, keys 1–40 chars, values ≤500 chars). Unknown param keys are stored verbatim so a view authored by a newer client round-trips through an older server without corruption — the forward-compatibility contract.
+
+### `GET /api/projects/:projectId/views`
+
+Lists the **caller's** saved views for the project, ordered by fractional `position` (creation order in v1 — there is no reorder endpoint yet; position-ordering makes adding one later a pure insert-between).
+
+**Auth:** Required.
+**Authorization:** Project member (any role, including viewers).
+
+**Response** (200):
+
+```json
+{
+  "views": [
+    {
+      "id": "uuid",
+      "projectId": "projectId",
+      "creatorId": "userId",
+      "name": "My urgent",
+      "state": {
+        "tab": "board",
+        "params": { "priority": "high,urgent", "assignee": "me" }
+      },
+      "position": "a0",
+      "createdAt": "...",
+      "updatedAt": "..."
+    }
+  ]
+}
+```
+
+Returns only the authenticated user's views — never another member's, even for project admins.
+
+### `POST /api/projects/:projectId/views`
+
+Creates a saved view for the caller. Maximum **20 views per (project, user)**. Names must be unique per (project, creator), case-insensitively — the DB unique index is case-sensitive, so this handler-level `LOWER(name)` check is the real guard (the index is only a race backstop). Cap, duplicate-name, and last-position lookups run in a single `db.batch` round-trip.
+
+**Auth:** Required.
+**Authorization:** Project member (any role, including viewers).
+
+**Request body:**
+
+| Field | Type | Constraints | Required |
+|-------|------|-------------|----------|
+| `name` | `string` | 1--50 characters, trimmed (whitespace-only rejected) | Yes |
+| `state` | `object` | `{ tab, params }` — see above | Yes |
+| `state.tab` | `string` | 1--20 characters | Yes |
+| `state.params` | `object` | Open string-record, ≤16 entries, keys 1--40 chars, values ≤500 chars | Yes |
+
+**Response** (201): `{ "view": { ...as above } }`
+
+**Errors:** 400 (max views reached / invalid body), 409 (duplicate name).
+
+### `PATCH /api/projects/:projectId/views/:viewId`
+
+Renames a view and/or overwrites its `state` snapshot. Last-write-wins — the data is single-owner, so there is no concurrent editor to protect against. The duplicate-name 409 only fires when the name actually changes case-insensitively, so a case-correction (`"urgent"` → `"Urgent"`) and a no-op rename never false-positive against the row's own name. An empty PATCH (no changed fields) echoes the row without bumping `updatedAt`.
+
+**Auth:** Required.
+**Authorization:** Project member (any role); the view must belong to the caller, else 404.
+
+**Request body:**
+
+| Field | Type | Constraints | Required |
+|-------|------|-------------|----------|
+| `name` | `string` | 1--50 characters, trimmed | No |
+| `state` | `object` | `{ tab, params }` — see above | No |
+
+**Response** (200): `{ "view": { ...as above } }`
+
+**Errors:** 404 (not found, or belongs to another user), 409 (duplicate name).
+
+### `DELETE /api/projects/:projectId/views/:viewId`
+
+Deletes one of the caller's saved views. The creator-scoped `WHERE` plus `.returning()` means another user's (or a non-existent) view id deletes nothing and yields the same 404.
+
+**Auth:** Required.
+**Authorization:** Project member (any role); the view must belong to the caller, else 404.
+
+**Response** (200):
+
+```json
+{ "ok": true, "deletedId": "viewId" }
+```
+
+**Errors:** 404 (not found, or belongs to another user).
+
+---
+
 ## Task Groups
 
 ### `POST /api/projects/:projectId/task-groups`
@@ -900,6 +1119,7 @@ Creates a new task group within a project. Position is automatically assigned at
     "projectId": "projectId",
     "name": "Backlog",
     "color": "#ff5733",
+    "isCompletionGroup": false,
     "position": "a3",
     "createdAt": "...",
     "updatedAt": "..."
@@ -924,6 +1144,7 @@ Lists all task groups in a project, ordered by position. Includes a task count p
       "projectId": "projectId",
       "name": "To Do",
       "color": null,
+      "isCompletionGroup": false,
       "position": "a0",
       "createdAt": "...",
       "updatedAt": "...",
@@ -1045,12 +1266,15 @@ Creates a new task within a project. The task is placed at the end of the specif
 | `taskGroupId` | `string` | UUID, must belong to the project | Yes |
 | `assigneeId` | `string \| null` | UUID | No |
 | `priority` | `string` | `"urgent"`, `"high"`, `"medium"`, `"low"`, or `"none"` (default: `"none"`) | No |
-| `dueDate` | `string \| null` | ISO 8601 datetime | No |
+| `startDate` | `string \| null` | Task start date, same format/validation as `dueDate`. Independently optional; when a `dueDate` is also present it must be on or before it (see range note below) | No |
+| `dueDate` | `string \| null` | A `YYYY-MM-DD` calendar date (what the web date picker sends) or a full ISO 8601 datetime. Validated calendar-aware: shape-correct-but-impossible dates (e.g. `2030-02-30`) are rejected with 400 | No |
 | `cost` | `integer \| null` | Non-negative integer (cents) | No |
 | `icon` | `string \| null` | max 50 characters | No |
 | `recurrenceRule` | `object \| null` | See [Recurrence Rule](#recurrence-rule-object) below | No |
 
 > **Note:** When `recurrenceRule` is provided but `dueDate` is omitted, `dueDate` defaults to the current date. A `recurrenceSeriesId` (UUID) is automatically generated for new recurring tasks.
+
+> **Start/due ordering invariant:** `startDate` and `dueDate` are each independently optional — a task may carry a start date alone (work that begins on a day with no deadline), a due date alone, both (a start → due range), or neither. The only cross-field rule is ordering: when **both** are present, `startDate` must not fall after `dueDate` (`"Start date must be on or before the due date"`, 400). On create the full state is in the payload, so the rule is checked by the schema. Comparison is on the `YYYY-MM-DD` prefix (lexicographic, no timezone parse).
 
 **Response** (201):
 
@@ -1065,6 +1289,7 @@ Creates a new task within a project. The task is placed at the end of the specif
     "assigneeId": null,
     "priority": "none",
     "status": "open",
+    "startDate": null,
     "dueDate": null,
     "cost": null,
     "icon": null,
@@ -1072,12 +1297,56 @@ Creates a new task within a project. The task is placed at the end of the specif
     "recurrenceRule": null,
     "recurrenceSeriesId": null,
     "recurrenceParentId": null,
+    "sourceUid": null,
     "position": "a0",
     "createdAt": "...",
     "updatedAt": "..."
   }
 }
 ```
+
+> **`sourceUid`** is always present on a task object. It is `null` for tasks created any way other than calendar import; it carries the ICS `UID` of the source event only for tasks created via `POST /projects/:projectId/tasks/import`. It is set once at import and is immutable — `PATCH /tasks/:taskId` ignores it, and `duplicate`/`move`/recurrence-spawn never copy it.
+
+### `POST /api/projects/:projectId/tasks/import`
+
+Bulk-creates up to **500 tasks** in one request from a **client-parsed** `.ics` calendar. The server never receives the raw `.ics` file — the browser (or a machine client) parses it and sends only validated JSON. Imported tasks are appended to the end of the target task group in payload order.
+
+**Auth:** Required (cookie session or PAT with `task:write` / `write:*`).
+**Authorization:** Project admin or member.
+**Rate limit:** 10 requests/minute per caller (`429` over the cap). One request can write 500 task rows plus 500 activity entries, so unlike single-task create this endpoint *is* rate-limited.
+
+**Request body:**
+
+| Field | Type | Constraints | Required |
+|-------|------|-------------|----------|
+| `taskGroupId` | `string` | UUID, must belong to the project in the URL | Yes |
+| `tasks` | `array` | 1--500 items (see item shape below) | Yes |
+
+**`tasks[]` item shape** — deliberately the same validation contract as `POST /tasks` (an import can never carry values a hand-created task couldn't):
+
+| Field | Type | Constraints | Required |
+|-------|------|-------------|----------|
+| `title` | `string` | 1--200 characters | Yes |
+| `description` | `string \| null` | max 5000 characters | No |
+| `startDate` | `string \| null` | Same format/validation as `dueDate`; independently optional and must be on or before `dueDate` when both are present (a `DTSTART` without a resolvable end imports as a start-only task, exactly like a create payload with a start and no due date) | No |
+| `dueDate` | `string \| null` | A `YYYY-MM-DD` calendar date or a full ISO 8601 datetime; validated calendar-aware (impossible dates such as `2030-02-30` rejected with 400) | No |
+| `sourceUid` | `string` | The source event's ICS `UID`, 1--512 characters | No |
+
+> **Re-import dedupe:** events that carry a `sourceUid` are imported **at most once per project** — a partial unique index on (`projectId`, `source_uid`) is the ground truth, and the handler pre-reads existing UIDs so re-importing the same file reports those events as `skipped` rather than failing the batch. A UID repeated within a single payload is also collapsed to one insert. Events **without** a `sourceUid` cannot be recognised on re-import and are created again every time — documented behavior.
+
+> **Atomicity:** all inserts run in a single D1 batch (one transaction). A mid-batch failure (e.g. a position race, or a concurrent import of the same file) rolls back every row and retries after re-reading both the existing-UID set and the group's boundary position, so the losing side of a same-file race converges to "all skipped" rather than erroring. There is never a partial import.
+
+> **No webhooks:** bulk import deliberately dispatches **no** `task.created` webhooks — a 500-event import would fan out 500 deliveries per subscriber for what is, to the user, one action. Imported tasks appear on the next read and carry `sourceUid` in every later task webhook payload.
+
+**Response** (201):
+
+```json
+{ "created": 480, "skipped": 20, "total": 500 }
+```
+
+`total` always equals `created + skipped` and echoes the request item count, so an integrator can detect a client-side truncation bug. Importing into a completion group marks the imported tasks completed (same rule as single-task create).
+
+**Errors:** `400` validation failed · `401` unauthorized · `403` forbidden · `404` task group not found in this project · `429` rate limit exceeded.
 
 ### `GET /api/projects/:projectId/tasks`
 
@@ -1150,7 +1419,8 @@ Updates task fields.
 | `assigneeId` | `string \| null` | UUID |
 | `priority` | `string` | `"urgent"`, `"high"`, `"medium"`, `"low"`, or `"none"` |
 | `status` | `string` | `"open"`, `"in_progress"`, `"completed"`, or `"cancelled"` |
-| `dueDate` | `string \| null` | ISO 8601 datetime |
+| `startDate` | `string \| null` | Task start date, same format/validation as `dueDate`. Independently optional; subject only to the start/due ordering invariant (see below) |
+| `dueDate` | `string \| null` | A `YYYY-MM-DD` calendar date or a full ISO 8601 datetime. Validated calendar-aware: impossible dates (e.g. `2030-02-30`) are rejected with 400 |
 | `cost` | `integer \| null` | Non-negative integer (cents) |
 | `icon` | `string \| null` | max 50 characters |
 | `coverImageKey` | `string \| null` | R2 object key for cover image (mutually exclusive with `coverUnsplash`) |
@@ -1167,6 +1437,8 @@ Updates task fields.
 - When `recurrenceRule` is set on a task that has no `recurrenceSeriesId`, a new series ID is generated automatically.
 - Changing `recurrenceRule` logs a `recurrence_changed` activity; removing it (setting to `null`) logs a `recurrence_removed` activity.
 - The `recurrenceRule` field is included in webhook change detection for `task.updated` events.
+- **Start/due ordering invariant on partial updates:** `startDate` and `dueDate` are independently optional; the only cross-field rule is that `startDate` must not fall after `dueDate` when both are present. A PATCH that touches only one of them is validated against the *stored* value of the other by a merged-state backstop in the handler (the schema can only check the rule when both fields are present in the payload). The same `dateRangeError` predicate and 400 wording are used in both places, so they can never drift. Setting `dueDate` to `null` does **not** touch a surviving `startDate` — a start date can stand on its own, so there is nothing to auto-clear.
+- Changing `startDate` logs a `start_date_changed` activity; clearing it logs a `start_date_removed` activity. `startDate` is included in webhook change detection for `task.updated` events.
 
 ### `DELETE /api/tasks/:taskId`
 
@@ -1464,7 +1736,7 @@ Lists comments for a task with compound cursor-based pagination (`createdAt|id`)
 
 Marks a task as complete. If the project has a completion group, the task is automatically moved into it. Creates activity log entries and notifies the assignee (if different from the actor).
 
-**Recurring task behavior:** If the completed task has a `recurrenceRule`, a new task instance is automatically spawned with the next due date computed from the rule. The new instance inherits the title, description, assignee, priority, cost, icon, labels, and subtasks (with completion reset) from the completed task. A unique partial index on `recurrenceParentId` prevents duplicate spawns from concurrent requests. A `task.created` webhook is dispatched for the spawned instance.
+**Recurring task behavior:** If the completed task has a `recurrenceRule`, a new task instance is automatically spawned, advancing the task's primary date by the rule. The new instance inherits the title, description, assignee, priority, cost, icon, labels, and subtasks (with completion reset) from the completed task. The recurrence anchors on the **due date** when present: a task with only a due date spawns with a null `startDate`, and a task with **both** a start and due date preserves the same whole-day start→due span (its `startDate` is the new due date minus that span, computed in UTC day math so DST transitions inside the span never shift it). A **start-only** task (a `startDate` with no `dueDate`) anchors the recurrence on its **start date** instead — the spawned instance advances the `startDate` and stays due-less, so a start-only series never silently grows a due date. A fully date-less recurring task anchors on the completion date and materialises a due date with a null `startDate`. A unique partial index on `recurrenceParentId` prevents duplicate spawns from concurrent requests. A `task.created` webhook is dispatched for the spawned instance.
 
 **Auth:** Required.
 **Authorization:** Project admin or member (resolved via `requireTaskRole`).
@@ -1543,7 +1815,7 @@ Updates a comment's body. Only the comment author can edit. Creates a `comment_u
 **Response** (200):
 
 ```json
-{ "comment": { "id": "...", "body": "...", "updatedAt": "...", "..." } }
+{ "comment": { "id": "...", "body": "...", "authorName": "...", "updatedAt": "...", "..." } }
 ```
 
 ### `DELETE /api/comments/:commentId`
@@ -2045,8 +2317,18 @@ Returns tasks assigned to the authenticated user across **active projects** in t
 | `period` | `string` | — | Filter by due date window: `"week"`, `"fortnight"`, or `"month"` |
 | `projectIds` | `string` | — | Comma-separated project UUIDs (max 100). When provided, only tasks from these projects are returned |
 | `taskGroupIds` | `string` | — | Comma-separated task-group UUIDs (max 100). When provided, only tasks in these task groups are returned |
+| `priority` | `string` | — | Comma-separated `TaskPriority` values (`urgent`, `high`, `medium`, `low`, `none`). Invalid entries are rejected with 400 |
+| `dueDateFrom` | `string` | — | Inclusive lower bound on due date, strict `YYYY-MM-DD` calendar date (mapped to `T00:00:00.000Z`). Impossible dates (e.g. `2030-02-30`) are rejected with 400 |
+| `dueDateTo` | `string` | — | Inclusive upper bound on due date, strict `YYYY-MM-DD` calendar date (mapped to `T23:59:59.999Z`) |
+| `noDueDate` | `string` | — | `"true"` to include tasks with no due date. OR-combined with any `dueDateFrom`/`dueDateTo` range (in range **or** no due date) |
+| `labelNames` | `string` | — | Comma-separated label **names** (not ids), each 1–30 chars, max 50. Matched case-insensitively across projects (a label's name is its cross-project identity) |
+| `noLabel` | `string` | — | `"true"` to include tasks with no labels. OR-combined with `labelNames` when both are present |
 | `limit` | `number` | 50 | Number of tasks per page (1–200) |
 | `cursor` | `string` | — | Compound cursor in `"isoDate\|id"` format for pagination (paginates by `createdAt` + `id` tiebreaker) |
+
+All filters are applied **server-side** (the endpoint is cursor-paginated, so client-side filtering of a single page would show 0 results for narrow filters until repeated "Load more" and would make counts lie). Filters combine with AND across dimensions; the due-date and label dimensions each combine with OR over their absence flag (`noDueDate`, `noLabel`). The response shape is unchanged — no labels column is returned.
+
+Date boundaries are UTC days, matching how task creation stores due dates (`new Date("YYYY-MM-DD")` is UTC midnight), so server filtering agrees with the client's day comparison regardless of viewer timezone. Note: `period` filters with `lte(dueDate, cutoff)`, which excludes NULL due dates, so combining `period` with `noDueDate=true` intentionally returns no rows.
 
 **Response** (200):
 
@@ -2412,6 +2694,68 @@ Sends a test `webhook.test` event to the webhook URL synchronously and returns t
 
 ---
 
+## Calendar Feed
+
+A **calendar feed** is a personal, per-workspace ICS subscription URL. A user mints one feed per workspace; the URL contains a secret `cdn_cal_…` token and exposes the **titles and dates** of tasks assigned to that user in that workspace, ready to subscribe to from Google Calendar, Apple Calendar, or Outlook. The token is a separate, read-only credential class from PATs — see [Database schema](../database/schema.md#calendarfeedtoken).
+
+The **management surface** below is **cookie-session only**: PAT callers are rejected with `403` (`rejectPatAuth()` — a leaked API token must never be able to mint a *different* credential class for its user). All three management responses are sent `Cache-Control: no-store`.
+
+### `GET /api/workspaces/:workspaceId/calendar-feed`
+
+Reports whether the calling user has a live feed for this workspace, with mint and last-fetch timestamps. The feed URL itself is **never** returned here — it is shown exactly once at mint time.
+
+**Auth:** Required (cookie session only — PAT → `403`).
+**Authorization:** Workspace member.
+**Rate limit:** 20 requests/minute per user.
+
+**Response** (200):
+
+```json
+{
+  "exists": true,
+  "createdAt": "2026-06-01T12:00:00.000Z",
+  "lastUsedAt": "2026-06-11T08:30:00.000Z"
+}
+```
+
+`createdAt` / `lastUsedAt` are `null` when no feed exists (and `lastUsedAt` is `null` until a calendar client first fetches the feed).
+
+### `POST /api/workspaces/:workspaceId/calendar-feed`
+
+Mints (or regenerates) the calling user's feed for this workspace — one feed per user per workspace. If a feed already exists it is **replaced atomically**: the old URL stops working the instant this returns (only the new token's hash is persisted). The returned `url` contains the secret token and is shown **only in this response** — the server stores only an HMAC-SHA256 hash, so a lost URL can only be recovered by regenerating.
+
+**Auth:** Required (cookie session only — PAT → `403`).
+**Authorization:** Workspace member.
+**Rate limit:** 20 requests/minute per user.
+
+**Response** (201):
+
+```json
+{ "url": "https://cadence.example.com/api/calendar/feed/cdn_cal_xxxxxxxx…" }
+```
+
+### `DELETE /api/workspaces/:workspaceId/calendar-feed`
+
+Revokes the calling user's feed for this workspace by deleting the token row. Any calendar client subscribed to the old URL starts receiving `404`s on its next refresh. **Idempotent** — revoking an already-revoked (or never-minted) feed still returns `{ "ok": true }`.
+
+**Auth:** Required (cookie session only — PAT → `403`).
+**Authorization:** Workspace member.
+**Rate limit:** 20 requests/minute per user.
+
+**Response** (200): `{ "ok": true }`
+
+### `GET /api/calendar/feed/:token` (public ICS feed)
+
+Serves the `text/calendar` feed for the token in the path. The `:token` segment **is** the credential (a capability URL), so this route carries **no `requireAuth`** — calendar providers cannot send `Authorization` headers — and is **deliberately excluded from the OpenAPI spec / Scalar docs** so live feed tokens are never pasted into a "Try it" box. Calendar clients discover the URL from the mint response above, never from API docs.
+
+- An optional trailing `.ics` suffix is accepted (`…/feed/<token>.ics`).
+- Verification is constant-shape: a cheap `cdn_cal_` prefix reject (so a PAT can never open the feed), then a peppered HMAC lookup, then a **live workspace-membership re-check** (removing the user from the workspace kills the feed on the next fetch, no sweep job). **Every** failure mode — bad prefix, unknown token, revoked membership — returns an **identical `404`**, so the URL leaks exactly one bit: "works" or "does not".
+- Contents: tasks assigned to the token's owner in the token's workspace that have **at least one date** (a due date or a start date) and are open, plus tasks completed within the last **30 days** (marked `STATUS:COMPLETED`, so a checked-off task does not vanish from the calendar). Capped at **500 events**, ordered by the day each event sits on (due date, or the start date when there is no due date). Each event carries the task **title** and a link back into the app — **never the task description** (third-party calendar storage must not receive task bodies). Start–due spans render as multi-day all-day events (RFC 5545 exclusive `DTEND`); a due-only task sits on its due date, and a start-only task sits on its start date.
+- **Rate limit:** 30 requests/minute, keyed by token (not IP — calendar providers fetch from large rotating egress fleets).
+- Response headers: `Content-Type: text/calendar; charset=utf-8`, `Cache-Control: private, max-age=300`.
+
+---
+
 ### `* /api/*` (404 catch-all)
 
 Any `/api/*` request that does not match a defined route returns a 404:
@@ -2473,7 +2817,7 @@ Used in task create/update endpoints to define a recurring schedule. Stored as J
 | `daysOfWeek` | `integer[]` | 0 (Sun) -- 6 (Sat), min 1 element | No |
 | `dayOfMonth` | `integer` | 1--31 | No |
 | `nthWeekday` | `object` | `{ n: 1-5, day: 0-6 }` (e.g. 2nd Tuesday) | No |
-| `endDate` | `string` | ISO 8601 date, optional end condition | No |
+| `endDate` | `string` | Strict `YYYY-MM-DD` calendar date (not a datetime), optional end condition. Validated calendar-aware: impossible dates are rejected with 400, since an unparseable end bound would make the recurrence series never terminate | No |
 
 ---
 

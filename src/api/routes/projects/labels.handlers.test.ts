@@ -8,12 +8,22 @@ import {
   createTestD1,
   fakeAuth,
   jsonRequest,
+  seedLabel,
   seedProject,
+  seedProjectMember,
   seedUser,
   seedWorkspace,
+  seedWorkspaceMember,
   TEST_USER,
+  TEST_USER_2,
 } from "../../test-utils";
-import { createLabel, deleteLabel, listLabels, updateLabel } from "./labels.handlers";
+import {
+  createLabel,
+  deleteLabel,
+  listLabels,
+  listWorkspaceLabels,
+  updateLabel,
+} from "./labels.handlers";
 
 let d1: D1Database;
 let dispose: () => Promise<void>;
@@ -267,5 +277,141 @@ describe("deleteLabel", () => {
     );
 
     expect(res.status).toBe(404);
+  });
+});
+
+/**
+ * Workspace-level label listing (GET /workspaces/:workspaceId/labels).
+ *
+ * These tests matter because the endpoint feeds the My Tasks label filter:
+ * a wrong dedupe key would show "Bug" and "bug" as two filter options, a
+ * missing status filter would offer dead options from archived projects,
+ * and — most importantly — a broken visibility branch would leak label
+ * names from projects a plain member cannot open. Runs against a real
+ * in-memory D1 so the GROUP BY LOWER(name) / MIN() SQL is exercised for
+ * real, not mocked.
+ */
+describe("listWorkspaceLabels", () => {
+  let wsId: string;
+  let emptyMembershipWsId: string;
+
+  beforeAll(async () => {
+    await seedUser(d1, TEST_USER_2);
+
+    // Fresh workspace so labels created by the CRUD tests above (in the
+    // file-level shared project) cannot leak into these assertions.
+    wsId = await seedWorkspace(d1, TEST_USER.id);
+    await seedWorkspaceMember(d1, wsId, TEST_USER_2.id, "member");
+
+    // Project A: both users are direct members.
+    const projectA = await seedProject(d1, wsId, { name: "WS Labels A" });
+    await seedProjectMember(d1, projectA, TEST_USER.id, "admin");
+    await seedProjectMember(d1, projectA, TEST_USER_2.id, "member");
+
+    // Project B: only user1 — its labels must stay invisible to user2.
+    const projectB = await seedProject(d1, wsId, { name: "WS Labels B" });
+    await seedProjectMember(d1, projectB, TEST_USER.id, "admin");
+
+    // Archived project: user2 IS a member, so its exclusion below proves
+    // the status filter (not membership) is what hides it.
+    const archivedProject = await seedProject(d1, wsId, {
+      name: "WS Labels Archived",
+      status: "archived",
+    });
+    await seedProjectMember(d1, archivedProject, TEST_USER.id, "admin");
+    await seedProjectMember(d1, archivedProject, TEST_USER_2.id, "member");
+
+    await seedLabel(d1, projectA, "Bug", "#ef4444");
+    await seedLabel(d1, projectA, "alpha", "#111111");
+    await seedLabel(d1, projectA, "Zeta", "#222222");
+    // Case-variant of project A's "Bug" — must collapse into one entry.
+    // Its color (#00aaff) sorts before #ef4444 so MIN(color) is observable.
+    await seedLabel(d1, projectB, "bug", "#00aaff");
+    await seedLabel(d1, projectB, "Backend", "#333333");
+    await seedLabel(d1, archivedProject, "Archived Only", "#999999");
+
+    // Workspace where user2 belongs to no project at all — exercises the
+    // empty-visibility early return.
+    emptyMembershipWsId = await seedWorkspace(d1, TEST_USER.id);
+    await seedWorkspaceMember(d1, emptyMembershipWsId, TEST_USER_2.id, "member");
+    const lonelyProject = await seedProject(d1, emptyMembershipWsId, {
+      name: "Lonely Project",
+    });
+    await seedProjectMember(d1, lonelyProject, TEST_USER.id, "admin");
+    await seedLabel(d1, lonelyProject, "Hidden", "#000000");
+  });
+
+  function wsLabelsApp(
+    user: typeof TEST_USER | typeof TEST_USER_2,
+    role: "owner" | "admin" | "member",
+    workspaceId: string,
+  ) {
+    const app = new Hono<AppEnv>();
+    app.get(
+      "/workspaces/:workspaceId/labels",
+      fakeAuth(d1, user, {
+        workspaceMembership: { id: "wm-labels", workspaceId, role },
+      }),
+      listWorkspaceLabels,
+    );
+    return app;
+  }
+
+  async function fetchLabels(
+    user: typeof TEST_USER | typeof TEST_USER_2,
+    role: "owner" | "admin" | "member",
+    workspaceId: string,
+  ) {
+    const app = wsLabelsApp(user, role, workspaceId);
+    const res = await app.request(`/workspaces/${workspaceId}/labels`);
+    expect(res.status).toBe(200);
+    const body = await res.json<{ labels: Array<{ name: string; color: string }> }>();
+    return body.labels;
+  }
+
+  it("dedupes case-variant names across projects into a single entry", async () => {
+    const labels = await fetchLabels(TEST_USER, "owner", wsId);
+
+    const bugEntries = labels.filter((l) => l.name.toLowerCase() === "bug");
+    expect(bugEntries).toHaveLength(1);
+    // MIN over {"Bug", "bug"} is "Bug" (uppercase sorts first in SQLite's
+    // binary collation) and MIN over {"#ef4444", "#00aaff"} is "#00aaff" —
+    // deterministic regardless of which project's row was inserted first.
+    expect(bugEntries[0].name).toBe("Bug");
+    expect(bugEntries[0].color).toBe("#00aaff");
+  });
+
+  it("orders deduped labels case-insensitively by name", async () => {
+    const labels = await fetchLabels(TEST_USER, "owner", wsId);
+
+    // Owner sees both active projects: alpha/Bug/Zeta (A) + bug/Backend (B),
+    // deduped to four entries. Binary ordering would put "Backend", "Bug"
+    // and "Zeta" before "alpha"; case-insensitive ordering must not.
+    expect(labels.map((l) => l.name)).toEqual(["alpha", "Backend", "Bug", "Zeta"]);
+  });
+
+  it("excludes labels from archived projects", async () => {
+    const labels = await fetchLabels(TEST_USER, "owner", wsId);
+
+    // Owner can see every project, so only the status filter can hide this.
+    expect(labels.find((l) => l.name === "Archived Only")).toBeUndefined();
+  });
+
+  it("restricts non-elevated members to labels from their own projects", async () => {
+    const labels = await fetchLabels(TEST_USER_2, "member", wsId);
+
+    // user2 is only a member of project A: no "Backend" leak from project B,
+    // and "Bug" keeps project A's color because project B's row is invisible.
+    expect(labels.map((l) => l.name)).toEqual(["alpha", "Bug", "Zeta"]);
+    expect(labels.find((l) => l.name === "Bug")?.color).toBe("#ef4444");
+    // Archived exclusion also applies on the membership branch — user2 is a
+    // member of the archived project but must not see "Archived Only".
+    expect(labels.find((l) => l.name === "Archived Only")).toBeUndefined();
+  });
+
+  it("returns an empty array for members with no project memberships", async () => {
+    const labels = await fetchLabels(TEST_USER_2, "member", emptyMembershipWsId);
+
+    expect(labels).toEqual([]);
   });
 });

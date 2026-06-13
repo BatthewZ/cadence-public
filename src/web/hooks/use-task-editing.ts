@@ -46,11 +46,15 @@ export function useTaskEditing({
   // Local editable state
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState("");
-  const [descriptionValue, setDescriptionValue] = useState("");
   const [costDisplay, setCostDisplay] = useState("");
 
   // Sync local editable fields when fresh task data arrives from the server
   // — skip fields the user is currently editing to prevent clobbering input.
+  //
+  // Note: the description field is NOT managed here. EditableMarkdown owns its
+  // own draft + explicit Save/Cancel and guards that draft against background
+  // `value` changes itself, so the blur-to-save dirty-field plumbing is gone
+  // (single source of truth — CLAUDE.md rule 4).
   const taskDataTaskId = taskData?.task?.id;
   useEffect(() => {
     if (taskData?.task) {
@@ -58,8 +62,6 @@ export function useTaskEditing({
       // Defer to avoid synchronous setState in effect body
       queueMicrotask(() => {
         if (!dirtyFields.current.has("title")) setTitleValue(t.title);
-        if (!dirtyFields.current.has("description"))
-          setDescriptionValue(t.description ?? "");
         if (!dirtyFields.current.has("cost"))
           setCostDisplay(t.cost != null ? (t.cost / 100).toFixed(2) : "");
       });
@@ -89,13 +91,6 @@ export function useTaskEditing({
     }
   }, [titleValue, localTask?.title, handlePatch]);
 
-  const handleDescriptionBlur = useCallback(async () => {
-    dirtyFields.current.delete("description");
-    if (descriptionValue !== (localTask?.description ?? "")) {
-      await handlePatch({ description: descriptionValue || null });
-    }
-  }, [descriptionValue, localTask?.description, handlePatch]);
-
   const handleCostBlur = useCallback(async () => {
     dirtyFields.current.delete("cost");
     const parsed = parseFloat(costDisplay);
@@ -116,13 +111,10 @@ export function useTaskEditing({
     setEditingTitle,
     titleValue,
     setTitleValue,
-    descriptionValue,
-    setDescriptionValue,
     costDisplay,
     setCostDisplay,
     handlePatch,
     handleTitleSave,
-    handleDescriptionBlur,
     handleCostBlur,
   };
 }

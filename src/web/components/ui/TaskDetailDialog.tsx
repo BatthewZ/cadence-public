@@ -3,8 +3,8 @@ import { Copy, SmilePlus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
 import { Input } from "@/web/components/form/Input";
-import { Textarea } from "@/web/components/form/Textarea";
 import { Divider, Stack } from "@/web/components/layout";
+import { EditableMarkdown } from "@/web/components/markdown/EditableMarkdown";
 import { useAppShell } from "@/web/components/ui/AppShell";
 import { Button } from "@/web/components/ui/Button";
 import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
@@ -216,13 +216,10 @@ export function TaskDetailDialog({
     setEditingTitle,
     titleValue,
     setTitleValue,
-    descriptionValue,
-    setDescriptionValue,
     costDisplay,
     setCostDisplay,
     handlePatch,
     handleTitleSave,
-    handleDescriptionBlur,
     handleCostBlur,
   } = useTaskEditing({
     taskId,
@@ -459,17 +456,15 @@ export function TaskDetailDialog({
                   <Text variant="body-3" weight="semibold" color="secondary" className="mb-r5">
                     Description
                   </Text>
-                  <Textarea
-                    value={descriptionValue}
-                    onChange={(e) => setDescriptionValue(e.target.value)}
-                    onFocus={() => dirtyFields.current.add("description")}
-                    onBlur={() => {
-                      void handleDescriptionBlur();
+                  <EditableMarkdown
+                    value={task.description ?? ""}
+                    onSave={async (next) => {
+                      await handlePatch({ description: next || null });
                     }}
-                    placeholder={canEditTasks ? "Add a description..." : "No description"}
+                    members={members}
                     readOnly={!canEditTasks}
-                    rows={5}
-                    className="resize-y min-h-[5rem] border-transparent bg-surface-1 hover:border-border-default focus:border-border-strong focus:bg-surface-0"
+                    density="compact"
+                    placeholder={canEditTasks ? "Add a description…" : "No description"}
                   />
                 </div>
 

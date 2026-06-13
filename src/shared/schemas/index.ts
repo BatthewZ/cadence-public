@@ -16,6 +16,23 @@ export type { AcceptInvitationInput, CreateInvitationInput } from "./invitation"
 export { acceptInvitationSchema, createInvitationSchema } from "./invitation";
 export type { CreateProjectInput, UpdateProjectInput } from "./project";
 export { createProjectSchema, updateProjectSchema } from "./project";
+export type {
+  CreateSavedViewInput,
+  SavedView,
+  SavedViewState,
+  UpdateSavedViewInput,
+} from "./saved-view";
+export {
+  createSavedViewSchema,
+  MAX_SAVED_VIEWS_PER_PROJECT_USER,
+  MULTI_VALUE_PARAM_KEYS,
+  SAVED_VIEW_MAX_PARAM_LENGTH,
+  SAVED_VIEW_MAX_PARAMS,
+  savedViewStateSchema,
+  TASK_FILTER_PARAM_KEYS,
+  TASK_VIEW_PARAM_KEYS,
+  updateSavedViewSchema,
+} from "./saved-view";
 export type { SearchQueryInput } from "./search";
 export { searchQuerySchema } from "./search";
 export type { CreateSubtaskInput, UpdateSubtaskInput } from "./subtask";
@@ -52,3 +69,59 @@ export type { CreateWebhookInput, UpdateWebhookInput } from "./webhook";
 export { createWebhookSchema, updateWebhookSchema } from "./webhook";
 export type { CreateWorkspaceInput, UpdateWorkspaceInput } from "./workspace";
 export { createWorkspaceSchema, updateWorkspaceSchema } from "./workspace";
+export type {
+  ExportedActivity,
+  ExportedAttachment,
+  ExportedComment,
+  ExportedCoverImage,
+  ExportedLabel,
+  ExportedProject,
+  ExportedSubtask,
+  ExportedTask,
+  ExportedTaskGroup,
+  ExportedUser,
+  WorkspaceExport,
+} from "./workspace-export";
+export {
+  EXPORT_FORMAT,
+  EXPORT_FORMAT_VERSION,
+  exportActivitySchema,
+  exportAttachmentSchema,
+  exportCommentSchema,
+  exportCoverImageSchema,
+  exportInvitationSchema,
+  exportLabelSchema,
+  exportProjectMemberSchema,
+  exportProjectSchema,
+  exportSubtaskSchema,
+  exportTaskGroupSchema,
+  exportTaskSchema,
+  exportTeamSchema,
+  exportUserSchema,
+  exportWebhookSchema,
+  exportWorkspaceMemberSchema,
+  MAX_IMPORT_FILE_BYTES,
+  workspaceExportSchema,
+} from "./workspace-export";
+export type {
+  ImportCounts,
+  ImportDocument,
+  ImportFailedProject,
+  ImportPreview,
+  ImportResponse,
+  ImportResult,
+  ImportSkipped,
+  ImportSourceFormat,
+  ImportUnmatchedUser,
+} from "./workspace-import";
+export {
+  IMPORT_SOURCE_FORMATS,
+  importCountsSchema,
+  importDocumentSchema,
+  importFailedProjectSchema,
+  importPreviewSchema,
+  importResponseSchema,
+  importResultSchema,
+  importSkippedSchema,
+  importUnmatchedUserSchema,
+} from "./workspace-import";

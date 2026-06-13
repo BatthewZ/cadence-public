@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Task, TaskGroup } from "@/web/contexts/ProjectContext";
@@ -37,13 +37,15 @@ vi.mock("@/web/contexts/WorkspaceContext", () => ({
   }),
 }));
 
-vi.mock("@/web/hooks/use-task-filters", () => ({
-  useTaskFilters: (tasks: Task[]) => ({
-    filteredTasks: tasks,
-    hasActiveFilters: false,
-    clearFilters: vi.fn(),
-  }),
-}));
+// `use-task-filters` is deliberately NOT mocked. The click-to-filter cells
+// write filter state to the URL via the real hook, and the URL is the single
+// source of truth shared with every other filter surface (TaskFilterBar,
+// FilterChips, board view). Mocking the hook would let a drift between the
+// mock and the real export surface (e.g. a missing `setFilter`) pass silently;
+// with the real hook, tests assert the actual URL contract end-to-end. The
+// hook only needs a router, which MemoryRouter in the wrapper provides, and
+// with no filter params in the URL it returns all tasks unfiltered — so the
+// pre-existing tests behave identically to when the hook was mocked.
 
 vi.mock("@/web/lib/api/client", () => ({
   api: Object.assign(vi.fn(), {
@@ -132,6 +134,22 @@ function setupProjectMock(tasks: Task[], taskGroups: TaskGroup[] = [makeTaskGrou
   });
 }
 
+/**
+ * Renders the current router search string so tests can assert on the URL
+ * filter state written by click-to-filter cells. Asserting on the URL (rather
+ * than on mock call args) verifies the real contract: filters live in the URL
+ * so they are shareable and stay in sync across all filter surfaces.
+ */
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location-search">{location.search}</div>;
+}
+
+function getSearchParams(): URLSearchParams {
+  const search = screen.getByTestId("location-search").textContent ?? "";
+  return new URLSearchParams(search);
+}
+
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -139,7 +157,10 @@ function createWrapper() {
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <MemoryRouter>
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <LocationProbe />
+        </QueryClientProvider>
       </MemoryRouter>
     );
   };
@@ -552,6 +573,119 @@ describe("ProjectListView", () => {
       expect(screen.getByText("Medium")).toBeInTheDocument();
       expect(screen.getByText("Low")).toBeInTheDocument();
       expect(screen.getByText("None")).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 7. Click-to-filter: priority badges and assignee cells toggle URL filters
+  // -------------------------------------------------------------------------
+  describe("click-to-filter", () => {
+    it("clicking the priority badge toggles the priority URL param (XOR)", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "High task", priority: "high", position: "000001" }),
+        makeTask({ id: "t-2", title: "Low task", priority: "low", position: "000002" }),
+      ];
+      setupProjectMock(tasks);
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "Filter by priority: High" }));
+
+      expect(getSearchParams().get("priority")).toBe("high");
+      // The real hook applies the filter, so only the high task remains.
+      expect(screen.getByText("High task")).toBeInTheDocument();
+      expect(screen.queryByText("Low task")).not.toBeInTheDocument();
+
+      // Second click XORs the value back out: param removed, list restored.
+      await user.click(screen.getByRole("button", { name: "Filter by priority: High" }));
+
+      expect(getSearchParams().get("priority")).toBeNull();
+      expect(screen.getByText("Low task")).toBeInTheDocument();
+    });
+
+    it("clicking the assignee cell toggles the assignee URL param (XOR)", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "Alice task", assigneeId: "user-1", position: "000001" }),
+        makeTask({ id: "t-2", title: "Bob task", assigneeId: "user-2", position: "000002" }),
+      ];
+      setupProjectMock(tasks);
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "Filter by assignee: Alice Smith" }));
+
+      expect(getSearchParams().get("assignee")).toBe("user-1");
+      expect(screen.getByText("Alice task")).toBeInTheDocument();
+      expect(screen.queryByText("Bob task")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Filter by assignee: Alice Smith" }));
+
+      expect(getSearchParams().get("assignee")).toBeNull();
+      expect(screen.getByText("Bob task")).toBeInTheDocument();
+    });
+
+    it('clicking "Unassigned" toggles the `none` sentinel in the assignee param', async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "Unclaimed task", assigneeId: null, position: "000001" }),
+        makeTask({ id: "t-2", title: "Alice task", assigneeId: "user-1", position: "000002" }),
+      ];
+      setupProjectMock(tasks);
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "Filter by assignee: Unassigned" }));
+
+      expect(getSearchParams().get("assignee")).toBe("none");
+      expect(screen.getByText("Unclaimed task")).toBeInTheDocument();
+      expect(screen.queryByText("Alice task")).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole("button", { name: "Filter by assignee: Unassigned" }));
+
+      expect(getSearchParams().get("assignee")).toBeNull();
+      expect(screen.getByText("Alice task")).toBeInTheDocument();
+    });
+
+    it("filter clicks do not open the task detail panel; only the title does", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "High task", priority: "high", assigneeId: "user-1" }),
+      ];
+      setupProjectMock(tasks);
+      renderComponent();
+
+      await user.click(screen.getByRole("button", { name: "Filter by priority: High" }));
+      await user.click(screen.getByRole("button", { name: "Filter by assignee: Alice Smith" }));
+
+      const params = getSearchParams();
+      expect(params.get("task")).toBeNull();
+      // Sanity: both filter dimensions did engage (clicks landed on real cells).
+      expect(params.get("priority")).toBe("high");
+      expect(params.get("assignee")).toBe("user-1");
+
+      // The title button remains the one and only way to open the detail panel.
+      await user.click(screen.getByRole("button", { name: "High task" }));
+      expect(getSearchParams().get("task")).toBe("t-1");
+    });
+
+    it("row selection is unaffected by filter clicks", async () => {
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "High task", priority: "high" }),
+      ];
+      setupProjectMock(tasks);
+      renderComponent();
+
+      await user.click(screen.getByRole("checkbox", { name: "Select row t-1" }));
+      await waitFor(() => {
+        expect(screen.getByText("1 selected")).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole("button", { name: "Filter by priority: High" }));
+
+      // The filter engaged without toggling or clearing the row selection.
+      expect(getSearchParams().get("priority")).toBe("high");
+      expect(screen.getByText("1 selected")).toBeInTheDocument();
+      expect(screen.getByRole("checkbox", { name: "Select row t-1" })).toBeChecked();
     });
   });
 });

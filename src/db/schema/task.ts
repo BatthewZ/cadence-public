@@ -8,7 +8,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-import type { UnsplashCoverPayload } from "../../shared/schemas/unsplash";
+import type { StoredUnsplashCoverPayload } from "../../shared/schemas/unsplash";
 import { apiToken } from "./api-token";
 import { user } from "./auth";
 import { project } from "./project";
@@ -60,15 +60,43 @@ export const task = sqliteTable(
     completedBy: text("completedBy").references(() => user.id, {
       onDelete: "set null",
     }),
+    /**
+     * Optional start date — independently optional from `dueDate` (a task may
+     * carry a start date alone, a due date alone, both, or neither). The only
+     * cross-field rule is ordering: start ≤ due when both are present, enforced
+     * in the shared Zod schemas and the updateTask merged-state backstop, not
+     * at the DB layer, so the column itself stays a plain nullable timestamp.
+     * Stored as a UTC-midnight timestamp via `new Date("YYYY-MM-DD")`, matching
+     * the `dueDate` convention. No dedicated index: calendar reads are
+     * client-side from the loaded project task list, and the ICS feed query is
+     * largely covered by `task_assignee_completed_due_idx` (start-only feed
+     * rows fall outside it — an accepted cost on that capped, cached feed).
+     */
+    startDate: integer("startDate", { mode: "timestamp" }),
     dueDate: integer("dueDate", { mode: "timestamp" }),
     cost: integer("cost"),  // cost in cents (nullable, optional)
     icon: text("icon"),
     coverImageKey: text("cover_image_key"),
     coverImagePosition: integer("cover_image_position"),
-    coverUnsplash: text("cover_unsplash", { mode: "json" }).$type<UnsplashCoverPayload>(),
+    coverUnsplash: text("cover_unsplash", { mode: "json" }).$type<StoredUnsplashCoverPayload>(),
     recurrenceRule: text("recurrence_rule"),
     recurrenceParentId: text("recurrence_parent_id"),
     recurrenceSeriesId: text("recurrence_series_id"),
+    /**
+     * Provenance UID for tasks created via calendar import (the ICS `UID`
+     * property of the source VEVENT). Set ONLY by the import endpoint and
+     * never editable via PATCH (`updateTaskSchema` deliberately omits it),
+     * so a stored value is a trustworthy provenance claim, not user input.
+     *
+     * Why a column instead of an import-ledger table: the partial unique
+     * index on (projectId, source_uid) answers "have I imported this event
+     * into this project before?" directly on the task row — re-imports of
+     * the same .ics dedupe with one indexed lookup, and API consumers get
+     * provenance for free on every task read/webhook payload. The index is
+     * partial (WHERE source_uid IS NOT NULL) because the overwhelming
+     * majority of tasks are not imported and must not collide on NULL.
+     */
+    sourceUid: text("source_uid"),
     position: text("position").notNull(),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
@@ -93,6 +121,12 @@ export const task = sqliteTable(
       table.taskGroupId,
       table.position,
     ),
+    // Partial unique index backing import dedupe: one task per (project,
+    // source event UID). Partial because non-imported tasks all have NULL
+    // source_uid and must not collide. See the `sourceUid` column JSDoc.
+    uniqueIndex("task_project_source_uid_unique_idx")
+      .on(table.projectId, table.sourceUid)
+      .where(sql`source_uid IS NOT NULL`),
   ],
 );
 

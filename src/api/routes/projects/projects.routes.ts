@@ -21,6 +21,7 @@ import {
   getProjectResponseSchema,
   listLabelsResponseSchema,
   listProjectsResponseSchema,
+  listWorkspaceLabelsResponseSchema,
   updateLabelResponseSchema,
   updateProjectResponseSchema,
 } from "../../../shared/schemas/openapi-responses";
@@ -31,6 +32,10 @@ import {
   reorderProjectSchema,
   updateProjectSchema,
 } from "../../../shared/schemas/project";
+import {
+  createSavedViewSchema,
+  updateSavedViewSchema,
+} from "../../../shared/schemas/saved-view";
 import { unsplashCoverPayloadSchema } from "../../../shared/schemas/unsplash";
 import { createWebhookSchema, updateWebhookSchema } from "../../../shared/schemas/webhook";
 import type { AppEnv } from "../../env";
@@ -44,11 +49,13 @@ import {
 import { defaultRateLimitKey, rateLimit } from "../../middleware/rate-limit";
 import { requireAuth } from "../../middleware/require-auth";
 import { validateBody, validationHook } from "../../middleware/validate";
+import { exportProjectCsv } from "./export-csv.handler";
 import { getProjectFreshness } from "./freshness.handler";
 import {
   createLabel,
   deleteLabel,
   listLabels,
+  listWorkspaceLabels,
   updateLabel,
 } from "./labels.handlers";
 import {
@@ -74,6 +81,12 @@ import {
   updateProject,
   uploadProjectCover,
 } from "./projects.handlers";
+import {
+  createSavedView,
+  deleteSavedView,
+  listSavedViews,
+  updateSavedView,
+} from "./saved-views.handlers";
 
 /**
  * Bridge between Hono's wide `Context<AppEnv>` handler return type and the
@@ -268,6 +281,28 @@ const listLabelsRoute = createRoute({
   },
 });
 
+const listWorkspaceLabelsRoute = createRoute({
+  method: "get",
+  path: "/workspaces/{workspaceId}/labels",
+  tags: ["Labels"],
+  summary: "List workspace labels",
+  description:
+    "Returns labels across every active project the caller can see in the workspace, deduplicated by case-insensitive name (`MIN(name)`/`MIN(color)` per group, ordered by name). Owners/admins see labels from all projects; members only from projects they belong to. Intended for workspace-level filter UIs such as the My Tasks label filter.",
+  security,
+  middleware: [requireAuth, requireWorkspaceMember()],
+  request: {
+    params: workspaceIdParam,
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: listWorkspaceLabelsResponseSchema } },
+      description: "Deduplicated labels across the caller's visible active projects",
+    },
+    401: unauthorizedResponse,
+    403: forbiddenResponse,
+  },
+});
+
 const createLabelRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/labels",
@@ -395,12 +430,26 @@ app.use("/projects/:projectId/cover/unsplash", projectReadScope, projectWriteSco
 app.use("/projects/:projectId/members", projectReadScope, projectWriteScope);
 app.use("/projects/:projectId/members/:userId", projectReadScope, projectWriteScope);
 
+// CSV export is read-only project data egress, so only the read scope
+// mounts — a `project:read` PAT can export, mirroring how the same token
+// can already page through every exported field via the task list API.
+app.use("/projects/:projectId/export/csv", projectReadScope);
+
 app.use("/projects/:projectId/labels", labelReadScope, labelWriteScope);
 app.use("/projects/:projectId/labels/:labelId", labelReadScope, labelWriteScope);
+// Workspace-level label listing is read-only, so only the read scope mounts.
+app.use("/workspaces/:workspaceId/labels", labelReadScope);
 
 app.use("/projects/:projectId/webhooks", webhookReadScope, webhookWriteScope);
 app.use("/projects/:projectId/webhooks/:webhookId", webhookReadScope, webhookWriteScope);
 app.use("/projects/:projectId/webhooks/:webhookId/test", webhookReadScope, webhookWriteScope);
+
+// Saved views ride the `project` scope: the PAT scope grammar has no
+// `view:*` resource, and views are project-scoped personal state — the same
+// reasoning that puts members/freshness under `project` rather than minting
+// a new scope.
+app.use("/projects/:projectId/views", projectReadScope, projectWriteScope);
+app.use("/projects/:projectId/views/:viewId", projectReadScope, projectWriteScope);
 
 // Documented routes
 app.openapi(listProjectsRoute, asRouteHandler<typeof listProjectsRoute>(listProjects));
@@ -409,6 +458,10 @@ app.openapi(createProjectRoute, asRouteHandler<typeof createProjectRoute>(create
 app.openapi(updateProjectRoute, asRouteHandler<typeof updateProjectRoute>(updateProject));
 
 app.openapi(listLabelsRoute, asRouteHandler<typeof listLabelsRoute>(listLabels));
+app.openapi(
+  listWorkspaceLabelsRoute,
+  asRouteHandler<typeof listWorkspaceLabelsRoute>(listWorkspaceLabels),
+);
 app.openapi(createLabelRoute, asRouteHandler<typeof createLabelRoute>(createLabel));
 app.openapi(updateLabelRoute, asRouteHandler<typeof updateLabelRoute>(updateLabel));
 app.openapi(deleteLabelRoute, asRouteHandler<typeof deleteLabelRoute>(deleteLabel));
@@ -419,6 +472,18 @@ app.openapi(deleteLabelRoute, asRouteHandler<typeof deleteLabelRoute>(deleteLabe
 
 // Project freshness polling endpoint
 app.get("/projects/:projectId/freshness", requireAuth, requireProjectAccess(), getProjectFreshness);
+
+// Per-project CSV export. ANY project member (including viewers) may export:
+// viewers can already read every exported field via the task APIs, so a
+// tighter role gate here would be theater, not a control (plan decision 3).
+// Rate-limited per caller because each export is a full project table scan.
+app.get(
+  "/projects/:projectId/export/csv",
+  requireAuth,
+  requireProjectAccess(),
+  rateLimit({ max: 30, windowSeconds: 3600, prefix: "project-export-csv", keyFn: defaultRateLimitKey }),
+  exportProjectCsv,
+);
 
 app.patch(
   "/projects/:projectId/reorder",
@@ -543,6 +608,45 @@ app.post(
   requireProjectRole("admin"),
   rateLimit({ max: 5, windowSeconds: 60, prefix: "project-webhook-test", keyFn: defaultRateLimitKey }),
   testProjectWebhook,
+);
+
+// ---------------------------------------------------------------------------
+// Saved view routes (private per-user-per-project board bookmarks)
+// ---------------------------------------------------------------------------
+//
+// `requireProjectAccess()` (any member, including viewers — views bookmark
+// read-only board state) is deliberately the only role gate: the handlers
+// scope every query by creatorId, so cross-user access yields 404 rather
+// than 403. See saved-views.handlers.ts for why that distinction matters.
+
+app.get(
+  "/projects/:projectId/views",
+  requireAuth,
+  requireProjectAccess(),
+  listSavedViews,
+);
+
+app.post(
+  "/projects/:projectId/views",
+  requireAuth,
+  requireProjectAccess(),
+  validateBody(createSavedViewSchema),
+  createSavedView,
+);
+
+app.patch(
+  "/projects/:projectId/views/:viewId",
+  requireAuth,
+  requireProjectAccess(),
+  validateBody(updateSavedViewSchema),
+  updateSavedView,
+);
+
+app.delete(
+  "/projects/:projectId/views/:viewId",
+  requireAuth,
+  requireProjectAccess(),
+  deleteSavedView,
 );
 
 export default app;

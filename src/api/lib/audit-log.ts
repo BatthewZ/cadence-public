@@ -1,11 +1,21 @@
 /**
- * Audit-ledger writer for Personal Access Token (PAT) mutations.
+ * Audit-ledger writer for Personal Access Token (PAT) mutations and
+ * workspace-level data events (export/import).
  *
  * Inserts a single row into `audit_log` per successful PAT-attributed
  * mutation. Wired into the request pipeline by
  * `src/api/middleware/audit-pat.ts`, which derives the resource type,
  * resource id, and action verb from the matched route pattern and then
  * delegates to `recordPatAuditLog` here.
+ *
+ * `recordWorkspaceDataEvent` extends the same ledger to workspace data
+ * egress/ingress (export downloads, imports). These events matter to the
+ * ledger for a different reason than PAT mutations: an export is a
+ * workspace-WIDE data egress, so "who exported this workspace, when, and
+ * with what credentials" is exactly the question an operator asks after a
+ * leak. Unlike the PAT path, these rows are written for cookie sessions
+ * too — `audit_log.apiTokenId` is nullable precisely so human-initiated
+ * events are attributable without a token.
  *
  * Why the writer is split from the middleware:
  *
@@ -41,8 +51,13 @@ export function newAuditLogId(): string {
   return crypto.randomUUID();
 }
 
-export type RecordPatAuditLogInput = {
-  apiTokenId: string;
+/**
+ * Generalized audit row input shared by every writer in this module.
+ * `apiTokenId` is nullable here (unlike {@link RecordPatAuditLogInput})
+ * because cookie-authenticated events have no token to attribute.
+ */
+type AuditLogEventInput = {
+  apiTokenId: string | null;
   actorUserId: string;
   workspaceId: string;
   resourceType: string;
@@ -60,20 +75,30 @@ export type RecordPatAuditLogInput = {
   metadata?: Record<string, unknown> | null;
 };
 
+export type RecordPatAuditLogInput = AuditLogEventInput & {
+  /** PAT events are by definition token-attributed — never null. */
+  apiTokenId: string;
+};
+
 /**
- * Fire-and-forget audit insert. Designed to be called from after-response
- * middleware: by the time we know `status`, the response has already been
- * generated, so blocking on the insert would only delay the client.
+ * Single persistence path for every audit row (CLAUDE.md rule 4: one
+ * source of truth — `recordPatAuditLog` and `recordWorkspaceDataEvent`
+ * both delegate here instead of carrying their own copy of the insert).
  *
- * Errors are caught and logged because:
+ * Fire-and-forget by design: writes go through `deferWork` so the response
+ * is never blocked by audit I/O, and errors are caught and logged because
  *  - The caller has no meaningful recourse (the user-visible work is
  *    already done).
  *  - A failing audit table must not break the API surface; the operational
  *    response is to alert on the log line, not to fail the request.
+ *
+ * `op` names the public entry point in the error log line so an alert
+ * still identifies which code path lost a row.
  */
-export function recordPatAuditLog(
+function persistAuditLogRow(
   c: Context<AppEnv>,
-  input: RecordPatAuditLogInput,
+  op: string,
+  input: AuditLogEventInput,
 ): void {
   deferWork(c, async () => {
     try {
@@ -102,7 +127,7 @@ export function recordPatAuditLog(
         JSON.stringify({
           level: "error",
           lib: "audit-log",
-          op: "recordPatAuditLog",
+          op,
           apiTokenId: input.apiTokenId,
           workspaceId: input.workspaceId,
           path: input.path,
@@ -110,5 +135,59 @@ export function recordPatAuditLog(
         }),
       );
     }
+  });
+}
+
+/**
+ * Fire-and-forget audit insert for PAT-attributed mutations. Designed to
+ * be called from after-response middleware: by the time we know `status`,
+ * the response has already been generated, so blocking on the insert
+ * would only delay the client. See {@link persistAuditLogRow} for the
+ * defer/swallow-errors rationale.
+ */
+export function recordPatAuditLog(
+  c: Context<AppEnv>,
+  input: RecordPatAuditLogInput,
+): void {
+  persistAuditLogRow(c, "recordPatAuditLog", input);
+}
+
+export type RecordWorkspaceDataEventInput = {
+  workspaceId: string;
+  actorUserId: string;
+  /** Workspace-wide data movement verbs — egress ("export") / ingress ("import"). */
+  action: "export" | "import";
+  /** Caller-supplied context (e.g. `includeActivity`, entity counts). */
+  metadata?: Record<string, unknown> | null;
+};
+
+/**
+ * Audit a workspace-level data event (export download / import commit).
+ *
+ * Why this is a distinct entry point rather than a `recordPatAuditLog`
+ * call at the route: export/import are reachable by BOTH cookie sessions
+ * and PATs, and the PAT writer's contract requires a token id. Here the
+ * token is attributed when present (`c.get("apiToken")`) and the row is
+ * still written without one — the audit trail for "who pulled a full copy
+ * of this workspace's data" must not have a hole for human-initiated
+ * downloads. `status` is fixed at 200 because callers invoke this only
+ * after authorization has passed and the response is being produced;
+ * failed attempts never reach the handler body.
+ */
+export function recordWorkspaceDataEvent(
+  c: Context<AppEnv>,
+  input: RecordWorkspaceDataEventInput,
+): void {
+  persistAuditLogRow(c, "recordWorkspaceDataEvent", {
+    apiTokenId: c.get("apiToken")?.id ?? null,
+    actorUserId: input.actorUserId,
+    workspaceId: input.workspaceId,
+    resourceType: "workspace",
+    resourceId: input.workspaceId,
+    action: input.action,
+    method: c.req.method,
+    path: c.req.path,
+    status: 200,
+    metadata: input.metadata ?? null,
   });
 }

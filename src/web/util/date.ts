@@ -93,3 +93,39 @@ export function endOfMonth(d: Date): Date {
   result.setHours(23, 59, 59, 999);
   return result;
 }
+
+/**
+ * Return the first day of the month containing `d` at local midnight.
+ *
+ * Built from local getters + the local `new Date(y, m, d)` constructor —
+ * never ISO-string parsing or toISOString round-trips — because
+ * `new Date("YYYY-MM-DD")` parses as UTC and shifts the calendar date for
+ * users away from UTC, which is this codebase's most common date-bug class.
+ * Calendar month navigation anchors on this value.
+ */
+export function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+/**
+ * Add `n` calendar months to a date (`n` may be negative), clamping the
+ * day-of-month to the target month's length: Jan 31 + 1 month yields
+ * Feb 28 (or Feb 29 in leap years) rather than overflowing into March.
+ * Naive `setMonth` overflows, which makes month navigation anchored on a
+ * 29th–31st skip February entirely — the clamp is what keeps repeated
+ * prev/next month stepping landing on every month exactly once.
+ * Time-of-day is preserved; all math is local-time.
+ */
+export function addMonths(d: Date, n: number): Date {
+  const day = d.getDate();
+  const result = new Date(d.getTime());
+  result.setDate(1); // avoid day-of-month overflow while the month changes
+  result.setMonth(result.getMonth() + n);
+  const daysInTarget = new Date(
+    result.getFullYear(),
+    result.getMonth() + 1,
+    0,
+  ).getDate();
+  result.setDate(Math.min(day, daysInTarget));
+  return result;
+}

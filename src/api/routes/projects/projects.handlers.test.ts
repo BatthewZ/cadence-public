@@ -28,7 +28,10 @@ import {
   duplicateProjectSchema,
   updateProjectSchema,
 } from "../../../shared/schemas/project";
-import type { UnsplashCoverPayload } from "../../../shared/schemas/unsplash";
+import type {
+  StoredUnsplashCoverPayload,
+  UnsplashCoverPayload,
+} from "../../../shared/schemas/unsplash";
 import { unsplashCoverPayloadSchema } from "../../../shared/schemas/unsplash";
 import type { AppEnv } from "../../env";
 import { validateBody } from "../../middleware/validate";
@@ -1237,7 +1240,9 @@ describe("project cover image handlers", () => {
       .first<{ k: string | null; u: string | null }>();
     return {
       coverImageKey: row?.k ?? null,
-      coverUnsplash: row?.u ? (JSON.parse(row.u) as UnsplashCoverPayload) : null,
+      // Stored (lenient) shape: this is a raw DB read — legacy rows may lack
+      // `rawUrl`, so casting to the strict apply-payload type would be a lie.
+      coverUnsplash: row?.u ? (JSON.parse(row.u) as StoredUnsplashCoverPayload) : null,
     };
   }
 
@@ -1281,7 +1286,7 @@ describe("project cover image handlers", () => {
 
     const body = await res.json<{
       coverImageKey: string | null;
-      coverUnsplash: UnsplashCoverPayload | null;
+      coverUnsplash: StoredUnsplashCoverPayload | null;
     }>();
     expect(body.coverImageKey).toBeNull();
     expect(body.coverUnsplash).toMatchObject({ id: "p-apply-fresh" });
@@ -1356,7 +1361,7 @@ describe("project cover image handlers", () => {
     expect(res.status).toBe(200);
     const body = await res.json<{
       coverImageKey: string;
-      coverUnsplash: UnsplashCoverPayload | null;
+      coverUnsplash: StoredUnsplashCoverPayload | null;
     }>();
     expect(body.coverImageKey).toMatch(/^project-cover\//);
     expect(body.coverUnsplash).toBeNull();
@@ -1474,7 +1479,7 @@ describe("project cover image handlers", () => {
     const body1 = await r1.json<{
       project: {
         coverImageKey: string | null;
-        coverUnsplash: UnsplashCoverPayload | null;
+        coverUnsplash: StoredUnsplashCoverPayload | null;
       };
     }>();
     expect(body1.project).toHaveProperty("coverUnsplash");
@@ -1498,7 +1503,7 @@ describe("project cover image handlers", () => {
       jsonRequest("GET", `/projects/${projectId}`),
     );
     const body2 = await r2.json<{
-      project: { coverUnsplash: UnsplashCoverPayload | null };
+      project: { coverUnsplash: StoredUnsplashCoverPayload | null };
     }>();
     expect(body2.project.coverUnsplash?.id).toBe("p-detail-reads");
   });
@@ -1527,7 +1532,7 @@ describe("project cover image handlers", () => {
     );
     expect(res.status).toBe(201);
     const body = await res.json<{
-      project: { id: string; coverUnsplash: UnsplashCoverPayload | null };
+      project: { id: string; coverUnsplash: StoredUnsplashCoverPayload | null };
     }>();
     expect(body.project.coverUnsplash).toBeNull();
 

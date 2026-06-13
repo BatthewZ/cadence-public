@@ -2,6 +2,7 @@ import { CheckCircle2, CircleDot } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
+import type { TaskPriority } from "@/shared/types/roles";
 import { SearchInput } from "@/web/components/form/SearchInput";
 import { Row, Stack } from "@/web/components/layout";
 import { Avatar } from "@/web/components/ui/Avatar";
@@ -17,7 +18,8 @@ import type { Task } from "@/web/contexts/ProjectContext";
 import { useProject } from "@/web/contexts/ProjectContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
-import { useTaskFilters } from "@/web/hooks/use-task-filters";
+import { FILTER_NONE, useTaskFilters } from "@/web/hooks/use-task-filters";
+import { toggleArrayValue } from "@/web/util/array";
 import { getPriorityBadgeVariant, getPriorityLabel } from "@/web/util/task-display";
 
 /* ------------------------------------------------------------------ */
@@ -35,7 +37,7 @@ function formatDate(dateStr: string | null | undefined): string {
 
 export default function ProjectListView() {
   const { project, tasks, taskGroups } = useProject();
-  const { filteredTasks: filterBarTasks } = useTaskFilters(tasks);
+  const { filters, setFilter, filteredTasks: filterBarTasks } = useTaskFilters(tasks);
   const { members } = useWorkspace();
   useDocumentTitle(`${project.name} — List`);
   const [, setSearchParams] = useSearchParams();
@@ -90,6 +92,23 @@ export default function ProjectListView() {
     [setSearchParams]
   );
 
+  // Click-to-filter toggles. These close over the *current* filter arrays, so
+  // they (and the `columns` memo below) must list them as dependencies — a
+  // stale closure here would make the second click re-add instead of remove.
+  const togglePriorityFilter = useCallback(
+    (priority: TaskPriority) => {
+      setFilter("priorities", toggleArrayValue(filters.priorities, priority));
+    },
+    [filters.priorities, setFilter]
+  );
+
+  const toggleAssigneeFilter = useCallback(
+    (assigneeId: string) => {
+      setFilter("assigneeIds", toggleArrayValue(filters.assigneeIds, assigneeId));
+    },
+    [filters.assigneeIds, setFilter]
+  );
+
   // Column definitions
   const columns: ColumnDef<Task>[] = useMemo(
     () => [
@@ -122,17 +141,38 @@ export default function ProjectListView() {
         sortable: true,
         render: (row) => {
           if (!row.assigneeId) {
-            return <span className="text-fg-muted">Unassigned</span>;
+            return (
+              <button
+                type="button"
+                aria-label="Filter by assignee: Unassigned"
+                className="text-fg-muted cursor-pointer bg-transparent border-none p-0 hover:underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleAssigneeFilter(FILTER_NONE);
+                }}
+              >
+                Unassigned
+              </button>
+            );
           }
           const member = memberMap.get(row.assigneeId);
-          if (!member) {
-            return <span className="text-fg-muted">Unknown</span>;
-          }
+          const assigneeId = row.assigneeId;
+          const name = member?.name ?? "Unknown";
           return (
-            <div className="flex items-center gap-r5">
-              <Avatar size="xs" name={member.name} src={member.image} />
-              <span>{member.name}</span>
-            </div>
+            <button
+              type="button"
+              aria-label={`Filter by assignee: ${name}`}
+              className={`flex items-center gap-r5 cursor-pointer bg-transparent border-none p-0 hover:underline ${
+                member ? "" : "text-fg-muted"
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleAssigneeFilter(assigneeId);
+              }}
+            >
+              {member && <Avatar size="xs" name={member.name} src={member.image} />}
+              <span>{name}</span>
+            </button>
           );
         },
       },
@@ -141,9 +181,19 @@ export default function ProjectListView() {
         header: "Priority",
         sortable: true,
         render: (row) => (
-          <Badge variant={getPriorityBadgeVariant(row.priority)}>
-            {getPriorityLabel(row.priority)}
-          </Badge>
+          <button
+            type="button"
+            aria-label={`Filter by priority: ${getPriorityLabel(row.priority)}`}
+            className="cursor-pointer bg-transparent border-none p-0 rounded-sm transition-shadow hover:ring-2 hover:ring-accent/50"
+            onClick={(e) => {
+              e.stopPropagation();
+              togglePriorityFilter(row.priority);
+            }}
+          >
+            <Badge variant={getPriorityBadgeVariant(row.priority)}>
+              {getPriorityLabel(row.priority)}
+            </Badge>
+          </button>
         ),
       },
       {
@@ -172,7 +222,7 @@ export default function ProjectListView() {
         ),
       },
     ],
-    [groupMap, memberMap, openTask]
+    [groupMap, memberMap, openTask, togglePriorityFilter, toggleAssigneeFilter]
   );
 
   return (

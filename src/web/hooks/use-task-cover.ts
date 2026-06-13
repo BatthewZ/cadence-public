@@ -1,6 +1,9 @@
 import { useCallback } from "react";
 
-import type { UnsplashCoverPayload } from "@/shared/schemas/unsplash";
+import type {
+  StoredUnsplashCoverPayload,
+  UnsplashCoverPayload,
+} from "@/shared/schemas/unsplash";
 import type { Task } from "@/web/contexts/ProjectContext";
 import { useFileUpload } from "@/web/hooks/use-file-upload";
 import { resolveCoverDisplay } from "@/web/hooks/use-project-cover";
@@ -19,9 +22,11 @@ interface UseTaskCoverOptions {
   /**
    * Current Unsplash payload for the task, or null/undefined. Takes
    * precedence over `coverImageKey` when both are transiently set — the XOR
-   * invariant normally guarantees only one is populated.
+   * invariant normally guarantees only one is populated. Typed as the STORED
+   * (lenient) shape because this is server state read back from the API:
+   * `rawUrl` may be absent on covers picked before that field existed.
    */
-  coverUnsplash: UnsplashCoverPayload | null | undefined;
+  coverUnsplash: StoredUnsplashCoverPayload | null | undefined;
   setLocalTask: React.Dispatch<React.SetStateAction<TaskDetail | null>>;
   updateTaskInContext: (taskId: string, updates: Partial<Task>) => void;
   invalidateTaskQueries: () => void;

@@ -4,6 +4,7 @@ import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { useOptionalWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 
+import { CalendarFeedSection } from "./components/CalendarFeedSection";
 import { DangerZoneSection } from "./components/DangerZoneSection";
 import { PasswordSection } from "./components/PasswordSection";
 import { ProfileSection } from "./components/ProfileSection";
@@ -30,6 +31,16 @@ export function Settings() {
         <Divider />
         <SessionsSection />
         <Divider />
+        {/* The calendar feed is scoped to a workspace (it serves the tasks
+            assigned to you *in that workspace*), so the section only renders
+            when Settings is mounted inside a workspace route — standalone
+            /settings has no workspace to mint a feed for. */}
+        {isInsideWorkspace && workspaceCtx && (
+          <>
+            <CalendarFeedSection workspaceId={workspaceCtx.workspace.id} />
+            <Divider />
+          </>
+        )}
         <DangerZoneSection />
       </Stack>
     </Container>

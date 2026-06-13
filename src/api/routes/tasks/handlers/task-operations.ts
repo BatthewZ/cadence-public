@@ -227,6 +227,10 @@ export async function duplicateTask(c: Context<AppEnv>) {
       completed: false,
       completedAt: null,
       completedBy: null,
+      // Copied verbatim so a duplicate preserves the source's dates exactly —
+      // whether that's a full start→due range, a start date alone, a due date
+      // alone, or neither.
+      startDate: sourceTask.startDate,
       dueDate: sourceTask.dueDate,
       cost: sourceTask.cost,
       icon: sourceTask.icon,
@@ -236,6 +240,10 @@ export async function duplicateTask(c: Context<AppEnv>) {
       recurrenceRule: sourceTask.recurrenceRule,
       recurrenceParentId: null,
       recurrenceSeriesId: sourceTask.recurrenceRule ? crypto.randomUUID() : null,
+      // Deliberately NOT copied from the source: the copy was not imported
+      // from a calendar event, and copying would trip the partial unique
+      // index on (projectId, source_uid) when duplicating an imported task.
+      sourceUid: null,
       position,
       createdAt: now,
       updatedAt: now,

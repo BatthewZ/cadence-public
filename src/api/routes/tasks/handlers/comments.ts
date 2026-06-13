@@ -161,7 +161,11 @@ export async function updateComment(c: Context<AppEnv>) {
     // Non-fatal: comment was already updated
   }
 
-  return c.json({ comment: updated });
+  // Enrich with authorName to mirror createComment/listComments responses —
+  // the web `Comment` contract pins authorName as required, and the author-only
+  // guard above (403 for non-authors) guarantees the actor IS the author, so
+  // user.name is the correct value without an extra lookup.
+  return c.json({ comment: { ...updated, authorName: user.name } });
 }
 
 export async function deleteComment(c: Context<AppEnv>) {

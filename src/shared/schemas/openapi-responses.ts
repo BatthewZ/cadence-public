@@ -25,6 +25,30 @@ import { z } from "@hono/zod-openapi";
 
 import { PROJECT_ROLES, PROJECT_STATUSES, TASK_PRIORITIES, WORKSPACE_ROLES } from "../types/roles";
 import { THEMES } from "../types/theme";
+import { storedUnsplashCoverPayloadSchema } from "./unsplash";
+
+/**
+ * Unsplash cover payload as it appears in project/task responses.
+ *
+ * Reuses `storedUnsplashCoverPayloadSchema` — the persistence/read variant —
+ * so the documented response shape can never drift from what handlers
+ * actually store and return. This is deliberately the LENIENT schema (its
+ * `rawUrl` is optional), not the strict `PUT .../cover/unsplash` request-body
+ * schema: legacy rows written before `rawUrl` existed are returned verbatim,
+ * so the response contract must admit a missing `rawUrl` or it would lie
+ * about real responses. The DB column is typed `$type<StoredUnsplashCoverPayload>`
+ * from this same schema. Nullable because the column is null when the cover
+ * source is R2 (or absent); optional because create responses omit cover
+ * keys entirely (covers are only attachable after creation via the
+ * dedicated cover endpoints).
+ */
+const coverUnsplashResponseSchema = storedUnsplashCoverPayloadSchema
+  .nullable()
+  .optional()
+  .openapi({
+    description:
+      "Unsplash cover payload when the cover source is Unsplash. Mutually exclusive with `coverImageKey` (exactly one source is set at a time; both null when no cover).",
+  });
 
 // ---------------------------------------------------------------------------
 // Shared error / validation schemas (re-exported for convenience)
@@ -62,7 +86,7 @@ const isoTimestamp = z.string().openapi({
 
 export const workspaceSchema = z
   .object({
-    id: z.string().uuid(),
+    id: z.uuid(),
     name: z.string(),
     slug: z.string(),
     description: z.string().nullable(),
@@ -102,8 +126,8 @@ export const getWorkspaceResponseSchema = z
 
 export const projectSchema = z
   .object({
-    id: z.string().uuid(),
-    workspaceId: z.string().uuid(),
+    id: z.uuid(),
+    workspaceId: z.uuid(),
     name: z.string(),
     description: z.string().nullable(),
     icon: z.string().nullable(),
@@ -113,6 +137,7 @@ export const projectSchema = z
     autoAssignCreator: z.boolean(),
     coverImageKey: z.string().nullable().optional(),
     coverImagePosition: z.number().int().nullable().optional(),
+    coverUnsplash: coverUnsplashResponseSchema,
     position: z.string().nullable().optional().openapi({
       description: "Fractional-index position string used for sort order",
     }),
@@ -180,9 +205,9 @@ const taskLabelInfoSchema = z
 
 export const taskSchema = z
   .object({
-    id: z.string().uuid(),
-    projectId: z.string().uuid(),
-    taskGroupId: z.string().uuid(),
+    id: z.uuid(),
+    projectId: z.uuid(),
+    taskGroupId: z.uuid(),
     title: z.string(),
     description: z.string().nullable(),
     assigneeId: z.string().nullable(),
@@ -190,14 +215,20 @@ export const taskSchema = z
     completed: z.boolean(),
     completedAt: z.string().nullable(),
     completedBy: z.string().nullable(),
+    startDate: z.string().nullable(),
     dueDate: z.string().nullable(),
     cost: z.number().int().nullable(),
     icon: z.string().nullable(),
     coverImageKey: z.string().nullable().optional(),
     coverImagePosition: z.number().int().nullable().optional(),
+    coverUnsplash: coverUnsplashResponseSchema,
     recurrenceRule: recurrenceRuleResponseSchema,
     recurrenceSeriesId: z.string().nullable(),
     recurrenceParentId: z.string().nullable(),
+    sourceUid: z.string().nullable().openapi({
+      description:
+        "Provenance UID when the task was created via calendar import (the ICS `UID` of the source event). Null for tasks created any other way. Set only by the import endpoint and immutable thereafter — PATCH ignores it.",
+    }),
     position: z.string(),
     createdAt: isoTimestamp,
     updatedAt: isoTimestamp,
@@ -253,6 +284,30 @@ export const updateTaskResponseSchema = z
   })
   .openapi("UpdateTaskResponse");
 
+/**
+ * Summary counters returned by `POST /projects/:projectId/tasks/import`.
+ *
+ * Deliberately NOT the created task rows: a 500-event import would balloon
+ * the response, and the client refetches the task list anyway. `skipped`
+ * counts events whose `sourceUid` already exists in the project (re-import
+ * dedupe); `total` always equals `created + skipped` and echoes the request
+ * item count so integrators can detect truncation bugs on their side.
+ */
+export const importTasksResponseSchema = z
+  .object({
+    created: z.number().int().nonnegative().openapi({
+      description: "Number of tasks inserted by this request.",
+    }),
+    skipped: z.number().int().nonnegative().openapi({
+      description:
+        "Number of events skipped because their sourceUid already exists in this project (previously imported).",
+    }),
+    total: z.number().int().nonnegative().openapi({
+      description: "Total events processed (created + skipped).",
+    }),
+  })
+  .openapi("ImportTasksResponse");
+
 // ---------------------------------------------------------------------------
 // Label
 // ---------------------------------------------------------------------------
@@ -260,7 +315,7 @@ export const updateTaskResponseSchema = z
 export const labelSchema = z
   .object({
     id: z.string(),
-    projectId: z.string().uuid(),
+    projectId: z.uuid(),
     name: z.string(),
     color: z.string().openapi({ description: "Hex color code (e.g. #ef4444)" }),
     createdAt: isoTimestamp,
@@ -278,6 +333,26 @@ export const listLabelsResponseSchema = z
     labels: z.array(labelWithCountSchema),
   })
   .openapi("ListLabelsResponse");
+
+/**
+ * Deduplicated cross-project label option. Carries no `id`/`projectId`
+ * because one entry can represent label rows from several projects — the
+ * case-insensitive name IS the identity at workspace scope (per-project
+ * uniqueness is already case-insensitive, so collapsing on LOWER(name)
+ * is lossless for filtering purposes).
+ */
+export const workspaceLabelSchema = z
+  .object({
+    name: z.string(),
+    color: z.string().openapi({ description: "Hex color code (e.g. #ef4444)" }),
+  })
+  .openapi("WorkspaceLabel");
+
+export const listWorkspaceLabelsResponseSchema = z
+  .object({
+    labels: z.array(workspaceLabelSchema),
+  })
+  .openapi("ListWorkspaceLabelsResponse");
 
 export const createLabelResponseSchema = z
   .object({
@@ -312,7 +387,7 @@ export const apiTokenViewSchema = z
   .object({
     id: z.string(),
     userId: z.string(),
-    workspaceId: z.string().uuid(),
+    workspaceId: z.uuid(),
     name: z.string(),
     tokenPrefix: z.string().openapi({
       description: "First 12 characters of the plaintext (safe to display).",

@@ -9,7 +9,7 @@ export const createWebhookSchema = z
     events: z
       .array(z.enum(WEBHOOK_EVENT_TYPES))
       .min(1, "At least one event is required"),
-    projectId: z.string().uuid().optional(),
+    projectId: z.uuid().optional(),
   })
   .refine(
     (data) => {
@@ -32,7 +32,7 @@ export const updateWebhookSchema = z.object({
     .optional(),
   active: z.boolean().optional(),
   regenerateSecret: z.boolean().optional(),
-  projectId: z.string().uuid().nullable().optional(),
+  projectId: z.uuid().nullable().optional(),
 });
 
 export type CreateWebhookInput = z.infer<typeof createWebhookSchema>;

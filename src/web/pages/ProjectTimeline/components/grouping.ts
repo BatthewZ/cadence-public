@@ -1,3 +1,4 @@
+import type { TaskLabelInfo } from "@/shared/schemas/label";
 import type { TaskPriority } from "@/shared/types/roles";
 import type { ProjectMember, TaskGroup } from "@/web/contexts/ProjectContext";
 import { sortByPosition } from "@/web/lib/sort-by-position";
@@ -8,10 +9,10 @@ import { getPriorityLabel } from "@/web/util/task-display";
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-export type GroupingMode = "dueDate" | "priority" | "taskGroup" | "assignee";
+export type GroupingMode = "dueDate" | "priority" | "taskGroup" | "assignee" | "label";
 
 const VALID_GROUPING_MODES: ReadonlySet<string> = new Set<GroupingMode>([
-  "dueDate", "priority", "taskGroup", "assignee",
+  "dueDate", "priority", "taskGroup", "assignee", "label",
 ]);
 
 /** Safely parse a URL param into a GroupingMode, falling back to "dueDate". */
@@ -24,7 +25,7 @@ export interface TimelineGroupMeta {
   priority?: TaskPriority;
   avatarUrl?: string;
   avatarName?: string;
-  icon?: "overdue" | "unscheduled" | "unassigned";
+  icon?: "overdue" | "unscheduled" | "unassigned" | "unlabeled";
 }
 
 export interface TimelineGroup {
@@ -44,6 +45,7 @@ export interface TimelineTask {
   assigneeName?: string;
   assigneeAvatarUrl?: string;
   taskGroupId: string;
+  labels?: TaskLabelInfo[];
 }
 
 /* ------------------------------------------------------------------ */
@@ -196,6 +198,79 @@ function groupTasksByAssignee(
 }
 
 /* ------------------------------------------------------------------ */
+/*  Group by Label                                                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Group tasks by their embedded labels (a many-to-many relation).
+ *
+ * A task with multiple labels intentionally appears in EVERY matching group.
+ * Duplication is the honest representation of many-to-many data and matches
+ * the OR semantics of the label filter; collapsing to a single "primary"
+ * label would hide real associations. Two consequences are accepted
+ * tradeoffs, and the tests in grouping.test.ts pin them down so a future
+ * "fix" doesn't silently change the contract:
+ *
+ * - Per-group count badges stay truthful (each badge counts the tasks
+ *   carrying that label), so group counts can sum to more than the total
+ *   number of distinct tasks.
+ * - Bulk-select operates on task ids, so selecting a duplicated row selects
+ *   that task in every group it appears in (existing id-based behavior).
+ *
+ * Groups are derived from the labels found on the tasks themselves rather
+ * than from a separate label fetch — empty groups are filtered out in every
+ * grouping mode anyway, so the output is identical and the function stays
+ * pure (no network dependency). Groups are sorted by label name
+ * case-insensitively; tasks with no labels land in a trailing "No label"
+ * group (key `label-none`, rendered with a muted Tag icon — the installed
+ * lucide-react version has no TagOff variant).
+ */
+export function groupTasksByLabel(tasks: TimelineTask[]): TimelineGroup[] {
+  const labelsById = new Map<string, TaskLabelInfo>();
+  for (const task of tasks) {
+    for (const label of task.labels ?? []) {
+      if (!labelsById.has(label.id)) labelsById.set(label.id, label);
+    }
+  }
+
+  const sortedLabels = [...labelsById.values()].sort((a, b) =>
+    a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
+  );
+
+  const groups: TimelineGroup[] = sortedLabels.map((l) => ({
+    label: l.name,
+    key: `label-${l.id}`,
+    tasks: [],
+    meta: { color: l.color },
+  }));
+
+  const noLabel: TimelineGroup = {
+    label: "No label",
+    key: "label-none",
+    tasks: [],
+    meta: { icon: "unlabeled" },
+  };
+
+  const indexMap = new Map(sortedLabels.map((l, i) => [l.id, i]));
+
+  for (const task of tasks) {
+    const labels = task.labels ?? [];
+    if (labels.length === 0) {
+      noLabel.tasks.push(task);
+      continue;
+    }
+    for (const label of labels) {
+      const idx = indexMap.get(label.id);
+      if (idx !== undefined) groups[idx].tasks.push(task);
+    }
+  }
+
+  const result = groups.filter((g) => g.tasks.length > 0);
+  if (noLabel.tasks.length > 0) result.push(noLabel);
+  return result;
+}
+
+/* ------------------------------------------------------------------ */
 /*  Dispatcher                                                         */
 /* ------------------------------------------------------------------ */
 
@@ -214,6 +289,8 @@ export function groupTimelineTasks(
       return groupTasksByTaskGroup(tasks, taskGroups);
     case "assignee":
       return groupTasksByAssignee(tasks, members);
+    case "label":
+      return groupTasksByLabel(tasks);
   }
 }
 
@@ -234,6 +311,7 @@ export function getDefaultOpenKeys(
       return groups.length > 0 ? [groups[0].key] : [];
     case "taskGroup":
     case "assignee":
+    case "label":
       return groups.map((g) => g.key);
   }
 }

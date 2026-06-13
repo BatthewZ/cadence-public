@@ -132,6 +132,7 @@ Every webhook delivery sends a JSON envelope with a consistent structure. The to
     "assigneeId": "user_ghi789",
     "assignee": { "id": "user_ghi789", "name": "Jane Smith", "email": "jane@acme.com" },
     "priority": "critical",
+    "startDate": null,
     "dueDate": "2026-04-01T00:00:00.000Z",
     "cost": 5,
     "completed": false,
@@ -143,6 +144,7 @@ Every webhook delivery sends a JSON envelope with a consistent structure. The to
     "recurrenceRule": null,
     "recurrenceParentId": null,
     "recurrenceSeriesId": null,
+    "sourceUid": null,
     "createdAt": "2026-03-20T09:00:00.000Z",
     "updatedAt": "2026-03-26T12:00:00.000Z"
   },
@@ -169,7 +171,7 @@ Every webhook delivery sends a JSON envelope with a consistent structure. The to
 
 ### Data Shapes by Domain
 
-- **Task events** (`task.*`): Full task object with `id`, `title`, `description`, `projectId`, `taskGroupId`, `taskGroup`, `assigneeId`, `assignee`, `priority`, `dueDate`, `cost`, `completed`, `completedAt`, `completedBy`, `completedByUser`, `position`, `icon`, `recurrenceRule`, `recurrenceParentId`, `recurrenceSeriesId`, `createdAt`, `updatedAt`. The `recurrenceRule` field is the JSON-encoded rule string (or `null`); `recurrenceParentId` links to the previous instance in a recurring series; `recurrenceSeriesId` groups all instances in the same series. Exception: `task.comment_created` sends the comment object (`id`, `taskId`, `authorId`, `author`, `body`, `createdAt`, `updatedAt`); `task.label_added` and `task.label_removed` send `{ task: { id, projectId }, label: { id, name } }`.
+- **Task events** (`task.*`): Full task object with `id`, `title`, `description`, `projectId`, `taskGroupId`, `taskGroup`, `assigneeId`, `assignee`, `priority`, `startDate`, `dueDate`, `cost`, `completed`, `completedAt`, `completedBy`, `completedByUser`, `position`, `icon`, `recurrenceRule`, `recurrenceParentId`, `recurrenceSeriesId`, `sourceUid`, `createdAt`, `updatedAt`. The `recurrenceRule` field is the JSON-encoded rule string (or `null`); `recurrenceParentId` links to the previous instance in a recurring series; `recurrenceSeriesId` groups all instances in the same series. `sourceUid` is the ICS `UID` of the calendar event a task was imported from (or `null`), included so consumers can match a task back to its source event without an API round-trip — it is set once at import and immutable, so it never appears in `changes`. Exception: `task.comment_created` sends the comment object (`id`, `taskId`, `authorId`, `author`, `body`, `createdAt`, `updatedAt`); `task.label_added` and `task.label_removed` send `{ task: { id, projectId }, label: { id, name } }`.
 - **Project events** (`project.*`): Full project object with `id`, `workspaceId`, `name`, `description`, `status`, `icon`, `budget`, `createdAt`, `updatedAt`. Exception: `project.member_added` and `project.member_removed` send `{ userId, user, projectId, role }`.
 - **Workspace events** (`workspace.*`): Member data with `{ userId, user, workspaceId, role }`.
 - **Invitation events** (`invitation.*`): Full invitation object with `id`, `workspaceId`, `email`, `role`, `status`, `expiresAt`, `createdAt`.
@@ -192,9 +194,9 @@ For `task.updated` and `task.moved` events, the `changes` field also includes en
 
 The `changes` field uses `computeChanges()` to diff specific tracked fields before and after the mutation. Each changed field maps to an object with `from` (previous value) and `to` (new value). Date values are normalized to ISO 8601 strings. Fields that did not change are omitted.
 
-Tracked fields for `task.updated`: `title`, `description`, `assigneeId`, `priority`, `dueDate`, `cost`, `icon`, `taskGroupId`, `coverImageKey`, `coverImagePosition`, `recurrenceRule`.
+Tracked fields for `task.updated`: `title`, `description`, `assigneeId`, `priority`, `startDate`, `dueDate`, `cost`, `icon`, `taskGroupId`, `coverImageKey`, `coverImagePosition`, `recurrenceRule`.
 
-Tracked fields for `project.updated`: `name`, `description`, `status`, `icon`, `budget`.
+Tracked fields for `project.updated`: `name`, `description`, `status`, `icon`, `budget`, `autoAssignCreator`.
 
 ---
 

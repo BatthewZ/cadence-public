@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createContext, type ReactNode, useCallback, useContext, useMemo } from "react";
 
 import type { TaskLabelInfo } from "@/shared/schemas/label";
-import type { UnsplashCoverPayload } from "@/shared/schemas/unsplash";
+import type { StoredUnsplashCoverPayload } from "@/shared/schemas/unsplash";
 import type { RecurrenceRule } from "@/shared/types/recurrence";
 import type { ProjectStatus, TaskPriority } from "@/shared/types/roles";
 import { Center } from "@/web/components/layout";
@@ -52,8 +52,10 @@ interface Project {
    * Optional Unsplash cover payload. Mutually exclusive with `coverImageKey`
    * (XOR invariant enforced by the backend): at most one cover source is
    * active at any time. When both are null/undefined the project has no cover.
+   * The STORED (lenient) shape: this is server state read back from the API,
+   * so `rawUrl` may be absent on covers picked before that field existed.
    */
-  coverUnsplash?: UnsplashCoverPayload | null;
+  coverUnsplash?: StoredUnsplashCoverPayload | null;
   coverImagePosition?: number | null;
   budget?: number | null;
   autoAssignCreator?: boolean;
@@ -82,6 +84,14 @@ export interface Task {
   completed: boolean;
   completedAt?: string | null;
   completedBy?: string | null;
+  /**
+   * ISO timestamp for the task's start date. Independently optional from
+   * `dueDate` — a task may have a start date alone, a due date alone, both
+   * (a start → due range), or neither. The API enforces only start ≤ due when
+   * both are present. Views recover the calendar day with `.slice(0, 10)`;
+   * never parse with local-time accessors (off-by-one hazard west of UTC).
+   */
+  startDate?: string | null;
   dueDate?: string | null;
   cost?: number | null;
   position: string;
@@ -89,9 +99,10 @@ export interface Task {
   coverImageKey?: string | null;
   /**
    * Optional Unsplash cover payload. Mutually exclusive with `coverImageKey`
-   * (XOR invariant enforced by the backend).
+   * (XOR invariant enforced by the backend). Stored (lenient) shape — see
+   * the same field on {@link Project}.
    */
-  coverUnsplash?: UnsplashCoverPayload | null;
+  coverUnsplash?: StoredUnsplashCoverPayload | null;
   coverImagePosition?: number | null;
   subtaskCount?: number;
   subtaskCompletedCount?: number;

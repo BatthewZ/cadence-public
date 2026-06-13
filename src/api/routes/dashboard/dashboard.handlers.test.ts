@@ -19,6 +19,7 @@ import { validateQuery } from "../../middleware/validate";
 import {
   createTestD1,
   fakeAuth,
+  seedLabel,
   seedProject,
   seedProjectMember,
   seedTask,
@@ -640,6 +641,272 @@ describe("myTasks", () => {
     expect(res.status).toBe(200);
     const body = await res.json<{ tasks: unknown[] }>();
     expect(body.tasks).toHaveLength(0);
+  });
+
+  // =========================================================================
+  // Filter params: priority, due-date range/absence, label names/absence.
+  //
+  // These exercise the real SQL because the endpoint is cursor-paginated —
+  // client-side filtering is broken by design (a narrow filter would show 0
+  // results until repeated "Load more"), so the server-side conditions are
+  // the only correct implementation and must be verified against seeded
+  // rows, including UTC day-boundary semantics (Risk 4) and the period +
+  // noDueDate interplay (Risk 5).
+  //
+  // Seeds live in an isolated workspace so the assertions in the sibling
+  // tests above (which assume exact task counts for TEST_USER) stay valid.
+  // =========================================================================
+
+  describe("filters (priority, due date, labels)", () => {
+    const FILTER_WS_ID = "ws-mytasks-filters";
+    const PROJECT_F1_ID = "proj-f1-filters";
+    const PROJECT_F2_ID = "proj-f2-filters";
+    const GROUP_F1 = "group-f1-filters";
+    const GROUP_F2 = "group-f2-filters";
+
+    /** Attach a label to a task (raw insert mirrors seed.ts conventions). */
+    async function linkTaskLabel(taskId: string, labelId: string) {
+      await d1
+        .prepare(
+          "INSERT INTO task_label (id, taskId, labelId, createdAt) VALUES (?, ?, ?, ?)",
+        )
+        .bind(crypto.randomUUID(), taskId, labelId, Math.floor(Date.now() / 1000))
+        .run();
+    }
+
+    beforeAll(async () => {
+      await seedWorkspace(d1, TEST_USER.id, {
+        id: FILTER_WS_ID,
+        name: "Filter WS",
+        slug: "mytasks-filter-ws",
+      });
+      await seedProject(d1, FILTER_WS_ID, { id: PROJECT_F1_ID, name: "Filter Alpha" });
+      await seedProject(d1, FILTER_WS_ID, { id: PROJECT_F2_ID, name: "Filter Beta" });
+      await seedTaskGroup(d1, PROJECT_F1_ID, { id: GROUP_F1, name: "To Do" });
+      await seedTaskGroup(d1, PROJECT_F2_ID, { id: GROUP_F2, name: "To Do" });
+
+      // "Bug" exists in BOTH projects with different casing — cross-project
+      // label identity is the case-insensitive name (labels are per-project
+      // rows, names unique case-insensitively within a project).
+      const labelBugF1 = await seedLabel(d1, PROJECT_F1_ID, "Bug");
+      const labelFrontendF1 = await seedLabel(d1, PROJECT_F1_ID, "Frontend");
+      // "none" is a legal user-entered label name — it must behave as a
+      // plain name, never as an absence sentinel (that is the noLabel flag).
+      const labelNoneF1 = await seedLabel(d1, PROJECT_F1_ID, "none");
+      const labelUrgentWorkF1 = await seedLabel(d1, PROJECT_F1_ID, "Urgent-Work");
+      const labelBugF2 = await seedLabel(d1, PROJECT_F2_ID, "bug");
+
+      // Due dates are stored exactly the way task creation stores them:
+      // new Date("YYYY-MM-DD") === UTC midnight of that day (Risk 4).
+      await seedTask(d1, PROJECT_F1_ID, GROUP_F1, {
+        id: "task-f1-urgent",
+        title: "F1 urgent bug",
+        assigneeId: TEST_USER.id,
+        priority: "urgent",
+        dueDate: new Date("2030-03-15T00:00:00.000Z"),
+      });
+      await seedTask(d1, PROJECT_F1_ID, GROUP_F1, {
+        id: "task-f1-low",
+        title: "F1 low frontend",
+        assigneeId: TEST_USER.id,
+        priority: "low",
+        dueDate: new Date("2030-03-20T00:00:00.000Z"),
+      });
+      await seedTask(d1, PROJECT_F1_ID, GROUP_F1, {
+        id: "task-f1-nodate",
+        title: "F1 medium, no due date, no labels",
+        assigneeId: TEST_USER.id,
+        priority: "medium",
+      });
+      await seedTask(d1, PROJECT_F1_ID, GROUP_F1, {
+        id: "task-f1-nonelabel",
+        title: "F1 task labeled 'none'",
+        assigneeId: TEST_USER.id,
+        priority: "none",
+        dueDate: new Date("2030-05-01T00:00:00.000Z"),
+      });
+      // Completed task with a matching label/priority — base conditions
+      // must keep excluding it no matter which filters are applied.
+      await seedTask(d1, PROJECT_F1_ID, GROUP_F1, {
+        id: "task-f1-completed-bug",
+        title: "F1 completed bug",
+        assigneeId: TEST_USER.id,
+        priority: "urgent",
+        completed: true,
+        dueDate: new Date("2030-03-15T00:00:00.000Z"),
+      });
+      await seedTask(d1, PROJECT_F2_ID, GROUP_F2, {
+        id: "task-f2-high",
+        title: "F2 high bug",
+        assigneeId: TEST_USER.id,
+        priority: "high",
+        dueDate: new Date("2030-03-15T00:00:00.000Z"),
+      });
+      await seedTask(d1, PROJECT_F2_ID, GROUP_F2, {
+        id: "task-f2-none",
+        title: "F2 no labels",
+        assigneeId: TEST_USER.id,
+        priority: "none",
+        dueDate: new Date("2030-04-01T00:00:00.000Z"),
+      });
+
+      await linkTaskLabel("task-f1-urgent", labelBugF1);
+      // Second label on the same task: EXISTS-based filtering must return
+      // the task exactly once even when several labels match the query.
+      await linkTaskLabel("task-f1-urgent", labelUrgentWorkF1);
+      await linkTaskLabel("task-f1-low", labelFrontendF1);
+      await linkTaskLabel("task-f1-nonelabel", labelNoneF1);
+      await linkTaskLabel("task-f1-completed-bug", labelBugF1);
+      await linkTaskLabel("task-f2-high", labelBugF2);
+    });
+
+    function myTasksUrl(query: string) {
+      return `/workspaces/${FILTER_WS_ID}/dashboard/my-tasks?${query}`;
+    }
+
+    async function fetchIds(query: string): Promise<string[]> {
+      const app = workspaceApp(TEST_USER, "owner");
+      const res = await app.request(myTasksUrl(query));
+      expect(res.status).toBe(200);
+      const body = await res.json<{ tasks: Array<{ id: string }> }>();
+      return body.tasks.map((t) => t.id);
+    }
+
+    it("filters by a single priority", async () => {
+      const ids = await fetchIds("priority=urgent");
+      // task-f1-completed-bug is also urgent but completed — excluded.
+      expect(ids).toEqual(["task-f1-urgent"]);
+    });
+
+    it("filters by a priority CSV (OR within the dimension)", async () => {
+      const ids = await fetchIds("priority=urgent,high");
+      expect(ids.sort()).toEqual(["task-f1-urgent", "task-f2-high"]);
+    });
+
+    it("returns 400 for an invalid priority value", async () => {
+      const app = workspaceApp(TEST_USER, "owner");
+      const res = await app.request(myTasksUrl("priority=urgent,banana"));
+      expect(res.status).toBe(400);
+    });
+
+    it("includes tasks on the UTC day boundary in a single-day range (Risk 4)", async () => {
+      // Due dates are stored as UTC midnight (new Date("2030-03-15")), so a
+      // from=to=2030-03-15 range must include them — the server's
+      // T00:00:00.000Z / T23:59:59.999Z boundaries agree with the client's
+      // ISO slice(0,10) day comparison.
+      const ids = await fetchIds("dueDateFrom=2030-03-15&dueDateTo=2030-03-15");
+      expect(ids.sort()).toEqual(["task-f1-urgent", "task-f2-high"]);
+    });
+
+    it("excludes a UTC-midnight task when the range ends the day before (Risk 4)", async () => {
+      const ids = await fetchIds("dueDateFrom=2030-03-01&dueDateTo=2030-03-14");
+      expect(ids).toEqual([]);
+    });
+
+    it("excludes a UTC-midnight task when the range starts the day after (Risk 4)", async () => {
+      const ids = await fetchIds("dueDateFrom=2030-03-16&dueDateTo=2030-03-19");
+      expect(ids).toEqual([]);
+    });
+
+    it("applies an open-ended dueDateFrom and excludes tasks without a due date", async () => {
+      const ids = await fetchIds("dueDateFrom=2030-03-20");
+      expect(ids.sort()).toEqual(["task-f1-low", "task-f1-nonelabel", "task-f2-none"]);
+    });
+
+    it("noDueDate alone returns only tasks without a due date", async () => {
+      const ids = await fetchIds("noDueDate=true");
+      expect(ids).toEqual(["task-f1-nodate"]);
+    });
+
+    it("range + noDueDate compose with OR (in range, or no due date)", async () => {
+      const ids = await fetchIds(
+        "dueDateFrom=2030-03-15&dueDateTo=2030-03-15&noDueDate=true",
+      );
+      expect(ids.sort()).toEqual(["task-f1-nodate", "task-f1-urgent", "task-f2-high"]);
+    });
+
+    it("period + noDueDate yields no rows (Risk 5)", async () => {
+      // period builds lte(dueDate, cutoff), which SQL evaluates to NULL for
+      // tasks without a due date, while noDueDate requires IS NULL. ANDed
+      // together no row can satisfy both — logically honest, documented here
+      // so the empty result is recognized as intended, not a regression.
+      const ids = await fetchIds("period=week&noDueDate=true");
+      expect(ids).toEqual([]);
+    });
+
+    it("matches labelNames case-insensitively across projects by name", async () => {
+      // "Bug" (Project F1) and "bug" (Project F2) are distinct rows but the
+      // same cross-project identity; the query casing differs from both.
+      const ids = await fetchIds("labelNames=BUG");
+      expect(ids.sort()).toEqual(["task-f1-urgent", "task-f2-high"]);
+    });
+
+    it("returns a task once even when several of its labels match", async () => {
+      // task-f1-urgent carries both "Bug" and "Urgent-Work" — EXISTS-based
+      // filtering must not duplicate it (a JOIN would).
+      const ids = await fetchIds("labelNames=Bug,URGENT-WORK");
+      expect(ids).toEqual(["task-f1-urgent", "task-f2-high"]);
+    });
+
+    it("treats 'none' in labelNames as a literal label name, not a sentinel", async () => {
+      const ids = await fetchIds("labelNames=none");
+      expect(ids).toEqual(["task-f1-nonelabel"]);
+    });
+
+    it("noLabel returns only tasks without any label", async () => {
+      // task-f1-nonelabel HAS a label (named "none") — must not appear.
+      const ids = await fetchIds("noLabel=true");
+      expect(ids.sort()).toEqual(["task-f1-nodate", "task-f2-none"]);
+    });
+
+    it("labelNames + noLabel compose with OR", async () => {
+      const ids = await fetchIds("labelNames=Frontend&noLabel=true");
+      expect(ids.sort()).toEqual(["task-f1-low", "task-f1-nodate", "task-f2-none"]);
+    });
+
+    it("combines dimensions with AND semantics", async () => {
+      // Both bug tasks match labelNames=bug, but only the urgent one passes
+      // the priority dimension.
+      const ids = await fetchIds("priority=urgent&labelNames=bug");
+      expect(ids).toEqual(["task-f1-urgent"]);
+    });
+
+    it("returns 400 for a malformed due date", async () => {
+      const app = workspaceApp(TEST_USER, "owner");
+      const res = await app.request(myTasksUrl("dueDateFrom=03/15/2030"));
+      expect(res.status).toBe(400);
+      const body = await res.json<{ error: string }>();
+      expect(body.error).toBe("Validation failed");
+    });
+
+    it("paginates with a cursor under label filters", async () => {
+      const app = workspaceApp(TEST_USER, "owner");
+
+      // labelNames=bug matches task-f1-urgent and task-f2-high (same due
+      // date, tie-broken by id), so a limit of 1 forces two pages.
+      const res1 = await app.request(myTasksUrl("labelNames=bug&limit=1"));
+      expect(res1.status).toBe(200);
+      const body1 = await res1.json<{
+        tasks: Array<{ id: string }>;
+        nextCursor: string | null;
+      }>();
+      expect(body1.tasks).toHaveLength(1);
+      expect(body1.tasks[0].id).toBe("task-f1-urgent");
+      expect(body1.nextCursor).not.toBeNull();
+
+      const res2 = await app.request(
+        myTasksUrl(
+          `labelNames=bug&limit=1&cursor=${encodeURIComponent(body1.nextCursor!)}`,
+        ),
+      );
+      expect(res2.status).toBe(200);
+      const body2 = await res2.json<{
+        tasks: Array<{ id: string }>;
+        nextCursor: string | null;
+      }>();
+      expect(body2.tasks).toHaveLength(1);
+      expect(body2.tasks[0].id).toBe("task-f2-high");
+    });
   });
 });
 

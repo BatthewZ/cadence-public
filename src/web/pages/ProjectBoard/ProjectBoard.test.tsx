@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Task, TaskGroup } from "@/web/contexts/ProjectContext";
@@ -23,13 +23,22 @@ vi.mock("@/web/hooks/use-permissions", () => ({
   useProjectPermissions: () => ({ canEditTasks: true, isProjectAdmin: false }),
 }));
 
-vi.mock("@/web/hooks/use-task-filters", () => ({
-  useTaskFilters: (tasks: Task[]) => ({
-    filteredTasks: tasks,
-    hasActiveFilters: false,
-    clearFilters: vi.fn(),
-  }),
-}));
+// Spread the real module so EVERY export stays available — TaskCard calls the
+// real useTaskFilterControls (so click-to-filter tests exercise genuine URL
+// read/write through MemoryRouter), while the board-level useTaskFilters is
+// stubbed to a pass-through so filter state never hides cards from the suite.
+vi.mock("@/web/hooks/use-task-filters", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/web/hooks/use-task-filters")>();
+  return {
+    ...actual,
+    useTaskFilters: (tasks: Task[]) => ({
+      filteredTasks: tasks,
+      hasActiveFilters: false,
+      clearFilters: vi.fn(),
+    }),
+  };
+});
 
 vi.mock("@/web/components/ui/ToastContext", () => ({
   useToast: () => ({ toast: vi.fn() }),
@@ -142,6 +151,21 @@ function setupProjectMock(groups: TaskGroup[], tasks: Task[]) {
   });
 }
 
+/**
+ * Exposes the router's current search string in the DOM so tests can assert
+ * on URL state (the single source of truth for filters) — MemoryRouter never
+ * touches window.location, so there is nothing else to read it from.
+ */
+function LocationSpy() {
+  return <div data-testid="location-search">{useLocation().search}</div>;
+}
+
+function searchParams(): URLSearchParams {
+  return new URLSearchParams(
+    screen.getByTestId("location-search").textContent ?? "",
+  );
+}
+
 function renderBoard() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
@@ -151,6 +175,7 @@ function renderBoard() {
     <QueryClientProvider client={queryClient}>
       <MemoryRouter>
         <ProjectBoard />
+        <LocationSpy />
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -359,5 +384,139 @@ describe("Board column task cap", () => {
       expect(remaining).toHaveLength(1);
       expect(remaining[0].textContent).toBe("Show 10 more tasks");
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Click-to-filter on card chips
+// ---------------------------------------------------------------------------
+//
+// These tests matter because every chip lives INSIDE a card whose own click
+// opens the task detail panel (`?task=<id>`) and whose pointerdown arms
+// dnd-kit dragging — a regression in the stopPropagation wiring would make
+// "filter by label" silently open the detail panel instead. Asserting the
+// `task` param stays absent is the guard for exactly that.
+describe("click-to-filter on card chips", () => {
+  const group = makeGroup("g1", "To Do", "a");
+
+  function makeFilterableTask(): Task {
+    return {
+      ...makeTask(1, "g1"),
+      priority: "high",
+      assigneeId: "user-1",
+      assigneeName: "Alice Smith",
+      labels: [{ id: "label-1", name: "Bug", color: "#dc2626" }],
+    };
+  }
+
+  it("clicking the priority indicator toggles the priority filter without opening task detail", async () => {
+    const user = userEvent.setup();
+    setupProjectMock([group], [makeFilterableTask()]);
+    renderBoard();
+
+    const priorityButton = screen.getByRole("button", {
+      name: "Filter by priority: High",
+    });
+
+    await user.click(priorityButton);
+    expect(searchParams().get("priority")).toBe("high");
+    expect(searchParams().get("task")).toBeNull();
+
+    // XOR semantics: clicking again removes the value (param disappears).
+    await user.click(priorityButton);
+    expect(searchParams().get("priority")).toBeNull();
+    expect(searchParams().get("task")).toBeNull();
+  });
+
+  it("clicking the assignee avatar toggles the assignee filter without opening task detail", async () => {
+    const user = userEvent.setup();
+    setupProjectMock([group], [makeFilterableTask()]);
+    renderBoard();
+
+    const assigneeButton = screen.getByRole("button", {
+      name: "Filter by assignee: Alice Smith",
+    });
+
+    await user.click(assigneeButton);
+    expect(searchParams().get("assignee")).toBe("user-1");
+    expect(searchParams().get("task")).toBeNull();
+
+    await user.click(assigneeButton);
+    expect(searchParams().get("assignee")).toBeNull();
+    expect(searchParams().get("task")).toBeNull();
+  });
+
+  it("clicking a label chip toggles the label filter without opening task detail", async () => {
+    const user = userEvent.setup();
+    setupProjectMock([group], [makeFilterableTask()]);
+    renderBoard();
+
+    const labelButton = screen.getByRole("button", {
+      name: "Filter by label: Bug",
+    });
+
+    await user.click(labelButton);
+    expect(searchParams().get("label")).toBe("label-1");
+    expect(searchParams().get("task")).toBeNull();
+
+    await user.click(labelButton);
+    expect(searchParams().get("label")).toBeNull();
+    expect(searchParams().get("task")).toBeNull();
+  });
+
+  it("XORs into an existing filter list instead of replacing it", async () => {
+    const user = userEvent.setup();
+    const taskA = makeFilterableTask();
+    const taskB: Task = {
+      ...makeTask(2, "g1"),
+      priority: "low",
+    };
+    setupProjectMock([group], [taskA, taskB]);
+    renderBoard();
+
+    await user.click(
+      screen.getByRole("button", { name: "Filter by priority: High" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Filter by priority: Low" }),
+    );
+
+    expect(searchParams().get("priority")).toBe("high,low");
+
+    // Removing one value keeps the other.
+    await user.click(
+      screen.getByRole("button", { name: "Filter by priority: High" }),
+    );
+    expect(searchParams().get("priority")).toBe("low");
+  });
+
+  it("clicking the card body (not a chip) still opens the task detail", async () => {
+    const user = userEvent.setup();
+    setupProjectMock([group], [makeFilterableTask()]);
+    renderBoard();
+
+    await user.click(screen.getByText("Task 1"));
+    expect(searchParams().get("task")).toBe("task-1");
+  });
+
+  it("opening the task detail preserves active filter params (regression: object-form setSearchParams wiped them)", async () => {
+    // `setSearchParams({ task: id })` REPLACES the whole query string — a
+    // user who built up filters via click-to-filter would lose them all the
+    // moment they opened a task. The open handler must use the functional
+    // updater and only set `task`, so the filter params survive the
+    // open/close round-trip (the close handler deletes only `task`).
+    const user = userEvent.setup();
+    setupProjectMock([group], [makeFilterableTask()]);
+    renderBoard();
+
+    // Build filter state first, exactly as a user would.
+    await user.click(
+      screen.getByRole("button", { name: "Filter by priority: High" }),
+    );
+    expect(searchParams().get("priority")).toBe("high");
+
+    await user.click(screen.getByText("Task 1"));
+    expect(searchParams().get("task")).toBe("task-1");
+    expect(searchParams().get("priority")).toBe("high");
   });
 });

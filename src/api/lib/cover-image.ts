@@ -30,7 +30,10 @@ import type { Context } from "hono";
 
 import type { Database } from "../../db";
 import { upload } from "../../db/schema/uploads";
-import type { UnsplashCoverPayload } from "../../shared/schemas/unsplash";
+import type {
+  StoredUnsplashCoverPayload,
+  UnsplashCoverPayload,
+} from "../../shared/schemas/unsplash";
 import { unsplashCoverPayloadSchema } from "../../shared/schemas/unsplash";
 import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_SIZE } from "../../shared/schemas/upload";
 import type { AppEnv } from "../env";
@@ -40,11 +43,17 @@ import { deleteObject, generateObjectKey, putObject } from "./storage";
 import { createUnsplashService } from "./unsplash";
 import { validJson } from "./validated";
 
-/** Minimal info the shared helpers need about the owning entity. */
+/**
+ * Minimal info the shared helpers need about the owning entity.
+ *
+ * `coverUnsplash` is the lenient STORED shape (its `rawUrl` may be absent on
+ * legacy rows) because this is a READ shape hydrated from a DB select, not a
+ * freshly-validated apply payload.
+ */
 interface EntityWithCover {
   id: string;
   coverImageKey: string | null;
-  coverUnsplash: UnsplashCoverPayload | null;
+  coverUnsplash: StoredUnsplashCoverPayload | null;
 }
 
 /** Shape of the two atomic cover-source fields the helpers write together. */

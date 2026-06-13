@@ -3,18 +3,25 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 
+/**
+ * Mirrors the rows returned by `GET /api/workspaces/:workspaceId/projects`
+ * (the `listProjects` handler: full project table columns plus the
+ * `memberCount` / `taskGroupCount` enrichments). Project rows have no
+ * `slug` or `archivedAt` columns — archival is expressed via
+ * `status === "archived"` — so those fields must never be declared here:
+ * non-optional phantom fields would type-check while being `undefined` at
+ * runtime for every consumer.
+ */
 export interface WorkspaceProjectSummary {
   id: string;
   workspaceId: string;
   name: string;
-  slug: string;
   description: string | null;
   status: string;
   icon: string | null;
   coverImageKey: string | null;
   coverImagePosition: number | null;
   position: string | null;
-  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
   memberCount: number;

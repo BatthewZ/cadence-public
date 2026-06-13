@@ -11,11 +11,32 @@ export const queryKeys = {
     dashboard: (id: string) => ["workspaces", id, "dashboard"] as const,
     dashboardMyTasksPrefix: (id: string) =>
       ["workspaces", id, "dashboard", "my-tasks"] as const,
+    /**
+     * The trailing segment is a normalized OBJECT, not a joined string like
+     * the project/task-group segments. Those segments hold nanoid lists, so
+     * `","` can never appear inside a value — but `labelNames` are
+     * user-entered text, and joining them with any separator could collide two
+     * distinct filter states into one cache key. TanStack Query hashes object
+     * segments with a stable, key-sorted serialization, so the object form is
+     * unambiguous. Arrays are sorted so the key is stable under reordering
+     * (selecting "urgent" then "high" hits the same cache entry as the
+     * reverse), and every field is always present (with an empty default) so
+     * all variants have the same segment count — prefix invalidation via
+     * `dashboardMyTasksPrefix` keeps covering every combination.
+     */
     dashboardMyTasks: (
       id: string,
       period?: string,
       projectIds?: string[],
       taskGroupIds?: string[],
+      filters?: {
+        priorities?: readonly string[];
+        dueDateFrom?: string | null;
+        dueDateTo?: string | null;
+        noDueDate?: boolean;
+        labelNames?: readonly string[];
+        noLabel?: boolean;
+      },
     ) =>
       [
         "workspaces",
@@ -25,9 +46,19 @@ export const queryKeys = {
         period ?? "all",
         projectIds && projectIds.length > 0 ? [...projectIds].sort().join(",") : "",
         taskGroupIds && taskGroupIds.length > 0 ? [...taskGroupIds].sort().join(",") : "",
+        {
+          priority: filters?.priorities ? [...filters.priorities].sort() : [],
+          dueDateFrom: filters?.dueDateFrom ?? "",
+          dueDateTo: filters?.dueDateTo ?? "",
+          noDueDate: filters?.noDueDate ?? false,
+          label: filters?.labelNames ? [...filters.labelNames].sort() : [],
+          noLabel: filters?.noLabel ?? false,
+        },
       ] as const,
     taskGroups: (id: string, projectIds: string[]) =>
       ["workspaces", id, "task-groups", projectIds.join(",")] as const,
+    /** Workspace-wide deduplicated label options (see `useWorkspaceLabels`). */
+    labels: (id: string) => ["workspaces", id, "labels"] as const,
     dashboardMyTasksPreview: (id: string) =>
       ["workspaces", id, "dashboard", "my-tasks-preview"] as const,
     dashboardUpcoming: (id: string) =>
@@ -38,6 +69,16 @@ export const queryKeys = {
     webhooks: (id: string) => ["workspaces", id, "webhooks"] as const,
     webhookDetail: (wsId: string, whId: string) =>
       ["workspaces", wsId, "webhooks", whId] as const,
+    /**
+     * Per-user calendar-feed status for a workspace. The cache only ever
+     * holds `{ exists, createdAt, lastUsedAt }` metadata — never the feed
+     * URL itself. The URL is a capability (anyone holding it can read the
+     * user's assigned task titles and dates), so the POST response that
+     * mints it is kept in component state and deliberately never written
+     * into React Query, keeping the reveal-once posture auditable: there is
+     * exactly one place the plaintext can live, and it dies on dismissal.
+     */
+    calendarFeed: (id: string) => ["workspaces", id, "calendar-feed"] as const,
   },
   projects: {
     detail: (id: string) => ["projects", id] as const,
@@ -45,6 +86,13 @@ export const queryKeys = {
     taskGroups: (id: string) => ["projects", id, "task-groups"] as const,
     tasks: (id: string) => ["projects", id, "tasks"] as const,
     labels: (id: string) => ["projects", id, "labels"] as const,
+    /**
+     * Per-user saved views for a project. Lives under the ["projects", id]
+     * prefix (like labels/tasks) so broad project-level invalidation covers
+     * it; no per-view detail key exists because the API only exposes a list —
+     * the ViewSwitcher consumes whole lists and mutations edit the list cache.
+     */
+    savedViews: (id: string) => ["projects", id, "saved-views"] as const,
     dashboard: (id: string) => ["projects", id, "dashboard"] as const,
     activity: (id: string) => ["projects", id, "activity"] as const,
     webhooks: (id: string) => ["projects", id, "webhooks"] as const,

@@ -60,13 +60,14 @@ General-purpose interactive and display primitives.
 | [FileUpload](file-upload.md)      | Drag-and-drop file upload dropzone                     |
 | [AvatarUpload](avatar-upload.md)  | Circular avatar upload with optimistic preview         |
 | [CoverImagePicker](cover-image-picker.md) | Modal with Upload + Unsplash tabs for selecting a cover image; Unsplash tab gated by `features.unsplash` |
-| [MentionText](mention-text.md)     | Renders `@mention` syntax as styled inline badges                          |
+| [Markdown / MarkdownEditor / EditableMarkdown](markdown.md) | Lite-markdown renderer + click-to-edit editor for task descriptions and comments. Renderer emits React elements directly (XSS-safe by construction); `@mention` rendering (formerly `MentionText`) is absorbed here |
 | BulkActionBar                      | Fixed bottom toolbar for multi-select task actions (priority, assign, move, due date, duplicate, delete) with optimistic updates |
 | DueDatePopover                     | Shared date-picker popover for setting task due dates, with optional custom trigger and current-date display |
 | CommandPalette                     | Unified search, navigation, favorites, recents, and quick actions overlay (Ctrl+K) |
 | KeyboardShortcutsDialog            | Modal listing all keyboard shortcuts, opened with `?`  |
 | LabelChip                         | Colored pill displaying a label name with its hex color |
 | LabelManagementDialog              | CRUD dialog for managing project labels (create, edit, delete) |
+| ImportIcsDialog                    | Dialog to import an `.ics` calendar into a project: client-side parse, event preview (with unreadable-event warnings), target task-group picker, and bulk create (1 MB file cap, 500-task limit, UID dedupe) |
 | TaskLabelPicker                    | Popover for assigning/removing labels on a task         |
 | TaskAttachmentSection              | File attachment list with drag-and-drop upload, image lightbox, and inline delete for task detail views |
 | TaskContextMenuItems               | Shared task context menu fragment (priority, assign, move, due date, delete) using DropdownMenu sub-menus. Used by ProjectBoard and ProjectTimeline. |
@@ -174,6 +175,7 @@ Pure functions and constants shared across multiple page components. These live 
 | [`date`](../../src/web/util/date.ts) | Date display utilities: `formatDueDate()` (relative labels like "Today", "Tomorrow", "2d overdue"), `isOverdue()`, `isDueToday()`, `startOfDay()`, and date-boundary helpers `endOfWeek()`, `endOfNextWeek()`, `endOfMonth()` for due-date quick-pick options. |
 | [`format`](../../src/web/util/format.ts) | Value formatting utilities: `formatBytes()` (human-readable file sizes) and `formatCurrency()` (cents to dollar string like "$1,234" using `Intl.NumberFormat`). Used by Dashboard, ProjectDashboard, and attachment components. |
 | [`role-display`](../../src/web/util/role-display.ts) | `getRoleBadgeVariant(role)` — maps workspace/project roles to badge variants (owner→success, admin→info, member/viewer→default). Single source of truth for role badge styling. |
+| [`array`](../../src/web/util/array.ts) | `toggleArrayValue(values, value)` — immutable XOR toggle (present→removed, absent→appended) shared by every multi-select filter surface (filter popovers, click-to-filter task-card chips, list-view cells). A second click undoes a selection instead of duplicating it into the URL (`assignee=u1,u1`), and removal preserves the rest so toggles compose across surfaces. |
 
 ## Shared Hooks
 
@@ -201,6 +203,7 @@ Hooks shared across multiple UI components.
 | [useFieldErrors](hooks.md#usefielderrors)                 | Per-field Zod validation error management for forms                |
 | [useTaskComments](hooks.md#usetaskcomments)               | Cursor-paginated comment fetching for task detail views             |
 | [useLabels](hooks.md#uselabels)                           | React Query hooks for project label CRUD and task label assignment  |
+| [useSavedViews](hooks.md#usesavedviews)                   | React Query hooks for per-user saved-view CRUD (board tab + filter snapshots); list-only cache, no freshness signaling |
 | [useTaskAttachments](hooks.md#usetaskattachments)         | Task attachment fetching with optimistic add/remove cache helpers   |
 | [useProjectDashboard](hooks.md#useprojectdashboard)       | Project dashboard data fetching (task counts, groups, members, overdue, priority breakdown) |
 | [useProjectActivity](hooks.md#useprojectactivity)         | Infinite-scroll activity feed across all tasks in a project        |
@@ -211,9 +214,13 @@ Hooks shared across multiple UI components.
 | [useFeatures](hooks.md#usefeatures)                        | Fetches server-side feature flags from `/api/config` (e.g. `features.unsplash`) with aggressive caching |
 | [useUnsplashSearch](hooks.md#useunsplashsearch)            | Infinite-query wrapper for the Unsplash cover picker (curated ↔ search switch, no retry on 429/503) |
 | [useTaskEditing](hooks.md#usetaskediting)                  | Editable field management (title, description, cost) with dirty-field tracking to prevent server clobbering |
+| useMentionAutocomplete                                     | Shared `@mention` autocomplete for a `<textarea>` (caret-mirror dropdown positioning, keyboard nav, `@"Name"` quoting). Single source consumed by `MarkdownEditor` (task descriptions + comment composer/edit form) |
 | [useTaskSubtasks](hooks.md#usetasksubtasks)                | Subtask CRUD, DnD reorder, and optimistic updates with rollback for the task detail panel |
 | [useTaskCommentActions](hooks.md#usetaskcommentactions)    | Comment CRUD mutations + optimistic cache updates, shared between TaskDetailDialog and TaskDetailPanelInner |
 | [useTaskDetailActions](hooks.md#usetaskdetailactions)      | Task complete/duplicate/delete actions with delete dialog state, shared between TaskDetailDialog and TaskDetailPanelInner |
 | [useWorkspaceWebhooks](hooks.md#useworkspacewebhooks)      | Centralised state, queries, mutations, and handlers for the workspace webhooks settings page |
+| [useWorkspaceProjects](hooks.md#useworkspaceprojects)      | Fetches the projects in a workspace the current user can see (visibility-scoped) |
+| [useWorkspaceTaskGroups](hooks.md#useworkspacetaskgroups)  | Fetches task groups across a set of projects in a workspace, for workspace-level column filters |
+| [useWorkspaceLabels](hooks.md#useworkspacelabels)          | Fetches workspace-wide labels deduplicated by name across active projects, for the My Tasks label filter |
 
 [Hooks docs →](hooks.md)

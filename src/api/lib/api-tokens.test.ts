@@ -5,11 +5,17 @@
  * These tests cover the security-critical primitives that back every
  * bearer-token-authenticated request:
  *
- * - `generateApiToken` / `hashToken` — the cryptographic foundation. We
- *   assert format, length, randomness and hash determinism so a regression
- *   that, for example, accidentally re-uses entropy or drifts the hash
- *   algorithm shows up immediately. A bug here invalidates every minted
- *   token after the next deploy.
+ * - `mintToken` / `generateApiToken` / `hashToken` — the cryptographic
+ *   foundation. We assert format, length, randomness and hash determinism
+ *   so a regression that, for example, accidentally re-uses entropy or
+ *   drifts the hash algorithm shows up immediately. A bug here invalidates
+ *   every minted token after the next deploy. `mintToken` is the shared
+ *   mint path for every credential class (PATs and `cdn_cal_` calendar
+ *   feed tokens), so its tests also guard the feed-token mint flow that
+ *   the calendar feed endpoint consumes — and we pin down that a
+ *   `cdn_cal_` token can NEVER pass `verifyToken`, because feed tokens
+ *   live in plaintext-stored calendar URLs and must not be promotable to
+ *   API credentials.
  * - `verifyToken` — the only path that turns a plaintext token into a
  *   trusted identity. We run it against a real in-memory D1 (via Miniflare)
  *   so the JOIN, revocation check, expiry check and workspace-membership
@@ -46,11 +52,13 @@ import {
 } from "../test-utils";
 import {
   bumpLastUsedAt,
+  CALENDAR_FEED_TOKEN_PREFIX,
   canAccessProject,
   generateApiToken,
   hashToken,
   hasScope,
   KNOWN_SCOPES,
+  mintToken,
   newApiTokenId,
   parseProjectIds,
   parseScopes,
@@ -192,6 +200,42 @@ describe("generateApiToken", () => {
     const { plaintext, hash } = await generateApiToken(TEST_TOKEN_HASH_PEPPER);
     const recomputed = await hashToken(plaintext, TEST_TOKEN_HASH_PEPPER);
     expect(hash).toBe(recomputed);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// mintToken (generalized mint primitive — backs PATs AND calendar feed tokens)
+// ---------------------------------------------------------------------------
+
+describe("mintToken", () => {
+  it("produces cdn_cal_ + 43 base64url chars for the calendar feed prefix", async () => {
+    const { plaintext } = await mintToken(
+      CALENDAR_FEED_TOKEN_PREFIX,
+      TEST_TOKEN_HASH_PEPPER,
+    );
+    expect(plaintext.startsWith(CALENDAR_FEED_TOKEN_PREFIX)).toBe(true);
+    const body = plaintext.slice(CALENDAR_FEED_TOKEN_PREFIX.length);
+    // 32 bytes → ceil(32 * 8 / 6) = 43 base64url characters (no padding).
+    expect(body.length).toBe(43);
+    expect(body).toMatch(/^[A-Za-z0-9_-]+$/);
+  });
+
+  it("returns a hash equal to hashToken(plaintext, pepper)", async () => {
+    // The stored hash and the verification-time hash must be the same
+    // peppered HMAC — a drift here would orphan every minted feed token.
+    const { plaintext, hash } = await mintToken(
+      CALENDAR_FEED_TOKEN_PREFIX,
+      TEST_TOKEN_HASH_PEPPER,
+    );
+    const recomputed = await hashToken(plaintext, TEST_TOKEN_HASH_PEPPER);
+    expect(hash).toBe(recomputed);
+  });
+
+  it("produces distinct plaintexts and hashes on every call (entropy sanity check)", async () => {
+    const a = await mintToken(CALENDAR_FEED_TOKEN_PREFIX, TEST_TOKEN_HASH_PEPPER);
+    const b = await mintToken(CALENDAR_FEED_TOKEN_PREFIX, TEST_TOKEN_HASH_PEPPER);
+    expect(a.plaintext).not.toBe(b.plaintext);
+    expect(a.hash).not.toBe(b.hash);
   });
 });
 
@@ -453,6 +497,27 @@ describe("verifyToken", () => {
     const selectSpy = vi.spyOn(db, "select");
 
     const result = await verifyToken(db, "ghp_not_our_token_at_all", TEST_TOKEN_HASH_PEPPER);
+
+    expect(result).toBeNull();
+    expect(selectSpy).not.toHaveBeenCalled();
+    selectSpy.mockRestore();
+  });
+
+  it("cheap-rejects a cdn_cal_ calendar feed token (feed tokens never grant API access)", async () => {
+    // Security boundary: feed tokens live inside ICS URLs that calendar
+    // providers store in plaintext and leak into request logs. If one ever
+    // authenticated through verifyToken, a leaked calendar URL would become
+    // a leaked API credential. The prefix check must reject it before the
+    // hash + DB lookup, exactly like any other foreign token.
+    const { plaintext } = await mintToken(
+      CALENDAR_FEED_TOKEN_PREFIX,
+      TEST_TOKEN_HASH_PEPPER,
+    );
+
+    const db = createDb(d1);
+    const selectSpy = vi.spyOn(db, "select");
+
+    const result = await verifyToken(db, plaintext, TEST_TOKEN_HASH_PEPPER);
 
     expect(result).toBeNull();
     expect(selectSpy).not.toHaveBeenCalled();

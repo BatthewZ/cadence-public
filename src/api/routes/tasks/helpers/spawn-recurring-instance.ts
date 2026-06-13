@@ -5,6 +5,7 @@ import { task } from "../../../../db/schema/task";
 import { generateKeyBetween } from "../../../../shared/lib/fractional-index";
 import {
   computeNextDueDate,
+  computeNextStartDate,
   parseRecurrenceRule,
 } from "../../../../shared/lib/recurrence";
 import { createNotification } from "../../../lib/notifications";
@@ -26,15 +27,15 @@ interface SpawnResult {
 /**
  * Spawns the next instance of a recurring task after completion.
  *
- * When a recurring task is completed, this function computes the next due date
- * from the recurrence rule and creates a fresh task instance linked to the
- * completed one via `recurrenceParentId`. The unique partial index on that
- * column prevents duplicate spawns when concurrent requests race to complete
- * the same task.
+ * When a recurring task is completed, this function advances the task's primary
+ * date by the recurrence rule (see step 2 for which date is the anchor) and
+ * creates a fresh task instance linked to the completed one via
+ * `recurrenceParentId`. The unique partial index on that column prevents
+ * duplicate spawns when concurrent requests race to complete the same task.
  *
  * Returns the new task if one was spawned, or null if:
  * - The task has no recurrence rule
- * - The next due date would exceed the rule's endDate
+ * - The next occurrence would exceed the rule's endDate
  * - A next instance already exists (race condition guard via unique index)
  */
 export async function spawnNextRecurringInstance(
@@ -47,10 +48,31 @@ export async function spawnNextRecurringInstance(
   const rule = parseRecurrenceRule(completedTask.recurrenceRule);
   if (!rule) return { nextRecurringTask: null };
 
-  // 2. Compute next due date using max(dueDate, completionDate) as anchor
-  const currentDueDate = completedTask.dueDate ?? completionDate;
-  const nextDueDate = computeNextDueDate(currentDueDate, completionDate, rule);
-  if (!nextDueDate) return { nextRecurringTask: null }; // Past endDate
+  // 2. Compute the next occurrence date.
+  //
+  // A recurring task advances its PRIMARY date. The anchor is the due date when
+  // present; a start-only task (now allowed — a startDate no longer requires a
+  // dueDate) advances its START date instead and stays due-less; a fully
+  // date-less recurring task anchors on the completion date (the "N days after
+  // I finish" pattern) and materialises a due date. The recurrence math is
+  // pure date arithmetic and doesn't care which field the anchor came from.
+  const recurOnStartOnly =
+    completedTask.dueDate === null && completedTask.startDate !== null;
+  const anchor =
+    completedTask.dueDate ?? completedTask.startDate ?? completionDate;
+  const nextAnchor = computeNextDueDate(anchor, completionDate, rule);
+  if (!nextAnchor) return { nextRecurringTask: null }; // Past endDate
+
+  // Map the advanced anchor back onto start/due. For a start-only series the
+  // anchor IS the start date; otherwise it is the due date, and any stored
+  // start→due span is carried forward by shifting the new start date back from
+  // the new due date by the same whole-day offset.
+  const nextStartDate = recurOnStartOnly
+    ? nextAnchor
+    : completedTask.startDate && completedTask.dueDate
+      ? computeNextStartDate(nextAnchor, completedTask.startDate, completedTask.dueDate)
+      : null;
+  const nextDueDate = recurOnStartOnly ? null : nextAnchor;
 
   // 3. Get position at end of target group
   const [lastTask] = await db
@@ -75,6 +97,9 @@ export async function spawnNextRecurringInstance(
     completed: false,
     completedAt: null,
     completedBy: null,
+    // Computed in step 2: carries forward the start→due offset for a ranged
+    // task, advances the start date for a start-only series, or stays null.
+    startDate: nextStartDate,
     dueDate: nextDueDate,
     cost: completedTask.cost,
     icon: completedTask.icon,
@@ -84,6 +109,10 @@ export async function spawnNextRecurringInstance(
     recurrenceRule: completedTask.recurrenceRule, // Keep the same JSON string
     recurrenceSeriesId: completedTask.recurrenceSeriesId,
     recurrenceParentId: completedTask.id, // Link to previous instance
+    // Not inherited: import provenance belongs to the originally imported
+    // task only. Inheriting would also collide with the partial unique
+    // index on (projectId, source_uid) the first time a series respawned.
+    sourceUid: null,
     position,
     createdAt: now,
     updatedAt: now,

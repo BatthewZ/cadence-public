@@ -13,6 +13,7 @@ import {
 import {
   type CSSProperties,
   type MouseEvent,
+  type SyntheticEvent,
 } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -29,8 +30,10 @@ import { Text } from "@/web/components/ui/Text";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { type Task, useProject } from "@/web/contexts/ProjectContext";
 import { useTaskActions } from "@/web/hooks/use-task-actions";
+import { useTaskFilterControls } from "@/web/hooks/use-task-filters";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
+import { toggleArrayValue } from "@/web/util/array";
 import { isDueToday, isOverdue } from "@/web/util/date";
 import {
   PRIORITY_BADGE_VARIANT,
@@ -40,6 +43,20 @@ import {
 } from "@/web/util/task-display";
 
 import { taskIdStr } from "./dnd-helpers";
+
+/**
+ * Stops an event from bubbling to the card wrapper. Used on BOTH `click` and
+ * `pointerdown` of every interactive chip inside the draggable card:
+ * - `click` must not bubble or the card's open-detail handler fires.
+ * - `pointerdown` must not bubble because dnd-kit's PointerSensor (attached
+ *   to the wrapper via `listeners`) arms a drag from that event; stopping it
+ *   keeps a chip click from starting a card drag. Accepted tradeoff: a drag
+ *   *started* on a chip won't drag the card — same as the existing checkbox
+ *   and quick-actions menu behavior.
+ */
+function stopPropagation(e: SyntheticEvent) {
+  e.stopPropagation();
+}
 
 // ---------------------------------------------------------------------------
 // SortableTaskCard
@@ -84,6 +101,10 @@ export function SortableTaskCard({
     workspaceId: project.workspaceId,
   });
 
+  // Lightweight URL read/write only — deliberately NOT useTaskFilters(tasks),
+  // which would re-filter the whole task list once per rendered card.
+  const { filters, setFilter } = useTaskFilterControls();
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: taskIdStr(task.id),
     data: { type: "task", task },
@@ -120,8 +141,37 @@ export function SortableTaskCard({
       onToggleSelect?.(task.id, e);
       return;
     }
-    // Plain click: open detail panel (no selection)
-    setSearchParams({ task: task.id });
+    // Plain click: open detail panel (no selection). Functional updater that
+    // only SETS `task` — the object form `setSearchParams({ task: ... })`
+    // replaces the entire query string, silently wiping any active filter
+    // params (assignee/priority/label/...) the user just built up via
+    // click-to-filter. The detail panel's close handler deletes only `task`,
+    // so opening must preserve its siblings for filters to survive the
+    // open/close round-trip (ProjectListView and TimelineTaskRow do the same).
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set("task", task.id);
+      return next;
+    });
+  };
+
+  // Click-to-filter toggles. Each stops propagation (see stopPropagation for
+  // the click/pointerdown + dnd-kit rationale) and XORs one value into its
+  // filter dimension in the URL.
+  const handlePriorityFilterClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    setFilter("priorities", toggleArrayValue(filters.priorities, task.priority));
+  };
+
+  const handleAssigneeFilterClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (!task.assigneeId) return;
+    setFilter("assigneeIds", toggleArrayValue(filters.assigneeIds, task.assigneeId));
+  };
+
+  const handleLabelFilterClick = (e: MouseEvent, labelId: string) => {
+    e.stopPropagation();
+    setFilter("labelIds", toggleArrayValue(filters.labelIds, labelId));
   };
 
   const handleCheckboxChange = async (checked: boolean) => {
@@ -238,16 +288,32 @@ export function SortableTaskCard({
               (task.labels?.length ?? 0) > 0 ||
               task.assigneeName) && (
               <div className="flex items-center gap-2 flex-wrap ml-[1.625rem]">
-                {badgeVariant && !task.completed && (
-                  <span
-                    className={`inline-flex items-center gap-1 ${PRIORITY_TEXT_CLASS[task.priority] ?? ""}`}
-                  >
+                {badgeVariant &&
+                  !task.completed &&
+                  (overlay ? (
+                    // Drag-overlay clone stays inert: plain span, no handlers.
                     <span
-                      className={`size-1.5 rounded-full ${PRIORITY_DOT_CLASS[task.priority] ?? ""}`}
-                    />
-                    <span className="text-body-3 leading-none capitalize">{task.priority}</span>
-                  </span>
-                )}
+                      className={`inline-flex items-center gap-1 ${PRIORITY_TEXT_CLASS[task.priority] ?? ""}`}
+                    >
+                      <span
+                        className={`size-1.5 rounded-full ${PRIORITY_DOT_CLASS[task.priority] ?? ""}`}
+                      />
+                      <span className="text-body-3 leading-none capitalize">{task.priority}</span>
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label={`Filter by priority: ${task.priority.charAt(0).toUpperCase()}${task.priority.slice(1)}`}
+                      className={`inline-flex items-center gap-1 cursor-pointer rounded transition-shadow hover:ring-1 hover:ring-accent/50 ${PRIORITY_TEXT_CLASS[task.priority] ?? ""}`}
+                      onClick={handlePriorityFilterClick}
+                      onPointerDown={stopPropagation}
+                    >
+                      <span
+                        className={`size-1.5 rounded-full ${PRIORITY_DOT_CLASS[task.priority] ?? ""}`}
+                      />
+                      <span className="text-body-3 leading-none capitalize">{task.priority}</span>
+                    </button>
+                  ))}
                 {formattedDue && (
                   <span className={`inline-flex items-center gap-1 leading-none ${dueDateColor}`}>
                     <Calendar size={12} className="shrink-0" />
@@ -284,18 +350,38 @@ export function SortableTaskCard({
                 {(task.labels?.length ?? 0) > 0 && (
                   <div className="flex items-center gap-1 flex-wrap">
                     {task.labels!.map((lbl) => (
-                      <LabelChip key={lbl.id} label={lbl} size="sm" />
+                      <LabelChip
+                        key={lbl.id}
+                        label={lbl}
+                        size="sm"
+                        // Drag-overlay clone stays inert: no handlers.
+                        onClick={overlay ? undefined : (e) => handleLabelFilterClick(e, lbl.id)}
+                        onPointerDown={overlay ? undefined : stopPropagation}
+                      />
                     ))}
                   </div>
                 )}
-                {task.assigneeName && (
-                  <Avatar
-                    size="xs"
-                    name={task.assigneeName}
-                    src={task.assigneeAvatarUrl}
-                    className="ml-auto"
-                  />
-                )}
+                {task.assigneeName &&
+                  // Only clickable when there is an assignee ID to filter by;
+                  // the overlay clone stays inert.
+                  (overlay || !task.assigneeId ? (
+                    <Avatar
+                      size="xs"
+                      name={task.assigneeName}
+                      src={task.assigneeAvatarUrl}
+                      className="ml-auto"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      aria-label={`Filter by assignee: ${task.assigneeName}`}
+                      className="ml-auto inline-flex rounded-full cursor-pointer transition-shadow hover:ring-2 hover:ring-accent/50"
+                      onClick={handleAssigneeFilterClick}
+                      onPointerDown={stopPropagation}
+                    >
+                      <Avatar size="xs" name={task.assigneeName} src={task.assigneeAvatarUrl} />
+                    </button>
+                  ))}
               </div>
             )}
           </div>

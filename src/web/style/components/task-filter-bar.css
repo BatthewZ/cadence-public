@@ -182,6 +182,36 @@
   flex-wrap: wrap;
 }
 
+/* Label-filter empty state (zero labels in scope) */
+.task-filter-bar__empty {
+  display: flex;
+  flex-direction: column;
+  padding: 0.125rem 0;
+}
+
+/* Mirrors .task-label-picker__manage so "Manage labels" reads the same in
+   both popovers — a quiet footer action separated by a hairline, not a CTA. */
+.task-filter-bar__manage {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.625rem;
+  padding: 0.625rem 0.5rem 0.3125rem;
+  width: 100%;
+  font-size: var(--BodyText-3);
+  color: var(--C-TEXT-MUTED);
+  background: none;
+  border: none;
+  border-top: 1px solid var(--C-BORDER-DEFAULT);
+  cursor: pointer;
+  text-align: left;
+  transition: color var(--DURATION-FAST) ease;
+}
+
+.task-filter-bar__manage:hover {
+  color: var(--C-ACCENT);
+}
+
 /* Filter chips */
 .task-filter-bar__chips {
   display: flex;
@@ -218,4 +248,174 @@
 
 .task-filter-bar__chip button:hover {
   opacity: 1;
+}
+
+/* ── Saved views (ViewSwitcher) ──────────────────────────────────────────
+   The pill itself reuses .task-filter-bar__trigger and menu rows reuse the
+   dropdown-menu-item classes, so saved views inherit the bar's existing
+   light/dark theming for free; everything below only covers what those
+   classes don't: name truncation, the muted "Edited" suffix, hover-revealed
+   row actions (with :focus-within parity so keyboard users are not locked
+   out), and the inline name form. */
+
+/* Bound long view names (≤50 chars server-side) so the pill cannot push the
+   controls row into overflow. */
+.view-switcher__pill-name {
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Quiet dirty indicator — informational, not a warning, hence muted. */
+.view-switcher__edited {
+  color: var(--C-TEXT-MUTED);
+  flex-shrink: 0;
+}
+
+.view-switcher__menu {
+  min-width: 13rem;
+  max-width: 18rem;
+}
+
+/* Truncate the view name echoed inside the "Update “<name>”" action. */
+.view-switcher__action-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Zero-views save affordance. Mirrors .task-filter-bar__clear geometry so
+   the pair reads as one quiet text-action cluster, but hovers toward the
+   accent (constructive) rather than the error color (destructive). */
+.view-switcher__save {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: var(--BodyText-3);
+  color: var(--C-TEXT-MUTED);
+  background: none;
+  border: none;
+  padding: 0.3125rem var(--R-SIZE-5);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: color var(--DURATION-FAST) ease;
+}
+
+.view-switcher__save:hover,
+.view-switcher__save:focus-visible {
+  color: var(--C-ACCENT);
+}
+
+/* A view row is a plain flex div hosting three buttons (apply / rename /
+   delete) — deliberately NOT a DropdownMenu.Item; see ViewSwitcher.tsx. */
+.view-switcher__row {
+  display: flex;
+  align-items: center;
+}
+
+.view-switcher__row-apply {
+  flex: 1;
+  min-width: 0;
+}
+
+.view-switcher__row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Fixed-width check slot keeps names aligned whether or not a row is the
+   active view (the icon span renders empty on inactive rows). */
+.view-switcher__row-check {
+  color: var(--C-ACCENT);
+}
+
+/* Hover-revealed row actions. opacity (not display) keeps them focusable,
+   and :focus-within on the row + :focus-visible on the button reveal them
+   for keyboard users — hidden-but-tabbable controls would otherwise trap
+   focus on invisible elements. */
+.view-switcher__row-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  border-radius: var(--RADIUS-SM);
+  color: var(--C-TEXT-MUTED);
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--DURATION-FAST) ease,
+    color var(--DURATION-FAST) ease,
+    background var(--DURATION-FAST) ease;
+}
+
+.view-switcher__row-action:last-child {
+  margin-right: 0.5rem;
+}
+
+.view-switcher__row:hover .view-switcher__row-action,
+.view-switcher__row:focus-within .view-switcher__row-action {
+  opacity: 1;
+}
+
+.view-switcher__row-action:hover,
+.view-switcher__row-action:focus-visible {
+  opacity: 1;
+  color: var(--C-TEXT-PRIMARY);
+  background: var(--C-SURFACE-1);
+}
+
+.view-switcher__row-action--danger:hover,
+.view-switcher__row-action--danger:focus-visible {
+  color: var(--C-STATUS-ERROR);
+  background: var(--C-STATUS-ERROR-BG);
+}
+
+/* Inline name form, shared by the bar (first save) and the menu (rename /
+   save-as-new). Column layout so the 409 duplicate-name error renders
+   directly under the input it belongs to. */
+.view-switcher__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.375rem 0.75rem;
+}
+
+/* Bar variant: the menu padding comes off so the input aligns with the
+   bar's other compact controls. */
+.view-switcher__form--bar {
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.view-switcher__input {
+  width: 100%;
+  min-width: 9rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--C-BORDER-DEFAULT);
+  border-radius: var(--RADIUS-SM);
+  background: var(--C-SURFACE-0);
+  color: var(--C-TEXT-PRIMARY);
+  font-size: var(--BodyText-3);
+  font-family: inherit;
+  transition:
+    border-color var(--DURATION-FAST) ease,
+    box-shadow var(--DURATION-FAST) ease;
+}
+
+.view-switcher__input:focus {
+  outline: none;
+  border-color: var(--C-BORDER-FOCUS);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--C-BORDER-FOCUS) 20%, transparent);
+}
+
+.view-switcher__error {
+  color: var(--C-STATUS-ERROR);
+  font-size: var(--BodyText-3);
 }

@@ -1,8 +1,8 @@
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, count, eq, inArray, sql } from "drizzle-orm";
 import type { Context } from "hono";
 
 import { label, taskLabel } from "../../../db/schema/label";
-import { project } from "../../../db/schema/project";
+import { project, projectMember } from "../../../db/schema/project";
 import { createLabelSchema, updateLabelSchema } from "../../../shared/schemas/label";
 import { MAX_LABELS_PER_PROJECT } from "../../../shared/schemas/label";
 import type { AppEnv } from "../../env";
@@ -79,6 +79,90 @@ export async function listLabels(c: Context<AppEnv>) {
     .from(label)
     .where(eq(label.projectId, projectId))
     .orderBy(label.name);
+
+  return c.json({ labels });
+}
+
+/**
+ * GET /workspaces/:workspaceId/labels
+ *
+ * Workspace-scoped list of labels across every **active** project the caller
+ * can see, deduplicated by `LOWER(name)`. Powers workspace-level filter UIs
+ * (e.g. the My Tasks label filter) where the user narrows tasks by label
+ * without caring which project a label row physically lives in.
+ *
+ * Why dedupe by `LOWER(name)`: labels are project-scoped rows, and name
+ * uniqueness is only enforced case-insensitively *within* a project (see
+ * `label_project_name_idx` + the createLabel/updateLabel 409 checks). Across
+ * projects the same conceptual label ("Bug" in project A, "bug" in project B)
+ * exists as distinct rows with distinct ids — so for cross-project filtering
+ * the *name* is the label's identity, and the case-insensitive key mirrors
+ * the per-project uniqueness rule. `MIN(name)` / `MIN(color)` pick a
+ * deterministic representative per group regardless of row insert order, so
+ * the option list is stable across requests.
+ *
+ * Access model: mirrors `listWorkspaceTaskGroups` — the caller must be a
+ * workspace member (enforced by requireWorkspaceMember on the route).
+ * Elevated members (owner/admin) see labels from all workspace projects;
+ * non-elevated members only from projects they are a direct member of, so a
+ * plain member can never enumerate label names from projects they cannot
+ * open. Archived projects are excluded because their tasks no longer appear
+ * in workspace task views, so offering their labels as filter options would
+ * only produce dead filters.
+ */
+export async function listWorkspaceLabels(c: Context<AppEnv>) {
+  const db = c.get("db");
+  const workspaceId = requireParam(c, "workspaceId");
+  const user = c.get("user")!;
+  const membership = c.get("workspaceMembership")!;
+  const isElevated = membership.role === "owner" || membership.role === "admin";
+
+  // Restrict to active projects in this workspace the caller can see
+  const visibleProjects = isElevated
+    ? await db
+        .select({ id: project.id })
+        .from(project)
+        .where(
+          and(
+            eq(project.workspaceId, workspaceId),
+            eq(project.status, "active"),
+          ),
+        )
+    : await db
+        .select({ id: project.id })
+        .from(project)
+        .innerJoin(
+          projectMember,
+          and(
+            eq(projectMember.projectId, project.id),
+            eq(projectMember.userId, user.id),
+          ),
+        )
+        .where(
+          and(
+            eq(project.workspaceId, workspaceId),
+            eq(project.status, "active"),
+          ),
+        );
+
+  const visibleIds = visibleProjects.map((p) => p.id);
+
+  if (visibleIds.length === 0) {
+    return c.json({ labels: [] });
+  }
+
+  // Ordering uses the same LOWER(name) key as the grouping so the option
+  // list sorts case-insensitively ("alpha" before "Beta"), matching how
+  // users read the deduped names.
+  const labels = await db
+    .select({
+      name: sql<string>`MIN(${label.name})`.as("name"),
+      color: sql<string>`MIN(${label.color})`.as("color"),
+    })
+    .from(label)
+    .where(inArray(label.projectId, visibleIds))
+    .groupBy(sql`LOWER(${label.name})`)
+    .orderBy(sql`LOWER(${label.name})`);
 
   return c.json({ labels });
 }

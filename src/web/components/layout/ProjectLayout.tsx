@@ -1,16 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, CalendarRange, FolderKanban, LayoutGrid, List, Settings, X } from "lucide-react";
+import { BarChart3, CalendarDays, CalendarRange, Download, FolderKanban, LayoutGrid, List, Settings, Upload, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import { type Theme,THEMES } from "@/shared/types/theme";
 import { Input } from "@/web/components/form/Input";
 import { Row, Stack } from "@/web/components/layout";
+import { ImportIcsDialog } from "@/web/components/project/ImportIcsDialog";
 import { TaskFilterBar } from "@/web/components/project/TaskFilterBar";
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { Button } from "@/web/components/ui/Button";
 import { CoverImage } from "@/web/components/ui/CoverImage";
 import { Dialog } from "@/web/components/ui/Dialog";
+import { DropdownMenu } from "@/web/components/ui/DropdownMenu";
+import { IconButton } from "@/web/components/ui/IconButton";
 import { IconDisplay } from "@/web/components/ui/IconDisplay";
 import { IconPicker } from "@/web/components/ui/IconPicker";
 import { Tabs } from "@/web/components/ui/Tabs";
@@ -25,6 +28,7 @@ import { useProjectCover } from "@/web/hooks/use-project-cover";
 import { useRecents } from "@/web/hooks/use-recents";
 import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
+import { downloadProjectICS } from "@/web/lib/export-ics";
 import { queryKeys } from "@/web/lib/query-keys";
 import { TaskDetailPanel } from "@/web/pages/TaskDetail/TaskDetailPanel";
 
@@ -37,7 +41,7 @@ function ProjectLayoutInner() {
   const { workspace } = useWorkspace();
   const { addRecent } = useRecents(workspace.id);
   const { project, members, tasks, updateProject, refetch } = useProject();
-  const { isProjectAdmin } = useProjectPermissions(members);
+  const { isProjectAdmin, canEditTasks } = useProjectPermissions(members);
   const {
     coverUrl,
     coverSrcSet,
@@ -187,14 +191,36 @@ function ProjectLayoutInner() {
     [project.id, project.workspaceId, updateProject, qc, toast, refetch]
   );
 
+  // --- Calendar export / import (.ics) ---
+  const [importIcsOpen, setImportIcsOpen] = useState(false);
+
+  /**
+   * Client-side export: the shared ICS generator is isomorphic and the
+   * project's tasks are already in memory, so no endpoint is involved (see
+   * `@/web/lib/export-ics`). Exports ALL tasks with dates — not the filtered
+   * subset — because "export this project" must not silently depend on
+   * invisible filter state. Zero dated tasks → explain instead of handing
+   * the user an empty calendar file.
+   */
+  const handleExportCalendar = useCallback(() => {
+    const exported = downloadProjectICS(project.name, tasks);
+    if (exported === 0) {
+      toast("This project has no tasks with dates to export.", { variant: "info" });
+    }
+  }, [project.name, tasks, toast]);
+
   const basePath = `/w/${workspace.slug}/projects/${project.id}`;
 
   // Determine active tab from current path
   const segments = location.pathname.split("/");
   const lastSegment = segments[segments.length - 1];
-  const activeTab = ["dashboard", "board", "list", "timeline", "settings"].includes(lastSegment)
+  const activeTab = ["dashboard", "board", "list", "timeline", "calendar", "settings"].includes(lastSegment)
     ? lastSegment
     : "board";
+
+  // The calendar menu gates itself exactly like TaskFilterBar below: it acts
+  // on tasks, so it is meaningless on the settings and dashboard tabs.
+  const showCalendarMenu = activeTab !== "settings" && activeTab !== "dashboard";
 
   function handleTabChange(value: string) {
     void navigate(`${basePath}/${value}`);
@@ -339,6 +365,12 @@ function ProjectLayoutInner() {
                 Timeline
               </span>
             </Tabs.Tab>
+            <Tabs.Tab value="calendar">
+              <span className="inline-flex items-center gap-r6">
+                <CalendarDays size={14} />
+                Calendar
+              </span>
+            </Tabs.Tab>
             {isProjectAdmin && (
               <Tabs.Tab value="settings">
                 <span className="inline-flex items-center gap-r6">
@@ -349,6 +381,33 @@ function ProjectLayoutInner() {
             )}
           </Tabs.List>
         </Tabs>
+        {showCalendarMenu && (
+          <DropdownMenu placement="bottom-end">
+            <DropdownMenu.Trigger asChild>
+              <IconButton aria-label="Calendar export and import">
+                <Download size={16} />
+              </IconButton>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Content>
+              <DropdownMenu.Item
+                index={0}
+                icon={<Download size={14} />}
+                onSelect={handleExportCalendar}
+              >
+                Export calendar (.ics)
+              </DropdownMenu.Item>
+              {canEditTasks && (
+                <DropdownMenu.Item
+                  index={1}
+                  icon={<Upload size={14} />}
+                  onSelect={() => setImportIcsOpen(true)}
+                >
+                  Import calendar (.ics)…
+                </DropdownMenu.Item>
+              )}
+            </DropdownMenu.Content>
+          </DropdownMenu>
+        )}
       </div>
 
       {activeTab !== "settings" && activeTab !== "dashboard" && <TaskFilterBar tasks={tasks} />}
@@ -356,6 +415,12 @@ function ProjectLayoutInner() {
       <Outlet />
 
       <TaskDetailPanel />
+
+      {/* Mounted only for members with edit rights — the import endpoint
+          requires them, so viewers never see the dialog (or its menu item). */}
+      {canEditTasks && (
+        <ImportIcsDialog open={importIcsOpen} onClose={() => setImportIcsOpen(false)} />
+      )}
     </Stack>
   );
 }

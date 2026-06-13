@@ -10,6 +10,13 @@ import type { TaskGroup } from "@/web/contexts/ProjectContext";
 
 import ProjectSettings from "./ProjectSettings";
 
+// This is the largest page in the app, and its tests drive heavy userEvent
+// interactions (typing + form submits) against a full jsdom render. When all
+// three vitest projects run concurrently the CPU is saturated, so the heaviest
+// interaction tests can briefly exceed vitest's 5s default. Give this file more
+// headroom — the work is real, not hung — to keep the suite deterministic.
+vi.setConfig({ testTimeout: 15000 });
+
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
@@ -259,7 +266,13 @@ function createWrapper() {
 
 function renderPage() {
   const Wrapper = createWrapper();
-  const user = userEvent.setup();
+  // `delay: null` removes userEvent's per-keystroke setTimeout. Under heavy
+  // parallel test load a saturated event loop turns those delays into real
+  // wall-clock time, so typing the longer strings here (e.g. "  Trimmed Name  ")
+  // could blow the 5s test timeout; a timed-out test then leaked its in-flight
+  // mutation into the next test, corrupting `mockApiPatch` call counts. Skipping
+  // the delay makes typing resolve via microtasks — fast and deterministic.
+  const user = userEvent.setup({ delay: null });
   render(
     <Wrapper>
       <ProjectSettings />
@@ -543,6 +556,18 @@ describe("ProjectSettings", () => {
           }),
         );
       });
+    });
+
+    // The export control must be a real anchor (not a fetch button): the API
+    // responds with Content-Disposition: attachment, so a native navigation is
+    // what makes the browser download the file. Pinning the href guards both
+    // the endpoint path contract and the anchor-based implementation.
+    it("renders an Export tasks (CSV) link pointing at the project export endpoint", () => {
+      setupDefaultMocks();
+      renderPage();
+
+      const link = screen.getByRole("link", { name: /Export tasks \(CSV\)/ });
+      expect(link).toHaveAttribute("href", "/api/projects/proj-1/export/csv");
     });
 
     it("renders Danger Zone with Delete Project button", () => {

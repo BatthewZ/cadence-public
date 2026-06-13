@@ -1,3 +1,5 @@
+import type { MouseEventHandler, PointerEventHandler } from "react";
+
 import type { TaskLabelInfo } from "@/shared/schemas/label";
 
 interface LabelChipProps {
@@ -5,35 +7,60 @@ interface LabelChipProps {
   /** Visual size variant: "sm" for board cards, "default" for detail panels */
   size?: "sm" | "default";
   className?: string;
+  /**
+   * When provided, the chip renders as a real `<button type="button">`
+   * (with an accessible "Filter by label: <name>" label) instead of a span.
+   * Used for click-to-filter on task cards; all other call sites omit it and
+   * keep the inert span unchanged.
+   */
+  onClick?: MouseEventHandler<HTMLButtonElement>;
+  /**
+   * Forwarded alongside `onClick` so callers inside dnd-kit draggables can
+   * `stopPropagation` on pointerdown — dnd-kit's PointerSensor activates from
+   * the pointerdown that bubbles to the card wrapper, so without stopping it
+   * a click on the chip could start a card drag instead of toggling a filter.
+   */
+  onPointerDown?: PointerEventHandler<HTMLButtonElement>;
 }
 
 /**
  * Renders a colored label chip. Reused across the board, task detail, and
- * label picker so the visual treatment stays consistent.
+ * label picker so the visual treatment stays consistent. Optionally
+ * interactive (see {@link LabelChipProps.onClick}) for click-to-filter.
  */
-export function LabelChip({ label: lbl, size = "default", className }: LabelChipProps) {
-  if (size === "sm") {
+export function LabelChip({
+  label: lbl,
+  size = "default",
+  className,
+  onClick,
+  onPointerDown,
+}: LabelChipProps) {
+  const sizeClass =
+    size === "sm"
+      ? "inline-flex items-center px-1.5 py-0.5 rounded text-[0.625rem] font-medium leading-none"
+      : "task-label-picker__chip";
+  const style = {
+    backgroundColor: lbl.color + "20",
+    color: lbl.color,
+  };
+
+  if (onClick) {
     return (
-      <span
-        className={`inline-flex items-center px-1.5 py-0.5 rounded text-[0.625rem] font-medium leading-none ${className ?? ""}`}
-        style={{
-          backgroundColor: lbl.color + "20",
-          color: lbl.color,
-        }}
+      <button
+        type="button"
+        aria-label={`Filter by label: ${lbl.name}`}
+        className={`${sizeClass} cursor-pointer transition-shadow hover:ring-1 hover:ring-current ${className ?? ""}`}
+        style={style}
+        onClick={onClick}
+        onPointerDown={onPointerDown}
       >
         {lbl.name}
-      </span>
+      </button>
     );
   }
 
   return (
-    <span
-      className={`task-label-picker__chip ${className ?? ""}`}
-      style={{
-        backgroundColor: lbl.color + "20",
-        color: lbl.color,
-      }}
-    >
+    <span className={`${sizeClass} ${className ?? ""}`} style={style}>
       {lbl.name}
     </span>
   );

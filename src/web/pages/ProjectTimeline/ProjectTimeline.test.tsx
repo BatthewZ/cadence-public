@@ -729,7 +729,7 @@ describe("ProjectTimeline", () => {
       expect(screen.getByText("Group: Due Date")).toBeInTheDocument();
     });
 
-    it("shows all four grouping options when clicked", async () => {
+    it("shows all five grouping options when clicked", async () => {
       const user = userEvent.setup();
       setupProjectMock([]);
       renderTimeline();
@@ -742,6 +742,7 @@ describe("ProjectTimeline", () => {
         expect(screen.getByText("Priority")).toBeInTheDocument();
         expect(screen.getByText("Task Group")).toBeInTheDocument();
         expect(screen.getByText("Assignee")).toBeInTheDocument();
+        expect(screen.getByText("Label")).toBeInTheDocument();
       });
     });
 
@@ -853,6 +854,90 @@ describe("ProjectTimeline", () => {
       // Only Alice group should appear (not Bob or Unassigned)
       const accordionItems = document.querySelectorAll(".accordion-item");
       expect(accordionItems.length).toBe(1);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // 14. Label grouping
+  // -----------------------------------------------------------------------
+  describe("label grouping", () => {
+    const bugLabel = { id: "l-1", name: "Bug", color: "#ef4444" };
+    const featureLabel = { id: "l-2", name: "Feature", color: "#3b82f6" };
+
+    it("groups tasks by label with the No label group last", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Bug task", dueDate: daysFromNow(0), labels: [bugLabel] }),
+        makeTask({ id: "t-2", title: "Feature task", dueDate: daysFromNow(1), labels: [featureLabel] }),
+        makeTask({ id: "t-3", title: "Plain task", dueDate: daysFromNow(2), labels: [] }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline(["/?groupBy=label"]);
+
+      expect(screen.getByText("Bug")).toBeInTheDocument();
+      expect(screen.getByText("Feature")).toBeInTheDocument();
+      expect(screen.getByText("No label")).toBeInTheDocument();
+
+      // All groups auto-expand for label mode, so every task row is visible
+      expect(screen.getByText("Bug task")).toBeInTheDocument();
+      expect(screen.getByText("Feature task")).toBeInTheDocument();
+      expect(screen.getByText("Plain task")).toBeInTheDocument();
+
+      // Three groups, with "No label" rendered last
+      const accordionItems = document.querySelectorAll(".accordion-item");
+      expect(accordionItems.length).toBe(3);
+      const lastItem = accordionItems[accordionItems.length - 1] as HTMLElement;
+      expect(within(lastItem).getByText("No label")).toBeInTheDocument();
+    });
+
+    it("shows a multi-label task in every matching group with truthful counts", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Dual task", dueDate: daysFromNow(0), labels: [bugLabel, featureLabel] }),
+        makeTask({ id: "t-2", title: "Bug only task", dueDate: daysFromNow(1), labels: [bugLabel] }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline(["/?groupBy=label"]);
+
+      // The dual-labeled task is duplicated into both groups — the honest
+      // representation of a many-to-many relation (matches the label
+      // filter's OR semantics).
+      expect(screen.getAllByText("Dual task").length).toBe(2);
+
+      const accordionItems = document.querySelectorAll(".accordion-item");
+      expect(accordionItems.length).toBe(2);
+
+      // Per-group count badges stay truthful: Bug has 2 tasks, Feature has 1
+      const bugSection = screen.getByText("Bug").closest(".accordion-item");
+      expect(bugSection).not.toBeNull();
+      expect(within(bugSection! as HTMLElement).getByText("2")).toBeInTheDocument();
+
+      const featureSection = screen.getByText("Feature").closest(".accordion-item");
+      expect(featureSection).not.toBeNull();
+      expect(within(featureSection! as HTMLElement).getByText("1")).toBeInTheDocument();
+    });
+
+    it("renders the No label header muted, matching the Unscheduled treatment", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Plain task", dueDate: daysFromNow(0) }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline(["/?groupBy=label"]);
+
+      const trigger = screen.getByText("No label").closest("button");
+      expect(trigger).not.toBeNull();
+      expect(trigger!.className).toContain("text-fg-muted");
+    });
+
+    it("hides label groups with no tasks", () => {
+      const tasks = [
+        makeTask({ id: "t-1", title: "Bug task", dueDate: daysFromNow(0), labels: [bugLabel] }),
+      ];
+      setupProjectMock(tasks);
+      renderTimeline(["/?groupBy=label"]);
+
+      // Only the Bug group should appear (no Feature, no "No label")
+      const accordionItems = document.querySelectorAll(".accordion-item");
+      expect(accordionItems.length).toBe(1);
+      expect(screen.queryByText("No label")).not.toBeInTheDocument();
     });
   });
 });

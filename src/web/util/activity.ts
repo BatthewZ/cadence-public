@@ -290,6 +290,14 @@ export function formatActivityMessage(
     case "due_date_removed":
       return "removed the due date";
 
+    case "start_date_changed": {
+      const formatted = formatActivityDate(newValue);
+      return `set start date to ${formatted}`;
+    }
+
+    case "start_date_removed":
+      return "removed the start date";
+
     case "comment_added": {
       const preview = newValue ? `: "${newValue}${newValue.length >= 100 ? "…" : ""}"` : "";
       return `added a comment${preview}`;

@@ -1,4 +1,4 @@
-import { Calendar, Columns3, Flag, Users } from "lucide-react";
+import { Calendar, Columns3, Flag, Tag, Users } from "lucide-react";
 import type { ReactElement } from "react";
 
 import { DropdownMenu } from "@/web/components/ui/DropdownMenu";
@@ -14,6 +14,7 @@ const GROUPING_OPTIONS: Array<{
   { value: "priority", label: "Priority", icon: <Flag size={14} /> },
   { value: "taskGroup", label: "Task Group", icon: <Columns3 size={14} /> },
   { value: "assignee", label: "Assignee", icon: <Users size={14} /> },
+  { value: "label", label: "Label", icon: <Tag size={14} /> },
 ];
 
 export function GroupByDropdown({

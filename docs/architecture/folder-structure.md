@@ -63,6 +63,9 @@ src/
 │       ├── index.ts              # Route aggregator
 │       ├── auth/                 # Auth domain
 │       │   └── auth.routes.ts
+│       ├── calendar/             # Calendar domain (ICS feed + feed-management surface)
+│       │   ├── calendar.routes.ts
+│       │   └── calendar.handlers.ts
 │       ├── dashboard/            # Dashboard domain
 │       │   ├── dashboard.routes.ts
 │       │   ├── dashboard.handlers.ts  # Re-export barrel for handlers/
@@ -90,6 +93,7 @@ src/
 │       │       ├── comments.ts        # Comment CRUD
 │       │       ├── completion.ts      # Task complete/uncomplete
 │       │       ├── cover-image.ts     # Task cover image upload/delete
+│       │       ├── import.ts          # Bulk .ics calendar import (dedupe by sourceUid, atomic D1 batch)
 │       │       ├── subtasks.ts        # Subtask CRUD
 │       │       ├── task-crud.ts       # Core task CRUD (create, get, list, update, delete)
 │       │       └── task-operations.ts # Task move & duplicate
@@ -126,6 +130,12 @@ src/
 │       └── workspace.ts          # workspaces, workspace membership
 │
 ├── shared/                       # Shared (frontend + backend)
+│   ├── lib/                      # Pure, isomorphic utilities (run identically on Worker + browser)
+│   │   ├── fractional-index.ts   # Ordering keys for drag-and-drop positions
+│   │   ├── recurrence.ts         # Recurrence-rule parsing & next-occurrence math
+│   │   ├── unsplash-display.ts   # Unsplash cover attribution/display helpers
+│   │   ├── ics.ts                # RFC 5545 iCalendar generator (calendar export / subscription feed; all-day floating VALUE=DATE events)
+│   │   └── ics-parse.ts          # RFC 5545 iCalendar parser (lenient .ics import; date-only, UTC-safe, bad VEVENTs skipped via warnings)
 │   ├── schemas/                  # Zod schemas grouped by domain
 │   │   ├── index.ts              # Re-exports all schemas
 │   │   ├── auth.ts               # Auth validation schemas (login, register, etc.)
@@ -155,7 +165,7 @@ src/
     │       └── auth-client.ts    # Better Auth React client
     ├── util/                     # Shared pure utilities
     │   ├── task-display.ts       # Priority badge/label/sort/border/text-color mappings
-    │   ├── date.ts               # Date formatting (formatDueDate, isOverdue, isDueToday, endOfWeek, endOfNextWeek, endOfMonth)
+    │   ├── date.ts               # Date formatting & local-time math (formatDueDate, isOverdue, isDueToday, endOfWeek, endOfNextWeek, endOfMonth, startOfMonth, addMonths — month helpers clamp day-of-month and avoid UTC parsing for calendar navigation)
     │   └── role-display.ts       # Role-to-badge-variant mapping (getRoleBadgeVariant)
     ├── hooks/                    # Shared hooks
     │   ├── use-active-section.ts
@@ -257,6 +267,9 @@ src/
         │   └── components/       # NotificationActions, NotificationFilters
         ├── ProjectBoard/
         │   └── components/       # BoardColumn, TaskCard, AddTaskForm, AddGroupColumn, dnd-helpers
+        ├── ProjectCalendar/
+        │   ├── components/       # CalendarGrid, CalendarDayCell, CalendarTaskChip, DayOverflowPopover
+        │   └── lib/              # month-grid (Monday-start grid build + greedy span/lane placement)
         ├── ProjectDashboard/
         │   └── components/       # StatCards, TasksByGroup, BudgetSection, UpcomingTasks, skeletons (ActivityFeed and OverdueAlert moved to shared dashboard/)
         ├── ProjectListView/

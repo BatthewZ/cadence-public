@@ -1020,6 +1020,40 @@ function TaskLabels({ projectId, taskId }: { projectId: string; taskId: string }
 }
 ```
 
+## useSavedViews
+
+A family of React Query hooks for **per-user saved views** — bookmarked snapshots of a project's task-board tab + filter URL params. Mirrors the `useLabels` optimistic template but with two deliberate divergences that are *not* omissions: saved-view mutations touch **only** their own list cache under `queryKeys.projects.savedViews(projectId)` (no task-cache fan-out, because views embed no task data) and never call `freshnessTracker` (saved views are private per-user, so cross-client staleness signaling is meaningless and would only produce spurious "data changed" prompts for data nobody else can see).
+
+**Source:** `src/web/hooks/use-saved-views.ts`
+
+### Hooks
+
+| Hook | Params | Description |
+| --- | --- | --- |
+| `useSavedViews(projectId, options?)` | `projectId: string`, `options?: { enabled?: boolean }` | Fetches the current user's saved views for a project via `GET /api/projects/:projectId/views`, position-ordered. Returns `{ views: SavedView[] }`. `enabled` lets lazy consumers (e.g. a closed ViewSwitcher dropdown) defer the fetch. |
+| `useCreateSavedView(projectId)` | `projectId: string` | Creates a saved view. Mutation input: `{ name: string; state: SavedViewState }`. Deliberately **non-optimistic** — the caller `await`s the server-assigned id to write `?view=<id>` into the URL, so an optimistic temp id would leak into the URL before the server responds. Invalidates the saved-views list on success. |
+| `useUpdateSavedView(projectId)` | `projectId: string` | Renames a view and/or overwrites its `state` snapshot. Mutation input: `{ viewId: string; name?: string; state?: SavedViewState }`. Optimistic patch of the list cache; rolls back on error (e.g. 409 duplicate name); `onSettled` re-syncs so server normalization (trimmed name, bumped `updatedAt`) is reflected. |
+| `useDeleteSavedView(projectId)` | `projectId: string` | Deletes a view. Mutation input: `viewId: string`. Optimistic removal from the list cache; rolls back on error; `onSettled` re-syncs. |
+
+### SavedView Type
+
+```ts
+interface SavedView {
+  id: string;
+  projectId: string;
+  creatorId: string;
+  name: string;
+  state: { tab: string; params: Record<string, string> };
+  position: string;
+  createdAt: string;
+  updatedAt: string;
+}
+```
+
+The pure helpers that produce and compare `state` — `captureViewState`, `viewStateToSearch`, `resolveViewTab`, and `isViewStateEqual` (the "dirty"/"Edited" predicate) — live in `src/web/lib/view-state.ts`. Comparison is normalized (set semantics for comma-list params, absent == empty, key-order insensitive) specifically to avoid false "Edited" indicators that would train users to ignore the signal.
+
+> **Note:** These hooks and helpers ship ahead of their UI consumer (the ViewSwitcher, a later wave of the Saved Views plan). Their cache and comparison contracts are pinned by `use-saved-views.test.tsx` / `view-state.test.ts` so the behavior is fixed before the UI is built.
+
 ## useTaskAttachments
 
 React Query hook for fetching task attachments, with companion cache-manipulation functions for optimistic updates.
@@ -1766,3 +1800,24 @@ Fetches task groups across a set of projects in a workspace. Only issues a reque
 ### Return Value
 
 Standard React Query result. `data.taskGroups` is a `WorkspaceTaskGroup[]` — each entry includes `id`, `name`, `color`, `isCompletionGroup`, `position`, `projectId`, and `projectName`.
+
+---
+
+## useWorkspaceLabels
+
+Fetches the deduplicated set of labels across every **active** project the current user can see in a workspace, backing workspace-level filter UIs (e.g. the My Tasks label filter). Labels are project-scoped rows, so the same conceptual label ("Bug" in project A, "bug" in project B) exists as distinct rows with distinct ids; the endpoint groups by case-insensitive name and returns one representative `{ name, color }` per group. Options are therefore identified by **name**, not id — at workspace scope a label's cross-project identity is its name, and exposing any single row's id would silently pin a "workspace-wide" filter to one project's label.
+
+Unlike `useWorkspaceTaskGroups` there is no `projectIds` argument: the option list is workspace-wide by design (the server already scopes it to projects the caller can see), so the query runs whenever a workspace id is present.
+
+**Source:** `src/web/hooks/use-workspace-labels.ts`
+
+### Parameters
+
+| Param | Type | Description |
+| --- | --- | --- |
+| `workspaceId` | `string` | The workspace to fetch labels for. |
+| `options.enabled` | `boolean` | Optional flag to disable the query. |
+
+### Return Value
+
+Standard React Query result. `data.labels` is a `WorkspaceLabel[]` — each entry is `{ name, color }`, deliberately with **no** `id` (see above). Consumers that feed a `LabelFilter` map each entry to `{ id: name, name, color }` and send the selected *names* to the API (`labelNames` CSV param), never ids.

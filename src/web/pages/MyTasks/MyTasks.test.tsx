@@ -95,13 +95,19 @@ interface MyTasksResponse {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function createWrapper() {
+/**
+ * `initialEntries` lets URL-driven states be tested (the filter bar persists
+ * every dimension in search params, so "render the page at this URL" IS the
+ * page's restore-a-shared-link path). Defaults to ["/"] — identical to
+ * MemoryRouter's own default — so pre-existing tests are unaffected.
+ */
+function createWrapper(initialEntries: string[] = ["/"]) {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <MemoryRouter>
+      <MemoryRouter initialEntries={initialEntries}>
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
       </MemoryRouter>
     );
@@ -159,13 +165,65 @@ function futureDateStr(): string {
   return d.toISOString();
 }
 
-function setupMockGet(tasks: MyTaskRaw[], nextCursor: string | null = null) {
+/**
+ * Supporting datasets for the workspace-scoped lookup endpoints the filter
+ * bar reads (label/project/task-group options). Tasks come first in the URL
+ * dispatch below because the my-tasks URL also contains "/workspaces/".
+ */
+interface MockLookupData {
+  labels?: { name: string; color: string }[];
+  projects?: { id: string; name: string; status: string }[];
+  taskGroups?: {
+    id: string;
+    name: string;
+    color: string | null;
+    isCompletionGroup: boolean;
+    position: string;
+    projectId: string;
+    projectName: string;
+  }[];
+}
+
+function setupMockGet(
+  tasks: MyTaskRaw[],
+  nextCursor: string | null = null,
+  lookups: MockLookupData = {},
+) {
   mockGet.mockImplementation((url: string): unknown => {
     if (url.includes("/api/workspaces/") && url.includes("/dashboard/my-tasks")) {
       return Promise.resolve({ tasks, nextCursor } as MyTasksResponse);
     }
+    if (url.includes("/labels")) {
+      return Promise.resolve({ labels: lookups.labels ?? [] });
+    }
+    if (url.includes("/task-groups")) {
+      return Promise.resolve({ taskGroups: lookups.taskGroups ?? [] });
+    }
+    if (url.includes("/projects")) {
+      return Promise.resolve({ projects: lookups.projects ?? [] });
+    }
     return Promise.resolve({});
   });
+}
+
+/**
+ * Search params of every my-tasks request, in call order. Filter tests
+ * assert against the LAST entry: each filter change produces a new query key
+ * and therefore a new request, so the latest request is the page's current
+ * understanding of the active filters — exactly what a regression in the
+ * URL↔API mapping would corrupt.
+ */
+function myTasksCallParams(): URLSearchParams[] {
+  return mockGet.mock.calls
+    .map((c: unknown[]) => c[0] as string)
+    .filter((url) => url.includes("/dashboard/my-tasks"))
+    .map((url) => new URLSearchParams(url.split("?")[1] ?? ""));
+}
+
+function lastMyTasksParams(): URLSearchParams {
+  const all = myTasksCallParams();
+  if (all.length === 0) throw new Error("No my-tasks request has been made");
+  return all[all.length - 1];
 }
 
 /**
@@ -918,6 +976,461 @@ describe("MyTasks", () => {
       const nav = await waitFor(() => screen.getByLabelText("Breadcrumb"));
       expect(within(nav).getByText("Test Workspace")).toBeInTheDocument();
       expect(within(nav).getByText("My Tasks")).toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Filter bar: priority / due date / label dimensions
+  // -------------------------------------------------------------------------
+
+  /**
+   * These tests pin the URL-param ↔ API-param contract of the new filter
+   * dimensions (web `label` → API `labelNames`; the rest map 1:1) and the
+   * batched-single-update behavior of multi-param writes. Two bugs in this
+   * filtering bundle were found at QA gates because react-router's functional
+   * `setSearchParams` updater closes over render-time params — back-to-back
+   * per-key calls in one handler silently lose all but the last write. The
+   * quick-pick, range-chip-removal, and clear-all tests below MUST fail if
+   * anyone reverts the batched single-call writes to per-key calls.
+   */
+  describe("filter bar (priority / due date / label)", () => {
+    const LABELS = [
+      { name: "Bug", color: "#ef4444" },
+      { name: "Frontend", color: "#3b82f6" },
+    ];
+    const PROJECTS = [{ id: "proj-1", name: "Project Alpha", status: "active" }];
+    const TASK_GROUPS = [
+      {
+        id: "g1",
+        name: "To Do",
+        color: null,
+        isCompletionGroup: false,
+        position: "a0",
+        projectId: "proj-1",
+        projectName: "Project Alpha",
+      },
+    ];
+
+    // Task titles deliberately avoid the filter trigger names ("Priority",
+    // "Due date", "Label"): task titles render as <button>s, so a title
+    // starting with a trigger name would collide with getByRole queries.
+    const ROW = makeTask({ id: "t1", title: "Row item" });
+
+    describe("URL → API mapping", () => {
+      it("maps every filter URL param onto the API request (label → labelNames)", async () => {
+        setupMockGet([ROW], null, { labels: LABELS });
+
+        const Wrapper = createWrapper([
+          "/?priority=urgent,high&dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true&label=Bug,Frontend&noLabel=true",
+        ]);
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        const params = lastMyTasksParams();
+        expect(params.get("priority")).toBe("urgent,high");
+        expect(params.get("dueDateFrom")).toBe("2026-06-01");
+        expect(params.get("dueDateTo")).toBe("2026-06-30");
+        expect(params.get("noDueDate")).toBe("true");
+        expect(params.get("labelNames")).toBe("Bug,Frontend");
+        expect(params.get("noLabel")).toBe("true");
+        // The web-side param name must not leak through to the API.
+        expect(params.get("label")).toBeNull();
+      });
+
+      it("degrades invalid URL values to 'no filter' instead of a 400ing request", async () => {
+        setupMockGet([ROW]);
+
+        const Wrapper = createWrapper([
+          // banana is not a priority; 2026-02-30 is date-shaped but not a
+          // real calendar day; bare text is not a date at all. The server
+          // rejects all three with a 400, so the client must drop them.
+          "/?priority=banana,urgent&dueDateFrom=2026-02-30&dueDateTo=banana",
+        ]);
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        const params = lastMyTasksParams();
+        expect(params.get("priority")).toBe("urgent");
+        expect(params.get("dueDateFrom")).toBeNull();
+        expect(params.get("dueDateTo")).toBeNull();
+      });
+
+      it("treats label=none as a literal label NAME, never as the absence sentinel", async () => {
+        setupMockGet([ROW], null, { labels: [{ name: "none", color: "#888888" }] });
+
+        const Wrapper = createWrapper(["/?label=none"]);
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        // "none" is a legal user-entered label name; absence-of-label only
+        // ever travels via the dedicated noLabel param.
+        const params = lastMyTasksParams();
+        expect(params.get("labelNames")).toBe("none");
+        expect(params.get("noLabel")).toBeNull();
+      });
+    });
+
+    describe("filter selection sends the exact query string", () => {
+      it("selecting priorities sends them as a CSV priority param", async () => {
+        const user = userEvent.setup();
+        setupMockGet([ROW]);
+
+        const Wrapper = createWrapper();
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        await user.click(screen.getByRole("button", { name: /^Priority/ }));
+        await screen.findByText("Filter by priority");
+        await user.click(screen.getByRole("checkbox", { name: "Urgent" }));
+
+        await waitFor(() => {
+          expect(lastMyTasksParams().get("priority")).toBe("urgent");
+        });
+
+        await user.click(screen.getByRole("checkbox", { name: "High" }));
+
+        await waitFor(() => {
+          expect(lastMyTasksParams().get("priority")).toBe("urgent,high");
+        });
+      });
+
+      it("a due-date quick-pick sets dueDateFrom AND dueDateTo in one request (batched multi-key patch)", async () => {
+        const user = userEvent.setup();
+        setupMockGet([ROW]);
+
+        const Wrapper = createWrapper();
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        await user.click(screen.getByRole("button", { name: "Due date" }));
+        await screen.findByText("Filter by due date");
+        await user.click(screen.getByRole("button", { name: "This week" }));
+
+        // Both bounds must land in the SAME request: the quick-pick emits one
+        // from+to patch, and a per-key setSearchParams regression would drop
+        // `from` (last write wins over the stale closure).
+        await waitFor(() => {
+          const params = lastMyTasksParams();
+          expect(params.get("dueDateFrom")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+          expect(params.get("dueDateTo")).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        });
+      });
+
+      it("toggling 'No due date' sends noDueDate=true", async () => {
+        const user = userEvent.setup();
+        setupMockGet([ROW]);
+
+        const Wrapper = createWrapper();
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        await user.click(screen.getByRole("button", { name: "Due date" }));
+        await screen.findByText("Filter by due date");
+        await user.click(screen.getByRole("checkbox", { name: "No due date" }));
+
+        await waitFor(() => {
+          expect(lastMyTasksParams().get("noDueDate")).toBe("true");
+        });
+      });
+
+      it("selecting a label plus 'No label' sends labelNames CSV and noLabel=true", async () => {
+        const user = userEvent.setup();
+        setupMockGet([ROW], null, { labels: LABELS });
+
+        const Wrapper = createWrapper();
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        await user.click(screen.getByRole("button", { name: /^Label/ }));
+        await screen.findByText("Filter by label");
+        await user.click(await screen.findByRole("checkbox", { name: "Bug" }));
+
+        await waitFor(() => {
+          const params = lastMyTasksParams();
+          expect(params.get("labelNames")).toBe("Bug");
+          expect(params.get("noLabel")).toBeNull();
+        });
+
+        // The pinned option adds the FILTER_NONE sentinel to the popover's
+        // selection; the page must split it into noLabel=true and keep the
+        // sentinel OUT of the names param ("none" is a legal label name).
+        await user.click(screen.getByRole("checkbox", { name: "No label" }));
+
+        await waitFor(() => {
+          const params = lastMyTasksParams();
+          expect(params.get("labelNames")).toBe("Bug");
+          expect(params.get("noLabel")).toBe("true");
+        });
+      });
+    });
+
+    describe("chips", () => {
+      it("renders chips for every active dimension", async () => {
+        setupMockGet([ROW], null, { labels: LABELS });
+
+        const Wrapper = createWrapper([
+          "/?priority=urgent&dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true&label=Bug&noLabel=true",
+        ]);
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        expect(screen.getByText("Urgent")).toBeInTheDocument();
+        expect(screen.getByText("2026-06-01 — 2026-06-30")).toBeInTheDocument();
+        expect(screen.getByText("No due date")).toBeInTheDocument();
+        expect(screen.getByText("No label")).toBeInTheDocument();
+        expect(screen.getByText("Bug")).toBeInTheDocument();
+      });
+
+      it("removing a priority chip drops only that priority", async () => {
+        const user = userEvent.setup();
+        setupMockGet([ROW]);
+
+        const Wrapper = createWrapper(["/?priority=urgent,high"]);
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        await user.click(
+          screen.getByRole("button", { name: "Remove priority filter urgent" }),
+        );
+
+        await waitFor(() => {
+          expect(lastMyTasksParams().get("priority")).toBe("high");
+        });
+        expect(screen.queryByText("Urgent")).not.toBeInTheDocument();
+        expect(screen.getByText("High")).toBeInTheDocument();
+      });
+
+      it("removing the date-range chip clears BOTH bounds in one update and keeps noDueDate", async () => {
+        const user = userEvent.setup();
+        setupMockGet([ROW]);
+
+        const Wrapper = createWrapper([
+          "/?dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true",
+        ]);
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        await user.click(
+          screen.getByRole("button", { name: "Remove due date filter" }),
+        );
+
+        // Regression: a per-key remover would resurrect one bound (stale
+        // closure, last write wins) — both must vanish together, while the
+        // independent noDueDate absence sub-filter must survive.
+        await waitFor(() => {
+          const params = lastMyTasksParams();
+          expect(params.get("dueDateFrom")).toBeNull();
+          expect(params.get("dueDateTo")).toBeNull();
+          expect(params.get("noDueDate")).toBe("true");
+        });
+        expect(screen.getByText("No due date")).toBeInTheDocument();
+      });
+
+      it("removing the 'No due date' chip keeps the date range", async () => {
+        const user = userEvent.setup();
+        setupMockGet([ROW]);
+
+        const Wrapper = createWrapper([
+          "/?dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true",
+        ]);
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        await user.click(
+          screen.getByRole("button", { name: "Remove no due date filter" }),
+        );
+
+        await waitFor(() => {
+          const params = lastMyTasksParams();
+          expect(params.get("noDueDate")).toBeNull();
+          expect(params.get("dueDateFrom")).toBe("2026-06-01");
+          expect(params.get("dueDateTo")).toBe("2026-06-30");
+        });
+      });
+
+      it("removing the 'No label' chip keeps selected label names", async () => {
+        const user = userEvent.setup();
+        setupMockGet([ROW], null, { labels: LABELS });
+
+        const Wrapper = createWrapper(["/?label=Bug&noLabel=true"]);
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        await user.click(
+          screen.getByRole("button", { name: "Remove no label filter" }),
+        );
+
+        // Absence OR-composes with names within the dimension: dropping the
+        // absence flag must not take the real label selection with it.
+        await waitFor(() => {
+          const params = lastMyTasksParams();
+          expect(params.get("noLabel")).toBeNull();
+          expect(params.get("labelNames")).toBe("Bug");
+        });
+        expect(screen.getByText("Bug")).toBeInTheDocument();
+        expect(screen.queryByText("No label")).not.toBeInTheDocument();
+      });
+
+      it("removing a label chip keeps the noLabel filter", async () => {
+        const user = userEvent.setup();
+        setupMockGet([ROW], null, { labels: LABELS });
+
+        const Wrapper = createWrapper(["/?label=Bug&noLabel=true"]);
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        await user.click(
+          screen.getByRole("button", { name: "Remove label filter Bug" }),
+        );
+
+        await waitFor(() => {
+          const params = lastMyTasksParams();
+          expect(params.get("labelNames")).toBeNull();
+          expect(params.get("noLabel")).toBe("true");
+        });
+        expect(screen.getByText("No label")).toBeInTheDocument();
+      });
+    });
+
+    describe("clear all", () => {
+      it("'Clear filters' removes EVERY filter in one batched update (gate-found regression)", async () => {
+        const user = userEvent.setup();
+        setupMockGet([makeTask({ id: "t1", title: "Row item", projectId: "proj-1" })], null, {
+          labels: LABELS,
+          projects: PROJECTS,
+          taskGroups: TASK_GROUPS,
+        });
+
+        const Wrapper = createWrapper([
+          "/?project=proj-1&taskGroup=g1&priority=urgent&dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true&label=Bug&noLabel=true",
+        ]);
+        render(
+          <Wrapper>
+            <MyTasks />
+          </Wrapper>,
+        );
+        await waitFor(() => {
+          expect(screen.getByText("Row item")).toBeInTheDocument();
+        });
+
+        // Sanity: the initial request carried every dimension, so the
+        // assertions below prove clearing (not that filters never applied).
+        const before = lastMyTasksParams();
+        expect(before.get("projectIds")).toBe("proj-1");
+        expect(before.get("taskGroupIds")).toBe("g1");
+        expect(before.get("priority")).toBe("urgent");
+        expect(before.get("noLabel")).toBe("true");
+
+        await user.click(screen.getByRole("button", { name: "Clear filters" }));
+
+        // Regression pin: clearAllFilters must delete ALL params in ONE
+        // setSearchParams call. If someone reverts to calling the per-key
+        // setters back-to-back, react-router's stale-closure semantics make
+        // the last write win and earlier deletions resurrect — the request
+        // below would then still carry projectIds/priority/etc. and this
+        // waitFor would time out.
+        await waitFor(() => {
+          const params = lastMyTasksParams();
+          for (const param of [
+            "projectIds",
+            "taskGroupIds",
+            "priority",
+            "dueDateFrom",
+            "dueDateTo",
+            "noDueDate",
+            "labelNames",
+            "noLabel",
+          ]) {
+            expect(params.get(param)).toBeNull();
+          }
+        });
+
+        // The bar reflects the cleared state: no chips, no Clear button.
+        expect(screen.queryByText("Clear filters")).not.toBeInTheDocument();
+        expect(screen.queryByText("No label")).not.toBeInTheDocument();
+        expect(screen.queryByText("Urgent")).not.toBeInTheDocument();
+      });
     });
   });
 });

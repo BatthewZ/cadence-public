@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { CalendarOff, UserX } from "lucide-react";
+import { CalendarOff, Tag, UserX } from "lucide-react";
 import {
   useCallback,
   useMemo,
@@ -86,6 +86,7 @@ export default function ProjectTimeline() {
         assigneeName: t.assigneeName,
         assigneeAvatarUrl: t.assigneeAvatarUrl,
         taskGroupId: t.taskGroupId,
+        labels: t.labels,
       }));
 
     return groupTimelineTasks(groupBy, timelineTasks, taskGroups, members);
@@ -153,10 +154,11 @@ export default function ProjectTimeline() {
           {groups.map((group) => {
             const isUnscheduled = group.meta?.icon === "unscheduled";
             const isOverdue = group.meta?.icon === "overdue";
+            const isUnlabeled = group.meta?.icon === "unlabeled";
             return (
               <Accordion.Item key={group.key} value={group.key}>
                 <Accordion.Trigger
-                  className={isUnscheduled ? "text-fg-muted" : undefined}
+                  className={isUnscheduled || isUnlabeled ? "text-fg-muted" : undefined}
                 >
                   <Row gap="r5" align="center">
                     {/* Contextual leading icon based on grouping meta */}
@@ -178,6 +180,14 @@ export default function ProjectTimeline() {
                     )}
                     {group.meta?.icon === "unassigned" && (
                       <UserX size={14} className="text-fg-muted shrink-0" />
+                    )}
+                    {/* Muted Tag glyph for the "No label" group. lucide-react
+                        0.564.0 ships no TagOff/TagX variant, so the muted
+                        color carries the "absence" semantics — labeled groups
+                        render color dots, never tag icons, so this stays
+                        unambiguous. */}
+                    {isUnlabeled && (
+                      <Tag size={14} className="text-fg-muted shrink-0" />
                     )}
 
                     {/* Group label — for priority, render as a colored badge */}

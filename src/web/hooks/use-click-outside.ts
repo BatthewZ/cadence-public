@@ -53,9 +53,29 @@ export function useClickOutside(
   useEffect(() => {
     if (!enabled) return;
 
+    // Where the press that produced the upcoming click/touchend began. A
+    // browser `click` fires on the *common ancestor* of the mousedown and
+    // mouseup targets, so a press that starts inside the ref but releases
+    // outside it (e.g. selecting text in the panel and dragging the cursor
+    // past its edge before letting go) reports a target outside the ref.
+    // Tracking the press origin lets us recognise that interaction as one
+    // that began inside, so we don't close mid-selection and lose the user's
+    // edit. Reset to null on each new press to avoid stale carry-over.
+    let pressStartTarget: Node | null = null;
+    const recordPressStart = (event: MouseEvent | TouchEvent) => {
+      pressStartTarget = event.target as Node;
+    };
+
     const listener = (event: MouseEvent | TouchEvent) => {
+      const downTarget = pressStartTarget;
+      pressStartTarget = null;
+
       const target = event.target as Node;
       if (!ref.current || ref.current.contains(target)) return;
+      // The press began inside the ref — treat the whole interaction as
+      // inside even though the cursor was released outside (drag-to-select
+      // past the panel edge). Closing here would discard in-progress edits.
+      if (downTarget && ref.current.contains(downTarget)) return;
       // If the target was removed from the DOM during event processing
       // (e.g. optimistic UI delete), it was originally inside the ref —
       // don't treat it as an outside click.
@@ -72,12 +92,16 @@ export function useClickOutside(
     // (e.g. a toggle button opening the sidebar) has fully propagated before
     // we start listening — otherwise it immediately fires as an outside click.
     const frameId = requestAnimationFrame(() => {
+      document.addEventListener("mousedown", recordPressStart);
+      document.addEventListener("touchstart", recordPressStart);
       document.addEventListener("click", listener);
       document.addEventListener("touchend", listener);
     });
 
     return () => {
       cancelAnimationFrame(frameId);
+      document.removeEventListener("mousedown", recordPressStart);
+      document.removeEventListener("touchstart", recordPressStart);
       document.removeEventListener("click", listener);
       document.removeEventListener("touchend", listener);
     };

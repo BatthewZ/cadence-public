@@ -5,11 +5,13 @@ All table definitions live in `src/db/schema/`. The barrel file `src/db/schema/i
 ```ts
 export * from "./api-token";
 export * from "./auth";
+export * from "./calendar-feed-token";
 export * from "./invitation";
 export * from "./label";
 export * from "./legal-acceptance";
 export * from "./notification";
 export * from "./project";
+export * from "./saved-view";
 export * from "./task";
 export * from "./task-attachment";
 export * from "./team";
@@ -232,6 +234,7 @@ export * from "./workspace";
 | `completed`   | `integer` (mode: `boolean`)   | `NOT NULL`, default `false`                       | Whether the task is complete                     |
 | `completedAt` | `integer` (mode: `timestamp`) |                                                   | Timestamp when the task was completed            |
 | `completedBy` | `text`                        | **FK** -> `user.id` (set null)                    | References the user who completed the task       |
+| `startDate`   | `integer` (mode: `timestamp`) |                                                   | Optional start date, independently optional from `dueDate` (a task may carry a start date alone, a due date alone, both, or neither). The only cross-field rule is ordering: `startDate` must be on or before `dueDate` when both are present — enforced in the shared Zod schemas + the `updateTask` merged-state backstop, **not** at the DB layer. UTC-midnight timestamp, matching the `dueDate` convention. No dedicated index (calendar reads are client-side; the ICS feed query is largely covered by the `(assigneeId, completed, dueDate)` index, though start-only feed rows fall outside it) |
 | `dueDate`     | `integer` (mode: `timestamp`) |                                                   | Task due date                                    |
 | `cost`          | `integer`                     |                                                   | Task cost in cents (nullable, optional)            |
 | `icon`          | `text`                        |                                                   | Task icon (e.g. emoji or icon identifier)          |
@@ -241,11 +244,12 @@ export * from "./workspace";
 | `recurrenceRule` | `text`                     |                                                   | JSON-encoded recurrence rule (frequency, interval, etc.) |
 | `recurrenceParentId` | `text`                  | **FK** -> `task.id` (set null), unique (non-null) | References the parent task in a recurrence chain |
 | `recurrenceSeriesId` | `text`                  |                                                   | Groups all tasks belonging to the same recurrence series |
+| `sourceUid`   | `text` (column `source_uid`)  | unique per (`projectId`, value) where non-null    | Provenance UID for tasks created via calendar import — the ICS `UID` of the source VEVENT. Set **only** by `POST /projects/:projectId/tasks/import` and never editable via PATCH, so a stored value is a trustworthy provenance claim, not user input. `NULL` for tasks created any other way (and not copied by duplicate/move/recurrence-spawn). Backs re-import dedupe directly on the task row (no separate import-ledger table) — see migration `0034_far_mystique` |
 | `position`    | `text`                        | `NOT NULL`                                        | Fractional index for ordering within group       |
 | `createdAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                        | Creation timestamp                               |
 | `updatedAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                        | Last update timestamp                            |
 
-**Indexes:** index on (`assigneeId`, `dueDate`), index on (`taskGroupId`, `position`), index on (`projectId`, `completed`), composite index on (`projectId`, `assigneeId`), composite index on (`projectId`, `dueDate`, `completed`), composite index on (`projectId`, `updatedAt`), index on (`recurrenceParentId`), unique index on (`recurrenceParentId`) where non-null, index on (`recurrenceSeriesId`), unique index on (`taskGroupId`, `position`) — guards against duplicate positions under concurrent create/duplicate/complete (see migration 0026)
+**Indexes:** index on (`assigneeId`, `completed`, `dueDate`) — also serves the per-assignee ICS calendar feed query, index on (`taskGroupId`, `position`), index on (`projectId`, `completed`), composite index on (`projectId`, `assigneeId`), composite index on (`projectId`, `dueDate`, `completed`), composite index on (`projectId`, `updatedAt`), index on (`recurrenceParentId`), unique index on (`recurrenceParentId`) where non-null, index on (`recurrenceSeriesId`), unique index on (`taskGroupId`, `position`) — guards against duplicate positions under concurrent create/duplicate/complete (see migration 0026), **partial** unique index on (`projectId`, `sourceUid`) `WHERE source_uid IS NOT NULL` — one task per project per imported event UID; partial so the overwhelming majority of (non-imported, `NULL`-UID) tasks never collide (see migration 0034)
 
 #### `subtask`
 
@@ -334,6 +338,25 @@ export * from "./workspace";
 | `createdAt` | `integer` (mode: `timestamp`) | `NOT NULL`                                   | Assignment timestamp               |
 
 **Indexes:** unique on (`taskId`, `labelId`), index on `labelId`
+
+#### `savedView`
+
+**File:** `src/db/schema/saved-view.ts`
+
+Private, per-user-per-project **saved views**: named snapshots of the task board's URL state. The URL stays the runtime source of truth — rows here are bookmarks, never live state. Two different users may each have a `"My urgent"` view on the same project (names are unique per `(projectId, creatorId)`, not globally).
+
+| Column      | Type                          | Constraints                                  | Description                                        |
+| ----------- | ----------------------------- | -------------------------------------------- | -------------------------------------------------- |
+| `id`        | `text`                        | **Primary key**                              | Unique saved-view identifier                       |
+| `projectId` | `text`                        | `NOT NULL`, **FK** -> `project.id` (cascade) | References the owning project                      |
+| `creatorId` | `text`                        | `NOT NULL`, **FK** -> `user.id` (cascade)    | References the user who owns the view (views are private) |
+| `name`      | `text`                        | `NOT NULL`                                   | User-supplied label (trimmed, 1–50 chars; unique per project + creator) |
+| `state`     | `text` (mode: `json`)         | `NOT NULL`                                   | JSON snapshot typed as `SavedViewState` from `src/shared/schemas/saved-view.ts`: `{ tab, params }`. `tab` is a bounded string (not an enum) and `params` is a bounded open string-record (≤16 entries, keys 1–40 chars, values ≤500 chars). Unknown param keys are stored verbatim so views authored by a future client round-trip without corruption |
+| `position`  | `text`                        | `NOT NULL`                                   | Fractional index assigned on create (v1 has no reorder endpoint) |
+| `createdAt` | `integer` (mode: `timestamp`) | `NOT NULL`                                   | Creation timestamp                                 |
+| `updatedAt` | `integer` (mode: `timestamp`) | `NOT NULL`                                   | Last update timestamp                              |
+
+**Indexes:** index on (`projectId`, `creatorId`), unique index on (`projectId`, `creatorId`, `name`)
 
 #### `notification`
 
@@ -465,6 +488,29 @@ export * from "./workspace";
 
 See [API Tokens](../api/api-tokens.md) for the full lifecycle, scope reference, and security best practices.
 
+#### `calendarFeedToken`
+
+**File:** `src/db/schema/calendar-feed-token.ts`
+
+The credential behind per-user ICS calendar subscription URLs — a deliberately separate credential class from `apiToken`, **not** a PAT.
+
+| Column        | Type                          | Constraints                                                  | Description                                                                                                                                                            |
+| ------------- | ----------------------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | `text`                        | **Primary key**                                              | Unique token identifier                                                                                                                                               |
+| `userId`      | `text`                        | `NOT NULL`, **FK** -> `user.id` (cascade)                    | Owning user. Feed contents are scoped to this user                                                                                                                    |
+| `workspaceId` | `text`                        | `NOT NULL`, **FK** -> `workspace.id` (cascade)               | The workspace whose tasks the feed exposes                                                                                                                            |
+| `tokenHash`   | `text`                        | `NOT NULL`, `UNIQUE`                                         | HMAC-SHA256 (peppered with `TOKEN_HASH_PEPPER`, same primitive as PATs) of the plaintext feed token. The plaintext is **never** persisted — a DB exfil yields hashes, not usable feed URLs, because verifying a guess offline also needs the server-side pepper |
+| `createdAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                                   | Creation timestamp                                                                                                                                                    |
+| `lastUsedAt`  | `integer` (mode: `timestamp`) |                                                              | Updated when a calendar client fetches the feed                                                                                                                       |
+
+**Indexes:** unique index on (`tokenHash`), unique index on (`userId`, `workspaceId`) — pins one live feed per user per workspace, so "regenerate" is a replace-the-row that atomically revokes the old URL.
+
+**Why a separate table and credential class (not a PAT):**
+
+- **Capability URL, weak custody.** Calendar clients (Google, Apple, Outlook) subscribe by URL and cannot send `Authorization` headers, so the secret must live in the URL itself. Those URLs are stored in plaintext by the provider's servers and appear in request logs — a far weaker custody story than a header-borne PAT. Reusing a PAT here would put a write-capable, scoped API credential into that weak-custody channel.
+- **Single-purpose by construction.** Feed tokens use the distinct `cdn_cal_` prefix and `verifyToken` cheap-rejects anything that is not `cdn_pat_`-prefixed, so a leaked feed URL can only ever unlock the read-only ICS feed endpoint — never a bearer-auth API call.
+- **Revocable without collateral damage.** Rotating a feed token never breaks the user's PAT-driven automations, and vice versa. The plaintext is minted via the shared `mintToken(prefix, pepper)` primitive in `src/api/lib/api-tokens.ts` (the single source of truth for token generation across credential classes), so its entropy and storage-hash properties are identical to a PAT's.
+
 ### Relationships
 
 - `session.userId` -> `user.id` (foreign key, cascade delete)
@@ -495,6 +541,8 @@ See [API Tokens](../api/api-tokens.md) for the full lifecycle, scope reference, 
 - `taskAttachment.uploadId` -> `upload.id` (foreign key, cascade delete)
 - `taskLabel.taskId` -> `task.id` (foreign key, cascade delete)
 - `taskLabel.labelId` -> `label.id` (foreign key, cascade delete)
+- `savedView.projectId` -> `project.id` (foreign key, cascade delete)
+- `savedView.creatorId` -> `user.id` (foreign key, cascade delete)
 - `notification.userId` -> `user.id` (foreign key, cascade delete)
 - `notification.workspaceId` -> `workspace.id` (foreign key, cascade delete)
 - `notification.projectId` -> `project.id` (foreign key, cascade delete)
@@ -512,8 +560,10 @@ See [API Tokens](../api/api-tokens.md) for the full lifecycle, scope reference, 
 - `apiToken.workspaceId` -> `workspace.id` (foreign key, cascade delete)
 - `apiToken.rotatedToId` -> `apiToken.id` (foreign key, self-reference)
 - `taskActivity.apiTokenId` -> `apiToken.id` (foreign key, set null on delete — so historical attribution survives token deletion)
+- `calendarFeedToken.userId` -> `user.id` (foreign key, cascade delete)
+- `calendarFeedToken.workspaceId` -> `workspace.id` (foreign key, cascade delete)
 
-The `user`, `session`, `account`, and `verification` tables are managed by **Better Auth** and follow its expected schema conventions. The `upload` table is application-managed. The `workspace`, `workspaceMember`, `team`, `teamMember`, `project`, `projectMember`, `taskGroup`, `task`, `subtask`, `comment`, `taskActivity`, `taskAttachment`, `label`, `taskLabel`, `notification`, `invitation`, `webhook`, `webhookDelivery`, `legalAcceptance`, and `apiToken` tables are application-managed.
+The `user`, `session`, `account`, and `verification` tables are managed by **Better Auth** and follow its expected schema conventions. The `upload` table is application-managed. The `workspace`, `workspaceMember`, `team`, `teamMember`, `project`, `projectMember`, `taskGroup`, `task`, `subtask`, `comment`, `taskActivity`, `taskAttachment`, `label`, `taskLabel`, `savedView`, `notification`, `invitation`, `webhook`, `webhookDelivery`, `legalAcceptance`, and `apiToken` tables are application-managed.
 
 ### Role & Status Types
 

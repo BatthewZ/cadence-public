@@ -4,7 +4,10 @@ import {
   buildUnsplashDisplaySrcSet,
   buildUnsplashDisplayUrl,
 } from "@/shared/lib/unsplash-display";
-import type { UnsplashCoverPayload } from "@/shared/schemas/unsplash";
+import type {
+  StoredUnsplashCoverPayload,
+  UnsplashCoverPayload,
+} from "@/shared/schemas/unsplash";
 import { useFileUpload } from "@/web/hooks/use-file-upload";
 import { api } from "@/web/lib/api/client";
 
@@ -31,7 +34,10 @@ export interface CoverAttribution {
  */
 export function resolveCoverDisplay(
   coverImageKey: string | null | undefined,
-  coverUnsplash: UnsplashCoverPayload | null | undefined,
+  // The STORED (lenient) shape: this resolves covers read back from the
+  // server, where `rawUrl` may be absent on legacy rows — the display
+  // builders below fall back to the pre-baked URLs for exactly that case.
+  coverUnsplash: StoredUnsplashCoverPayload | null | undefined,
 ): {
   coverUrl: string | null;
   /** Multi-width `<img srcSet>` for Unsplash covers — lets the browser pick
@@ -88,10 +94,11 @@ export function resolveCoverDisplay(
 export function useProjectCover(
   projectId: string,
   coverImageKey: string | null | undefined,
-  coverUnsplash: UnsplashCoverPayload | null | undefined,
+  // Stored (lenient) shape — server state; see resolveCoverDisplay.
+  coverUnsplash: StoredUnsplashCoverPayload | null | undefined,
   updateProject: (updates: {
     coverImageKey?: string | null;
-    coverUnsplash?: UnsplashCoverPayload | null;
+    coverUnsplash?: StoredUnsplashCoverPayload | null;
   }) => void,
   onRemoveError?: () => void,
   onApplyError?: () => void,

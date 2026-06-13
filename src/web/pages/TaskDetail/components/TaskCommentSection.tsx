@@ -1,13 +1,12 @@
 import { Check, Pencil, Trash2, X } from "lucide-react";
 
-import { MentionTextarea } from "@/web/components/form/MentionTextarea";
-import { Textarea } from "@/web/components/form/Textarea";
 import { Row, Stack } from "@/web/components/layout";
+import { Markdown } from "@/web/components/markdown/Markdown";
+import { MarkdownEditor } from "@/web/components/markdown/MarkdownEditor";
 import { Avatar } from "@/web/components/ui/Avatar";
 import { Button } from "@/web/components/ui/Button";
 import { HoldToDeleteButton } from "@/web/components/ui/HoldToDeleteButton";
 import { IconButton } from "@/web/components/ui/IconButton";
-import { MentionText } from "@/web/components/ui/MentionText";
 import { CommentSkeletonList } from "@/web/components/ui/Skeleton";
 import { Text } from "@/web/components/ui/Text";
 import type { Comment } from "@/web/contexts/ProjectContext";
@@ -45,7 +44,12 @@ interface TaskCommentSectionProps {
 /**
  * Shared comment section used by both TaskDetailDialog and TaskDetailPanelInner.
  * Renders the comment list with edit/delete actions, pagination, and the
- * comment input area with MentionTextarea.
+ * comment authoring surfaces. Both the new-comment composer and the in-place
+ * edit form use {@link MarkdownEditor} so comments are authored with the same
+ * toolbar / shortcuts / @mention support as task descriptions, and round-trip
+ * through the same canonical markdown string they're already rendered from. The
+ * composer is `collapsible` (progressive disclosure): it reads as a single
+ * quiet input until focused, then reveals the full editor chrome.
  */
 export function TaskCommentSection({
   comments,
@@ -142,10 +146,11 @@ export function TaskCommentSection({
               </Row>
               {isEditing ? (
                 <Stack gap="r6">
-                  <Textarea
+                  <MarkdownEditor
                     value={editingCommentBody}
-                    onChange={(e) => onEditBodyChange(e.target.value)}
-                    className="min-h-[2.5rem] border-border-default bg-surface-1 focus:bg-surface-0 text-body-2"
+                    onChange={onEditBodyChange}
+                    members={members}
+                    density="compact"
                     autoFocus
                   />
                   <Row gap="r6" className="justify-end">
@@ -166,9 +171,9 @@ export function TaskCommentSection({
                   </Row>
                 </Stack>
               ) : (
-                <Text variant="body-2">
-                  <MentionText>{comment.body}</MentionText>
-                </Text>
+                <Markdown density="compact" members={members}>
+                  {comment.body}
+                </Markdown>
               )}
             </div>
           );
@@ -189,12 +194,13 @@ export function TaskCommentSection({
 
         {canEdit && (
           <>
-            <MentionTextarea
+            <MarkdownEditor
               value={commentBody}
               onChange={onCommentBodyChange}
               members={members}
+              density="compact"
+              collapsible
               placeholder="Write a comment... Use @ to mention"
-              className="min-h-[3.75rem] border-border-default bg-surface-1 focus:bg-surface-0"
             />
             <div className="flex justify-end">
               <Button
