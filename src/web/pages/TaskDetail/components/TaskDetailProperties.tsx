@@ -56,9 +56,24 @@ import { RecurrencePicker, RecurrencePickerReadOnly } from "./RecurrencePicker";
  * — all 32px). Pinning the box to 2rem and dropping the vertical padding (the
  * border-box height now drives layout, and the UA vertically centres the value)
  * makes every property row exactly the same height.
+ *
+ * A native `type="date"` input renders its empty-state format text
+ * (`dd/mm/yyyy`) through the `::-webkit-datetime-edit` pseudo-element, which
+ * inherits the input's `color` rather than the `::placeholder` styling used by
+ * text inputs. Left alone it draws in full-strength foreground, making the
+ * empty Start/Due rows read darker than the Cost row's muted `0.00`
+ * placeholder. We therefore mute the input's text colour while it has no value
+ * so every empty placeholder on the panel shares the `text-fg-muted` tone, then
+ * restore full strength once a real date is present.
  */
-const dateInputClass =
-  "h-8 border-transparent bg-transparent hover:bg-surface-1 focus:bg-surface-0 px-r5 text-body-3 rounded";
+function dateInputClass(hasValue: boolean): string {
+  return [
+    "h-8 border-transparent bg-transparent hover:bg-surface-1 focus:bg-surface-0 px-r5 text-body-3 rounded",
+    hasValue ? "" : "text-fg-muted",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 
 /**
  * The clear (×) icon button shared by the Start and Due rows. A fixed 24px
@@ -206,7 +221,7 @@ export function TaskDetailProperties({
             onChange={(e) => {
               onPatch({ startDate: e.target.value || null });
             }}
-            className={dateInputClass}
+            className={dateInputClass(Boolean(task.startDate))}
           />
           {canEditTasks && task.startDate ? (
             <button
@@ -238,7 +253,7 @@ export function TaskDetailProperties({
             onChange={(e) => {
               onPatch({ dueDate: e.target.value || null });
             }}
-            className={dateInputClass}
+            className={dateInputClass(Boolean(task.dueDate))}
           />
           {canEditTasks && task.dueDate ? (
             <button
