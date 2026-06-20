@@ -6,10 +6,6 @@ import {
   Presentation,
 } from "lucide-react";
 
-export function isImageType(mimeType: string): boolean {
-  return mimeType.startsWith("image/");
-}
-
 export function FileTypeIcon({ mimeType }: { mimeType: string }) {
   let Icon = File;
   if (mimeType === "application/pdf") Icon = FileText;

@@ -39,6 +39,51 @@ const UL_RE = /^[-*] (.*)$/;
 const OL_RE = /^\d+\. (.*)$/;
 
 /**
+ * Gather the items of a single list starting at `start`, tolerating blank lines
+ * *between* items. This matches CommonMark "loose list" behaviour: authors (and
+ * Trello/PAT-exported content) routinely separate list items with a blank line
+ * for readability, and those items must stay in ONE list node rather than
+ * fragmenting into many single-item lists. The fragmentation bug was visible as
+ * an ordered list where every item restarted at "1." — each `<ol>` the renderer
+ * received held a lone item, so the browser's `list-style: decimal` counter
+ * reset on each one. A blank-line gap is only consumed when the *next* non-blank
+ * line is another item of the SAME list (same `re`); otherwise the list ends and
+ * the blank line falls through to normal block separation, so a list followed by
+ * a paragraph (or a different list type) still splits correctly.
+ *
+ * @returns the parsed inline content per item and the index of the first line
+ *   after the list.
+ */
+function collectListItems(
+  lines: string[],
+  start: number,
+  re: RegExp
+): { items: MdInline[][]; next: number } {
+  const items: MdInline[][] = [];
+  let i = start;
+  while (i < lines.length) {
+    if (re.test(lines[i])) {
+      const m = re.exec(lines[i]);
+      items.push(parseInline(m ? m[1] : ""));
+      i++;
+      continue;
+    }
+    if (lines[i].trim() === "") {
+      // Look past one or more blank lines: only keep going if another item of
+      // this same list follows — otherwise the list is done.
+      let j = i + 1;
+      while (j < lines.length && lines[j].trim() === "") j++;
+      if (j < lines.length && re.test(lines[j])) {
+        i = j;
+        continue;
+      }
+    }
+    break;
+  }
+  return { items, next: i };
+}
+
+/**
  * Phase 1 — scan the source into block nodes line-by-line, then phase 2 —
  * inline-tokenize each block's text run. The two phases are deliberately
  * separate so that block context (e.g. "inside a fenced code block") can fully
@@ -108,24 +153,16 @@ export function parseMarkdown(src: string): MdNode[] {
 
     // --- Unordered list ---------------------------------------------------
     if (UL_RE.test(line)) {
-      const items: MdInline[][] = [];
-      while (i < lines.length && UL_RE.test(lines[i])) {
-        const m = UL_RE.exec(lines[i]);
-        items.push(parseInline(m ? m[1] : ""));
-        i++;
-      }
+      const { items, next } = collectListItems(lines, i, UL_RE);
+      i = next;
       nodes.push({ type: "list", ordered: false, items });
       continue;
     }
 
     // --- Ordered list -----------------------------------------------------
     if (OL_RE.test(line)) {
-      const items: MdInline[][] = [];
-      while (i < lines.length && OL_RE.test(lines[i])) {
-        const m = OL_RE.exec(lines[i]);
-        items.push(parseInline(m ? m[1] : ""));
-        i++;
-      }
+      const { items, next } = collectListItems(lines, i, OL_RE);
+      i = next;
       nodes.push({ type: "list", ordered: true, items });
       continue;
     }

@@ -57,7 +57,7 @@ Element styling pulls existing design tokens: code → `--C-SURFACE-2` + `--DEFA
 
 ## Supported subset (v1)
 
-**Blocks:** headings `#`–`######`, paragraphs (wrapped lines reflow), blockquote `> ` (one level, inline content, consecutive `>` lines joined), horizontal rule `---`, fenced code block ` ``` ` (info string ignored, content never inline-parsed), unordered list `- ` / `* `, ordered list `1. `.
+**Blocks:** headings `#`–`######`, paragraphs (wrapped lines reflow), blockquote `> ` (one level, inline content, consecutive `>` lines joined), horizontal rule `---`, fenced code block ` ``` ` (info string ignored, content never inline-parsed), unordered list `- ` / `* `, ordered list `1. ` (blank lines *between* items are tolerated — "loose" items coalesce into one list so ordered numbering keeps counting instead of restarting at `1.`).
 
 **Inline:** bold `**…**`, italic `_…_` / `*…*`, bold-italic `***…***`, **one level of nesting** (`**a _b_ c**`), inline code `` `…` `` (atomic — its content is never re-parsed), link `[text](url)` (href protocol allow-listed; paren-balanced so URLs containing `()` close correctly), mention `@"Name"` / `@username`.
 

@@ -15,7 +15,7 @@ export default defineConfig([
   {
     languageOptions: {
       parserOptions: {
-        project: ["./tsconfig.backend.json", "./tsconfig.web.json", "./tsconfig.test.json"],
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -43,22 +43,37 @@ export default defineConfig([
     },
   },
 
-  // Compound component files export multiple components from one file by design,
-  // which triggers react-refresh warnings that don't apply here.
+  // Compound component files export multiple components from one file by design
+  // (e.g. `Object.assign(Root, { Trigger, Content })`). Fast Refresh can't statically
+  // recognise that namespaced shape as a component, so the rule flags every
+  // sub-component. Splitting them would break the compound API (`Popover.Trigger`),
+  // so the rule is disabled here. Fast Refresh is a dev-only HMR optimisation with
+  // no production impact.
   {
     files: [
       "src/web/components/ui/Accordion.tsx",
+      "src/web/components/ui/AppShell.tsx",
+      "src/web/components/ui/Breadcrumbs.tsx",
       "src/web/components/ui/Carousel.tsx",
+      "src/web/components/ui/DropdownMenu.tsx",
       "src/web/components/ui/Hero.tsx",
       "src/web/components/ui/MasonryGrid.tsx",
       "src/web/components/ui/MediaCard.tsx",
+      "src/web/components/ui/Popover.tsx",
       "src/web/components/ui/ProgressBar.tsx",
       "src/web/components/ui/Spotlight.tsx",
       "src/web/components/ui/StatCard.tsx",
+      "src/web/components/ui/Table.tsx",
       "src/web/components/ui/Tabs.tsx",
       "src/web/components/ui/Timeline.tsx",
       "src/web/components/ui/ToastContext.tsx",
     ],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
+  {
+    files: ["src/web/contexts/ProjectContext.tsx", "src/web/contexts/ThemeControlContext.tsx"],
     rules: {
       "react-refresh/only-export-components": "off",
     },

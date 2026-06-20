@@ -1,19 +1,8 @@
-import { type ComponentPropsWithRef, createContext, forwardRef, useContext, useId } from "react";
+import { type ComponentPropsWithRef, forwardRef, useId } from "react";
 
 import { cn } from "@/web/util/style/style";
 
-type FieldContextValue = { errorId: string };
-const FieldContext = createContext<FieldContextValue | null>(null);
-export const useFieldContext = () => useContext(FieldContext);
-
-/** Returns aria-invalid and aria-describedby props for a form control inside a Field. */
-export function useFieldErrorProps(error: boolean | undefined) {
-  const field = useFieldContext();
-  return {
-    "aria-invalid": error ? ("true" as const) : undefined,
-    "aria-describedby": error && field?.errorId ? field.errorId : undefined,
-  };
-}
+import { FieldContext } from "./field-context";
 
 type FieldProps = ComponentPropsWithRef<"div">;
 

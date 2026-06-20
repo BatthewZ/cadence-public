@@ -94,6 +94,66 @@ describe("parseMarkdown — blocks", () => {
     });
   });
 
+  it("keeps blank-line-separated ordered items in ONE list so numbering continues", () => {
+    // Regression: authors and exported (Trello/PAT) content often separate list
+    // items with a blank line. These must coalesce into a single list node —
+    // otherwise the renderer emits one `<ol>` per item and the browser's
+    // `list-style: decimal` counter resets, making every item render as "1.".
+    const src = "1. alpha\n\n2. beta\n\n3. gamma";
+    const nodes = parseMarkdown(src);
+    expect(nodes).toEqual([
+      {
+        type: "list",
+        ordered: true,
+        items: [
+          [{ type: "text", value: "alpha" }],
+          [{ type: "text", value: "beta" }],
+          [{ type: "text", value: "gamma" }],
+        ],
+      },
+    ]);
+  });
+
+  it("keeps blank-line-separated unordered items in ONE list", () => {
+    const nodes = parseMarkdown("- one\n\n- two\n\n- three");
+    expect(nodes).toEqual([
+      {
+        type: "list",
+        ordered: false,
+        items: [
+          [{ type: "text", value: "one" }],
+          [{ type: "text", value: "two" }],
+          [{ type: "text", value: "three" }],
+        ],
+      },
+    ]);
+  });
+
+  it("ends a list at a blank line when the next block is not a list item", () => {
+    // The blank-line tolerance must NOT swallow a following paragraph: the gap is
+    // only consumed when another item of the same list actually follows.
+    const nodes = parseMarkdown("1. alpha\n\n2. beta\n\nAfter the list.");
+    expect(nodes).toEqual([
+      {
+        type: "list",
+        ordered: true,
+        items: [
+          [{ type: "text", value: "alpha" }],
+          [{ type: "text", value: "beta" }],
+        ],
+      },
+      { type: "paragraph", children: [{ type: "text", value: "After the list." }] },
+    ]);
+  });
+
+  it("splits an ordered list and a following unordered list across a blank line", () => {
+    const nodes = parseMarkdown("1. alpha\n\n- bullet");
+    expect(nodes).toEqual([
+      { type: "list", ordered: true, items: [[{ type: "text", value: "alpha" }]] },
+      { type: "list", ordered: false, items: [[{ type: "text", value: "bullet" }]] },
+    ]);
+  });
+
   it("parses a fenced code block verbatim with no inline/mention parsing", () => {
     const src = "```\n@notamention **notbold** `nocode`\n```";
     const [node] = parseMarkdown(src);

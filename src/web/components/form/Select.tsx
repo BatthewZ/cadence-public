@@ -2,7 +2,7 @@ import { type ComponentPropsWithRef, forwardRef } from "react";
 
 import { cn } from "@/web/util/style/style";
 
-import { useFieldErrorProps } from "./Field";
+import { useFieldErrorProps } from "./field-context";
 
 type SelectProps = {
   error?: boolean;

@@ -6,7 +6,8 @@ import type { Attachment } from "@/web/hooks/use-task-attachments";
 import { formatRelativeTime } from "@/web/util/activity";
 import { formatBytes } from "@/web/util/format";
 
-import { FileTypeIcon, isImageType } from "./FileTypeIcon";
+import { isImageType } from "./file-type";
+import { FileTypeIcon } from "./FileTypeIcon";
 
 export function AttachmentRow({
   attachment,

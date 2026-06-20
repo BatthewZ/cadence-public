@@ -26,7 +26,7 @@ import { queryKeys } from "@/web/lib/query-keys";
 import { AttachmentRow } from "./components/AttachmentRow";
 import { AttachmentSkeletonList } from "./components/AttachmentSkeleton";
 import { CompactDropZone } from "./components/CompactDropZone";
-import { isImageType } from "./components/FileTypeIcon";
+import { isImageType } from "./components/file-type";
 import { ImageLightbox } from "./components/ImageLightbox";
 
 // ---------------------------------------------------------------------------
@@ -134,7 +134,7 @@ export function TaskAttachmentSection({ taskId, projectId, readOnly = false }: T
         }
       }
     },
-    [attachments.length, taskId, qc, toast, updateAttachmentCount],
+    [attachments.length, taskId, projectId, qc, toast, updateAttachmentCount],
   );
 
   // ----- Delete flow -----
@@ -158,7 +158,7 @@ export function TaskAttachmentSection({ taskId, projectId, readOnly = false }: T
     } finally {
       setIsDeleting(false);
     }
-  }, [deleteTarget, taskId, qc, toast, attachments.length, updateAttachmentCount]);
+  }, [deleteTarget, taskId, projectId, qc, toast, attachments.length, updateAttachmentCount]);
 
   // ----- Image lightbox -----
 

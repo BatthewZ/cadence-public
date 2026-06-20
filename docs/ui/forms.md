@@ -27,6 +27,8 @@ flex flex-col gap-r6
 
 ### Context Exports
 
+The context primitives (`FieldContext`, `useFieldContext`, `useFieldErrorProps`, `FieldContextValue`) live in `src/web/components/form/field-context.ts`, separate from the `Field` component. They are split out so the component file only exports components — required by the `react-refresh/only-export-components` lint rule (mixing hook/context exports with a component breaks Fast Refresh). `Field.tsx` imports `FieldContext` from this module and renders the provider.
+
 - **`useFieldContext()`** -- Returns `{ errorId: string } | null`. Used internally by `FieldError` and form controls.
 - **`useFieldErrorProps(error)`** -- Returns `{ "aria-invalid": "true" | undefined, "aria-describedby": string | undefined }`. Used by `Input`, `Textarea`, and `Select` to wire up accessibility attributes when `error` is `true`.
 

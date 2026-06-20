@@ -1,6 +1,6 @@
 {
   "name": "cadence",
-  "version": "1.27.0",
+  "version": "1.27.1",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,11 +16,11 @@
     "typecheck": "concurrently -n backend,web,tests,eslint -c blue,green,yellow,red \"bun run typecheck:backend\" \"bun run typecheck:web\" \"bun run typecheck:tests\" \"bun run lint:fix\"",
     "typecheck:ci": "concurrently -n backend,web,tests,eslint -c blue,green,yellow,red \"bun run typecheck:backend\" \"bun run typecheck:web\" \"bun run typecheck:tests\" \"bun run lint\"",
     "ci": "concurrently -n types:backend,types:web,types:tests,lint,test,build -c blue,green,yellow,red,cyan,magenta \"bun run typecheck:backend\" \"bun run typecheck:web\" \"bun run typecheck:tests\" \"bun run lint\" \"bun run test\" \"bun run build && bun run build:worker\"",
-    "lint": "eslint src/",
+    "lint": "node --max-old-space-size=4096 ./node_modules/.bin/eslint src/",
     "typecheck:backend": "tsc --noEmit -p tsconfig.backend.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
     "typecheck:tests": "tsc --noEmit -p tsconfig.test.json",
-    "lint:fix": "eslint src/ --fix",
+    "lint:fix": "node --max-old-space-size=4096 ./node_modules/.bin/eslint src/ --fix",
     "format": "prettier --write ./src",
     "format:check": "prettier --check .",
     "test": "vitest run",
