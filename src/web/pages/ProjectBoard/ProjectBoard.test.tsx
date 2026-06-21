@@ -1,11 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Task, TaskGroup } from "@/web/contexts/ProjectContext";
+import { api } from "@/web/lib/api/client";
 
 import ProjectBoard, { COLUMN_TASK_LIMIT } from "./ProjectBoard";
 
@@ -70,7 +71,8 @@ vi.mock("@dnd-kit/core", () => ({
   DndContext: ({ children }: { children: ReactNode }) => <>{children}</>,
   DragOverlay: () => null,
   KeyboardSensor: class {},
-  PointerSensor: class {},
+  MouseSensor: class {},
+  TouchSensor: class {},
   closestCorners: vi.fn(),
   useSensor: vi.fn(() => undefined),
   useSensors: vi.fn(() => []),
@@ -133,7 +135,7 @@ function makeGroup(
 }
 
 function setupProjectMock(groups: TaskGroup[], tasks: Task[]) {
-  mockUseProject.mockReturnValue({
+  const ctx = {
     project: { id: "proj-1", name: "Test Project" },
     members: [],
     taskGroups: groups,
@@ -148,7 +150,9 @@ function setupProjectMock(groups: TaskGroup[], tasks: Task[]) {
     updateTaskGroup: vi.fn(),
     removeTaskGroup: vi.fn(),
     addTaskGroup: vi.fn(),
-  });
+  };
+  mockUseProject.mockReturnValue(ctx);
+  return ctx;
 }
 
 /**
@@ -518,5 +522,125 @@ describe("click-to-filter on card chips", () => {
     await user.click(screen.getByText("Task 1"));
     expect(searchParams().get("task")).toBe("task-1");
     expect(searchParams().get("priority")).toBe("high");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Within-column reorder via the card menu (non-drag fallback)
+// ---------------------------------------------------------------------------
+//
+// These tests guard the menu-driven "Move up / Move down" path, which is the
+// ONLY way to reorder a task within a column on touch devices (dnd-kit's
+// press-and-hold drag is unreliable there, and was the user-reported gap).
+// A regression here would silently strand mobile users with no way to reorder.
+async function openTaskMenu(user: ReturnType<typeof userEvent.setup>, taskIndex: number) {
+  const triggers = screen.getAllByRole("button", { name: "Task actions" });
+  await user.click(triggers[taskIndex]);
+}
+
+describe("within-column reorder menu", () => {
+  const group = makeGroup("g1", "To Do", "a");
+
+  beforeEach(() => {
+    // Resolve the move endpoint with a representative task so the optimistic
+    // handler's `res.task` apply doesn't throw and fall into the revert branch.
+    vi.mocked(api.patch).mockResolvedValue({ task: makeTask(2, "g1") });
+  });
+
+  it("renders Move up / Move down items in the card menu", async () => {
+    const user = userEvent.setup();
+    setupProjectMock([group], makeTasks(3, "g1"));
+    renderBoard();
+
+    await openTaskMenu(user, 1); // middle task
+
+    expect(screen.getByRole("menuitem", { name: "Move up" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Move down" })).toBeInTheDocument();
+  });
+
+  // Split into two single-menu tests: an open DropdownMenu traps focus and
+  // marks the rest of the page aria-hidden, so opening a second menu in the
+  // same test (even after Escape) races the exit transition and hides the
+  // other cards' triggers. One menu per render keeps the assertion robust.
+  it("disables Move up for the first task (already at the top)", async () => {
+    const user = userEvent.setup();
+    setupProjectMock([group], makeTasks(3, "g1"));
+    renderBoard();
+
+    await openTaskMenu(user, 0);
+    expect(screen.getByRole("menuitem", { name: "Move up" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByRole("menuitem", { name: "Move down" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
+  });
+
+  it("disables Move down for the last task (already at the bottom)", async () => {
+    const user = userEvent.setup();
+    setupProjectMock([group], makeTasks(3, "g1"));
+    renderBoard();
+
+    await openTaskMenu(user, 2);
+    expect(screen.getByRole("menuitem", { name: "Move down" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    expect(screen.getByRole("menuitem", { name: "Move up" })).not.toHaveAttribute(
+      "aria-disabled",
+    );
+  });
+
+  it("Move down on the middle task PATCHes the move endpoint with the same group and a new position", async () => {
+    const user = userEvent.setup();
+    const ctx = setupProjectMock([group], makeTasks(3, "g1"));
+    renderBoard();
+
+    await openTaskMenu(user, 1); // Task 2 (position "000002")
+    await user.click(screen.getByRole("menuitem", { name: "Move down" }));
+
+    await waitFor(() => {
+      expect(api.patch).toHaveBeenCalledWith(
+        "/api/tasks/task-2/move",
+        expect.objectContaining({ taskGroupId: "g1" }),
+      );
+    });
+
+    // New position sorts AFTER the previously-last task (moved past Task 3).
+    const moveCall = vi.mocked(api.patch).mock.calls[0] as [
+      string,
+      { taskGroupId: string; position: string },
+    ];
+    expect(moveCall[1].position > "000003").toBe(true);
+
+    // The optimistic context update uses the SAME position that gets persisted,
+    // so it should have fired for the moved task before the request resolved.
+    expect(ctx.updateTask).toHaveBeenCalledWith("task-2", {
+      position: moveCall[1].position,
+    });
+  });
+
+  it("Move up on the middle task computes a position between the two preceding tasks", async () => {
+    const user = userEvent.setup();
+    setupProjectMock([group], makeTasks(3, "g1"));
+    renderBoard();
+
+    await openTaskMenu(user, 1); // Task 2
+    await user.click(screen.getByRole("menuitem", { name: "Move up" }));
+
+    await waitFor(() => {
+      expect(api.patch).toHaveBeenCalledWith(
+        "/api/tasks/task-2/move",
+        expect.objectContaining({ taskGroupId: "g1" }),
+      );
+    });
+
+    // Moving up past Task 1 → new position sorts BEFORE Task 1 ("000001").
+    const moveCall = vi.mocked(api.patch).mock.calls[0] as [
+      string,
+      { taskGroupId: string; position: string },
+    ];
+    expect(moveCall[1].position < "000001").toBe(true);
   });
 });

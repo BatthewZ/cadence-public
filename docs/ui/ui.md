@@ -70,7 +70,7 @@ General-purpose interactive and display primitives.
 | ImportIcsDialog                    | Dialog to import an `.ics` calendar into a project: client-side parse, event preview (with unreadable-event warnings), target task-group picker, and bulk create (1 MB file cap, 500-task limit, UID dedupe) |
 | TaskLabelPicker                    | Popover for assigning/removing labels on a task         |
 | TaskAttachmentSection              | File attachment list with drag-and-drop upload, image lightbox, and inline delete for task detail views |
-| TaskContextMenuItems               | Shared task context menu fragment (priority, assign, move, due date, delete) using DropdownMenu sub-menus. Used by ProjectBoard and ProjectTimeline. |
+| TaskContextMenuItems               | Shared task context menu fragment (priority, assign, move-to-group, optional move up/down within-column reorder, due date, delete) using DropdownMenu sub-menus. The move up/down items render only when `onMoveUp`/`onMoveDown` are passed (board only — the non-drag reorder fallback) and disable at the column edges via `canMoveUp`/`canMoveDown`. Used by ProjectBoard and ProjectTimeline. |
 | RecurrencePicker                   | Popover for configuring a task's recurrence rule (frequency, interval, day-of-week, monthly mode, end date) with auto-apply on change |
 | RecurrencePickerReadOnly           | Static display of a recurrence rule (non-interactive variant of RecurrencePicker) |
 
@@ -187,6 +187,7 @@ Hooks shared across multiple UI components.
 | [useClickOutside](hooks.md#useclickoutside)               | Fires a callback on mouse/touch events outside an element      |
 | [useFocusTrap](hooks.md#usefocustrap)                     | Traps Tab/Shift+Tab within a container                         |
 | [useRovingFocus](hooks.md#userovingfocus)                 | Roving tabindex keyboard navigation                            |
+| [useDndSensors](hooks.md#usedndsensors)                   | Single-source dnd-kit sensor set (MouseSensor + TouchSensor + optional KeyboardSensor) shared by board, sidebar, and subtask drag surfaces; touch uses press-and-hold so a finger can both scroll and reorder |
 | [useFileUpload](hooks.md#usefileupload)                   | File upload state management with validation                   |
 | [useDocumentTitle](hooks.md#usedocumenttitle)             | Sets document title with app name suffix, restores on unmount  |
 | [useForceDefaultTheme](hooks.md#useforcedefaulttheme)     | Forces default theme on mount, restores on unmount (Landing, AuthLayout) |

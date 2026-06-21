@@ -1,9 +1,6 @@
 import {
   type DragEndEvent,
   type DragStartEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import type { UseMutationResult } from "@tanstack/react-query";
@@ -11,6 +8,7 @@ import { useCallback, useMemo, useState } from "react";
 
 import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import type { Subtask, Task } from "@/web/contexts/ProjectContext";
+import { useDndSensors } from "@/web/hooks/use-dnd-sensors";
 import { api } from "@/web/lib/api/client";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import { sortByPosition } from "@/web/lib/sort-by-position";
@@ -52,9 +50,7 @@ export function useTaskSubtasks({
   toast,
   createSubtask,
 }: UseTaskSubtasksOptions) {
-  const subtaskSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-  );
+  const subtaskSensors = useDndSensors();
 
   const subtasks = localTask?.subtasks;
   const sortedSubtasks = useMemo(

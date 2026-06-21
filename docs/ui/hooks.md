@@ -1556,6 +1556,45 @@ function TaskDetailPanel({ taskId, taskData }) {
 }
 ```
 
+## useDndSensors
+
+The single source of truth for drag-and-drop activation across every draggable surface in the app — board columns/cards, the sidebar project nav, and subtask lists. Returns a `@dnd-kit/core` sensor set so the surfaces can never drift apart (e.g. one staying touch-broken).
+
+**Source:** `src/web/hooks/use-dnd-sensors.ts`
+
+### Why MouseSensor + TouchSensor instead of PointerSensor
+
+The previous setup used a single `PointerSensor` with a 5px distance constraint. `PointerSensor` unifies mouse and touch through the Pointer Events API, which is hostile to touch: on a phone the same finger gesture that should scroll a column is also a pointer drag, and with only a 5px threshold the browser claims the gesture for native scrolling and fires `pointercancel` before dnd-kit crosses the threshold — so on touch the drag never activates and the user just scrolls. Splitting into a `MouseSensor` + `TouchSensor` gives each input the activation model that suits it:
+
+- **Mouse** — 5px distance threshold (`MOUSE_ACTIVATION_DISTANCE_PX`). A drag begins the instant the cursor moves past 5px, preserving the exact prior desktop behaviour.
+- **Touch** — press-and-hold (`delay` `TOUCH_ACTIVATION_DELAY_MS` = 220ms) with a movement `tolerance` (`TOUCH_ACTIVATION_TOLERANCE_PX` = 8px). Holding still starts a drag; moving further than the tolerance before the delay elapses is treated as a scroll and cancels the pending drag. This lets one finger BOTH scroll a column (quick swipe) and reorder (hold, then drag) without a `touch-action: none` rule that would permanently break finger-scrolling.
+
+> [!NOTE]
+> Because the sensors arm from `mousedown`/`touchstart` (not `pointerdown`), interactive controls nested inside a draggable wrapper must stop **all three** of `pointerdown`/`mousedown`/`touchstart` to keep a press from arming a card/column drag — see `stopDragActivation` in `ProjectBoard/components/TaskCard.tsx` and the `onMouseDown`/`onTouchStart` props on `LabelChip`. Guarding `pointerdown` alone is now a no-op.
+
+### Options
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `enabled` | `boolean` | `true` | When false, returns no sensors, fully disabling drag-and-drop (e.g. for users without edit permission). The `useSensor` hooks are still called unconditionally to satisfy the rules of hooks — only inclusion in the returned set is gated. |
+| `keyboard` | `boolean` | `false` | When true, includes a `KeyboardSensor` (with `sortableKeyboardCoordinates`) for accessible keyboard dragging (space/enter to grab, arrows to move). The board opts in; the sidebar and subtasks use mouse + touch only. |
+
+### Return Value
+
+`SensorDescriptor[]` — pass directly to a `<DndContext sensors={...}>`.
+
+### Usage
+
+```tsx
+import { useDndSensors } from "@/web/hooks/use-dnd-sensors";
+
+// Board: keyboard-accessible, gated on edit permission
+const sensors = useDndSensors({ keyboard: true, enabled: canEditTasks });
+
+// Sidebar / subtasks: mouse + touch only
+const sensors = useDndSensors();
+```
+
 ## useTaskSubtasks
 
 Encapsulates all subtask state and handlers for the task detail panel: DnD sensors, sorted subtask memos, active drag state, and CRUD operations (add, delete, rename, toggle, reorder) with optimistic updates and rollback.
@@ -1578,7 +1617,7 @@ Encapsulates all subtask state and handlers for the task detail panel: DnD senso
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `subtaskSensors` | `SensorDescriptor[]` | DnD kit sensor config (PointerSensor with 5px activation distance). |
+| `subtaskSensors` | `SensorDescriptor[]` | DnD kit sensor config from the shared [`useDndSensors`](#usedndsensors) hook (MouseSensor + TouchSensor — mouse 5px distance, touch press-and-hold). |
 | `sortedSubtasks` | `Subtask[]` | Subtasks sorted by fractional-index position. |
 | `subtaskIds` | `string[]` | Sorted subtask IDs (for SortableContext). |
 | `activeSubtask` | `Subtask \| null` | Currently dragged subtask (for DragOverlay). |

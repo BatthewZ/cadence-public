@@ -4,6 +4,16 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.28.0] - 2026-06-21
+
+### Added
+
+- **Reorder tasks within a column without dragging.** A task's actions menu on the Board now offers **Move up** and **Move down**, shifting the task one slot within its column and disabling at the top/bottom edges. This is the non-drag fallback for reordering — primarily for touch, where a press-and-hold drag can be fiddly — and produces exactly the same ordering a single-slot drag would, so the menu and drag stay consistent. The new position is computed against the full column order (not just the cards visible under the per-column display cap), so a card at the visible/hidden boundary still moves correctly.
+
+### Fixed
+
+- **Drag-to-reorder now works reliably on touch devices.** Board cards/columns, the sidebar project list, and subtask lists previously used a single pointer-based drag sensor with a small movement threshold, which on phones lost the gesture to native scrolling before a drag could start — so reordering by drag was effectively impossible on mobile. Drag activation now uses separate mouse and touch models: mouse drags still begin after a 5px move, while touch uses press-and-hold so a single finger can both scroll a column (quick swipe) and reorder (hold, then drag) without breaking finger-scrolling. Tapping a card's chips, checkbox, menu, or a column's colour dot still performs its own action and no longer risks starting a drag.
+
 ## [1.26.0] - 2026-06-13
 
 ### Added

@@ -2,9 +2,6 @@ import {
   closestCenter,
   DndContext,
   type DragEndEvent,
-  PointerSensor,
-  useSensor,
-  useSensors,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -29,6 +26,7 @@ import { UserMenu } from "@/web/components/layout/UserMenu";
 import { AppShell } from "@/web/components/ui/AppShell";
 import { Text } from "@/web/components/ui/Text";
 import type { WorkspaceProject } from "@/web/contexts/WorkspaceContext";
+import { useDndSensors } from "@/web/hooks/use-dnd-sensors";
 import { api } from "@/web/lib/api/client";
 import { getIconComponent } from "@/web/lib/icon-map";
 import { queryKeys } from "@/web/lib/query-keys";
@@ -64,9 +62,7 @@ export function SidebarNav({
 }: SidebarNavProps) {
   const qc = useQueryClient();
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-  );
+  const sensors = useDndSensors();
 
   const sortedVisibleProjects = useMemo(
     () =>

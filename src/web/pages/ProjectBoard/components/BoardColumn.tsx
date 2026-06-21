@@ -23,6 +23,7 @@ import {
   useState,
 } from "react";
 
+import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import { Input } from "@/web/components/form/Input";
 import { Select } from "@/web/components/form/Select";
 import { Row, Stack } from "@/web/components/layout";
@@ -196,6 +197,53 @@ export function SortableColumn({
     }
   };
 
+  /**
+   * Non-drag reorder of a card within this column — the menu-driven fallback
+   * that makes "move up / move down" reachable on touch devices (where the
+   * press-and-hold drag can be fiddly) and via keyboard.
+   *
+   * The new fractional position is computed against the FULL group order
+   * (`sortByPosition(tasks)`), not the capped `visibleTasks`, so a card sitting
+   * at the visible/hidden boundary still moves correctly into the hidden region.
+   * Moving "up" reinserts the card between its two preceding neighbours; moving
+   * "down", between its two following neighbours — mirroring exactly what a
+   * single-slot drag would produce, so drag and menu stay consistent. Optimistic
+   * update first, reverting to the captured position if the move endpoint fails.
+   */
+  const handleReorderTask = async (taskId: string, direction: "up" | "down") => {
+    if (!project) return;
+    const ordered = sortedTasks;
+    const i = ordered.findIndex((t) => t.id === taskId);
+    if (i === -1) return;
+    const target = ordered[i];
+
+    let newPosition: string;
+    if (direction === "up") {
+      if (i === 0) return;
+      const above = i - 2 >= 0 ? ordered[i - 2].position : null;
+      newPosition = generateKeyBetween(above, ordered[i - 1].position);
+    } else {
+      if (i === ordered.length - 1) return;
+      const below = i + 2 < ordered.length ? ordered[i + 2].position : null;
+      newPosition = generateKeyBetween(ordered[i + 1].position, below);
+    }
+
+    const oldPosition = target.position;
+    updateTaskInCtx(taskId, { position: newPosition });
+    try {
+      const res = await api.patch<{ task: Task }>(`/api/tasks/${taskId}/move`, {
+        taskGroupId: group.id,
+        position: newPosition,
+      });
+      updateTaskInCtx(taskId, res.task);
+      void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
+      void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
+    } catch {
+      updateTaskInCtx(taskId, { position: oldPosition });
+      toast("Failed to move task", { variant: "error" });
+    }
+  };
+
   return (
     <>
       <div
@@ -232,7 +280,12 @@ export function SortableColumn({
                       ? { backgroundColor: group.color }
                       : undefined
                   }
+                  // Stop all three drag-arming events: the column header is the
+                  // group's drag handle, and the sensors arm from mousedown/
+                  // touchstart (MouseSensor/TouchSensor), not just pointerdown.
                   onPointerDown={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
                   aria-label="Change column color"
                 >
                   {group.isCompletionGroup && <Check size={8} className="text-fg-inverse" />}
@@ -352,12 +405,21 @@ export function SortableColumn({
                 )}
               </div>
             ) : (
-              visibleTasks.map((task) => (
+              visibleTasks.map((task, i) => (
                 <SortableTaskCard
                   key={task.id}
                   task={task}
                   selected={selectedIds?.has(task.id)}
                   onToggleSelect={onToggleSelect}
+                  // visibleTasks is a prefix of sortedTasks, so the map index is
+                  // the card's index in the full column order. Reorder is gated
+                  // on edit permission; passing undefined hides the menu items.
+                  onMoveUp={canEditTasks ? () => void handleReorderTask(task.id, "up") : undefined}
+                  onMoveDown={
+                    canEditTasks ? () => void handleReorderTask(task.id, "down") : undefined
+                  }
+                  canMoveUp={i > 0}
+                  canMoveDown={i < sortedTasks.length - 1}
                 />
               ))
             )}

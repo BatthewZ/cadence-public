@@ -172,6 +172,7 @@ src/
     │   ├── use-api.ts
     │   ├── use-click-outside.ts
     │   ├── use-debounce.ts
+    │   ├── use-dnd-sensors.ts    # Shared dnd-kit sensor set (MouseSensor + TouchSensor + optional KeyboardSensor) for every drag surface
     │   ├── use-document-title.ts
     │   ├── use-file-upload.ts
     │   ├── use-floating.ts

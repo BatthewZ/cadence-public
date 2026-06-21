@@ -1,4 +1,13 @@
-import { ArrowRightLeft, Calendar, Flag, Trash2, Users, UserX } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowRightLeft,
+  ArrowUp,
+  Calendar,
+  Flag,
+  Trash2,
+  Users,
+  UserX,
+} from "lucide-react";
 
 import type { TaskPriority } from "@/shared/types/roles";
 import { Input } from "@/web/components/form/Input";
@@ -29,7 +38,22 @@ interface TaskContextMenuItemsProps {
   onMoveToGroup: (groupId: string) => void;
   onDueDateChange: (date: string | null) => void;
   onDeleteRequest: () => void;
-  /** Running index counter for flat DropdownMenu.Items (due-date clear & delete).
+  /**
+   * Reorder the task one position earlier within its current column. When
+   * omitted (e.g. the timeline view, where order is date-driven), the "Move
+   * up"/"Move down" items are not rendered at all — they only make sense on the
+   * board, which owns explicit per-column ordering. This is the non-drag
+   * fallback that makes within-column reordering reachable on touch devices,
+   * where dnd-kit's press-and-hold drag can still be awkward.
+   */
+  onMoveUp?: () => void;
+  /** Reorder the task one position later within its current column. See {@link onMoveUp}. */
+  onMoveDown?: () => void;
+  /** False when the task is already first in its column (disables "Move up"). */
+  canMoveUp?: boolean;
+  /** False when the task is already last in its column (disables "Move down"). */
+  canMoveDown?: boolean;
+  /** Running index counter for flat DropdownMenu.Items (move up/down, due-date clear & delete).
    *  Returns the next available index. Defaults to 0. */
   menuItemIndexStart?: number;
 }
@@ -53,10 +77,15 @@ export function TaskContextMenuItems({
   onMoveToGroup,
   onDueDateChange,
   onDeleteRequest,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp = true,
+  canMoveDown = true,
   menuItemIndexStart = 0,
 }: TaskContextMenuItemsProps) {
   const dot = dotSize === "sm" ? "size-2" : "size-2.5";
   let menuItemIndex = menuItemIndexStart;
+  const showReorder = Boolean(onMoveUp || onMoveDown);
 
   return (
     <>
@@ -144,6 +173,36 @@ export function TaskContextMenuItems({
           ))}
         </DropdownMenu.SubContent>
       </DropdownMenu.Sub>
+
+      {/* Reorder within the current column (board only). Rendered as flat items
+          rather than a sub-menu so they're a single tap on touch — the whole
+          point is to make reordering reachable without a drag gesture. Each is
+          disabled at the respective edge of the column. */}
+      {showReorder &&
+        (() => {
+          const moveUpIdx = menuItemIndex++;
+          const moveDownIdx = menuItemIndex++;
+          return (
+            <>
+              <DropdownMenu.Item
+                index={moveUpIdx}
+                icon={<ArrowUp size={14} />}
+                disabled={!canMoveUp}
+                onSelect={() => onMoveUp?.()}
+              >
+                Move up
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                index={moveDownIdx}
+                icon={<ArrowDown size={14} />}
+                disabled={!canMoveDown}
+                onSelect={() => onMoveDown?.()}
+              >
+                Move down
+              </DropdownMenu.Item>
+            </>
+          );
+        })()}
 
       <DropdownMenu.Divider />
 

@@ -46,7 +46,7 @@ Click **New Project** from the projects page or command palette. Set the name, d
 
 Each project has five views, accessible from the tab bar:
 
-**Board** — Kanban columns representing task groups (statuses). Drag tasks between columns to change status. Drag columns to reorder them.
+**Board** — Kanban columns representing task groups (statuses). Drag tasks between columns to change status. Drag columns to reorder them. To reorder a task *within* a column without dragging — handy on touch devices, where you press-and-hold to start a drag — open the task's actions menu (the three-dot icon) and choose **Move up** or **Move down**; these are disabled when the task is already at the top or bottom of its column.
 
 **List** — Sortable table with columns for title, status, assignee, due date, and priority. Includes search by task title.
 

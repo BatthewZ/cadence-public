@@ -5,16 +5,11 @@ import {
   type DragOverEvent,
   DragOverlay,
   type DragStartEvent,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
 } from "@dnd-kit/core";
 import {
   arrayMove,
   horizontalListSortingStrategy,
   SortableContext,
-  sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -29,6 +24,7 @@ import { BulkActionBar } from "@/web/components/ui/BulkActionBar";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { type Task, useProject } from "@/web/contexts/ProjectContext";
+import { useDndSensors } from "@/web/hooks/use-dnd-sensors";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useMultiSelect } from "@/web/hooks/use-multi-select";
 import { useProjectPermissions } from "@/web/hooks/use-permissions";
@@ -96,16 +92,9 @@ export default function ProjectBoard() {
     return map;
   }, [filteredTasks, sortedGroups]);
 
-  const pointerSensor = useSensor(PointerSensor, {
-    activationConstraint: { distance: 5 },
-  });
-  const keyboardSensor = useSensor(KeyboardSensor, {
-    coordinateGetter: sortableKeyboardCoordinates,
-  });
-  const sensors = useSensors(
-    canEditTasks ? pointerSensor : undefined,
-    canEditTasks ? keyboardSensor : undefined
-  );
+  // Mouse + touch (+ keyboard) sensors. Touch uses press-and-hold activation so
+  // a finger can BOTH scroll the column and reorder cards — see useDndSensors.
+  const sensors = useDndSensors({ keyboard: true, enabled: canEditTasks });
 
   // Find which group container a sortable id belongs to
   const findGroupForTask = useCallback(

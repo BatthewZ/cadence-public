@@ -1,4 +1,4 @@
-import type { MouseEventHandler, PointerEventHandler } from "react";
+import type { MouseEventHandler, PointerEventHandler, TouchEventHandler } from "react";
 
 import type { TaskLabelInfo } from "@/shared/schemas/label";
 
@@ -16,11 +16,18 @@ interface LabelChipProps {
   onClick?: MouseEventHandler<HTMLButtonElement>;
   /**
    * Forwarded alongside `onClick` so callers inside dnd-kit draggables can
-   * `stopPropagation` on pointerdown — dnd-kit's PointerSensor activates from
-   * the pointerdown that bubbles to the card wrapper, so without stopping it
-   * a click on the chip could start a card drag instead of toggling a filter.
+   * `stopPropagation` and keep a press on the chip from arming a card drag.
+   * All three of `pointerdown`/`mousedown`/`touchstart` are exposed because the
+   * board's drag sensors changed from a single PointerSensor (armed by
+   * `pointerdown`) to a MouseSensor + TouchSensor pair (armed by `mousedown` and
+   * `touchstart` respectively) — guarding `pointerdown` alone would no longer
+   * stop the drag.
    */
   onPointerDown?: PointerEventHandler<HTMLButtonElement>;
+  /** See {@link LabelChipProps.onPointerDown} — covers the MouseSensor activator. */
+  onMouseDown?: MouseEventHandler<HTMLButtonElement>;
+  /** See {@link LabelChipProps.onPointerDown} — covers the TouchSensor activator. */
+  onTouchStart?: TouchEventHandler<HTMLButtonElement>;
 }
 
 /**
@@ -34,6 +41,8 @@ export function LabelChip({
   className,
   onClick,
   onPointerDown,
+  onMouseDown,
+  onTouchStart,
 }: LabelChipProps) {
   const sizeClass =
     size === "sm"
@@ -53,6 +62,8 @@ export function LabelChip({
         style={style}
         onClick={onClick}
         onPointerDown={onPointerDown}
+        onMouseDown={onMouseDown}
+        onTouchStart={onTouchStart}
       >
         {lbl.name}
       </button>

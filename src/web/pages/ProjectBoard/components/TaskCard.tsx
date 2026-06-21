@@ -45,18 +45,34 @@ import {
 import { taskIdStr } from "./dnd-helpers";
 
 /**
- * Stops an event from bubbling to the card wrapper. Used on BOTH `click` and
- * `pointerdown` of every interactive chip inside the draggable card:
- * - `click` must not bubble or the card's open-detail handler fires.
- * - `pointerdown` must not bubble because dnd-kit's PointerSensor (attached
- *   to the wrapper via `listeners`) arms a drag from that event; stopping it
- *   keeps a chip click from starting a card drag. Accepted tradeoff: a drag
- *   *started* on a chip won't drag the card — same as the existing checkbox
- *   and quick-actions menu behavior.
+ * Stops an event from bubbling to the card wrapper. The card's drag listeners
+ * live on the wrapper, so an interactive chip inside it must stop the events
+ * dnd-kit's sensors arm from, or pressing the chip would start a card drag.
  */
 function stopPropagation(e: SyntheticEvent) {
   e.stopPropagation();
 }
+
+/**
+ * Spread onto every interactive control nested inside the draggable card so a
+ * press started on the control never arms a card drag — alongside a separate
+ * `onClick` guard that keeps a chip click from opening the card detail.
+ *
+ * Why all three of pointerdown/mousedown/touchstart: the board's sensors moved
+ * from a single PointerSensor (armed by `pointerdown`) to a MouseSensor +
+ * TouchSensor pair (armed by `mousedown` and `touchstart` respectively — see
+ * `useDndSensors`). After that swap, guarding `pointerdown` alone is a no-op
+ * because the sensors never listen for it. Stopping all three is the single
+ * source of truth that keeps the guards from drifting out of sync with the
+ * sensor set again. `stopPropagation` (never `preventDefault`) leaves the
+ * control's own click/tap/focus and native scrolling intact; it only keeps the
+ * event from reaching the wrapper's drag listeners.
+ */
+const stopDragActivation = {
+  onPointerDown: stopPropagation,
+  onMouseDown: stopPropagation,
+  onTouchStart: stopPropagation,
+};
 
 // ---------------------------------------------------------------------------
 // SortableTaskCard
@@ -67,11 +83,23 @@ export function SortableTaskCard({
   overlay,
   selected,
   onToggleSelect,
+  onMoveUp,
+  onMoveDown,
+  canMoveUp,
+  canMoveDown,
 }: {
   task: Task;
   overlay?: boolean;
   selected?: boolean;
   onToggleSelect?: (taskId: string, e: MouseEvent) => void;
+  /** Reorder this card one slot earlier in its column (board menu fallback). */
+  onMoveUp?: () => void;
+  /** Reorder this card one slot later in its column (board menu fallback). */
+  onMoveDown?: () => void;
+  /** False when the card is already first in its column. */
+  canMoveUp?: boolean;
+  /** False when the card is already last in its column. */
+  canMoveDown?: boolean;
 }) {
   const [, setSearchParams] = useSearchParams();
   const {
@@ -227,7 +255,7 @@ export function SortableTaskCard({
             <div
               className="absolute top-1 right-1 hover-reveal z-10"
               onClick={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
+              {...stopDragActivation}
             >
               <DropdownMenu placement="bottom-end">
                 <DropdownMenu.Trigger asChild>
@@ -249,6 +277,10 @@ export function SortableTaskCard({
                     onMoveToGroup={(id) => void handleMoveToGroup(id)}
                     onDueDateChange={(d) => void handleDueDateChange(d)}
                     onDeleteRequest={() => setShowDeleteDialog(true)}
+                    onMoveUp={onMoveUp}
+                    onMoveDown={onMoveDown}
+                    canMoveUp={canMoveUp}
+                    canMoveDown={canMoveDown}
                   />
                 </DropdownMenu.Content>
               </DropdownMenu>
@@ -260,7 +292,7 @@ export function SortableTaskCard({
               <div
                 className="shrink-0 h-[1lh] flex items-center"
                 onClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
+                {...stopDragActivation}
               >
                 <TaskCheckbox
                   size="sm"
@@ -306,7 +338,7 @@ export function SortableTaskCard({
                       aria-label={`Filter by priority: ${task.priority.charAt(0).toUpperCase()}${task.priority.slice(1)}`}
                       className={`inline-flex items-center gap-1 cursor-pointer rounded transition-shadow hover:ring-1 hover:ring-accent/50 ${PRIORITY_TEXT_CLASS[task.priority] ?? ""}`}
                       onClick={handlePriorityFilterClick}
-                      onPointerDown={stopPropagation}
+                      {...stopDragActivation}
                     >
                       <span
                         className={`size-1.5 rounded-full ${PRIORITY_DOT_CLASS[task.priority] ?? ""}`}
@@ -356,7 +388,7 @@ export function SortableTaskCard({
                         size="sm"
                         // Drag-overlay clone stays inert: no handlers.
                         onClick={overlay ? undefined : (e) => handleLabelFilterClick(e, lbl.id)}
-                        onPointerDown={overlay ? undefined : stopPropagation}
+                        {...(overlay ? {} : stopDragActivation)}
                       />
                     ))}
                   </div>
@@ -377,7 +409,7 @@ export function SortableTaskCard({
                       aria-label={`Filter by assignee: ${task.assigneeName}`}
                       className="ml-auto inline-flex rounded-full cursor-pointer transition-shadow hover:ring-2 hover:ring-accent/50"
                       onClick={handleAssigneeFilterClick}
-                      onPointerDown={stopPropagation}
+                      {...stopDragActivation}
                     >
                       <Avatar size="xs" name={task.assigneeName} src={task.assigneeAvatarUrl} />
                     </button>
