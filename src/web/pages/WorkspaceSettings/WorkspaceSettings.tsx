@@ -260,7 +260,7 @@ export default function WorkspaceSettings() {
 
       {canDeleteWorkspace && (
         <Dialog open={deleteDialogOpen} onClose={handleDeleteDialogClose}>
-          <Stack gap="r4" className="p-r2">
+          <Stack gap="r4">
             <Text variant="h5" weight="semibold">Delete Workspace</Text>
             <Text variant="body-2" color="secondary">
               This will permanently delete the workspace and all associated projects, tasks, and

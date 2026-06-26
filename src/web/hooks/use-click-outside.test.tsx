@@ -23,6 +23,23 @@ function TestComponent({
   );
 }
 
+// Models a floating element (e.g. a dropdown) that lives *inside* a modal
+// dialog. Clicks elsewhere in the dialog are genuinely outside the dropdown and
+// must still close it — the dialog wraps the ref, so it must NOT be treated as
+// an overlay that protects the ref from outside clicks.
+function DialogWrappedComponent({ handler }: { handler: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useClickOutside(ref, handler, true);
+  return (
+    <dialog open>
+      <div ref={ref} data-testid="dropdown">
+        Dropdown
+      </div>
+      <div data-testid="dialog-elsewhere">Elsewhere in dialog</div>
+    </dialog>
+  );
+}
+
 describe("useClickOutside", () => {
   // The hook defers listener registration via requestAnimationFrame to avoid
   // the toggle-click that opens a panel from immediately closing it again.
@@ -137,5 +154,42 @@ describe("useClickOutside", () => {
     expect(handler).not.toHaveBeenCalled();
 
     document.body.removeChild(portal);
+  });
+
+  it("does not call handler when clicking inside an open dialog mounted outside the ref", () => {
+    // Reproduces the bug where a delete-confirmation <dialog> (showModal paints
+    // it in the top layer, so it is mounted as a sibling of the panel it
+    // overlays) closed the panel out from under itself: a click on the dialog's
+    // own text resolves to a target outside the panel ref, which a naive
+    // contains() check reads as an outside click. The dialog floats *over* the
+    // panel and does not contain it, so its clicks must be ignored.
+    const handler = vi.fn();
+    render(<TestComponent handler={handler} />);
+
+    const dialog = document.createElement("dialog");
+    dialog.setAttribute("open", "");
+    const dialogText = document.createElement("p");
+    dialogText.textContent = "Are you sure? This cannot be undone.";
+    dialog.appendChild(dialogText);
+    document.body.appendChild(dialog);
+
+    fireEvent.click(dialogText);
+
+    expect(handler).not.toHaveBeenCalled();
+
+    document.body.removeChild(dialog);
+  });
+
+  it("still calls handler when clicking elsewhere in a dialog that wraps the ref", () => {
+    // Guards the inverse: when the ref (e.g. a dropdown) lives *inside* a modal
+    // dialog, a click on other dialog content is a real outside click for the
+    // dropdown and must still close it. The dialog contains the ref, so the
+    // overlay exception must not apply.
+    const handler = vi.fn();
+    render(<DialogWrappedComponent handler={handler} />);
+
+    fireEvent.click(screen.getByTestId("dialog-elsewhere"));
+
+    expect(handler).toHaveBeenCalledTimes(1);
   });
 });

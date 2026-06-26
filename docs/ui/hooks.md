@@ -89,9 +89,20 @@ Detects mouse and touch events outside a referenced element and calls a handler.
 
 ### Behavior
 
-- Listens on `mousedown` and `touchstart` (captures the interaction before it propagates).
+- Fires the `handler` on `click` / `touchend`, and tracks where each press **began** via `mousedown` / `touchstart`. A browser `click` targets the common ancestor of the press-down and press-up nodes, so a press that starts inside the ref but releases outside (e.g. drag-selecting text past the panel edge) would otherwise read as an outside click and discard an in-progress edit — tracking the press origin lets the hook recognise it as inside.
 - The `handler` is stored in a ref so the effect does not re-attach when the callback identity changes.
+- Registration is deferred one `requestAnimationFrame` so the very click that flipped `enabled` to `true` (e.g. the toggle that opened the overlay) finishes propagating before the listener attaches, preventing an immediate self-close.
 - Listeners are cleaned up on unmount or when `enabled` becomes `false`.
+
+#### Clicks that do _not_ count as "outside"
+
+A click outside the ref is still ignored — the `handler` does not fire — in these cases. The portal, dialog, and toggle checks each resolve via a single self-inclusive walk up the click target's ancestor chain (`findAncestorOrSelf`):
+
+- **Press began inside the ref** — the interaction started in the panel (drag-select past the edge); closing would lose the edit.
+- **Target detached from the DOM** — the node was removed during event handling (e.g. an optimistic delete), so it was originally inside.
+- **Inside a floating-ui portal** (`data-floating-ui-portal`) — portaled popovers/tooltips/dropdowns are logically part of the component that opened them.
+- **Inside an enclosing open native `<dialog>`** that does _not_ contain the ref. A modal opened with `showModal()` paints in the browser **top layer** and is commonly mounted as a _sibling_ or portal of the element it overlays (e.g. a task panel's delete-confirmation `ConfirmDialog`), so a plain containment check would read a click inside the dialog as "outside" the panel and dismiss the panel out from under its own dialog. The exception is skipped when the dialog _wraps_ the ref (e.g. a dropdown inside a form dialog), so clicks elsewhere in that dialog still close the ref.
+- **Inside the controlling toggle** (`aria-controls` matching the ref's `id`) — the toggle runs its own open/close logic; firing both causes a close-then-reopen race.
 
 ### Usage
 

@@ -438,7 +438,7 @@ export function SortableColumn({
 
       {/* Delete confirmation dialog */}
       <Dialog open={showDeleteDialog} onClose={() => setShowDeleteDialog(false)}>
-        <Stack gap="r4" className="p-r2">
+        <Stack gap="r4">
           <Text variant="h5" weight="semibold">
             Delete &ldquo;{group.name}&rdquo;
           </Text>

@@ -4,6 +4,13 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.28.1] - 2026-06-26
+
+### Fixed
+
+- **A confirmation dialog opened over a click-to-dismiss panel no longer closes the panel beneath it.** Modal dialogs (e.g. a task's delete-confirmation) open in the browser's top layer and are mounted outside the panel they overlay, so clicking inside the dialog was read as a click "outside" the panel and dismissed the panel out from under its own dialog. Clicks inside an enclosing open dialog are now ignored by the panel's outside-click handler — unless the dialog itself wraps the panel (e.g. a dropdown inside a form dialog), where clicking elsewhere in the dialog still closes the dropdown as before.
+- **Removed doubled inner padding from confirmation and settings dialogs.** Several dialogs nested their content in an extra padded container on top of the padding the base dialog already applies, leaving the content inset further than intended; the redundant inner padding has been removed so spacing is consistent across dialogs.
+
 ## [1.28.0] - 2026-06-21
 
 ### Added

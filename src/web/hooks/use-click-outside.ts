@@ -1,23 +1,61 @@
 import { useEffect, useRef } from "react";
 
 /**
+ * Walks up the DOM from `node` (inclusive of `node` itself) and returns the
+ * first ancestor satisfying `predicate`, or null if none do.
+ *
+ * Every click-outside exception below — a floating-ui portal, an enclosing open
+ * dialog, the controlling toggle — is the same self-inclusive parent-chain walk
+ * with a different match test. Centralising the walk here keeps each exception a
+ * single declarative predicate and removes three near-identical loops. The
+ * type-guard predicate also flows the matched node's type through, so callers
+ * that need the element itself (e.g. the dialog) get it back without a cast.
+ */
+function findAncestorOrSelf<T extends Node>(
+  node: Node,
+  predicate: (n: Node) => n is T
+): T | null {
+  let current: Node | null = node;
+  while (current) {
+    if (predicate(current)) return current;
+    current = current.parentNode;
+  }
+  return null;
+}
+
+/**
  * Checks whether a DOM node lives inside a floating-ui portal container.
  * Clicks on portaled content (popovers, tooltips, dropdowns) are logically
  * "inside" the component that triggered them, so they should not count as
  * outside clicks.
  */
 function isInsideFloatingPortal(node: Node): boolean {
-  let current: Node | null = node;
-  while (current) {
-    if (
-      current instanceof HTMLElement &&
-      current.hasAttribute("data-floating-ui-portal")
-    ) {
-      return true;
-    }
-    current = current.parentNode;
-  }
-  return false;
+  return (
+    findAncestorOrSelf(
+      node,
+      (n): n is HTMLElement =>
+        n instanceof HTMLElement &&
+        n.hasAttribute("data-floating-ui-portal")
+    ) !== null
+  );
+}
+
+/**
+ * Walks up from `node` to find the nearest open native `<dialog>` ancestor.
+ *
+ * A modal dialog opened with `showModal()` paints in the browser's *top layer*,
+ * escaping its DOM position. A confirmation/modal dialog that logically belongs
+ * to a panel is therefore commonly mounted as a *sibling* (or portal) of that
+ * panel rather than a descendant — so a plain `ref.contains(target)` check reads
+ * a click inside the dialog as "outside" the panel and dismisses the panel out
+ * from under the dialog. Surfacing the enclosing open dialog lets the listener
+ * decide whether the click should count as outside (see its usage below).
+ */
+function getEnclosingOpenDialog(node: Node): HTMLDialogElement | null {
+  return findAncestorOrSelf(
+    node,
+    (n): n is HTMLDialogElement => n instanceof HTMLDialogElement && n.open
+  );
 }
 
 /**
@@ -26,17 +64,14 @@ function isInsideFloatingPortal(node: Node): boolean {
  * not "outside" clicks — the toggle already manages open/close itself.
  */
 function isInsideAriaController(node: Node, controlledId: string): boolean {
-  let current: Node | null = node;
-  while (current) {
-    if (
-      current instanceof HTMLElement &&
-      current.getAttribute("aria-controls") === controlledId
-    ) {
-      return true;
-    }
-    current = current.parentNode;
-  }
-  return false;
+  return (
+    findAncestorOrSelf(
+      node,
+      (n): n is HTMLElement =>
+        n instanceof HTMLElement &&
+        n.getAttribute("aria-controls") === controlledId
+    ) !== null
+  );
 }
 
 export function useClickOutside(
@@ -81,6 +116,15 @@ export function useClickOutside(
       // don't treat it as an outside click.
       if (!target.isConnected) return;
       if (isInsideFloatingPortal(target)) return;
+      // A modal <dialog> (showModal) paints in the top layer and is commonly
+      // mounted as a sibling/portal of the element it overlays — e.g. a task
+      // panel's delete-confirmation dialog. A click inside such a dialog must
+      // not dismiss the element beneath it. We only skip when the dialog does
+      // NOT contain `ref.current`: if the dialog *wraps* the ref (e.g. a
+      // dropdown inside a form dialog), clicks elsewhere in the dialog are
+      // genuinely outside the ref and should still close it.
+      const enclosingDialog = getEnclosingOpenDialog(target);
+      if (enclosingDialog && !enclosingDialog.contains(ref.current)) return;
       // Ignore clicks on the toggle that controls this element — it has its
       // own open/close logic and firing both causes a close-then-reopen race.
       const panelId = ref.current.id;

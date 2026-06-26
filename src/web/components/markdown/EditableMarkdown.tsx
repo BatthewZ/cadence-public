@@ -148,12 +148,14 @@ export function EditableMarkdown(
           // The horizontal padding gives the hover/focus affordance box room to
           // breathe around the text, but on its own it indents the rendered
           // prose past the section's "Description" label, leaving it visibly
-          // misaligned with every other sidebar row. `-mx-r4` cancels the
+          // misaligned with every other sidebar row. `-mx-r5` cancels the
           // inline padding so the *text* lines up flush with the label while the
-          // affordance box still bleeds outward into the section's `px-r3`
-          // gutter (r3 > r4, so the box stays within the section padding in both
-          // the sidebar panel and the dialog). Edit mode keeps the full padding.
-          "cursor-text rounded-md border border-transparent -mx-r4 px-r4 py-r5 text-fg-primary",
+          // affordance box bleeds outward into the section's `px-r3` gutter.
+          // The negative margin and padding MUST stay equal so the text stays
+          // flush — the bleed is intentionally a notch smaller than the gutter
+          // (r5 < r3) so the box keeps a visible breathing gap from the panel
+          // edge instead of crowding it. Edit mode keeps the full editor width.
+          "cursor-text rounded-md border border-transparent -mx-r5 px-r5 py-r5 text-fg-primary",
           "duration-fast hover:border-border-default hover:bg-surface-1",
           "focus:outline-none focus-visible:border-border-focus focus-visible:bg-surface-1",
         )}

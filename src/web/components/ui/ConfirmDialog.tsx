@@ -29,7 +29,7 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   return (
     <Dialog open={open} onClose={onClose}>
-      <Stack gap="r4" className="p-r2">
+      <Stack gap="r4">
         <Text variant="h5" weight="semibold">
           {title}
         </Text>
