@@ -28,7 +28,8 @@
     "test:api": "vitest run --project api",
     "test:unit": "vitest run --project unit",
     "test:web": "vitest run --project web",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:security": "./not_public/verify-security-fixes.sh"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
