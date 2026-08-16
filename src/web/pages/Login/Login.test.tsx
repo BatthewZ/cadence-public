@@ -41,21 +41,21 @@ vi.mock("@/web/hooks/use-document-title", () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-function createWrapper() {
+function createWrapper(route = "/login") {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[route]}>
         <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
       </MemoryRouter>
     );
   };
 }
 
-function renderLogin() {
-  const Wrapper = createWrapper();
+function renderLogin(route = "/login") {
+  const Wrapper = createWrapper(route);
   const user = userEvent.setup();
   render(
     <Wrapper>
@@ -350,6 +350,92 @@ describe("Login", () => {
 
     await waitFor(() => {
       expect(screen.queryByText("Invalid credentials")).not.toBeInTheDocument();
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Email verification + post-login destination
+// ---------------------------------------------------------------------------
+//
+// `requireEmailVerification` is enabled server-side (it is what stops a
+// stranger claiming a colleague's workspace invitation by registering their
+// address), so sign-in now has a refusal mode that is not a wrong password.
+// And the emailed `/invite/:token` link routes signed-out visitors through
+// this page with `?redirect=`, so where the user lands afterwards is part of
+// whether invitations work at all.
+
+describe("Login — verification and redirect", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSignInEmail.mockResolvedValue({ error: null });
+  });
+
+  async function submitValidCredentials(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText("Email"), "test@example.com");
+    await user.type(screen.getByLabelText("Password"), "Password1");
+    await user.click(screen.getByRole("button", { name: "Sign In" }));
+  }
+
+  it("tells an unverified user to check their inbox rather than repeating the raw code", async () => {
+    mockSignInEmail.mockResolvedValue({
+      error: { code: "EMAIL_NOT_VERIFIED", message: "Email not verified" },
+    });
+
+    const { user } = renderLogin();
+    await submitValidCredentials(user);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(/verify your email address/i);
+    });
+    // Better Auth re-sends the link on every refused sign-in, so the copy must
+    // say so — otherwise a user whose original link expired has no reason to
+    // look in their inbox again.
+    expect(screen.getByRole("alert")).toHaveTextContent(/new verification link/i);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it("still shows the server's message for other sign-in failures", async () => {
+    mockSignInEmail.mockResolvedValue({
+      error: { code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password" },
+    });
+
+    const { user } = renderLogin();
+    await submitValidCredentials(user);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("Invalid email or password");
+    });
+  });
+
+  it("returns the user to a ?redirect= path after signing in", async () => {
+    const { user } = renderLogin("/login?redirect=%2Finvite%2Fabc123");
+    await submitValidCredentials(user);
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/invite/abc123");
+    });
+  });
+
+  it("ignores an off-site ?redirect= destination", async () => {
+    // Hostile input: without the same-origin check, `?redirect=` turns this
+    // page into an open redirector — a convincing phishing hop taken straight
+    // after a genuine sign-in.
+    const { user } = renderLogin("/login?redirect=https%3A%2F%2Fevil.example%2Fphish");
+    await submitValidCredentials(user);
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/");
+    });
+  });
+
+  it("ignores a scheme-relative ?redirect= destination", async () => {
+    // `//evil.example` has no scheme but browsers resolve it as absolute.
+    const { user } = renderLogin("/login?redirect=%2F%2Fevil.example");
+    await submitValidCredentials(user);
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/");
     });
   });
 });

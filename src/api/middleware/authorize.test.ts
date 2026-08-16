@@ -28,10 +28,17 @@
  * the gate logic the middleware actually owns.
  */
 
+import type { SQL } from "drizzle-orm";
+import { SQLiteAsyncDialect } from "drizzle-orm/sqlite-core";
+import type { Context } from "hono";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ApiToken } from "../../db/schema";
+import { notification } from "../../db/schema/notification";
+import { project } from "../../db/schema/project";
+import { task } from "../../db/schema/task";
+import { webhook } from "../../db/schema/webhook";
 import type { AppEnv } from "../env";
 
 vi.mock("../lib/access", () => ({
@@ -41,6 +48,7 @@ vi.mock("../lib/access", () => ({
 
 import { resolveProjectAccess, resolveTaskAccess } from "../lib/access";
 import {
+  enforceTokenWorkspaceWideAccess,
   requireProjectAccess,
   requireProjectRole,
   requireReadScopeForResource,
@@ -49,6 +57,10 @@ import {
   requireWorkspaceMember,
   requireWorkspaceRole,
   requireWriteScopeForResource,
+  tokenAllowsProject,
+  tokenProjectAllowList,
+  tokenProjectScopeFilter,
+  tokenWorkspaceScopeFilter,
 } from "./authorize";
 
 const mockResolveProjectAccess = vi.mocked(resolveProjectAccess);
@@ -105,7 +117,37 @@ type Fixture = {
   user?: NonNullable<AppEnv["Variables"]["user"]> | null;
   token?: ApiToken | null;
   membership?: AppEnv["Variables"]["workspaceMembership"];
+  /**
+   * Optional stand-in for the `db` handle. Only the "does this project row
+   * exist at all?" fallback inside `getOrResolveProjectAccess` ever touches
+   * it, so a test that needs to distinguish the middleware's 404 from its 403
+   * supplies {@link projectLookupStub}; everything else leaves it unset and
+   * gets the inert `{}`.
+   */
+  db?: AppEnv["Variables"]["db"];
 };
+
+/**
+ * Minimal `db` double for the single query `getOrResolveProjectAccess` runs
+ * when `resolveProjectAccess` came back null: `select(...).from(...)
+ * .where(...).limit(1)`. Returning `rows` decides which branch the middleware
+ * takes — `[]` means "no such project" (404) and a row means "project exists,
+ * you just cannot see it" (403). That distinction is a real part of the
+ * contract (a 404 tells a caller the id is wrong; a 403 tells them it is not
+ * theirs), so it deserves a test that can actually fail rather than an
+ * assertion that accepts either.
+ */
+function projectLookupStub(rows: { id: string }[]): AppEnv["Variables"]["db"] {
+  return {
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: () => Promise.resolve(rows),
+        }),
+      }),
+    }),
+  } as unknown as AppEnv["Variables"]["db"];
+}
 
 function createApp(
   middleware: ReturnType<
@@ -124,10 +166,13 @@ function createApp(
   const app = new Hono<AppEnv>();
   app.use("*", async (c, next) => {
     c.set("requestId", "test-req");
-    // The db is never touched in these tests because we seed
-    // workspaceMembership and mock the access resolvers. A bare object is
-    // safe and makes the cast explicit.
-    c.set("db", {} as never);
+    // Most cases seed `workspaceMembership` and mock the access resolvers, so
+    // no query runs and a bare object is enough. The exception is the
+    // project-not-found branch: `getOrResolveProjectAccess` falls through to a
+    // real `select().from().where().limit()` to tell 404 from 403, and
+    // `projectLookupStub` is what answers it. Hence `fixture.db`, and hence
+    // the fallback rather than an unconditional stub.
+    c.set("db", fixture.db ?? ({} as never));
     if (fixture.user !== undefined) c.set("user", fixture.user);
     if (fixture.token !== undefined) c.set("apiToken", fixture.token);
     if (fixture.membership !== undefined)
@@ -239,7 +284,10 @@ describe("requireProjectAccess (PAT project-scope guard)", () => {
       requireProjectAccess(),
       {
         user: fakeUser(),
-        token: fakeToken({ projectScope: "all", projectIds: null }),
+        // Workspace id matches the project's owning workspace — the two
+        // halves of the binding policy are independent, and this case pins
+        // the project-selection half in isolation.
+        token: fakeToken({ workspaceId: "ws_alpha", projectScope: "all", projectIds: null }),
       },
       "/projects/:projectId",
     );
@@ -260,6 +308,7 @@ describe("requireProjectAccess (PAT project-scope guard)", () => {
       {
         user: fakeUser(),
         token: fakeToken({
+          workspaceId: "ws_alpha",
           projectScope: "selected",
           projectIds: JSON.stringify(["proj_42", "proj_99"]),
         }),
@@ -284,7 +333,10 @@ describe("requireProjectAccess (PAT project-scope guard)", () => {
       requireProjectAccess(),
       {
         user: fakeUser(),
+        // Same workspace as the project, so ONLY the selected-project list
+        // can be responsible for the denial.
         token: fakeToken({
+          workspaceId: "ws_alpha",
           projectScope: "selected",
           projectIds: JSON.stringify(["proj_42"]),
         }),
@@ -299,22 +351,21 @@ describe("requireProjectAccess (PAT project-scope guard)", () => {
   });
 
   it("returns 404 when the project does not exist (preserves cookie behavior)", async () => {
+    // `resolveProjectAccess` returns null for BOTH "no such project" and "no
+    // access", so the middleware disambiguates with a second lookup. Feeding
+    // that lookup an empty result is the only way to pin the 404 branch — the
+    // assertion used to accept 403/404/500 alike, which meant it could not
+    // fail and told us nothing about which branch ran.
     mockResolveProjectAccess.mockResolvedValue(null);
 
     const app = createApp(
       requireProjectAccess(),
-      { user: fakeUser(), token: null },
+      { user: fakeUser(), token: null, db: projectLookupStub([]) },
       "/projects/:projectId",
     );
 
     const res = await app.request("/projects/proj_missing");
-    // resolveProjectAccess returns null for both missing and no-access; the
-    // middleware does the second lookup via the project table which we have
-    // not mocked. We expect the middleware to follow its existing fallback
-    // and return 404 OR 403 depending on the db response — which fails here
-    // because the db stub doesn't exist. So we verify the cookie path got
-    // far enough to attempt the resolver.
-    expect([403, 404, 500]).toContain(res.status);
+    expect(res.status).toBe(404);
     expect(mockResolveProjectAccess).toHaveBeenCalled();
   });
 });
@@ -336,6 +387,7 @@ describe("requireProjectRole (PAT project-scope guard)", () => {
       {
         user: fakeUser(),
         token: fakeToken({
+          workspaceId: "ws_alpha",
           projectScope: "selected",
           projectIds: JSON.stringify(["proj_42"]),
         }),
@@ -368,6 +420,7 @@ describe("requireTaskAccess (PAT project-scope guard)", () => {
       {
         user: fakeUser(),
         token: fakeToken({
+          workspaceId: "ws_alpha",
           projectScope: "selected",
           projectIds: JSON.stringify(["proj_unrelated"]),
         }),
@@ -394,6 +447,7 @@ describe("requireTaskAccess (PAT project-scope guard)", () => {
       {
         user: fakeUser(),
         token: fakeToken({
+          workspaceId: "ws_alpha",
           projectScope: "selected",
           projectIds: JSON.stringify(["proj_owner"]),
         }),
@@ -536,6 +590,39 @@ describe("requireWriteScopeForResource", () => {
     expect(putRes.status).toBe(200);
   });
 
+  /**
+   * DENY direction for PATCH/PUT — the half that actually proves enforcement.
+   *
+   * The allow-direction test above passes a token that already holds
+   * `task:write`, so its 200 is the outcome whether the middleware checks the
+   * right scope, the wrong scope, or nothing at all. Only a token WITHOUT the
+   * scope can distinguish an enforcing middleware from a no-op. Without this
+   * case, folding PATCH/PUT into the safe-method early return would ship
+   * green while a read-only PAT could rewrite any record its owner can reach.
+   */
+  it("refuses PATCH and PUT when the token lacks <resource>:write", async () => {
+    const app = createApp(
+      requireWriteScopeForResource({ resource: "task" }),
+      {
+        user: fakeUser(),
+        token: fakeToken({ scopes: JSON.stringify(["task:read"]) }),
+      },
+      "/",
+    );
+
+    const patchRes = await app.request("/", { method: "PATCH" });
+    expect(patchRes.status).toBe(403);
+    expect((await patchRes.json<{ error: string }>()).error).toBe(
+      "Insufficient scope: requires task:write",
+    );
+
+    const putRes = await app.request("/", { method: "PUT" });
+    expect(putRes.status).toBe(403);
+    expect((await putRes.json<{ error: string }>()).error).toBe(
+      "Insufficient scope: requires task:write",
+    );
+  });
+
   it("requires <resource>:delete on DELETE when allowDelete is true", async () => {
     const app = createApp(
       requireWriteScopeForResource({ resource: "task", allowDelete: true }),
@@ -581,6 +668,34 @@ describe("requireWriteScopeForResource", () => {
 
     const res = await app.request("/", { method: "DELETE" });
     expect(res.status).toBe(200);
+  });
+
+  /**
+   * DENY direction for the `allowDelete`-unset fallback.
+   *
+   * Every resource that omits `allowDelete` — `webhook`, `label`,
+   * `attachment`, `team`, `invitation`, `workspace` — relies on this single
+   * branch for ALL of its DELETE scope enforcement. The allow-direction test
+   * above hands the token the scope it needs, so it cannot tell enforcement
+   * from a no-op. If DELETE were ever folded into the safe-method early
+   * return, a `webhook:read` PAT could destroy another team's integrations
+   * and the suite would stay green. This is the case that notices.
+   */
+  it("refuses DELETE without <resource>:write when allowDelete is unset", async () => {
+    const app = createApp(
+      requireWriteScopeForResource({ resource: "webhook" }),
+      {
+        user: fakeUser(),
+        // Read-only integration token — must not be able to delete.
+        token: fakeToken({ scopes: JSON.stringify(["webhook:read"]) }),
+      },
+      "/",
+    );
+
+    const res = await app.request("/", { method: "DELETE" });
+    expect(res.status).toBe(403);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("Insufficient scope: requires webhook:write");
   });
 
   it("is a no-op for cookie auth on any method", async () => {
@@ -688,5 +803,540 @@ describe("requireReadScopeForResource", () => {
 
     const res = await app.request("/");
     expect(res.status).toBe(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// tokenAllowsProject — the shared PAT binding policy
+// ---------------------------------------------------------------------------
+
+/**
+ * These tests pin the single source of truth that both the middleware above
+ * and the handlers that resolve project access inline (subtasks, comments,
+ * task groups) call. Before this policy was extracted, the project-selection
+ * and workspace-binding checks existed ONLY inside the middleware, so any
+ * route whose URL carried no `:projectId`/`:taskId` silently ran with an
+ * unconstrained token. Pinning the predicate directly means a regression
+ * shows up here even if every route were rewired.
+ */
+describe("tokenAllowsProject (shared PAT binding policy)", () => {
+  const projAlpha = { id: "proj_alpha", workspaceId: "ws_alpha" };
+
+  it("is a no-op for cookie auth (null and undefined token)", () => {
+    // Cookie sessions carry no PAT. The policy must never narrow them —
+    // their authorization is the membership/role check alone.
+    expect(tokenAllowsProject(null, projAlpha)).toBe(true);
+    expect(tokenAllowsProject(undefined, projAlpha)).toBe(true);
+  });
+
+  it("allows an `all` token inside its own workspace", () => {
+    expect(
+      tokenAllowsProject(
+        fakeToken({ workspaceId: "ws_alpha", projectScope: "all" }),
+        projAlpha,
+      ),
+    ).toBe(true);
+  });
+
+  it("denies an `all` token acting on a project in another workspace", () => {
+    // The token is the workspace boundary, not the user: `projectScope: "all"`
+    // means "all projects in MY workspace", never "all projects anywhere the
+    // owning human happens to be a member".
+    expect(
+      tokenAllowsProject(
+        fakeToken({ workspaceId: "ws_beta", projectScope: "all" }),
+        projAlpha,
+      ),
+    ).toBe(false);
+  });
+
+  it("allows a `selected` token listing the project", () => {
+    expect(
+      tokenAllowsProject(
+        fakeToken({
+          workspaceId: "ws_alpha",
+          projectScope: "selected",
+          projectIds: JSON.stringify(["proj_alpha", "proj_other"]),
+        }),
+        projAlpha,
+      ),
+    ).toBe(true);
+  });
+
+  it("denies a `selected` token that omits the project", () => {
+    expect(
+      tokenAllowsProject(
+        fakeToken({
+          workspaceId: "ws_alpha",
+          projectScope: "selected",
+          projectIds: JSON.stringify(["proj_other"]),
+        }),
+        projAlpha,
+      ),
+    ).toBe(false);
+  });
+
+  it("fails closed on a missing, empty or corrupt selected list", () => {
+    // A `selected` token whose id list cannot be read must grant nothing.
+    // Failing open here would turn a storage bug into a workspace-wide grant.
+    for (const projectIds of [null, "", "not json", '{"not":"an array"}', "[]"]) {
+      expect(
+        tokenAllowsProject(
+          fakeToken({
+            workspaceId: "ws_alpha",
+            projectScope: "selected",
+            projectIds,
+          }),
+          projAlpha,
+        ),
+      ).toBe(false);
+    }
+  });
+
+  it("denies an unknown projectScope value (forward fail-closed)", () => {
+    expect(
+      tokenAllowsProject(
+        fakeToken({
+          workspaceId: "ws_alpha",
+          projectScope: "future_mode",
+          projectIds: JSON.stringify(["proj_alpha"]),
+        }),
+        projAlpha,
+      ),
+    ).toBe(false);
+  });
+
+  it("requires BOTH halves — right project, wrong workspace is still a deny", () => {
+    // Guards the exact mistake the extraction exists to prevent: enforcing
+    // project selection while forgetting the workspace binding.
+    expect(
+      tokenAllowsProject(
+        fakeToken({
+          workspaceId: "ws_beta",
+          projectScope: "selected",
+          projectIds: JSON.stringify(["proj_alpha"]),
+        }),
+        projAlpha,
+      ),
+    ).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Workspace binding on the project/task middleware
+// ---------------------------------------------------------------------------
+
+describe("project + task middleware enforce the workspace half of the binding", () => {
+  it("returns 403 when a PAT from another workspace reaches a project it could otherwise see", async () => {
+    // The human is a workspace admin of ws_alpha, so the cookie path would
+    // grant admin here. The token is bound to ws_beta and must not inherit
+    // that — this is the promise docs/api/api-tokens.md makes about sibling
+    // workspaces ("cannot access any resource in those other workspaces").
+    mockResolveProjectAccess.mockResolvedValue({
+      role: "admin",
+      source: "workspace",
+      project: { id: "proj_1", workspaceId: "ws_alpha" },
+    });
+
+    const app = createApp(
+      requireProjectAccess(),
+      {
+        user: fakeUser(),
+        token: fakeToken({ workspaceId: "ws_beta", projectScope: "all" }),
+      },
+      "/projects/:projectId",
+    );
+
+    const res = await app.request("/projects/proj_1");
+    expect(res.status).toBe(403);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("Forbidden");
+  });
+
+  it("returns 403 when a PAT from another workspace reaches a task it could otherwise see", async () => {
+    mockResolveTaskAccess.mockResolvedValue({
+      found: true,
+      access: {
+        role: "member",
+        source: "project",
+        project: { id: "proj_owner", workspaceId: "ws_alpha" },
+      },
+    });
+
+    const app = createApp(
+      requireTaskAccess(),
+      {
+        user: fakeUser(),
+        token: fakeToken({ workspaceId: "ws_beta", projectScope: "all" }),
+      },
+      "/tasks/:taskId",
+    );
+
+    const res = await app.request("/tasks/task_1");
+    expect(res.status).toBe(403);
+  });
+
+  it("leaves cookie sessions untouched on the same project path", async () => {
+    mockResolveProjectAccess.mockResolvedValue({
+      role: "viewer",
+      source: "project",
+      project: { id: "proj_1", workspaceId: "ws_alpha" },
+    });
+
+    const app = createApp(
+      requireProjectAccess(),
+      { user: fakeUser(), token: null },
+      "/projects/:projectId",
+    );
+
+    const res = await app.request("/projects/proj_1");
+    expect(res.status).toBe(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// tokenProjectAllowList / tokenProjectScopeFilter / enforceTokenWorkspaceWideAccess
+// ---------------------------------------------------------------------------
+
+/**
+ * The *enumeration* half of the PAT project policy, added to close the hole
+ * where `requireWorkspaceMember` / `requireWorkspaceRole` guarded only the
+ * token's workspace binding. Workspace-level routes (search, dashboards,
+ * activity, labels, workspace task-groups, project list, webhooks) read across
+ * every project at once, so they cannot ask `tokenAllowsProject` about "the"
+ * project — they need the list, pushed into SQL.
+ *
+ * Two properties are load-bearing here and each has its own test below:
+ *
+ *  1. **Agreement.** The enumeration must decide exactly what the predicate
+ *     decides, or the API grows two divergent definitions of "selected"
+ *     (CLAUDE.md rule 4). The equivalence test is what mechanically holds them
+ *     together; if either implementation is edited in isolation it goes red.
+ *  2. **No-op for humans.** These are the app's primary read endpoints. If the
+ *     filter ever emits SQL for a cookie session, every list in the UI empties
+ *     out — a far worse regression than the leak being closed. Hence the
+ *     explicit "compiles to nothing" assertions rather than a behavioural
+ *     proxy.
+ */
+
+/**
+ * Capture a REAL Hono context primed exactly as `middleware/auth.ts` primes
+ * one. Using the framework's own context (rather than a hand-rolled stub)
+ * means `errorResponse`'s `requestId` read and `c.get` typing are exercised
+ * for real, so a change to either surfaces here instead of in production.
+ */
+async function contextWithToken(token: ApiToken | null): Promise<Context<AppEnv>> {
+  let captured: Context<AppEnv> | null = null;
+  const app = new Hono<AppEnv>();
+  app.use("*", async (c, next) => {
+    c.set("requestId", "allowlist-test");
+    c.set("apiToken", token);
+    await next();
+  });
+  app.get("/", (c) => {
+    captured = c;
+    return c.body(null, 204);
+  });
+  await app.request("/");
+  if (!captured) throw new Error("context was never captured");
+  return captured;
+}
+
+/** Compile a Drizzle fragment to the literal SQL + params D1 would receive. */
+function compile(fragment: SQL | undefined): { sql: string; params: unknown[] } {
+  if (!fragment) throw new Error("expected a SQL fragment, got undefined");
+  const query = new SQLiteAsyncDialect().sqlToQuery(fragment);
+  return { sql: query.sql, params: query.params };
+}
+
+describe("tokenProjectAllowList", () => {
+  it("returns null (unrestricted) for cookie auth", () => {
+    // `null` must mean "add no filter at all", NOT "an empty list". The whole
+    // regression risk of this change is a filter firing for humans.
+    expect(tokenProjectAllowList(null)).toBeNull();
+    expect(tokenProjectAllowList(undefined)).toBeNull();
+  });
+
+  it("returns null (unrestricted) for a projectScope: 'all' token", () => {
+    expect(tokenProjectAllowList(fakeToken({ projectScope: "all" }))).toBeNull();
+  });
+
+  it("returns the explicit list for a projectScope: 'selected' token", () => {
+    expect(
+      tokenProjectAllowList(
+        fakeToken({
+          projectScope: "selected",
+          projectIds: JSON.stringify(["proj_a", "proj_b"]),
+        }),
+      ),
+    ).toEqual(["proj_a", "proj_b"]);
+  });
+
+  it("returns an EMPTY array — never null — for a missing or corrupt list", () => {
+    // The dangerous confusion: `[]` (sees nothing) vs `null` (sees
+    // everything). A storage bug in `projectIds` must degrade to zero access,
+    // so every unreadable form has to land on `[]`.
+    for (const projectIds of [null, "", "not json", '{"not":"an array"}', "[]"]) {
+      expect(
+        tokenProjectAllowList(
+          fakeToken({ projectScope: "selected", projectIds }),
+        ),
+      ).toEqual([]);
+    }
+  });
+
+  it("returns an empty array for an unknown projectScope (forward fail-closed)", () => {
+    expect(
+      tokenProjectAllowList(
+        fakeToken({
+          projectScope: "future_mode",
+          projectIds: JSON.stringify(["proj_a"]),
+        }),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("tokenProjectAllowList agrees with tokenAllowsProject", () => {
+  /**
+   * The anti-drift harness. `tokenAllowsProject` (via `canAccessProject`) is
+   * the authoritative predicate; `tokenProjectAllowList` is its enumeration.
+   * Across every branch either function can take — `all`, `selected` with the
+   * project listed, omitted, empty or corrupt, and an unknown scope mode — and
+   * for a listed, an unlisted and an absent project id, the two must give the
+   * same answer. Otherwise a route that filters and a route that checks would
+   * disagree about the same token, which is the exact class of bug this whole
+   * change exists to remove.
+   *
+   * The cases are enumerated by hand rather than generated, so this covers
+   * every branch of the two functions as they stand today, not every value the
+   * `projectScope` column could hold. A new scope mode needs a case added here;
+   * `unknown scope mode` is what pins the fail-closed default in the meantime.
+   *
+   * The equivalence is deliberately asserted only for projects in the token's
+   * OWN workspace, because that is the precondition the enumeration documents:
+   * it encodes the project half and nothing else. The separate describe below
+   * pins the other side of that boundary — that the enumeration does NOT
+   * encode the workspace half — so the precondition is a tested fact rather
+   * than a comment, and so this harness cannot be mistaken for proof that the
+   * filter is safe on a route with no workspace guard.
+   */
+  const cases: Array<{ label: string; token: ApiToken }> = [
+    { label: "all", token: fakeToken({ workspaceId: "ws_alpha", projectScope: "all" }) },
+    {
+      label: "selected containing the project",
+      token: fakeToken({
+        workspaceId: "ws_alpha",
+        projectScope: "selected",
+        projectIds: JSON.stringify(["proj_alpha"]),
+      }),
+    },
+    {
+      label: "selected omitting the project",
+      token: fakeToken({
+        workspaceId: "ws_alpha",
+        projectScope: "selected",
+        projectIds: JSON.stringify(["proj_other"]),
+      }),
+    },
+    {
+      label: "selected with a corrupt list",
+      token: fakeToken({
+        workspaceId: "ws_alpha",
+        projectScope: "selected",
+        projectIds: "not json",
+      }),
+    },
+    {
+      label: "selected with an empty list",
+      token: fakeToken({
+        workspaceId: "ws_alpha",
+        projectScope: "selected",
+        projectIds: "[]",
+      }),
+    },
+    {
+      label: "unknown scope mode",
+      token: fakeToken({ workspaceId: "ws_alpha", projectScope: "future_mode" }),
+    },
+  ];
+
+  for (const { label, token } of cases) {
+    it(`matches for a ${label} token`, () => {
+      const list = tokenProjectAllowList(token);
+      for (const id of ["proj_alpha", "proj_other", "proj_absent"]) {
+        const viaList = list === null || list.includes(id);
+        const viaPredicate = tokenAllowsProject(token, {
+          id,
+          workspaceId: "ws_alpha",
+        });
+        expect(
+          viaList,
+          `${label}: enumeration and predicate disagree about ${id}`,
+        ).toBe(viaPredicate);
+      }
+    });
+  }
+
+  it("matches for a cookie session (no token)", () => {
+    expect(tokenProjectAllowList(null)).toBeNull();
+    expect(tokenAllowsProject(null, { id: "any", workspaceId: "ws_alpha" })).toBe(true);
+  });
+});
+
+describe("tokenProjectAllowList does NOT encode the workspace half", () => {
+  /**
+   * The counterexample that bounds the equivalence above, written as a test so
+   * the precondition cannot quietly stop being true.
+   *
+   * `tokenAllowsProject` enforces workspace binding AND project selection.
+   * `tokenProjectAllowList` never reads `token.workspaceId`, so for a project
+   * in a DIFFERENT workspace the two disagree by design: the predicate denies,
+   * the enumeration says "unrestricted". Callers must therefore already hold
+   * the workspace half — from `requireWorkspaceMember` / `requireWorkspaceRole`
+   * on a `:workspaceId` route, or from `tokenWorkspaceScopeFilter` on a route
+   * that has no workspace in its URL (`/notifications`).
+   *
+   * This is not a latent bug in the shipped code: every current call site is
+   * behind one of those two. It is documented and tested because the docstring
+   * is what the next handler author will trust, and a filter applied without
+   * the workspace half is a cross-tenant leak.
+   */
+  const foreignProject = { id: "proj_alpha", workspaceId: "ws_alpha" };
+
+  it("says 'unrestricted' for an all-scope token bound to another workspace", () => {
+    const t = fakeToken({ workspaceId: "ws_beta", projectScope: "all" });
+    expect(tokenProjectAllowList(t)).toBeNull();
+    expect(tokenAllowsProject(t, foreignProject)).toBe(false);
+  });
+
+  it("says 'allowed' for a selected token listing a project in another workspace", () => {
+    const t = fakeToken({
+      workspaceId: "ws_beta",
+      projectScope: "selected",
+      projectIds: JSON.stringify(["proj_alpha"]),
+    });
+    expect(tokenProjectAllowList(t)).toContain("proj_alpha");
+    expect(tokenAllowsProject(t, foreignProject)).toBe(false);
+  });
+});
+
+describe("tokenWorkspaceScopeFilter", () => {
+  it("emits NO fragment for a cookie session", async () => {
+    // Same no-op guarantee as the project filter: humans are never narrowed.
+    const c = await contextWithToken(null);
+    expect(tokenWorkspaceScopeFilter(c, notification.workspaceId)).toBeUndefined();
+  });
+
+  it("restricts to the token's workspace even for a projectScope: 'all' token", async () => {
+    // Asymmetry with the project half, and the reason these are two functions:
+    // EVERY PAT is bound to exactly one workspace, so `all` narrows nothing
+    // about projects but still narrows workspaces.
+    const c = await contextWithToken(
+      fakeToken({ workspaceId: "ws_alpha", projectScope: "all" }),
+    );
+    const { sql: text, params } = compile(
+      tokenWorkspaceScopeFilter(c, notification.workspaceId),
+    );
+    expect(text).toContain('"notification"."workspaceId" = ?');
+    expect(params).toEqual(["ws_alpha"]);
+  });
+
+  it("binds to whichever workspace-id column the caller passes", async () => {
+    const c = await contextWithToken(fakeToken({ workspaceId: "ws_alpha" }));
+    expect(compile(tokenWorkspaceScopeFilter(c, project.workspaceId)).sql).toContain(
+      '"project"."workspaceId" = ?',
+    );
+  });
+});
+
+describe("tokenProjectScopeFilter", () => {
+  it("emits NO fragment for a cookie session", async () => {
+    // Drizzle drops `undefined` operands from `and(...)`, so `undefined` here
+    // means the generated SQL is byte-identical to the pre-policy query. This
+    // is the assertion that protects the web UI.
+    const c = await contextWithToken(null);
+    expect(tokenProjectScopeFilter(c, project.id)).toBeUndefined();
+  });
+
+  it("emits NO fragment for a projectScope: 'all' token", async () => {
+    const c = await contextWithToken(fakeToken({ projectScope: "all" }));
+    expect(tokenProjectScopeFilter(c, project.id)).toBeUndefined();
+  });
+
+  it("emits an IN (...) fragment bound to the token's ids", async () => {
+    const c = await contextWithToken(
+      fakeToken({
+        projectScope: "selected",
+        projectIds: JSON.stringify(["proj_a", "proj_b"]),
+      }),
+    );
+    const { sql: text, params } = compile(tokenProjectScopeFilter(c, project.id));
+    expect(text).toContain('"project"."id" in (?, ?)');
+    expect(params).toEqual(["proj_a", "proj_b"]);
+  });
+
+  it("emits an IMPOSSIBLE predicate — not an empty IN — for an empty list", async () => {
+    // `inArray(col, [])` has meant different things across Drizzle releases
+    // (throw / `false`), and this is precisely the case where a silent no-op
+    // would return the entire workspace to a token narrowed to nothing. We
+    // write `1 = 0` ourselves so the fail-closed behaviour does not depend on
+    // the ORM version.
+    const c = await contextWithToken(
+      fakeToken({ projectScope: "selected", projectIds: "[]" }),
+    );
+    const { sql: text, params } = compile(tokenProjectScopeFilter(c, project.id));
+    expect(text).toBe("1 = 0");
+    expect(params).toEqual([]);
+  });
+
+  it("targets whichever project-id column the caller passes", async () => {
+    // Some queries join `project`, others only have `task.projectId` or
+    // `webhook.projectId` in scope. The helper must bind to the column it is
+    // given rather than assuming a particular table is joined.
+    const c = await contextWithToken(
+      fakeToken({ projectScope: "selected", projectIds: JSON.stringify(["p"]) }),
+    );
+    expect(compile(tokenProjectScopeFilter(c, task.projectId)).sql).toContain(
+      '"task"."projectId" in (?)',
+    );
+    expect(compile(tokenProjectScopeFilter(c, webhook.projectId)).sql).toContain(
+      '"webhook"."projectId" in (?)',
+    );
+  });
+});
+
+describe("enforceTokenWorkspaceWideAccess", () => {
+  it("permits a cookie session", async () => {
+    const c = await contextWithToken(null);
+    expect(enforceTokenWorkspaceWideAccess(c)).toBeNull();
+  });
+
+  it("permits a projectScope: 'all' token", async () => {
+    const c = await contextWithToken(fakeToken({ projectScope: "all" }));
+    expect(enforceTokenWorkspaceWideAccess(c)).toBeNull();
+  });
+
+  it("refuses a projectScope: 'selected' token with the generic 403", async () => {
+    // Same bare "Forbidden" body as every other denial: a distinct message
+    // would tell a probe holding a stolen token that it is narrowed rather
+    // than simply unauthorised.
+    const c = await contextWithToken(
+      fakeToken({
+        projectScope: "selected",
+        projectIds: JSON.stringify(["proj_a"]),
+      }),
+    );
+    const res = enforceTokenWorkspaceWideAccess(c);
+    expect(res).not.toBeNull();
+    expect(res!.status).toBe(403);
+    await expect(res!.json()).resolves.toMatchObject({ error: "Forbidden" });
+  });
+
+  it("refuses a selected token even when its list is empty", async () => {
+    const c = await contextWithToken(
+      fakeToken({ projectScope: "selected", projectIds: "[]" }),
+    );
+    expect(enforceTokenWorkspaceWideAccess(c)?.status).toBe(403);
   });
 });

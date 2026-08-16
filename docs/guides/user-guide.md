@@ -10,9 +10,13 @@ Cadence is a project management app for organizing work with workspaces, project
 
 Navigate to `/register` and enter your name, email, and password. Password requirements are displayed inline as you type.
 
+Registering doesn't sign you in — it sends a **verification link** to the address you signed up with, and the page confirms where it went. Follow that link before your first sign-in. If you try to sign in beforehand, Cadence tells you the address still needs verifying and sends a fresh link right then, so an expired one is never a dead end. Verifying signs you in at the same moment.
+
+You aren't asked to accept the Terms of Service on the registration form. The Terms and Privacy Policy are linked there so you can read them up front, and you're asked to accept them **once, on your first sign-in**, before you reach the rest of the app.
+
 ### Workspaces
 
-After signing in you'll land on the **Workspaces** page. A workspace is the top-level container for all your projects, teams, and members.
+After signing in you'll land on the **Workspaces** page. A workspace is the top-level container for all your projects and members.
 
 - Click **Create Workspace** to get started
 - Give it a name — the URL slug is auto-generated but editable
@@ -41,6 +45,11 @@ The **command palette** (`Ctrl+K` / `Cmd+K`) provides quick search across projec
 ### Creating a Project
 
 Click **New Project** from the projects page or command palette. Set the name, description, icon, and optionally a budget.
+
+Owners and admins can always create projects. Whether plain **members** can is up
+to the workspace — see [Member Permissions](#member-permissions). When it's
+turned off, the **New Project** button is disabled and explains why on hover, and
+the command palette drops the **Create Project** action.
 
 ### Views
 
@@ -78,7 +87,7 @@ The calendar menu — the download icon beside the view tabs — moves tasks bet
 Access via the **Settings** tab on a project:
 
 - **General** — Name, description, status (active/archived), budget, auto-assign tasks to creator, and an **Export tasks (CSV)** download. The CSV holds one row per task — title, group, assignee, due date, priority, labels, completion state, and cost — and is available to any project member, including viewers.
-- **Members** — Add workspace members with project-specific roles (admin, member, viewer)
+- **Members** — Add workspace members with project-specific roles (admin, member, viewer), change an existing member's role from the row's **…** menu, or remove them. See [Project Roles](#project-roles) for what each role can do.
 - **Task Groups** — Define your workflow columns. Mark a group as a "completion group" to auto-complete tasks moved there. Drag to reorder.
 - **Webhooks** — Create and manage webhooks scoped to this project. Project-scoped webhooks only fire for events within the project (task and project events). Workspace and invitation events are not available. Requires the project admin role.
 - **Appearance** — Icon (emoji picker), cover image, project theme (visible to workspace admins and project admins)
@@ -105,7 +114,12 @@ Use the project card's context menu (three-dot icon) to change status:
 
 Use the **Duplicate project** option in the project card's context menu to create a copy of an existing project. The duplicate includes the project's settings, task groups, and labels. Tasks, comments, and attachments are not copied.
 
-A confirmation dialog lets you optionally **include members and their roles**. The duplicated project is set to active status and named `"{original name} (copy)"`. You are automatically added as an admin on the new project and navigated to it after creation.
+Duplicating is creating a project, so it follows the same rule: if the workspace
+has turned off [member project creation](#member-permissions), members can't
+duplicate either — including projects they administer, and including ones they
+created themselves before the setting changed.
+
+A confirmation dialog lets you optionally **include members and their roles**. Only people still in the workspace are carried over — if someone on the original project has since left the workspace, they are not added to the copy. (Their membership on the original already grants them nothing; copying it forward would only spread a stale record.) The duplicated project is set to active status and named `"{original name} (copy)"`. You are automatically added as an admin on the new project and navigated to it after creation.
 
 ### Reordering Projects in the Sidebar
 
@@ -244,23 +258,111 @@ The greeting is time-aware ("Good morning", "Good afternoon", "Good evening").
 
 | Role | Permissions |
 |---|---|
-| **Owner** | Full access. Manage members, settings, billing. Cannot be removed. |
-| **Admin** | Manage members, projects, and settings. Cannot delete workspace. |
-| **Member** | Access projects they're added to. Cannot manage workspace settings. |
+| **Owner** | Full access. Invite at any role, change anyone's role, remove anyone. Cannot be removed. |
+| **Admin** | Manage projects, settings, webhooks and API tokens. Export and import workspace data. Invite and remove **members**. Cannot delete the workspace, cannot change roles, and cannot act on another admin — or on their own row. |
+| **Member** | Access projects they're added to. Cannot manage workspace settings, create webhooks, issue API tokens, or export/import workspace data — those tabs stay visible and explain the restriction rather than disappearing. Whether they can create projects is set per workspace — see [Member Permissions](#member-permissions). |
+
+Two rules run through everything on the members page:
+
+- **Only the owner creates admins.** Inviting someone as an admin and promoting an existing member to admin arrive at the same place, so both are the owner's call.
+- **You act on people below you, never beside you.** The owner manages every admin and member; an admin manages plain members only.
+
+### Member Permissions
+
+Some of what a **member** can do is the workspace's decision rather than a fixed
+property of the role. Open **Settings > General** as an owner or admin and look
+for the **Member Permissions** card. Each switch applies immediately — there's no
+Save button, because a governance switch sitting in an unsaved state would be
+showing you a position that isn't in force.
+
+| Setting | Default | When off |
+|---|---|---|
+| **Members can create projects** | On | Only owners and admins can create new projects or duplicate existing ones. |
+
+Turning **Members can create projects** off suits workspaces where projects map
+onto something real — a client, a cost centre, a compliance boundary — and a
+stray project is a mess someone has to clean up. Leaving it on suits teams where
+starting a project is how work begins. Neither is safer: owners and admins
+already hold admin access to **every** project in the workspace, including ones
+members create, so they can always see, edit and delete them. What the setting
+buys is process, not containment.
+
+A few things worth knowing before you turn it off:
+
+- **Admins are never affected**, so you can't lock out the people who'd have to
+  turn it back on.
+- **It applies to duplication too.** Otherwise a member who created a project
+  while the setting was on could keep making new ones by copying it.
+- **Existing projects are untouched.** Members keep whatever access they already
+  have, including project-admin on projects they created.
+- **Members aren't left guessing.** The **New Project** button stays visible but
+  disabled and explains itself on hover, and the empty states point them at an
+  admin instead of telling them to create something they can't.
 
 ### Inviting Members
 
-Go to **Settings > Members** and enter an email address with a role. The invitee receives a link that works whether or not they already have an account.
+Open **Settings > Members** and click **Invite Member** — the button is there for owners and admins. Enter an email address and choose a role. The **Admin** option appears in the dropdown only when you're the workspace owner; an admin sees **Member** on its own.
 
-Pending invitations appear on the workspace list page for the invitee, with accept/decline options.
+Cadence tidies the address before storing it — surrounding spaces are trimmed and capitals folded to lower case — so `  Sam@Example.com ` and `sam@example.com` are the same person and it doesn't matter how carefully it was typed.
+
+Sending the invitation **emails the invitee a link**, and that link works whether or not they already have a Cadence account. If they do have one, they also get an in-app notification and the invitation appears on their **Workspaces** page. Invitations expire after 7 days.
+
+You can send up to **20 invitations per hour**. Cadence also declines a second pending invitation to the same address in the same workspace, and declines to invite someone who is already a member — so that ceiling means 20 genuinely new people in an hour.
+
+Pending invitations are listed beneath the members table, each showing the address, the invited role, and the date sent, with two controls for owners and admins:
+
+- **Copy link** — puts the invite URL on your clipboard, or shows it in a selectable field if your browser blocks clipboard access. This is the fallback for a bounced address, an aggressive spam filter, or a self-hosted install with no mail provider configured.
+- **Revoke** — cancels the invitation; the link stops working immediately.
+
+### Accepting an Invitation
+
+There are two ways in, and both end in the same place.
+
+**From the email** — the link opens an invitation page naming the workspace, who invited you, and the role you'd join at. If you're not signed in yet, sign in or create an account from there and you're brought straight back to the invitation. Then click **Accept Invitation**. **Decline** simply leaves the page; it doesn't cancel the invitation, so the link still works if you change your mind.
+
+**From inside Cadence** — invitations sent to your address appear as cards on your **Workspaces** page, and in **Notifications**, with **Accept** and **Dismiss**. Accept joins you at the invited role. **Dismiss** is a "not now" — it clears the card from view, but the invitation stays open until you accept it, an admin revokes it, or it expires.
+
+An invitation can only be accepted by the account whose verified email matches the invited address, and only once. If it has already been used, has been revoked, or has expired, Cadence tells you which — and if you're already a member of that workspace, it says so and leaves your existing membership untouched.
+
+### Managing Members
+
+Each row in **Settings > Members** shows the person's name, email, role, and join date. The row's actions menu (the three-dot icon) offers only what you're actually allowed to do, so it never advertises an action that would be refused:
+
+- **Change Role** — the owner only, and never on their own row. Choose **Admin** or **Member**.
+- **Remove** — the owner can remove admins and members; an admin can remove members only. Nobody can remove the owner, and nobody can remove themselves.
+
+Removing someone is thorough. Along with their workspace membership it revokes their **project memberships in that workspace**, so they lose access to every project and task there. Putting it back means a fresh invitation plus re-adding each of those grants by hand — which is why the confirmation dialog identifies the member by **both name and email**. Display names aren't unique, and this is the moment to be certain you have the right row.
 
 ### Project Roles
 
-Projects have separate roles (admin, member, viewer) that can restrict access further. Workspace owners and admins have elevated access to all projects.
+A project has its own roles, separate from the workspace ones. They only ever *narrow* things within that project — workspace owners and admins keep full admin access to every project regardless of what their project row says.
 
-### Teams
+| | **Viewer** | **Member** | **Admin** |
+| --- | :---: | :---: | :---: |
+| See the project, its board, timeline and members | ✓ | ✓ | ✓ |
+| Save personal views, export the task CSV | ✓ | ✓ | ✓ |
+| Create and edit tasks, subtasks, comments, attachments | | ✓ | ✓ |
+| Create and edit labels and task groups | | ✓ | ✓ |
+| Delete a label | | | ✓ |
+| Project settings — name, status, budget, icon, cover, theme | | | ✓ |
+| Add, remove and re-role project members | | | ✓ |
+| Manage project webhooks | | | ✓ |
+| Duplicate or delete the project | | | ✓ |
 
-Create named teams under workspace settings to group members. Useful for organizational purposes and future team-based features.
+The two boundaries worth knowing are **Viewer → Member**, which is the line between reading and writing, and **Member → Admin**, which is the line between using the project and administering it. A viewer is genuinely read-only on the work itself, but they can still export the whole task list to CSV — they can already read every field of it one task at a time, so the export grants nothing extra.
+
+The same summary appears next to the role picker in **Project Settings > Members**, so it is available at the moment you choose.
+
+#### Changing someone's role
+
+From **Project Settings > Members**, open the **…** menu on a row and choose **Change Role**. Any project admin can re-role any other project member — projects have no owner tier and no rank between admins, unlike workspaces.
+
+Two things the dialog will not let you do:
+
+- **Change your own role.** A self-demotion is the one change you cannot undo yourself: drop to viewer and the settings page you did it from is closed to you. Ask another project admin, or a workspace owner or admin.
+- **Re-role a workspace owner or admin who was never added to the project.** They appear as admins everywhere in the project by elevation, but they have no project membership row to edit — change their access from the workspace members list instead.
+
+If somebody else changes the same person's role while your dialog is open, your change is refused rather than applied on top of theirs, with a message asking you to look again.
 
 ---
 
@@ -325,7 +427,7 @@ Webhooks let external systems receive real-time HTTP notifications when events h
 
 ### Setup
 
-**Workspace webhooks** — Go to **Settings > Webhooks** and click **Create Webhook**:
+**Workspace webhooks** — Requires the workspace owner or admin role. Go to **Settings > Webhooks** and click **Create Webhook**:
 1. Give it a name
 2. Enter your endpoint URL (HTTPS required in production; HTTP allowed in dev mode)
 3. Optionally select a **project scope** — when set, the webhook only fires for events from that project. Workspace and invitation events are unavailable for project-scoped webhooks. Only active projects appear in the project selector.

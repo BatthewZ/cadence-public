@@ -2,7 +2,13 @@
 
 This project uses **Drizzle ORM** with **Cloudflare D1** (SQLite) as the database layer. D1 is a serverless SQL database built on SQLite, available as a Cloudflare Workers binding.
 
-There are **27 application + auth tables**: workspaces, projects, tasks (with subtasks, comments, activity, attachments, labels, and per-user saved views), teams, invitations, notifications, webhooks (and their deliveries), legal acceptance, uploads, Better Auth's user/session/account/verification, `api_token` for machine clients, and `calendar_feed_token` for per-user ICS calendar subscription URLs. See [Schema](./schema.md) for the full table reference and [Migration Workflow](./migrations.md) for the development cycle.
+There are **28 application + auth tables**: workspaces, projects, tasks (with subtasks, comments, activity, attachments, labels, and per-user saved views), teams, invitations, notifications, webhooks (and their deliveries), legal acceptance, uploads, Better Auth's user/session/account/verification, `api_token` for machine clients, `audit_log` for the cross-resource PAT mutation ledger, and `calendar_feed_token` for per-user ICS calendar subscription URLs. See [Schema](./schema.md) for the full table reference and [Migration Workflow](./migrations.md) for the development cycle.
+
+The count is derived from the schema itself, not maintained by hand — every table is one `sqliteTable(...)` call under `src/db/schema/`:
+
+```bash
+grep -rhoE 'sqliteTable\(' src/db/schema/*.ts | wc -l
+```
 
 ## Documentation
 

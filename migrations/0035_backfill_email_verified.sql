@@ -1,0 +1,88 @@
+-- Backfill `user.emailVerified` for every account that predates mandatory
+-- email verification.
+--
+-- WHY THIS MIGRATION EXISTS
+-- Sign-up has always issued a working session with `emailVerified = 0`, so
+-- 100% of existing rows carry that value. The same change that adds this file
+-- sets `emailAndPassword.requireEmailVerification: true` in
+-- `src/api/lib/auth.ts`, which makes Better Auth refuse `POST /sign-in/email`
+-- with 403 EMAIL_NOT_VERIFIED for any unverified account. Shipping that flag
+-- without this backfill would therefore lock out *every existing user on the
+-- first deploy*, workspace owners included — and there is no self-service way
+-- back in: password reset does not clear the flag, and the only sender of a
+-- verification link is an endpoint the locked-out user can no longer reach
+-- with a session.
+--
+-- WHY GRANDFATHERING IS THE RIGHT TRADE, NOT A SHORTCUT
+-- These addresses are unproven, and this migration does not pretend
+-- otherwise: it asserts "the product never asked them to prove it", which is
+-- true. The alternative — force every existing user through verification —
+-- converts a security improvement into a total outage for people who did
+-- nothing wrong, and (because unverified accounts cannot sign in to trigger a
+-- resend) would require a bulk mail-out to recover from.
+--
+-- RESIDUAL RISK — CORRECTED
+-- An earlier version of this comment claimed the audit-finding-04 exposure was
+-- purely "a *future* attack", on the grounds that an attacker who had already
+-- exploited it "would hold a workspace membership, not an unverified login".
+-- That was WRONG, and the error mattered, so it is recorded rather than
+-- quietly deleted.
+--
+-- Finding 04 was live for the entire life of the product. Pre-positioning
+-- against it does not require an invitation to have been sent yet: register a
+-- colleague's address, never prove it, and wait. The pre-positioned attacker
+-- therefore holds exactly the thing the old comment said they would not — an
+-- unverified login on someone else's address. This migration promotes that
+-- login to permanently verified, after which its holder satisfies
+-- `acceptInvitation`'s email check for any invitation ever addressed to that
+-- mailbox, past or future. Removing a membership is indeed the admin's job,
+-- but there is no membership to remove until after the claim succeeds, and
+-- nothing distinguishes the claim from a legitimate one.
+--
+-- WHY NO FOLLOW-UP MIGRATION NARROWS THE AMNESTY
+-- Considered and rejected while fixing the invitation subsystem. The obvious
+-- narrowing — leave verified only those accounts with a live session or a
+-- workspace membership — is badly calibrated in both directions:
+--
+--   * It misses the attacker. Pre-positioning means registering, and
+--     registration mints a session. A squatter who acted recently keeps their
+--     session row and stays verified.
+--   * It hits the innocent hardest. An account with no workspace membership is
+--     the normal state of someone who registered *in response to an
+--     invitation* and has not accepted it yet — the exact person the whole
+--     invitation flow exists to serve. Un-verifying them blocks sign-in
+--     mid-onboarding.
+--   * Recovery depends on the subsystem that was broken. `sendOnSignIn: true`
+--     re-issues a verification link when an unverified account tries to sign
+--     in, but on a self-hosted install with no `RESEND_API_KEY` the mailer is
+--     the console transport: the link goes to a server log the user cannot
+--     read, and the lockout is permanent.
+--
+-- Decisively: this migration has already been applied, so the data needed to
+-- separate "grandfathered by this UPDATE" from "verified honestly since" no
+-- longer exists — `emailVerified` is a bare boolean with no provenance. Any
+-- follow-up can only guess with proxies, and every available proxy is one of
+-- the miscalibrated ones above. Trading a certain, silent lockout of real
+-- users against a partial, unmeasurable reduction in a residual risk is the
+-- wrong trade, and it is the same trade this migration was written to refuse.
+--
+-- The exposure is therefore ACCEPTED, not eliminated, and its real controls
+-- are elsewhere: `requireEmailVerification` closes the hole for every account
+-- created from this point on, `invitation.accepted` and
+-- `workspace.member_joined` webhooks make a claim observable, and a workspace
+-- owner can remove a member who should not be there. An operator who knows
+-- their user base is small enough to re-verify by hand can narrow this
+-- manually; that is a deployment decision with a human in the loop, which is
+-- what an imprecise predicate cannot be.
+--
+-- SCOPE
+-- Data only — no schema change, so drizzle-kit's snapshot is untouched and no
+-- `meta/_journal.json` entry is generated (same convention as the hand-written
+-- 0025 and 0026 migrations in this folder). Idempotent: re-running it is a
+-- no-op because the WHERE clause excludes already-verified rows, and it can
+-- never *un*-verify anyone.
+--
+-- `updatedAt` is deliberately left alone. It records when the user's own
+-- profile last changed, and an administrative backfill is not a profile edit;
+-- rewriting it would corrupt that signal for every account at once.
+UPDATE `user` SET `emailVerified` = 1 WHERE `emailVerified` = 0;

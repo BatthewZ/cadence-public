@@ -29,6 +29,8 @@ import { workspace } from "../../../db/schema/workspace";
 import type { AppEnv } from "../../env";
 import { deferWork } from "../defer";
 import { createEmailService } from "../email";
+// From the leaf module, not the `../email` barrel — see `../email/from.ts`.
+import { resolveEmailFrom } from "../email/from";
 import { webhookCreatedEmail } from "../email/templates/webhook-created";
 
 /**
@@ -121,7 +123,7 @@ export function scheduleWebhookCreatedEmail(
 
       await emailService.send({
         to: recipientEmail,
-        from: env.EMAIL_FROM,
+        from: resolveEmailFrom(env),
         subject,
         html,
         text,

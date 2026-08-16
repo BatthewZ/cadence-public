@@ -28,7 +28,7 @@
 
 import type { RouteConfig, RouteHandler } from "@hono/zod-openapi";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import type { Context } from "hono";
+import type { Context, MiddlewareHandler } from "hono";
 
 import {
   apiErrorResponseSchema,
@@ -41,7 +41,11 @@ import {
   rotateApiTokenResponseSchema,
 } from "../../../shared/schemas/openapi-responses";
 import type { AppEnv } from "../../env";
-import { rejectPatAuth, requireWorkspaceMember } from "../../middleware/authorize";
+import {
+  rejectPatAuth,
+  requireWorkspaceMember,
+  requireWorkspaceRole,
+} from "../../middleware/authorize";
 import { noStoreCacheControl } from "../../middleware/cache-control";
 import { defaultRateLimitKey, rateLimit } from "../../middleware/rate-limit";
 import { requireAuth } from "../../middleware/require-auth";
@@ -144,21 +148,37 @@ const tokenMgmtRateLimit = rateLimit({
  *      A leaked PAT must not be able to mint siblings or enumerate
  *      tokens, and the lockout must run before any other middleware
  *      consults the request. See [authorize.ts](../../middleware/authorize.ts).
- *   3. `requireWorkspaceMember()` — verifies the caller belongs to the
- *      workspace named in the URL.
+ *   3. `access` — verifies the caller's standing in the workspace named in
+ *      the URL. Every route on this surface differs from every other only
+ *      in this slot.
  *   4. `tokenMgmtRateLimit` — caps the issuance rate.
  *   5. `noStoreCacheControl()` — token metadata (prefix, scopes, last-used
  *      timestamps) must never sit in a shared cache, even though the
  *      hash never leaves the DB. Pre-empting any future misconfigured
  *      intermediary CDN is cheap defense-in-depth.
  */
-const baseMiddleware = [
-  requireAuth,
-  rejectPatAuth(),
-  requireWorkspaceMember(),
-  tokenMgmtRateLimit,
-  noStoreCacheControl(),
-];
+function tokenRouteMiddleware(access: MiddlewareHandler<AppEnv>) {
+  return [requireAuth, rejectPatAuth(), access, tokenMgmtRateLimit, noStoreCacheControl()];
+}
+
+const baseMiddleware = tokenRouteMiddleware(requireWorkspaceMember());
+
+/**
+ * Issuance guard for the two endpoints that put a *new* secret into a
+ * caller's hands: mint and rotate. A workspace member may hold, inspect and
+ * revoke their own tokens, but only owners and admins may bring new
+ * credentials into existence.
+ *
+ * Rotate is gated alongside create, not with the read endpoints, because it
+ * mints a sibling with a fresh secret — leaving it at member level would let
+ * someone demoted to member renew an existing token indefinitely and walk
+ * straight around this policy. Rotate additionally stays owner-only inside
+ * the handler: being an admin does not let you rotate someone else's token,
+ * because the plaintext response would hand you their credential.
+ */
+const tokenIssuanceMiddleware = tokenRouteMiddleware(
+  requireWorkspaceRole("owner", "admin"),
+);
 
 // ---------------------------------------------------------------------------
 // Route definitions
@@ -206,9 +226,9 @@ const createApiTokenRoute = createRoute({
   tags: ["API Tokens"],
   summary: "Mint a new API token",
   description:
-    "Generates a Personal Access Token. The plaintext is returned **only** in this response; the server stores nothing more than `sha256(plaintext)` afterwards. A non-blocking creation-notification email is dispatched to the owner. Defaults: `expiresInDays = 365`, `projectScope = all` (must be supplied by the caller).",
+    "Generates a Personal Access Token. **Requires the workspace `owner` or `admin` role** — plain members cannot mint tokens. The plaintext is returned **only** in this response; the server stores nothing more than `sha256(plaintext)` afterwards. A non-blocking creation-notification email is dispatched to the owner. Defaults: `expiresInDays = 365`, `projectScope = all` (must be supplied by the caller).",
   security,
-  middleware: baseMiddleware,
+  middleware: tokenIssuanceMiddleware,
   request: {
     params: workspaceIdParam,
     body: {
@@ -257,9 +277,9 @@ const rotateApiTokenRoute = createRoute({
   tags: ["API Tokens"],
   summary: "Rotate an API token",
   description:
-    "Mints a sibling that inherits the original's scopes, project scope, and absolute `expiresAt`. The old token enters a 7-day grace window (`revokeAt = now + 7d`) before the scheduled handler finalises revocation. Owner-only.",
+    "Mints a sibling that inherits the original's scopes, project scope, and absolute `expiresAt`. The old token enters a 7-day grace window (`revokeAt = now + 7d`) before the scheduled handler finalises revocation. **Requires the workspace `owner` or `admin` role**, and the caller must be the token's own owner — an admin cannot rotate another member's token, because the response carries the new plaintext.",
   security,
-  middleware: baseMiddleware,
+  middleware: tokenIssuanceMiddleware,
   request: {
     params: tokenIdParams,
   },
@@ -272,7 +292,8 @@ const rotateApiTokenRoute = createRoute({
     401: unauthorizedResponse,
     403: {
       content: { "application/json": { schema: apiErrorResponseSchema } },
-      description: "Only the token owner can rotate; PAT-authenticated callers cannot manage tokens",
+      description:
+        "Caller is not a workspace owner/admin, is not the token's owner, or is PAT-authenticated",
     },
     404: notFoundResponse,
     409: {

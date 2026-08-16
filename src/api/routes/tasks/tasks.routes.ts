@@ -455,6 +455,10 @@ app.post(
 
 // Subtask PATCH/DELETE resolve the parent task's project and check access
 // inline in handlers (no taskId in URL to use requireTaskAccess middleware).
+// Because of that, the handlers ALSO call `enforceTokenProjectBinding`
+// themselves: the `task:*` middleware mounted above is capability scope, not
+// project selection, so without that call a PAT narrowed to one project — or
+// bound to a different workspace — would be unconstrained on these routes.
 app.patch(
   "/subtasks/:subtaskId",
   requireAuth,
@@ -489,7 +493,9 @@ app.post(
 );
 
 // Comment PATCH/DELETE resolve the parent task's project and check access
-// inline in handlers (no taskId in URL to use requireTaskAccess middleware).
+// inline in handlers (no taskId in URL to use requireTaskAccess middleware),
+// and likewise call `enforceTokenProjectBinding` themselves — see the note on
+// the subtask routes above.
 app.patch(
   "/comments/:commentId",
   requireAuth,

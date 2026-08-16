@@ -16,14 +16,36 @@ vi.mock("@/web/contexts/ProjectContext", () => ({
   useProject: (): unknown => mockUseProject(),
 }));
 
-vi.mock("@/web/contexts/WorkspaceContext", () => ({
-  useWorkspace: () => ({
-    workspace: { id: "ws-1", name: "Test Workspace", slug: "test" },
-    members: [],
-    teams: [],
-    refetch: vi.fn(),
-  }),
-}));
+/**
+ * Workspace roster `useProjectPermissions` reads. Empty by default, which puts
+ * the hook on its "roster has not arrived" branch — deliberately permissive, so
+ * every test that is not about permissions keeps the editing affordances it
+ * asserts on. The viewer test fills this in so the hook takes the real
+ * role-lookup path instead.
+ */
+let mockWorkspaceMembers: Array<{ userId: string; role: string }> = [];
+
+// `policy` is imported rather than spelled out because `useWorkspacePermissions`
+// dereferences `workspace.policy.allowMemberProjectCreation` unconditionally:
+// the context's contract is that it always hands over a fully-resolved policy,
+// and a mock that omits it crashes the hook instead of exercising it. Async
+// factory because `vi.mock` is hoisted above the import list.
+vi.mock("@/web/contexts/WorkspaceContext", async () => {
+  const { DEFAULT_WORKSPACE_POLICY } = await import("@/shared/types/workspace-policy");
+  return {
+    useWorkspace: () => ({
+      workspace: {
+        id: "ws-1",
+        name: "Test Workspace",
+        slug: "test",
+        policy: DEFAULT_WORKSPACE_POLICY,
+      },
+      members: mockWorkspaceMembers,
+      teams: [],
+      refetch: vi.fn(),
+    }),
+  };
+});
 
 let mockCompletedFilter: boolean | null = null;
 
@@ -132,11 +154,16 @@ function makeTask(overrides: Partial<Task> & { id: string; title: string }): Tas
   };
 }
 
-function setupProjectMock(tasks: Task[]) {
+/**
+ * @param selfRole Project role of the signed-in user (`user-1`). Only matters
+ * once `mockWorkspaceMembers` is populated — until then the permission hook
+ * short-circuits to its permissive loading placeholder.
+ */
+function setupProjectMock(tasks: Task[], selfRole = "admin") {
   mockUseProject.mockReturnValue({
     project: { id: "proj-1", name: "Test Project", workspaceId: "ws-1" },
     members: [
-      { id: "m-1", userId: "user-1", name: "Alice", email: "alice@test.com", image: null, role: "admin", joinedAt: "2025-01-01" },
+      { id: "m-1", userId: "user-1", name: "Alice", email: "alice@test.com", image: null, role: selfRole, joinedAt: "2025-01-01" },
       { id: "m-2", userId: "user-2", name: "Bob", email: "bob@test.com", image: null, role: "member", joinedAt: "2025-01-01" },
     ],
     taskGroups: [
@@ -178,6 +205,7 @@ function renderTimeline(initialEntries: string[] = ["/"]) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockCompletedFilter = null;
+  mockWorkspaceMembers = [];
 });
 
 afterEach(() => {
@@ -570,6 +598,23 @@ describe("ProjectTimeline", () => {
       renderTimeline();
 
       expect(screen.getByLabelText("Task actions")).toBeInTheDocument();
+    });
+
+    // A `viewer` holds read access only, so every entry behind the three-dot
+    // menu (priority, assignee, move to group, due date, delete) is a write the
+    // API will reject. Withhold the trigger entirely rather than advertise
+    // actions that dead-end in an error toast — while still rendering the row,
+    // because viewing is exactly what the role exists for.
+    it("hides the task actions menu from a project viewer", () => {
+      mockWorkspaceMembers = [{ userId: "user-1", role: "member" }];
+      const tasks = [
+        makeTask({ id: "t-1", title: "Actions task", dueDate: daysFromNow(0) }),
+      ];
+      setupProjectMock(tasks, "viewer");
+      renderTimeline();
+
+      expect(screen.getByText("Actions task")).toBeInTheDocument();
+      expect(screen.queryByLabelText("Task actions")).not.toBeInTheDocument();
     });
   });
 

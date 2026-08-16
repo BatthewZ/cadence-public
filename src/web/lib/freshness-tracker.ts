@@ -16,8 +16,12 @@ class FreshnessTracker {
   private suppressionWindowMs = 3000;
 
   /**
-   * Record that the current user just mutated an entity type.
-   * Call this from mutation hooks after the optimistic update is applied.
+   * Record that the current user is mutating an entity type.
+   *
+   * Call from `onMutate`, not a settle handler: the poll cycle is shorter than a
+   * slow request, so a window opened only once the write finishes leaves the
+   * whole in-flight period free to repaint the pre-write value over an
+   * optimistic one.
    */
   recordMutation(entityType: string): void {
     this.lastMutationAt.set(entityType, Date.now());

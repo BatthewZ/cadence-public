@@ -6,6 +6,7 @@ import { task, taskGroup } from "../../../../db/schema/task";
 import type { AppEnv } from "../../../env";
 import { compoundCursorCondition, computeCompoundNextCursor, parseCompoundCursor, parseCursorParams } from "../../../lib/pagination";
 import { requireParam } from "../../../lib/params";
+import { tokenProjectScopeFilter } from "../../../middleware/authorize";
 import { getTimeBucket, isElevatedRole, type TimeBucket } from "./helpers";
 
 /**
@@ -13,6 +14,19 @@ import { getTimeBucket, isElevatedRole, type TimeBucket } from "./helpers";
  *
  * Returns all upcoming tasks across all projects in the workspace, grouped
  * into time buckets: overdue, today, this_week, next_week, this_month, later.
+ *
+ * Results are narrowed twice, by two different mechanisms:
+ *
+ *  - the **human's** project visibility — an elevated (owner/admin) caller
+ *    sees the whole workspace, a plain member gets an extra `innerJoin` on
+ *    `projectMember`, which is why there are two query branches below;
+ *  - the **token's** selected-project list, which lives in `baseConditions`
+ *    and therefore applies to BOTH branches.
+ *
+ * Putting the token filter in the shared conditions rather than in each branch
+ * is the point: the elevated branch is exactly where a missing token filter
+ * would be invisible, because the human check it would otherwise ride on is
+ * absent there — an owner passes trivially.
  */
 export async function upcomingTasks(c: Context<AppEnv>) {
   const db = c.get("db");
@@ -29,6 +43,12 @@ export async function upcomingTasks(c: Context<AppEnv>) {
     isNotNull(task.dueDate),
     eq(task.completed, false),
   ];
+
+  // PAT project narrowing — no-op for cookie sessions and `all`-scope tokens.
+  const patScope = tokenProjectScopeFilter(c, project.id);
+  if (patScope) {
+    baseConditions.push(patScope);
+  }
 
   const compound = parseCompoundCursor(cursor);
   if (compound) {

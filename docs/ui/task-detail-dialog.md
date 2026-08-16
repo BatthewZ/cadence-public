@@ -119,6 +119,14 @@ The delete confirmation dialog uses the shared [`ConfirmDialog`](confirm-dialog.
 
 All mutations invalidate `queryKeys.tasks.detail(taskId)`, `queryKeys.tasks.comments(taskId)`, `queryKeys.workspaces.dashboard(workspace.id)`, and (when a `projectId` is available) `queryKeys.projects.tasks(projectId)` and `queryKeys.projects.dashboard(projectId)` to keep project board/list views and the project dashboard in sync. Each mutation also calls `freshnessTracker.recordMutation("tasks")` so the freshness poller skips re-invalidation for changes the current user already applied locally. Attachment mutations additionally invalidate `queryKeys.tasks.attachments(taskId)` and `queryKeys.tasks.activity(taskId)`.
 
+That `recordMutation` call belongs in **`onMutate`**, not only at settle. The suppression window has to open when the write *starts*: the poll cycle is shorter than a slow `PATCH`, so a freshness-driven refetch can otherwise land mid-write and repaint the pre-write value over the optimistic one before the response arrives. Recording again at settle then covers the refetch the write itself triggers.
+
+## Live Updates While Open
+
+Both the dialog and `TaskDetailPanel` keep a local optimistic copy of the task and reconcile it through the shared [`useTaskServerSync`](hooks.md#usetaskserversync) hook. A collaborator's edit reaches an already-open view through the freshness poller: it invalidates the `["tasks"]` prefix, the detail query refetches, and the hook replaces the local copy with the new row.
+
+`useTaskServerSync` documents the two caller preconditions that make wholesale adoption safe — mid-edit fields must not render from the local copy, and mutations must open the freshness suppression window in `onMutate`. Both hold here: [`useTaskEditing`](hooks.md#usetaskediting) owns title and cost, [`EditableMarkdown`](markdown.md) owns the description draft, and every mutation on this view records its `"tasks"` mutation as described above.
+
 ## Usage
 
 ```tsx
@@ -153,4 +161,5 @@ const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 - [`useTaskCommentActions`](hooks.md#usetaskcommentactions) (comment CRUD mutations + optimistic updates)
 - [`useTaskDetailActions`](hooks.md#usetaskdetailactions) (complete/duplicate/delete actions)
 - [`useTaskAttachments`](hooks.md#usetaskattachments) (attachment fetching with optimistic cache helpers)
+- [`useTaskServerSync`](hooks.md#usetaskserversync) (adopts the fetched row into the local copy)
 - `useWorkspace` context (for dashboard cache invalidation on task delete)

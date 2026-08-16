@@ -9,8 +9,8 @@ The file storage service (`src/api/lib/storage.ts`) provides an abstraction over
 ```
 src/api/lib/storage.ts                    # R2 storage helpers
 src/api/routes/uploads/
-├── uploads.routes.ts                      # Avatar upload route definitions
-├── uploads.handlers.ts                    # Avatar upload handler implementations
+├── uploads.routes.ts                      # Avatar upload, file serve and delete route definitions
+├── uploads.handlers.ts                    # Avatar upload, file serve and delete handler implementations
 └── uploads.handlers.test.ts              # Integration tests (Miniflare D1 + R2)
 src/api/routes/projects/
 ├── projects.routes.ts                     # Includes project cover upload/delete routes
@@ -87,6 +87,7 @@ Uploads a user avatar image. Requires authentication. Rate-limited to 10 request
 | --- | --- |
 | 400 | No file provided, invalid file type, or file too large |
 | 401 | Not authenticated |
+| 403 | API-token request missing the `attachment:write` scope |
 | 429 | Rate limit exceeded |
 | 500 | R2 upload failed or database write failed (with automatic cleanup) |
 | 503 | R2 storage binding not configured |
@@ -198,18 +199,47 @@ Removes a task's cover image (R2 or Unsplash). Idempotent -- returns success eve
 
 ### `GET /api/uploads/:purpose/:userId/:filename`
 
-Serves a stored file. No authentication required. Returns the file with `Cache-Control: public, max-age=31536000, immutable`. For `task-attachment` uploads with non-image content types, sets `Content-Disposition: attachment` to force download and prevent browser execution of potentially unsafe files.
+Serves a stored file. Requires authentication, and — for every purpose except `avatar` — authorization against the resource that owns the object, using the same permission rules as the rest of the API. Knowing the URL is never sufficient on its own. Rate-limited to 100 requests per minute.
+
+| Purpose | Who may read it | How it is resolved |
+| --- | --- | --- |
+| `task-attachment` | Anyone with access to the owning task's project (`admin`, `member` or `viewer`, including workspace owners/admins by elevation) | `upload.key` → `task_attachment` → `task` → `resolveTaskAccess` |
+| `task-cover` | Same as above | `task.cover_image_key` → `resolveTaskAccess` |
+| `project-cover` | Anyone with access to the project | `project.cover_image_key` → `resolveProjectAccess` |
+| `avatar` | Any signed-in user | Not object-authorized by design — see below |
+| anything else | Nobody | Unenumerated purposes fail closed |
+
+Cover ownership is resolved from the row that references the key, which only works as authorization because **no client can choose what its own row claims**. Covers are set exclusively through the dedicated cover endpoints (`PUT /api/projects/:projectId/cover`, `PUT /api/tasks/:taskId/cover`, and their Unsplash counterparts), which write a key the server has just generated for the caller's own upload.
+
+`coverImageKey` is therefore **not accepted** by `PATCH /api/projects/:projectId` or `PATCH /api/tasks/:taskId`. It is absent from `updateProjectSchema` / `updateTaskSchema` (`src/shared/schemas/project.ts`, `src/shared/schemas/task.ts`) and from both handlers' update objects. Both schemas are non-strict, so a payload that still sends the field gets **200 with the field ignored** — it is not rejected with a 400, and the stored cover is unchanged. Clients that need to change a cover must call the cover endpoints. (Every other path that touches the column — project/task duplicate, workspace import, recurring-instance spawn, and cover delete — writes `null`. `coverImagePosition`, a 0–100 framing offset with no authorization meaning, remains PATCHable.)
+
+The uploader tie-break stands behind that invariant as its enforcement: if two rows ever claim the same object, the tie is broken by the object's uploader (`upload.userId`, which no API can rewrite) — the owner is the claiming row the uploader can actually reach, since they uploaded the cover to it. A single uncontested claim is honoured without consulting the uploader, so a cover keeps working after its uploader leaves the workspace. If the uploader can reach several claims, or none, the key is ambiguous and nobody is served.
+
+Avatars are deliberately different: an avatar is written to `user.image` and already embedded in every payload that names a person (member rosters, comment authors, assignees, activity actors), so the URL is disclosed to anyone entitled to see that person and re-checking it per `<img>` would buy nothing. They remain behind authentication, so they are visible to signed-in users only.
+
+**API-token callers.** Requests authenticated with a Personal Access Token need the `attachment:read` scope to download a file, and `attachment:write` to upload or delete one — including for `purpose = "avatar"`, since a machine credential asking for file bytes should have to say it wants file access whichever bucket they sit in. (There is no `attachment:delete` in the v1 scope grammar, so `DELETE` falls under `attachment:write`.) Human, cookie-authenticated requests are unaffected: the scope middleware no-ops without a token, so avatars stay readable by any signed-in user.
+
+On top of the scope check, a PAT gets the same object-level check as a human plus the token's own narrowing: a token bound to another workspace, or restricted to a `selected` project list that does not include the owning project, is refused even when its human owner has access. See [API Tokens](./api-tokens.md) for the scope grammar and project scoping.
+
+Cache directives follow the same split. Private purposes are served with `Cache-Control: private, max-age=31536000, immutable` — the browser still caches the object for a year (keys are UUID-based and never rewritten) but shared caches and proxies must not store a per-user-authorized response. Avatars keep `Cache-Control: public, max-age=31536000, immutable`.
+
+For `task-attachment` uploads with non-image content types, sets `Content-Disposition: attachment` to force download and prevent browser execution of potentially unsafe files.
 
 **Error responses:**
 
 | Status | Condition |
 | --- | --- |
-| 404 | File not found in R2 |
+| 401 | Not authenticated |
+| 403 | API-token request missing the `attachment:read` scope (`Insufficient scope: requires attachment:read`) |
+| 404 | File not found in R2, **or** the caller is not authorized to read it |
+| 429 | Rate limit exceeded |
 | 503 | R2 storage binding not configured |
+
+The 404-not-403 on the unauthorized case is deliberate. These URLs are unguessable capabilities rather than addressable ids, so a 403 would confirm "this object exists and belongs to someone else" to anyone holding a URL that leaked through a browser history, referrer header or log line. The uniform 404 gives back exactly one bit — "this URL works" or "it does not" — matching the [calendar feed](./endpoints.md) handler's treatment of its token URLs.
 
 ### `DELETE /api/uploads/:id`
 
-Deletes an upload. Requires authentication. Only the file owner can delete.
+Deletes an upload. Requires authentication. Only the file owner can delete. API-token requests need the `attachment:write` scope (there is no `attachment:delete` in the v1 grammar).
 
 **Response** (200):
 
@@ -222,7 +252,7 @@ Deletes an upload. Requires authentication. Only the file owner can delete.
 | Status | Condition |
 | --- | --- |
 | 401 | Not authenticated |
-| 403 | Not the file owner |
+| 403 | Not the file owner, or an API-token request missing the `attachment:write` scope |
 | 404 | Upload record not found |
 | 503 | R2 storage binding not configured |
 

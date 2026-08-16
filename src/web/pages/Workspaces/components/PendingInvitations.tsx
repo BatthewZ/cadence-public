@@ -64,7 +64,7 @@ export function PendingInvitations() {
                   size="sm"
                   variant="primary"
                   className="flex-1"
-                  onClick={() => inv.token && accept(inv.token)}
+                  onClick={() => accept(inv.id)}
                   disabled={isAccepting}
                 >
                   {isAccepting ? "Accepting..." : "Accept"}

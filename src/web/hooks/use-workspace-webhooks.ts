@@ -98,9 +98,9 @@ function useWebhookForm() {
 /* ------------------------------------------------------------------ */
 
 export function useWorkspaceWebhooks() {
-  const { workspace, projects } = useWorkspace();
+  const { workspace, projects, error: workspaceError } = useWorkspace();
   const { toast } = useToast();
-  const { canManageWorkspace } = useWorkspacePermissions();
+  const { canManageWorkspace, isResolved: roleResolved } = useWorkspacePermissions();
   const qc = useQueryClient();
   const workspaceId = workspace?.id ?? "";
 
@@ -135,7 +135,13 @@ export function useWorkspaceWebhooks() {
   } = useQuery({
     queryKey: queryKeys.workspaces.webhooks(workspaceId),
     queryFn: () => api.get<{ webhooks: WebhookRow[] }>(`/api/workspaces/${workspaceId}/webhooks`),
-    enabled: !!workspaceId,
+    // Reading webhooks is owner/admin-only server-side, so firing this as a
+    // member buys a guaranteed 403 that the view can only render as a bare
+    // "Forbidden" banner. Gate on the resolved role, not the optimistic one:
+    // firing while the roster is still in flight lands the 403 in the query
+    // cache, and disabling the query afterwards does not clear it — the
+    // banner would survive on a stale error.
+    enabled: !!workspaceId && roleResolved && canManageWorkspace,
     staleTime: 30_000,
   });
   const webhooks = listData?.webhooks ?? [];
@@ -339,6 +345,8 @@ export function useWorkspaceWebhooks() {
     projects,
     activeProjects,
     canManageWorkspace,
+    roleResolved,
+    workspaceError,
 
     // View state
     selectedWebhookId,

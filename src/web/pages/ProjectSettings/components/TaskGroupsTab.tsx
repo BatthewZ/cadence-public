@@ -67,13 +67,14 @@ export function TaskGroupsTab({
     error: updateErrorObj,
   } = useMutation({
     mutationFn: (input: UpdateTaskGroupInput) =>
-      api.patch<unknown>(
-        `/api/task-groups/${selectedGroup?.id ?? ""}`,
-        input
-      ),
+      api.patch<unknown>(`/api/task-groups/${selectedGroup?.id ?? ""}`, input),
     onMutate: (input) => {
       if (selectedGroup) {
-        updateTaskGroup(selectedGroup.id, { name: input.name, color: input.color, isCompletionGroup: input.isCompletionGroup });
+        updateTaskGroup(selectedGroup.id, {
+          name: input.name,
+          color: input.color,
+          isCompletionGroup: input.isCompletionGroup,
+        });
       }
     },
     onSettled: () => {
@@ -117,7 +118,11 @@ export function TaskGroupsTab({
     if (!groupName.trim() || !selectedGroup) return;
 
     try {
-      await updateGroup({ name: groupName.trim(), color: groupColor, isCompletionGroup: groupIsCompletion });
+      await updateGroup({
+        name: groupName.trim(),
+        color: groupColor,
+        isCompletionGroup: groupIsCompletion,
+      });
       toast("Task group updated.", { variant: "success" });
       setEditDialogOpen(false);
       setSelectedGroup(null);
@@ -137,7 +142,9 @@ export function TaskGroupsTab({
   async function handleDelete() {
     if (!deleteGroupId || !targetGroupId) return;
     try {
-      await api.delete(`/api/task-groups/${deleteGroupId}?targetGroupId=${encodeURIComponent(targetGroupId)}`);
+      await api.delete(
+        `/api/task-groups/${deleteGroupId}?targetGroupId=${encodeURIComponent(targetGroupId)}`
+      );
       toast("Task group deleted.", { variant: "success" });
       setDeleteDialogOpen(false);
       setDeleteGroupId(null);
@@ -158,12 +165,16 @@ export function TaskGroupsTab({
 
     // Compute a position key that places this group at the target index
     const before = targetIdx > 0 && direction === "up" ? taskGroups[targetIdx - 1].position : null;
-    const after = targetIdx < taskGroups.length - 1 && direction === "down" ? taskGroups[targetIdx + 1].position : null;
+    const after =
+      targetIdx < taskGroups.length - 1 && direction === "down"
+        ? taskGroups[targetIdx + 1].position
+        : null;
     const neighbor = taskGroups[targetIdx].position;
 
-    const newPosition = direction === "up"
-      ? generateKeyBetween(before, neighbor)
-      : generateKeyBetween(neighbor, after);
+    const newPosition =
+      direction === "up"
+        ? generateKeyBetween(before, neighbor)
+        : generateKeyBetween(neighbor, after);
 
     try {
       await api.patch<unknown>(`/api/task-groups/${groupId}/reorder`, {
@@ -201,8 +212,11 @@ export function TaskGroupsTab({
       ) : (
         <Stack gap="r5">
           {taskGroups.map((group, idx) => (
-            <Card key={group.id} className="border border-border-default bg-surface-0 rounded-lg overflow-hidden">
-              <Row justify="between" align="center" className="px-r3 py-r4">
+            <Card
+              key={group.id}
+              className="border border-border-default bg-surface-0 rounded-lg overflow-hidden"
+            >
+              <Row justify="between" align="center" className="px-r5 py-r6">
                 <Row gap="r4" align="center">
                   {group.isCompletionGroup ? (
                     <span className="size-4 rounded-full shrink-0 bg-status-success flex items-center justify-center">
@@ -410,10 +424,11 @@ export function TaskGroupsTab({
         }}
       >
         <Stack gap="r4" className="p-r2">
-          <Text variant="h5" weight="semibold">Delete Task Group</Text>
+          <Text variant="h5" weight="semibold">
+            Delete Task Group
+          </Text>
           <Text variant="body-2" color="secondary">
-            All tasks in{" "}
-            <strong>{taskGroups.find((g) => g.id === deleteGroupId)?.name}</strong>{" "}
+            All tasks in <strong>{taskGroups.find((g) => g.id === deleteGroupId)?.name}</strong>{" "}
             will be moved to the group you select below.
           </Text>
 

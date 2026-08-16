@@ -33,9 +33,11 @@ import { useTaskComments } from "@/web/hooks/use-task-comments";
 import { useTaskCover } from "@/web/hooks/use-task-cover";
 import { useTaskDetailActions } from "@/web/hooks/use-task-detail-actions";
 import { useTaskEditing } from "@/web/hooks/use-task-editing";
+import { useTaskServerSync } from "@/web/hooks/use-task-server-sync";
 import { useTaskSubtasks } from "@/web/hooks/use-task-subtasks";
 import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
+import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import { queryKeys } from "@/web/lib/query-keys";
 import { TaskCommentSection } from "@/web/pages/TaskDetail/components/TaskCommentSection";
 import { TaskActivityFeed } from "@/web/pages/TaskDetail/TaskActivityFeed";
@@ -105,41 +107,26 @@ export function TaskDetailPanelInner({
   const [localTask, setLocalTask] = useState<TaskDetail | null>(null);
   const task = localTask;
 
-  // Seed local task from API data (only on initial load or taskId change)
-  useEffect(() => {
-    if (taskData?.task) {
-      const incoming = taskData.task;
-      // Defer to avoid synchronous setState in effect body
-      queueMicrotask(() => {
-        setLocalTask((prev) => {
-          // Only overwrite if this is a fresh load (no local state yet) or a refetch after subtask/comment changes
-          if (!prev || prev.id !== incoming.id) return incoming;
-          // Merge in server-managed fields but keep locally-edited fields
-          return {
-            ...prev,
-            subtasks: incoming.subtasks,
-            commentCount: incoming.commentCount,
-            labels: incoming.labels,
-          };
-        });
-      });
-    }
-  }, [taskData]);
+  useTaskServerSync(taskData?.task, setLocalTask);
 
   const invalidateTaskQueries = useCallback(() => {
     void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
     void qc.invalidateQueries({ queryKey: queryKeys.tasks.comments(taskId) });
+    // Re-arm at settle so the poll doesn't re-invalidate what this is refetching.
+    freshnessTracker.recordMutation("tasks");
   }, [qc, taskId]);
 
   // Mutations
   const patchTask = useMutation({
     mutationFn: (updates: Partial<TaskDetail>) =>
       api.patch<{ task: TaskDetail }>(`/api/tasks/${taskId}`, updates),
+    onMutate: () => freshnessTracker.recordMutation("tasks"),
     onSuccess: invalidateTaskQueries,
   });
   const createSubtask = useMutation({
     mutationFn: (input: { title: string }) =>
       api.post<{ subtask: Subtask }>(`/api/tasks/${taskId}/subtasks`, input),
+    onMutate: () => freshnessTracker.recordMutation("tasks"),
     onSettled: invalidateTaskQueries,
   });
 

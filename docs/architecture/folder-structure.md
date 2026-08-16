@@ -19,33 +19,67 @@ src/
 │   ├── index.ts                  # Worker entry point, global middleware
 │   ├── env.ts                    # Bindings & env type definitions
 │   ├── middleware/               # Shared middleware
-│   │   ├── auth.ts               # Auth session middleware
-│   │   ├── authorize.ts          # Role/permission authorization
+│   │   ├── audit-pat.ts          # Audit-ledger row per successful PAT-attributed mutation (post-response)
+│   │   ├── auth.ts               # Auth session middleware (PAT bearer token or cookie session)
+│   │   ├── authorize.ts          # Workspace/project/task role guards + PAT binding & scope guards
+│   │   ├── cache-control.ts      # Per-route Cache-Control (opt-in TTL, and no-store lockdown)
 │   │   ├── logger.ts             # Request logging
 │   │   ├── rate-limit.ts         # Rate limiting
 │   │   ├── request-id.ts         # Request ID generation
 │   │   ├── require-auth.ts       # Auth requirement enforcement
 │   │   ├── security-headers.ts   # Security header middleware
+│   │   ├── telemetry.ts          # Telemetry sink creation + http_request events
 │   │   └── validate.ts           # Request validation middleware
 │   ├── lib/                      # Shared API utilities
+│   │   ├── access.ts             # Shared project/task access resolution (resolveProjectAccess, resolveTaskAccess)
+│   │   ├── api-tokens.ts         # PAT minting, hashing, verification, scope & project-scope predicates
+│   │   ├── assignee-validation.ts # Assignee reachability (canUserBeAssigned, retainAssignableAssignee)
+│   │   ├── audit-log.ts          # Audit-ledger writer (recordPatAuditLog)
 │   │   ├── auth.ts               # Better Auth factory
+│   │   ├── cover-image.ts        # Shared project/task cover-image upload, apply, delete
+│   │   ├── csv.ts                # RFC 4180 CSV serialization with formula-injection hardening
+│   │   ├── defer.ts              # Fire-and-forget work via the Workers waitUntil() API
 │   │   ├── email/                # Email service (Resend + console fallback)
 │   │   │   ├── index.ts          # Email service entry point
+│   │   │   ├── from.ts           # resolveEmailFrom + DEFAULT_EMAIL_FROM (sender single source of truth)
 │   │   │   ├── console.ts        # Console fallback transport
 │   │   │   ├── resend.ts         # Resend transport
 │   │   │   ├── types.ts          # Email type definitions
 │   │   │   └── templates/        # Email templates
+│   │   │       ├── api-token-created.ts
+│   │   │       ├── api-token-revoked.ts
+│   │   │       ├── api-token-rotated.ts
 │   │   │       ├── email-verification.ts
 │   │   │       ├── password-reset.ts
+│   │   │       ├── webhook-created.ts
 │   │   │       ├── workspace-invitation.ts
 │   │   │       └── utils.ts
-│   │   ├── access.ts             # Shared project access resolution (resolveProjectAccess)
+│   │   ├── error-response.ts     # Uniform `{ error, requestId }` responses + throwWithContext
+│   │   ├── mentions.ts           # @mention extraction + resolution to project members
+│   │   ├── mime-detect.ts        # Magic-byte MIME sniffing for uploads
+│   │   ├── notifications.ts      # In-app notification inserts (single + fan-out)
+│   │   ├── pagination.ts         # Cursor pagination parsing & clamping
+│   │   ├── params.ts             # requireParam route-parameter accessor
+│   │   ├── password-reset-cooldown.ts # Per-email cooldown for password reset requests
+│   │   ├── password.ts           # PBKDF2 password hashing (+ legacy scrypt verification)
+│   │   ├── position-conflict.ts  # Retry helpers for racing fractional-index position writes
 │   │   ├── storage.ts            # R2 storage helpers (put, get, delete)
+│   │   ├── telemetry/            # Telemetry sinks
+│   │   │   ├── index.ts          # createTelemetrySink factory (sink selection)
+│   │   │   ├── analytics-engine.ts # Cloudflare Analytics Engine sink
+│   │   │   ├── console.ts        # Structured-JSON console sink
+│   │   │   ├── noop.ts           # Discard-everything sink
+│   │   │   └── types.ts          # TelemetrySink interface & event types
+│   │   ├── unsplash.ts           # Unsplash REST API wrapper (search, curated, download tracking)
+│   │   ├── validated.ts          # Typed accessor for Hono's validated-data store
 │   │   ├── webhooks.ts           # Re-export barrel for webhooks/ sub-modules
 │   │   ├── webhooks/             # Webhook internals (split from monolithic webhooks.ts)
 │   │   │   ├── delivery.ts       # Webhook dispatch, delivery with exponential-backoff retries, cron-driven retry processing
+│   │   │   ├── notify.ts         # Out-of-band security email when a webhook is created
 │   │   │   └── utils.ts          # HMAC-SHA256 signing, SSRF-safe URL validation, secret generation
-│   │   └── webhook-payloads.ts   # Webhook payload builders, context fetcher, change detection, fire-and-forget dispatch
+│   │   ├── webhook-payloads.ts   # Webhook payload builders, context fetcher, change detection, fire-and-forget dispatch
+│   │   ├── workspace-policy.ts   # loadWorkspacePolicy — the one server read of workspace.policy for an authorization decision
+│   │   └── workspace-roles.ts    # Workspace role hierarchy (outranks, mayGrantAdmin) — single source of truth
 │   ├── scheduled/                # Cron-triggered background tasks
 │   │   ├── index.ts              # handleScheduled entry point (runs every 5 min)
 │   │   ├── auth-cleanup.ts       # Expired session + verification token pruning
@@ -58,7 +92,8 @@ src/
 │   │   ├── db-setup.ts           # Test database setup helpers
 │   │   ├── fakes.ts              # Fake data factories for tests
 │   │   ├── request-helpers.ts    # HTTP request helpers for tests
-│   │   └── seed.ts               # Database seeding for integration tests
+│   │   ├── seed.ts               # Database seeding for integration tests
+│   │   └── unsplash.ts           # Unsplash cover-payload fixtures & mocks
 │   └── routes/                   # Domain-grouped route modules
 │       ├── index.ts              # Route aggregator
 │       ├── auth/                 # Auth domain
@@ -66,6 +101,8 @@ src/
 │       ├── calendar/             # Calendar domain (ICS feed + feed-management surface)
 │       │   ├── calendar.routes.ts
 │       │   └── calendar.handlers.ts
+│       ├── config/               # Public client config domain
+│       │   └── config.routes.ts
 │       ├── dashboard/            # Dashboard domain
 │       │   ├── dashboard.routes.ts
 │       │   ├── dashboard.handlers.ts  # Re-export barrel for handlers/
@@ -79,9 +116,18 @@ src/
 │       ├── invitations/          # Invitation domain
 │       │   ├── invitations.routes.ts
 │       │   └── invitations.handlers.ts
+│       ├── legal/                # Legal domain (Terms of Service acceptance)
+│       │   ├── legal.routes.ts
+│       │   └── legal.handlers.ts
+│       ├── notifications/        # Notifications domain
+│       │   ├── notifications.routes.ts
+│       │   └── notifications.handlers.ts
 │       ├── projects/             # Projects domain
 │       │   ├── projects.routes.ts
 │       │   └── projects.handlers.ts
+│       ├── search/               # Cross-project search domain
+│       │   ├── search.routes.ts
+│       │   └── search.handlers.ts
 │       ├── task-groups/          # Task groups domain
 │       │   ├── task-groups.routes.ts
 │       │   └── task-groups.handlers.ts
@@ -100,6 +146,9 @@ src/
 │       ├── teams/                # Teams domain (UI hidden — feature not yet functionally integrated)
 │       │   ├── teams.routes.ts
 │       │   └── teams.handlers.ts
+│       ├── unsplash/             # Unsplash cover-image search domain
+│       │   ├── unsplash.routes.ts
+│       │   └── unsplash.handlers.ts
 │       ├── uploads/              # File upload domain
 │       │   ├── uploads.routes.ts
 │       │   └── uploads.handlers.ts
@@ -111,7 +160,16 @@ src/
 │       │   └── webhooks.handlers.ts
 │       └── workspaces/           # Workspaces domain
 │           ├── workspaces.routes.ts
-│           └── workspaces.handlers.ts
+│           ├── workspaces.handlers.ts
+│           ├── api-tokens.routes.ts   # PAT management sub-resource (rejects PAT callers)
+│           ├── api-tokens.handlers.ts
+│           ├── export.handlers.ts     # Streamed workspace JSON export
+│           ├── freshness.handler.ts   # Workspace freshness polling endpoint
+│           ├── import.handlers.ts     # Workspace import endpoint (dry-run preview + execute)
+│           └── import/                # Import internals
+│               ├── parse.ts           # Format sniffing, parsing, document-integrity validation
+│               ├── trello.ts          # Trello board JSON → Cadence import shape
+│               └── executor.ts        # Preview & write of the parsed document (batched D1 inserts)
 │
 ├── db/                           # Database layer
 │   ├── index.ts                  # createDb(d1) factory
@@ -153,7 +211,8 @@ src/
 │   └── types/                    # Shared TypeScript types
 │       ├── invitations.ts        # Canonical Invitation interface (shared across frontend consumers)
 │       ├── roles.ts              # Role type definitions
-│       └── webhook.ts            # Webhook event types, event groups, payload envelope interface
+│       ├── webhook.ts            # Webhook event types, event groups, payload envelope interface
+│       └── workspace-policy.ts   # WorkspacePolicy shape + resolveWorkspacePolicy — single source of truth for the toggle defaults
 │
 └── web/                          # Frontend (React SPA)
     ├── App.tsx                   # Root router
@@ -161,8 +220,19 @@ src/
     ├── lib/                      # Utilities & clients
     │   ├── api/                  # API client
     │   │   └── client.ts         # HTTP client for backend requests
-    │   └── auth/                 # Auth client
-    │       └── auth-client.ts    # Better Auth React client
+    │   ├── auth/                 # Auth client & auth-flow helpers
+    │   │   ├── auth-client.ts    # Better Auth React client
+    │   │   ├── safe-redirect.ts  # safeRedirectPath — normalises `?redirect=` to a same-origin path
+    │   │   └── use-guest-session.ts # Session state for guest surfaces (first-resolve loader only)
+    │   ├── export-ics.ts         # Client-side project calendar export (.ics download)
+    │   ├── freshness-tracker.ts  # Suppresses freshness invalidations caused by the user's own mutations
+    │   ├── icon-map.ts           # Icon-name → Lucide component lookup (ICON_MAP, getIconComponent)
+    │   ├── poll-interval.ts      # jitteredInterval — randomised refetchInterval, desynchronises pollers
+    │   ├── query-client.ts       # React Query client configuration
+    │   ├── query-keys.ts         # Canonical React Query key factory
+    │   ├── sort-by-position.ts   # Stable fractional-index sort (position, id tiebreaker)
+    │   ├── theme-constants.ts    # Theme labels & metadata shared by theme UI
+    │   └── view-state.ts         # Pure view-state utilities for Saved Views
     ├── util/                     # Shared pure utilities
     │   ├── task-display.ts       # Priority badge/label/sort/border/text-color mappings
     │   ├── date.ts               # Date formatting & local-time math (formatDueDate, isOverdue, isDueToday, endOfWeek, endOfNextWeek, endOfMonth, startOfMonth, addMonths — month helpers clamp day-of-month and avoid UTC parsing for calendar navigation)
@@ -188,6 +258,7 @@ src/
     │   ├── use-task-cover.ts    # Task cover image upload, removal, and position-change logic
     │   ├── use-task-detail-actions.ts # Task complete/duplicate/delete actions (shared between Dialog & Panel)
     │   ├── use-task-editing.ts  # Editable field management (title, description, cost) with dirty-field tracking
+    │   ├── use-task-server-sync.ts # Mirrors the fetched task row into a detail view's local copy (shared between Dialog & Panel)
     │   ├── use-task-subtasks.ts # Subtask CRUD, DnD reorder, and optimistic updates with rollback
     │   ├── use-theme.ts
     │   └── use-workspace-webhooks.ts # Centralised webhook state, queries, mutations for WorkspaceSettings
@@ -291,7 +362,7 @@ src/
         ├── ThemeEditor/
         │   └── components/       # LivePreview, TokenInputs, helpers, token-constants
         ├── WorkspaceSettings/
-        │   └── components/       # Member/team/webhook dialogs, TeamCard, column defs, WebhookListView, WebhookDetailView
+        │   └── components/       # Member/webhook dialogs, column defs, WebhookListView, WebhookDetailView; team dialogs + TeamCard (UI hidden, unrouted)
         └── Workspaces/
             └── components/       # CreateWorkspaceDialog, PendingInvitations
 ```
@@ -313,7 +384,7 @@ src/
 | `contexts/` | React context providers & query-based state | Domain-scoped state (WorkspaceContext uses React Query cache; ProjectContext uses a context provider). |
 | `hooks/` | Shared hooks | Hooks used by 2+ pages. |
 | `util/` | Shared pure utilities | Non-React helpers used by 2+ pages (e.g. `task-display.ts`, `date.ts`). |
-| `lib/` | Utilities & clients | Auth client, API client, helper functions. |
+| `lib/` | Utilities & clients | Auth client, API client, helper functions. `lib/auth/` also holds the auth-flow helpers the guest pages share: `safe-redirect.ts` (normalises a caller-supplied `?redirect=` into a same-origin path before any post-login navigation) and `use-guest-session.ts` (shows the loading state only until the session first resolves, so a background session refetch cannot remount a guest page and discard its post-submit view). |
 
 ### API Conventions
 
@@ -321,9 +392,9 @@ src/
 |---|---|---|
 | `routes/{domain}/` | Domain route module | Contains `{domain}.routes.ts` and `{domain}.handlers.ts`. Large handler files may be split into a `handlers/` subdirectory with the original file becoming a re-export barrel (e.g. `tasks/handlers/task-crud.ts`, `dashboard/handlers/workspace-dashboard.ts`). |
 | `routes/index.ts` | Route aggregator | Imports and mounts all domain routes. |
-| `middleware/` | Shared middleware | Cross-cutting concerns: auth, authorization, logging, rate limiting, validation, security headers. |
+| `middleware/` | Shared middleware | Cross-cutting concerns: auth, authorization (role guards plus the PAT workspace/project binding and scope guards), audit logging, request logging, rate limiting, validation, caching, telemetry, security headers. See [Middleware](../api/middleware.md). |
 | `test-utils/` | Shared API test utilities | Test database setup, fake data factories, database seeding, and HTTP request helpers. |
-| `lib/` | Shared utilities | Auth factory, email service, storage helpers, project access resolution (`access.ts`), webhook internals (`webhooks/` subdirectory with delivery and utils modules, re-exported via `webhooks.ts`), and payload builders (`webhook-payloads.ts`). |
-| `lib/email/` | Email service | Resend + console transports, with domain-specific templates (verification, password reset, workspace invitation). |
+| `lib/` | Shared utilities | Auth factory, email service, storage helpers, project access resolution (`access.ts`), webhook internals (`webhooks/` subdirectory with delivery and utils modules, re-exported via `webhooks.ts`), and payload builders (`webhook-payloads.ts`). Authorization *policy* that more than one route needs also lives here rather than as private handler helpers, so a rule stated once cannot disagree with itself: `workspace-roles.ts` holds the workspace role hierarchy (`outranks`, `mayGrantAdmin`) shared by the member endpoints and the invitation endpoint, `assignee-validation.ts` holds the "an assignee must be able to reach the task's project" rule shared by the task write paths, and `workspace-policy.ts` holds the single server-side read of `workspace.policy` behind an authorization decision, shared by the two routes that create projects. Note the split for that last one: the policy's *shape, defaults and resolver* live in `shared/types/workspace-policy.ts`, which the frontend context and the Zod schemas both type against, while this module holds only the D1 query — putting that in `shared/` would drag a `Database` import into browser code. |
+| `lib/email/` | Email service | Resend + console transports, with domain-specific templates (verification, password reset, workspace invitation). Sender resolution lives in its own leaf module `from.ts` — not in the barrel — so the transports can depend on it without importing the barrel back, and so every mail path resolves `From:` the same way. |
 | `scheduled/` | Cron-triggered tasks | Background maintenance (webhook retries, delivery cleanup, auth cleanup, notification cleanup, task activity cleanup, invitation cleanup). Entry point: `index.ts`. |
 | `env.ts` | Environment types | Bindings, variables, and Hono env type. |

@@ -1,0 +1,33 @@
+-- Add `workspace.policy` — admin-configurable governance toggles, stored as a
+-- JSON object.
+--
+-- WHY THIS MIGRATION EXISTS
+-- Until now "may a workspace member create projects?" was answered in code,
+-- identically for every workspace: `POST /workspaces/:workspaceId/projects`
+-- was mounted behind `requireWorkspaceMember()` with no role check, so any
+-- member could. That is the right default (and stays the default), but it is
+-- a governance preference rather than a fact about the product — a six-person
+-- team wants zero friction, a larger org with per-project reporting wants a
+-- gate — so it belongs to the workspace's admins.
+--
+-- WHY ONE JSON COLUMN AND NOT ONE COLUMN PER TOGGLE
+-- The pressure this feature creates is not "we need one boolean", it is "we
+-- will need the next eight". A column per toggle answers that with a
+-- migration, a schema edit and a new plumbing path each time, and leaves
+-- existing rows needing a backfill decision on every addition. One JSON object
+-- with defaults resolved in code (`resolveWorkspacePolicy`) makes toggle #2 a
+-- field on an interface: absent keys already mean "code default", so every
+-- workspace that predates a toggle picks it up correctly with no backfill.
+--
+-- WHY NULLABLE WITH NO DEFAULT
+-- NULL is the meaningful value here — it says "this workspace has never
+-- expressed a preference", which resolves to every default. Writing '{}' at
+-- migration time would be indistinguishable in behaviour but would assert that
+-- every existing workspace made a choice it never made, and it would need
+-- rewriting on each future toggle. Nothing is backfilled; that is the point.
+--
+-- The column is read exclusively through `resolveWorkspacePolicy`, which is
+-- total over malformed input (see its JSDoc for why it falls back rather than
+-- throwing), so a hand-edited or corrupt value degrades to defaults instead of
+-- failing the workspace detail endpoint every workspace route depends on.
+ALTER TABLE `workspace` ADD `policy` text;

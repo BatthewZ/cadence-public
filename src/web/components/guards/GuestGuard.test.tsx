@@ -46,7 +46,7 @@ describe("GuestGuard", () => {
     );
   });
 
-  it("shows loading state while auth is pending", () => {
+  it("shows loading state while auth is pending on first load", () => {
     mockUseSession.mockReturnValue({
       data: null,
       isPending: true,
@@ -56,5 +56,45 @@ describe("GuestGuard", () => {
     expect(screen.queryByText("Guest Content")).not.toBeInTheDocument();
     // Should render Spinner inside Center
     expect(container.querySelector("[role='status']")).toBeTruthy();
+  });
+
+  it("keeps the guest page mounted across a later session refetch", () => {
+    // Regression guard. `isPending` goes true again on every background
+    // session refetch, and `signUp.email()` triggers one. Swapping the page
+    // for a spinner at that moment unmounts it, destroying its React state:
+    // the Register page's "check your email for a verification link"
+    // confirmation vanished the instant it was set, leaving a blank form and
+    // no sign the account had been created.
+    //
+    // The assertion is DOM-node identity, not presence: a remount would still
+    // render "Guest Content", so a text check alone would pass while the bug
+    // was live. Same node ⇒ React reused the subtree ⇒ its state survived.
+    mockUseSession.mockReturnValue({ data: null, isPending: false });
+    const { rerender, container } = render(
+      <GuestGuard><span>Guest Content</span></GuestGuard>,
+    );
+    const firstNode = screen.getByText("Guest Content");
+
+    // …now a refetch starts.
+    mockUseSession.mockReturnValue({ data: null, isPending: true });
+    rerender(<GuestGuard><span>Guest Content</span></GuestGuard>);
+
+    expect(container.querySelector("[role='status']")).toBeNull();
+    expect(screen.getByText("Guest Content")).toBe(firstNode);
+  });
+
+  it("still redirects if a session appears during a refetch", () => {
+    // Tolerating the refetch must not tolerate an authenticated user sitting
+    // on a guest page: the moment a session resolves, the redirect fires.
+    mockUseSession.mockReturnValue({ data: null, isPending: false });
+    const { rerender } = render(<GuestGuard><span>Guest Content</span></GuestGuard>);
+
+    mockUseSession.mockReturnValue({ data: { user: { id: "1" } }, isPending: true });
+    rerender(<GuestGuard><span>Guest Content</span></GuestGuard>);
+
+    expect(screen.queryByText("Guest Content")).not.toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith(
+      expect.objectContaining({ to: "/", replace: true })
+    );
   });
 });

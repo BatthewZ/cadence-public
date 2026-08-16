@@ -20,8 +20,13 @@ vi.mock("@/web/contexts/ProjectContext", () => ({
   useProject: (): unknown => mockUseProject(),
 }));
 
+// Permissions are stubbed rather than derived from rosters so a test can pick a
+// role in one line. Default is the ordinary editing member, which is what every
+// test that is not about permissions assumes.
+let mockPermissions = { canEditTasks: true, isProjectAdmin: false };
+
 vi.mock("@/web/hooks/use-permissions", () => ({
-  useProjectPermissions: () => ({ canEditTasks: true, isProjectAdmin: false }),
+  useProjectPermissions: () => mockPermissions,
 }));
 
 // Spread the real module so EVERY export stays available — TaskCard calls the
@@ -192,6 +197,7 @@ function renderBoard() {
 beforeEach(() => {
   vi.clearAllMocks();
   capturedSortableContextItems.length = 0;
+  mockPermissions = { canEditTasks: true, isProjectAdmin: false };
 });
 
 describe("Board column task cap", () => {
@@ -537,6 +543,61 @@ async function openTaskMenu(user: ReturnType<typeof userEvent.setup>, taskIndex:
   const triggers = screen.getAllByRole("button", { name: "Task actions" });
   await user.click(triggers[taskIndex]);
 }
+
+// ---------------------------------------------------------------------------
+// Read-only board for project viewers
+// ---------------------------------------------------------------------------
+//
+// A `viewer` holds read access only, so every entry behind the card's hover
+// "..." menu (priority, assignee, move to group, reorder, due date, delete) is
+// a write the API will reject. Rendering the trigger would advertise actions
+// that dead-end in an error toast, so the whole menu is withheld — the cards
+// themselves must still render, because viewing is exactly what the role is for.
+describe("viewer permissions", () => {
+  const group = makeGroup("g1", "To Do", "a");
+
+  it("hides the card actions menu when the user cannot edit tasks", () => {
+    mockPermissions = { canEditTasks: false, isProjectAdmin: false };
+    setupProjectMock([group], makeTasks(3, "g1"));
+    renderBoard();
+
+    expect(screen.getByText("Task 1")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Task actions" })).not.toBeInTheDocument();
+  });
+
+  it("renders the card actions menu for a user who can edit tasks", () => {
+    setupProjectMock([group], makeTasks(3, "g1"));
+    renderBoard();
+
+    expect(screen.getAllByRole("button", { name: "Task actions" })).toHaveLength(3);
+  });
+
+  // The cursor is the board's only hint that a card or column can be dragged.
+  // ProjectBoard builds its sensors with `enabled: canEditTasks`, so for a
+  // viewer there is no sensor to arm and a grab cursor would promise a
+  // reorder that silently never happens. Cards keep `cursor-pointer` because
+  // clicking still opens the detail panel; the column header has no click
+  // behaviour of its own, so it drops to the default cursor.
+  it("drops the grab cursor on cards and column headers for a viewer", () => {
+    mockPermissions = { canEditTasks: false, isProjectAdmin: false };
+    setupProjectMock([group], makeTasks(1, "g1"));
+    renderBoard();
+
+    const card = screen.getByText("Task 1").closest(".group");
+    expect(card).toHaveClass("cursor-pointer");
+    expect(card).not.toHaveClass("cursor-grab");
+    expect(screen.getByText("To Do")).not.toHaveClass("cursor-grab");
+  });
+
+  it("keeps the grab cursor on cards and column headers for an editor", () => {
+    setupProjectMock([group], makeTasks(1, "g1"));
+    renderBoard();
+
+    const card = screen.getByText("Task 1").closest(".group");
+    expect(card).toHaveClass("cursor-grab");
+    expect(screen.getByText("To Do")).toHaveClass("cursor-grab");
+  });
+});
 
 describe("within-column reorder menu", () => {
   const group = makeGroup("g1", "To Do", "a");

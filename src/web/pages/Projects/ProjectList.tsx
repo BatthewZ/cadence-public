@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom";
 import { Row, Stack } from "@/web/components/layout";
 import {
   Alert,
-  Button,
   Card,
   EmptyState,
   EmptyStateActions,
@@ -18,10 +17,15 @@ import {
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
 import { CreateProjectDialog } from "@/web/components/ui/CreateProjectDialog";
+import { NewProjectButton } from "@/web/components/ui/NewProjectButton";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { useWorkspace, type WorkspaceProject } from "@/web/contexts/WorkspaceContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useFavorites } from "@/web/hooks/use-favorites";
+import {
+  NO_PROJECTS_FOR_MEMBER_DESCRIPTION,
+  useWorkspacePermissions,
+} from "@/web/hooks/use-permissions";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 
@@ -33,6 +37,7 @@ export default function ProjectList() {
   const navigate = useNavigate();
   const { workspace, projects, loading, error, refetchProjects } = useWorkspace();
   useDocumentTitle(`${workspace.name} — Projects`);
+  const { canCreateProject } = useWorkspacePermissions();
 
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -160,9 +165,7 @@ export default function ProjectList() {
       <Stack gap="r4">
         <Row justify="between">
           <Text variant="h3">Projects</Text>
-          <Button onClick={() => setDialogOpen(true)} disabled>
-            + New Project
-          </Button>
+          <NewProjectButton onClick={() => setDialogOpen(true)} disabled />
         </Row>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {Array.from({ length: 3 }, (_, i) => (
@@ -208,7 +211,7 @@ export default function ProjectList() {
       </Breadcrumbs>
       <Row justify="between">
         <Text variant="h3">Projects</Text>
-        <Button onClick={() => setDialogOpen(true)}>+ New Project</Button>
+        <NewProjectButton onClick={() => setDialogOpen(true)} />
       </Row>
 
       {error && <Alert variant="error">{error}</Alert>}
@@ -216,12 +219,23 @@ export default function ProjectList() {
       {visibleProjects.length === 0 && !error ? (
         <EmptyState>
           <EmptyStateTitle>No projects yet</EmptyStateTitle>
+          {/*
+            The empty state has to change its story, not just disable its
+            button. "Create your first project" told a member the way forward
+            was an action they cannot take — the screen would look identical to
+            a bug. What a member in this position actually needs to know is
+            that the emptiness is expected and who resolves it.
+          */}
           <EmptyStateDescription>
-            Create your first project to start tracking tasks
+            {canCreateProject
+              ? "Create your first project to start tracking tasks"
+              : NO_PROJECTS_FOR_MEMBER_DESCRIPTION}
           </EmptyStateDescription>
-          <EmptyStateActions>
-            <Button onClick={() => setDialogOpen(true)}>Create Project</Button>
-          </EmptyStateActions>
+          {canCreateProject && (
+            <EmptyStateActions>
+              <NewProjectButton onClick={() => setDialogOpen(true)} label="Create Project" />
+            </EmptyStateActions>
+          )}
         </EmptyState>
       ) : (
         <Tabs defaultValue="active" value={activeTab} onValueChange={setActiveTab}>
@@ -234,10 +248,16 @@ export default function ProjectList() {
             {activeProjects.length === 0 ? (
               <EmptyState>
                 <EmptyStateTitle>No active projects</EmptyStateTitle>
-                <EmptyStateDescription>Create a new project to get started</EmptyStateDescription>
-                <EmptyStateActions>
-                  <Button onClick={() => setDialogOpen(true)}>Create Project</Button>
-                </EmptyStateActions>
+                <EmptyStateDescription>
+                  {canCreateProject
+                    ? "Create a new project to get started"
+                    : "Nothing active right now. A workspace admin can create a project or add you to one."}
+                </EmptyStateDescription>
+                {canCreateProject && (
+                  <EmptyStateActions>
+                    <NewProjectButton onClick={() => setDialogOpen(true)} label="Create Project" />
+                  </EmptyStateActions>
+                )}
               </EmptyState>
             ) : (
               <ProjectCardGrid projects={activeProjects} tab="active" {...gridProps} />

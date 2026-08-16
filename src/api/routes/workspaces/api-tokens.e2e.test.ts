@@ -87,6 +87,7 @@ let d1: D1Database;
 let dispose: () => Promise<void>;
 let workspaceId: string;
 let otherWorkspaceId: string;
+let memberOnlyWorkspaceId: string;
 let projectInPrimary: string;
 let otherProjectInPrimary: string;
 
@@ -221,6 +222,16 @@ beforeAll(async () => {
   // Ensure TEST_USER_2 is also a member of the primary workspace so the
   // workspace listing endpoint returns a deterministic shape.
   await seedWorkspaceMember(d1, workspaceId, TEST_USER_2.id, "member");
+
+  // A workspace the cookie user belongs to as a plain `member`. The cookie
+  // auth mock always resolves TEST_USER, so demoting the caller means owning
+  // the workspace from the OTHER user — this is what makes the role gate on
+  // the issuance endpoints reachable end-to-end.
+  memberOnlyWorkspaceId = await seedWorkspace(d1, TEST_USER_2.id, {
+    slug: "member-only-ws",
+    name: "Member Only Workspace",
+  });
+  await seedWorkspaceMember(d1, memberOnlyWorkspaceId, TEST_USER.id, "member");
 });
 
 afterAll(async () => {
@@ -408,6 +419,76 @@ describe("E2E: PAT lockout on token-management endpoints", () => {
     expect(mintViaPatRes.status).toBe(403);
     const body = await mintViaPatRes.json<{ error: string }>();
     expect(body.error).toContain("API tokens cannot manage");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Scenario 3b — Issuance requires owner/admin
+// ---------------------------------------------------------------------------
+
+describe("E2E: token issuance is owner/admin-only", () => {
+  it("a plain member cannot mint a token", async () => {
+    const app = buildE2EApp();
+
+    const res = await app.request(
+      cookieRequest("POST", `/workspaces/${memberOnlyWorkspaceId}/api-tokens`, {
+        name: "Member should not get this",
+        scopes: ["workspace:read"],
+        projectScope: "all",
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    // No credential may exist, and no "your token was created" email may go
+    // out, when the mint is refused.
+    const rows = await d1
+      .prepare('SELECT COUNT(*) AS n FROM api_token WHERE "workspaceId" = ?')
+      .bind(memberOnlyWorkspaceId)
+      .first<{ n: number }>();
+    expect(rows?.n).toBe(0);
+    expect(mockEmailSend).not.toHaveBeenCalled();
+  });
+
+  it("a plain member cannot rotate, and the role gate fires before token lookup", async () => {
+    const app = buildE2EApp();
+
+    // A token id that does not exist. A member must still see 403, not 404:
+    // 404 would prove the request reached the handler's ownership lookup and
+    // that only a missing row — rather than the role — turned it away.
+    const res = await app.request(
+      cookieRequest(
+        "POST",
+        `/workspaces/${memberOnlyWorkspaceId}/api-tokens/tok_does_not_exist/rotate`,
+      ),
+    );
+
+    expect(res.status).toBe(403);
+  });
+
+  it("still lets a plain member list tokens, so they can audit and revoke their own", async () => {
+    const app = buildE2EApp();
+
+    const res = await app.request(
+      cookieRequest("GET", `/workspaces/${memberOnlyWorkspaceId}/api-tokens`),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ tokens: unknown[] }>();
+    expect(body.tokens).toEqual([]);
+  });
+
+  it("still lets an owner mint in a workspace they own", async () => {
+    const app = buildE2EApp();
+
+    const res = await app.request(
+      cookieRequest("POST", `/workspaces/${workspaceId}/api-tokens`, {
+        name: "Owner may mint",
+        scopes: ["workspace:read"],
+        projectScope: "all",
+      }),
+    );
+
+    expect(res.status).toBe(201);
   });
 });
 

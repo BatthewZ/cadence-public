@@ -19,6 +19,11 @@ import {
   scheduleWebhookCreatedEmail,
   validateWebhookUrl,
 } from "../../lib/webhooks";
+import {
+  enforceTokenProjectBinding,
+  enforceTokenWorkspaceWideAccess,
+  tokenProjectScopeFilter,
+} from "../../middleware/authorize";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -46,10 +51,69 @@ async function projectBelongsToWorkspace(
   return !!proj;
 }
 
+/**
+ * Enforce the caller's PAT project binding against a webhook's target scope.
+ *
+ * A webhook is a **standing egress pipe**: once registered it streams event
+ * payloads — task titles, descriptions, assignees, comment bodies — to an
+ * arbitrary URL for as long as it exists, with no further authentication of
+ * the original caller. That makes it the single most consequential thing a
+ * narrowed token can create, and the reason it needs its own binding rule
+ * rather than inheriting the generic workspace-role guard on these routes:
+ * `projectBelongsToWorkspace` above answers only "is this project in this
+ * workspace?", which every sibling project the token was denied also satisfies.
+ *
+ * The rule has two branches because a webhook's scope has two shapes:
+ *
+ *  - **`projectId` set** — a project-scoped subscription. Delegates to
+ *    {@link enforceTokenProjectBinding}, the same predicate every project route
+ *    uses, so "may this token act on project X?" has exactly one answer in the
+ *    codebase (CLAUDE.md rule 4).
+ *  - **`projectId` null** — a workspace-wide subscription, which receives
+ *    `task.*` events from EVERY project in the workspace. There is no partial
+ *    version of that, so a project-narrowed token is refused outright via
+ *    {@link enforceTokenWorkspaceWideAccess}. Without this branch the fix would
+ *    be trivially bypassable: denied project P2 directly, a token would simply
+ *    register a null-project webhook and receive P2's events anyway.
+ *
+ * Cookie sessions and `projectScope: "all"` tokens pass both branches
+ * unchanged. Read paths call this too — a webhook row carries its target URL,
+ * event list and failure state, all of which describe how a project outside
+ * the token's list is wired up.
+ */
+function enforceTokenWebhookBinding(
+  c: Context<AppEnv>,
+  workspaceId: string,
+  projectId: string | null,
+): Response | null {
+  if (projectId === null) return enforceTokenWorkspaceWideAccess(c);
+  return enforceTokenProjectBinding(c, { id: projectId, workspaceId });
+}
+
 // ---------------------------------------------------------------------------
 // createWebhook
 // ---------------------------------------------------------------------------
 
+/**
+ * `POST /workspaces/:workspaceId/webhooks`
+ *
+ * Registers a webhook subscription and returns its signing secret exactly once.
+ *
+ * Guard order is deliberate and must not be rearranged: SSRF URL validation,
+ * then the PAT binding (403), then "is this project in this workspace?" (400),
+ * then the per-workspace limit.
+ *
+ * The PAT binding comes BEFORE the existence check specifically to close an
+ * existence oracle. Run the other way round, a narrowed token learns which
+ * project ids are real: an id that exists in the workspace but is off its list
+ * answers `403`, while an unknown id answers `400 Project not found in this
+ * workspace`. Checking the binding first collapses both to the same `403`,
+ * because an unknown id is off-list too. That is the uniform-denial property
+ * `enforceTokenProjectBinding` documents, and this is the one call site where
+ * the order of two *body*-driven checks decides whether it holds. Cookie
+ * sessions and `all`-scope tokens pass the binding unconditionally, so they
+ * still get the more useful `400` for a bad id.
+ */
 export async function createWebhook(c: Context<AppEnv>) {
   const db = c.get("db");
   const workspaceId = requireParam(c, "workspaceId");
@@ -60,6 +124,12 @@ export async function createWebhook(c: Context<AppEnv>) {
   if (!urlValidation.valid) {
     return errorResponse(c, urlValidation.error, 400);
   }
+
+  // PAT binding: a narrowed token may only subscribe to a project on its list,
+  // and may not open a workspace-wide subscription at all. Before the
+  // existence check — see the jsdoc for why the order is the security property.
+  const denied = enforceTokenWebhookBinding(c, workspaceId, body.projectId ?? null);
+  if (denied) return denied;
 
   // Validate projectId belongs to this workspace
   if (body.projectId) {
@@ -121,6 +191,19 @@ export async function createWebhook(c: Context<AppEnv>) {
 // listWebhooks
 // ---------------------------------------------------------------------------
 
+/**
+ * `GET /workspaces/:workspaceId/webhooks`
+ *
+ * Lists the workspace's webhooks with secrets stripped.
+ *
+ * For a project-narrowed PAT the list is filtered to webhooks targeting a
+ * project on its list. Note what the filter does with `projectId IS NULL`
+ * rows: `inArray` never matches NULL, so workspace-wide webhooks drop out
+ * automatically — which is the correct outcome and not an accident of SQL.
+ * A workspace-wide webhook's URL and event list describe an egress path
+ * carrying every project's events, so it is not the narrowed token's to see,
+ * exactly as it is not the narrowed token's to create.
+ */
 export async function listWebhooks(c: Context<AppEnv>) {
   const db = c.get("db");
   const workspaceId = requireParam(c, "workspaceId");
@@ -128,7 +211,12 @@ export async function listWebhooks(c: Context<AppEnv>) {
   const rows = await db
     .select()
     .from(webhook)
-    .where(eq(webhook.workspaceId, workspaceId));
+    .where(
+      and(
+        eq(webhook.workspaceId, workspaceId),
+        tokenProjectScopeFilter(c, webhook.projectId),
+      ),
+    );
 
   return c.json({ webhooks: rows.map(omitSecret) });
 }
@@ -168,6 +256,11 @@ export async function getWebhook(c: Context<AppEnv>) {
     return errorResponse(c, "Webhook not found", 404);
   }
 
+  // PAT binding — the delivery history below echoes response bodies from the
+  // subscriber, so an out-of-scope webhook is a read of another project.
+  const denied = enforceTokenWebhookBinding(c, workspaceId, row.projectId);
+  if (denied) return denied;
+
   return c.json({ webhook: omitSecret(row), deliveries });
 }
 
@@ -195,6 +288,11 @@ export async function updateWebhook(c: Context<AppEnv>) {
     return errorResponse(c, "Webhook not found", 404);
   }
 
+  // PAT binding on the webhook's CURRENT target: a token that may not read a
+  // webhook must not be able to repoint, rename, re-enable or re-secret it.
+  const deniedCurrent = enforceTokenWebhookBinding(c, workspaceId, existing.projectId);
+  if (deniedCurrent) return deniedCurrent;
+
   // If URL is being changed, re-validate it
   if (body.url !== undefined && body.url !== existing.url) {
     const urlValidation = validateWebhookUrl(body.url, { allowInsecure: isDevMode(c) });
@@ -202,6 +300,20 @@ export async function updateWebhook(c: Context<AppEnv>) {
       return errorResponse(c, urlValidation.error, 400);
     }
   }
+
+  const effectiveProjectId =
+    body.projectId !== undefined ? body.projectId : existing.projectId;
+
+  // PAT binding on the webhook's NEW target. Checked separately from the
+  // current target because the two differ precisely in the attack that
+  // matters: a token allowed to edit its own project's webhook must not be
+  // able to widen it to a sibling project, or to `null` (workspace-wide) —
+  // and, in the other direction, must not be able to seize a SIBLING's webhook
+  // by repointing it onto its own list (which the current-target check above
+  // is what stops). Placed before the existence check below for the same
+  // no-oracle reason as `createWebhook`.
+  const deniedNext = enforceTokenWebhookBinding(c, workspaceId, effectiveProjectId);
+  if (deniedNext) return deniedNext;
 
   // Validate projectId if being changed
   if (body.projectId !== undefined && body.projectId !== null) {
@@ -211,8 +323,6 @@ export async function updateWebhook(c: Context<AppEnv>) {
   }
 
   // Cross-validate: project-scoped webhooks cannot have workspace-scoped events
-  const effectiveProjectId =
-    body.projectId !== undefined ? body.projectId : existing.projectId;
   if (effectiveProjectId) {
     const effectiveEvents: WebhookEventType[] = body.events ?? (JSON.parse(existing.events) as WebhookEventType[]);
     if (effectiveEvents.some((e) => WORKSPACE_SCOPED_EVENTS.has(e))) {
@@ -276,8 +386,10 @@ export async function deleteWebhook(c: Context<AppEnv>) {
   const db = c.get("db");
   const { workspaceId, webhookId } = requireParams(c, "workspaceId", "webhookId");
 
+  // `projectId` is selected purely so the PAT binding below can be evaluated
+  // without a second round-trip.
   const [existing] = await db
-    .select({ id: webhook.id })
+    .select({ id: webhook.id, projectId: webhook.projectId })
     .from(webhook)
     .where(
       and(
@@ -290,6 +402,11 @@ export async function deleteWebhook(c: Context<AppEnv>) {
   if (!existing) {
     return errorResponse(c, "Webhook not found", 404);
   }
+
+  // PAT binding — deleting another project's webhook is a denial-of-service on
+  // that project's integrations, so it is bound the same way reads are.
+  const denied = enforceTokenWebhookBinding(c, workspaceId, existing.projectId);
+  if (denied) return denied;
 
   // Cascade delete handles associated webhook_delivery rows
   await db.delete(webhook).where(eq(webhook.id, webhookId));
@@ -319,6 +436,12 @@ export async function testWebhook(c: Context<AppEnv>) {
   if (!row) {
     return errorResponse(c, "Webhook not found", 404);
   }
+
+  // PAT binding — `/test` fires a real signed delivery to the registered URL,
+  // so it is a write against the subscriber for a project the token may not
+  // hold, and it confirms that project's endpoint is live.
+  const denied = enforceTokenWebhookBinding(c, workspaceId, row.projectId);
+  if (denied) return denied;
 
   const deliveryId = crypto.randomUUID();
   const testPayload: Record<string, unknown> = {

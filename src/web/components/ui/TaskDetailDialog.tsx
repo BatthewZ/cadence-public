@@ -26,6 +26,7 @@ import { useTaskComments } from "@/web/hooks/use-task-comments";
 import { useTaskCover } from "@/web/hooks/use-task-cover";
 import { useTaskDetailActions } from "@/web/hooks/use-task-detail-actions";
 import { useTaskEditing } from "@/web/hooks/use-task-editing";
+import { useTaskServerSync } from "@/web/hooks/use-task-server-sync";
 import { useTaskSubtasks } from "@/web/hooks/use-task-subtasks";
 import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
@@ -100,17 +101,7 @@ export function TaskDetailDialog({
   const [localTask, setLocalTask] = useState<TaskDetail | null>(null);
   const task = localTask;
 
-  // Seed local task from API data
-  useEffect(() => {
-    if (taskFromServer) {
-      queueMicrotask(() => {
-        setLocalTask((prev) => {
-          if (!prev || prev.id !== taskFromServer.id) return taskFromServer;
-          return { ...prev, subtasks: taskFromServer.subtasks, labels: taskFromServer.labels };
-        });
-      });
-    }
-  }, [taskFromServer]);
+  useTaskServerSync(taskFromServer, setLocalTask);
 
   // Fetch task groups for the project
   const { data: taskGroupsData } = useQuery({
@@ -199,12 +190,14 @@ export function TaskDetailDialog({
   const patchTask = useMutation({
     mutationFn: (updates: Partial<TaskDetail>) =>
       api.patch<{ task: TaskDetail }>(`/api/tasks/${taskId}`, updates),
+    onMutate: () => freshnessTracker.recordMutation("tasks"),
     onSuccess: invalidateTaskQueries,
   });
 
   const createSubtask = useMutation({
     mutationFn: (input: { title: string }) =>
       api.post<{ subtask: Subtask }>(`/api/tasks/${taskId}/subtasks`, input),
+    onMutate: () => freshnessTracker.recordMutation("tasks"),
     onSettled: invalidateTaskQueries,
   });
 

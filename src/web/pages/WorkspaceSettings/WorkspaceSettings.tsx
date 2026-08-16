@@ -10,13 +10,14 @@ import { Alert, Button, Card, Dialog, Text } from "@/web/components/ui";
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { ThemeGrid } from "@/web/components/ui/ThemeGrid";
 import { useToast } from "@/web/components/ui/ToastContext";
-import { useWorkspace, type Workspace } from "@/web/contexts/WorkspaceContext";
+import { useWorkspace, type WorkspaceDetail } from "@/web/contexts/WorkspaceContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useWorkspacePermissions } from "@/web/hooks/use-permissions";
 import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
 import { queryKeys } from "@/web/lib/query-keys";
 
+import { MemberPermissionsCard } from "./components/MemberPermissionsCard";
 import { SettingsNav } from "./SettingsNav";
 
 interface UpdateWorkspaceInput {
@@ -64,7 +65,7 @@ export default function WorkspaceSettings() {
       const previousData = qc.getQueryData(key);
       qc.setQueryData(
         key,
-        (old: { workspace: Workspace } | undefined) =>
+        (old: { workspace: WorkspaceDetail } | undefined) =>
           old ? { workspace: { ...old.workspace, name: input.name, slug: input.slug, description: input.description } } : old,
       );
       return { previousData };
@@ -89,7 +90,7 @@ export default function WorkspaceSettings() {
       const previousData = qc.getQueryData(queryKeys.workspaces.detail(workspace.id));
       qc.setQueryData(
         queryKeys.workspaces.detail(workspace.id),
-        (old: { workspace: Workspace } | undefined) =>
+        (old: { workspace: WorkspaceDetail } | undefined) =>
           old ? { workspace: { ...old.workspace, theme: newTheme } } : old,
       );
       return { previousData };
@@ -237,6 +238,8 @@ export default function WorkspaceSettings() {
             </Stack>
           </Card>
         )}
+
+        {canManageWorkspace && <MemberPermissionsCard workspace={workspace} />}
 
         {canDeleteWorkspace && (
           <Card className="border border-status-error/30">

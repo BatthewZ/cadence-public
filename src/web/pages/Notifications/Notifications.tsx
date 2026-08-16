@@ -97,13 +97,13 @@ export default function Notifications() {
     staleTime: 2 * 60_000,
   });
 
-  const pendingTokenMap = useMemo(
-    () =>
-      new Map(
-        (pendingData?.invitations ?? [])
-          .filter((inv): inv is Invitation & { token: string } => !!inv.token)
-          .map((inv) => [inv.id, inv.token]),
-      ),
+  // Which invitation notifications still have a live invitation behind them.
+  // Previously this was an id → token map built from the pending list; the
+  // pending endpoint no longer returns tokens (audit finding 04), and none is
+  // needed — acceptance goes by id. The set still gates the Accept button so
+  // a notification for a revoked or expired invitation renders without one.
+  const pendingInvitationIds = useMemo(
+    () => new Set((pendingData?.invitations ?? []).map((inv) => inv.id)),
     [pendingData],
   );
 
@@ -112,7 +112,7 @@ export default function Notifications() {
   const notifications = data?.pages.flatMap((p) => p.notifications) ?? [];
 
   const actionsCtx: NotificationActionsContext = {
-    pendingTokenMap,
+    pendingInvitationIds,
     isAccepting,
     acceptInvitation,
     dismissInvitation,

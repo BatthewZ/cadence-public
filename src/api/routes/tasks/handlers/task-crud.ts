@@ -11,6 +11,7 @@ import { parseRecurrenceRule } from "../../../../shared/lib/recurrence";
 import type { TaskLabelInfo } from "../../../../shared/schemas/label";
 import { createTaskSchema, dateRangeError, updateTaskSchema } from "../../../../shared/schemas/task";
 import type { AppEnv } from "../../../env";
+import { ASSIGNEE_NOT_ASSIGNABLE_MESSAGE, canUserBeAssigned } from "../../../lib/assignee-validation";
 import { deferWork } from "../../../lib/defer";
 import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
@@ -71,6 +72,21 @@ export async function createTask(c: Context<AppEnv>) {
   const assigneeId = body.assigneeId !== undefined
     ? (body.assigneeId ?? null)
     : (projectResult[0]?.autoAssignCreator ? user.id : null);
+
+  // The assignee must be someone who can actually open this project. Without
+  // this, any user id in the payload got a "task_assigned" notification
+  // carrying the task title and the actor's name — a title leak to a total
+  // outsider, plus an unbounded notification-spam primitive. See
+  // assignee-validation.ts for why membership rows alone are not the test.
+  //
+  // Skipped when the assignee is the caller: the route guard
+  // (`requireProjectRole`) already proved they can reach this project, so
+  // re-resolving it would add a query to the two most common cases —
+  // self-assign and autoAssignCreator — for no security gain.
+  if (assigneeId !== null && assigneeId !== user.id
+    && !(await canUserBeAssigned(db, projectId, assigneeId))) {
+    return errorResponse(c, ASSIGNEE_NOT_ASSIGNABLE_MESSAGE, 400);
+  }
 
   // A recurring task needs an anchor date. When neither date is supplied we
   // default dueDate to today so the series has somewhere to recur from. But if
@@ -392,6 +408,31 @@ export async function updateTask(c: Context<AppEnv>) {
     }
   }
 
+  // -------------------------------------------------------------------------
+  // Assignee must be able to reach this task's project (see
+  // assignee-validation.ts — membership rows alone are the wrong test, because
+  // workspace owners/admins are elevated without one).
+  //
+  // Four cases are deliberately let through without a lookup:
+  //   * `undefined` — the field is absent from this PATCH, nothing to check.
+  //   * `null` — unassigning; always allowed.
+  //   * unchanged — a client re-sending the stored value (the web client PATCHes
+  //     whole task objects) is a no-op. If the stored assignee has since been
+  //     offboarded, validating it here would 400 every subsequent edit of that
+  //     task — an unrelated membership change silently bricking the task. The
+  //     stale value is cleaned up on the paths that copy it forward instead.
+  //   * self — the route guard already proved the caller can reach the project.
+  // -------------------------------------------------------------------------
+  if (
+    body.assigneeId !== undefined
+    && body.assigneeId !== null
+    && body.assigneeId !== currentTask.assigneeId
+    && body.assigneeId !== user.id
+    && !(await canUserBeAssigned(db, currentTask.projectId, body.assigneeId))
+  ) {
+    return errorResponse(c, ASSIGNEE_NOT_ASSIGNABLE_MESSAGE, 400);
+  }
+
   const now = new Date();
 
   const updateData = {
@@ -404,7 +445,15 @@ export async function updateTask(c: Context<AppEnv>) {
     ...(body.dueDate !== undefined && { dueDate: body.dueDate ? new Date(body.dueDate) : null }),
     ...(body.cost !== undefined && { cost: body.cost }),
     ...(body.icon !== undefined && { icon: body.icon }),
-    ...(body.coverImageKey !== undefined && { coverImageKey: body.coverImageKey }),
+    // No `coverImageKey` line, and none may be added: this generic PATCH must
+    // never write that column. `serveUpload` authorizes a `task-cover` download
+    // by matching the requested R2 key against `task.cover_image_key`, so a
+    // client-writable key is a forgeable capability — a user could point their
+    // own task at another workspace's object and read it through their own
+    // access. `api/lib/cover-image.ts` is the only writer of a non-null
+    // `coverImageKey` anywhere in the API, and the key it writes is one the
+    // server just minted for the caller's own upload. `coverImagePosition` is a
+    // framing offset only and is safe.
     ...(body.coverImagePosition !== undefined && { coverImagePosition: body.coverImagePosition }),
     ...(body.recurrenceRule !== undefined && {
       recurrenceRule: body.recurrenceRule ? JSON.stringify(body.recurrenceRule) : null,
@@ -538,16 +587,18 @@ export async function updateTask(c: Context<AppEnv>) {
   {
     const updatedEnrichment = await resolveTaskEnrichment(db, updated);
     const data = buildTaskEventData(updated, updatedEnrichment);
-    // Why: `coverUnsplash` is a JSON object (not a scalar) and is only written
-    // via the dedicated PUT /tasks/:taskId/cover/unsplash endpoint — it never
-    // changes through this PATCH handler, so diffing it here would never fire
-    // and `computeChanges` is scalar-only (it reports `{from, to}` pairs which
-    // don't render meaningfully for arbitrary JSON). The swap between cover
-    // sources is observable via `coverImageKey` toggling on/off below.
+    // Why neither cover SOURCE column is diffed here: `coverImageKey` and
+    // `coverUnsplash` are not writable through this PATCH (see updateTaskSchema
+    // and `updateData` above — a client-writable cover key would forge the
+    // download authorization in `serveUpload`). Only the dedicated cover
+    // endpoints change them, so diffing either one here could never fire.
+    // `coverUnsplash` is additionally unsuited to `computeChanges`, which is
+    // scalar-only: it reports `{from, to}` pairs that don't render meaningfully
+    // for arbitrary JSON. `coverImagePosition` IS still patchable and is tracked.
     const changes = computeChanges(
       currentTask as Record<string, unknown>,
       updated as Record<string, unknown>,
-      ["title", "description", "assigneeId", "priority", "startDate", "dueDate", "cost", "icon", "taskGroupId", "coverImageKey", "coverImagePosition", "recurrenceRule"],
+      ["title", "description", "assigneeId", "priority", "startDate", "dueDate", "cost", "icon", "taskGroupId", "coverImagePosition", "recurrenceRule"],
     );
 
     // Enrich ID-only changes with human-readable objects

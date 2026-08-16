@@ -6,6 +6,7 @@ import { project, projectMember } from "../../../../db/schema/project";
 import { task } from "../../../../db/schema/task";
 import type { AppEnv } from "../../../env";
 import { requireParam } from "../../../lib/params";
+import { tokenProjectScopeFilter } from "../../../middleware/authorize";
 import { costAggregationColumns, emptyCostAggregation, emptyTaskCounts, isElevatedRole, taskCountColumns } from "./helpers";
 
 /**
@@ -13,6 +14,18 @@ import { costAggregationColumns, emptyCostAggregation, emptyTaskCounts, isElevat
  *
  * Returns an array of projects in the workspace with task count breakdowns
  * by status and total member count per project.
+ *
+ * Every one of the eight queries below is filtered by the SAME `inWorkspace`
+ * predicate, which folds in the caller's PAT project narrowing
+ * (`tokenProjectScopeFilter`). Composing it once into `inWorkspace` rather
+ * than bolting it onto each query individually is the point: this handler
+ * returns rolled-up numbers (task counts, cost totals, per-member workload)
+ * where a single unfiltered query would leak an unselected project's data as
+ * an *aggregate* — a leak no post-hoc row filter could undo, and one that no
+ * amount of eyeballing the response would reveal.
+ *
+ * For cookie sessions and `projectScope: "all"` tokens the filter is
+ * `undefined`, Drizzle drops it, and the SQL is exactly what it was before.
  */
 export async function workspaceDashboard(c: Context<AppEnv>) {
   const db = c.get("db");
@@ -25,8 +38,12 @@ export async function workspaceDashboard(c: Context<AppEnv>) {
   const memberScope = () =>
     and(eq(projectMember.projectId, project.id), eq(projectMember.userId, user.id));
 
-  // Common filters reused across dashboard queries
-  const inWorkspace = eq(project.workspaceId, workspaceId);
+  // Common filters reused across dashboard queries. `inWorkspace` carries the
+  // PAT project narrowing so no query below can forget it.
+  const inWorkspace = and(
+    eq(project.workspaceId, workspaceId),
+    tokenProjectScopeFilter(c, project.id),
+  );
   const isActiveProject = eq(project.status, "active");
 
   const now = new Date();
@@ -46,14 +63,14 @@ export async function workspaceDashboard(c: Context<AppEnv>) {
         .select(projectColumns)
         .from(project)
         .leftJoin(task, eq(task.projectId, project.id))
-        .where(eq(project.workspaceId, workspaceId))
+        .where(inWorkspace)
         .groupBy(project.id, project.name, project.status)
     : db
         .select(projectColumns)
         .from(project)
         .innerJoin(projectMember, memberScope())
         .leftJoin(task, eq(task.projectId, project.id))
-        .where(eq(project.workspaceId, workspaceId))
+        .where(inWorkspace)
         .groupBy(project.id, project.name, project.status);
 
   // Member counts per project
@@ -64,7 +81,7 @@ export async function workspaceDashboard(c: Context<AppEnv>) {
     })
     .from(projectMember)
     .innerJoin(project, eq(projectMember.projectId, project.id))
-    .where(eq(project.workspaceId, workspaceId))
+    .where(inWorkspace)
     .groupBy(projectMember.projectId);
 
   // Workspace-wide task counts

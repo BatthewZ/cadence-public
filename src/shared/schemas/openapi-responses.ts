@@ -25,6 +25,7 @@ import { z } from "@hono/zod-openapi";
 
 import { PROJECT_ROLES, PROJECT_STATUSES, TASK_PRIORITIES, WORKSPACE_ROLES } from "../types/roles";
 import { THEMES } from "../types/theme";
+import type { WorkspacePolicy } from "../types/workspace-policy";
 import { storedUnsplashCoverPayloadSchema } from "./unsplash";
 
 /**
@@ -114,9 +115,46 @@ export const listWorkspacesResponseSchema = z
   })
   .openapi("ListWorkspacesResponse");
 
+/**
+ * The workspace's governance toggles, always fully populated on the wire.
+ *
+ * The handler resolves the stored column through `resolveWorkspacePolicy`
+ * before responding, so integrators never see a null or a partially-populated
+ * object and never need to know this project's defaults to interpret a
+ * response. The `satisfies` clause makes adding a toggle to the
+ * `WorkspacePolicy` interface a compile error here until the spec describes it
+ * too.
+ */
+export const workspacePolicyResponseSchema = z
+  .object({
+    allowMemberProjectCreation: z.boolean().openapi({
+      description:
+        "Whether workspace members (role `member`) may create projects and duplicate projects they administer. Owners and admins always may, regardless of this value. Defaults to true.",
+      example: true,
+    }),
+  })
+  .openapi("WorkspacePolicy") satisfies z.ZodType<WorkspacePolicy>;
+
+/**
+ * Detail responses carry the policy; list responses do not.
+ *
+ * That asymmetry is intentional rather than an oversight. The workspace list
+ * populates the switcher — it returns a row per workspace the caller belongs
+ * to, and shipping every workspace's governance config to render a dropdown is
+ * payload nobody reads. The detail endpoint is already a hard dependency of
+ * every workspace route (nothing renders until it resolves), so the policy
+ * arrives with the data the UI was waiting on anyway, and no screen has to
+ * decide what to do about a policy that has not loaded yet.
+ */
+export const workspaceDetailSchema = workspaceWithMemberCountSchema
+  .extend({
+    policy: workspacePolicyResponseSchema,
+  })
+  .openapi("WorkspaceDetail");
+
 export const getWorkspaceResponseSchema = z
   .object({
-    workspace: workspaceWithMemberCountSchema,
+    workspace: workspaceDetailSchema,
   })
   .openapi("GetWorkspaceResponse");
 

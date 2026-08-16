@@ -26,6 +26,7 @@ import {
   addProjectMemberSchema,
   createProjectSchema,
   duplicateProjectSchema,
+  updateProjectMemberRoleSchema,
   updateProjectSchema,
 } from "../../../shared/schemas/project";
 import type {
@@ -42,6 +43,7 @@ import {
   fakeCoverPngFile,
   installFetchSpy,
   jsonRequest,
+  makeTestUser,
   sampleUnsplashPayload,
   seedLabel,
   seedProject,
@@ -65,6 +67,7 @@ import {
   listMembers,
   listProjects,
   removeMember,
+  updateMemberRole,
   updateProject,
   uploadProjectCover,
 } from "./projects.handlers";
@@ -77,6 +80,29 @@ let d1: D1Database;
 let dispose: () => Promise<void>;
 let workspaceId: string;
 
+/**
+ * A live member of a SECOND workspace, and never a `workspace_member` of
+ * `workspaceId`.
+ *
+ * Distinct from the orphan fixture used by the duplication tests: an orphan has
+ * no `workspace_member` row anywhere, so it is refused by the "is a member"
+ * half of the rule alone. This principal is genuinely a member — of somebody
+ * else's tenant — so only the "of THIS workspace" half can refuse them. That is
+ * the difference between a test that pins a tenancy boundary and a test that
+ * pins account existence.
+ *
+ * Individual tests DO give them `project_member` rows under `workspaceId`, and
+ * that is the point rather than a contradiction: an orphaned project row held
+ * by a real member of another tenant is precisely the state that must confer
+ * nothing here.
+ */
+const FOREIGN_WORKSPACE_USER = makeTestUser(
+  "foreign-workspace-user-id",
+  "Foreign Tenant User",
+);
+const FOREIGN_WORKSPACE_USER_ID = FOREIGN_WORKSPACE_USER.id;
+let foreignWorkspaceId: string;
+
 beforeAll(async () => {
   const result = await createTestD1();
   d1 = result.d1;
@@ -85,6 +111,12 @@ beforeAll(async () => {
   await seedUser(d1, TEST_USER_2);
   workspaceId = await seedWorkspace(d1, TEST_USER.id);
   await seedWorkspaceMember(d1, workspaceId, TEST_USER_2.id, "member");
+
+  await seedUser(d1, FOREIGN_WORKSPACE_USER);
+  foreignWorkspaceId = await seedWorkspace(d1, FOREIGN_WORKSPACE_USER_ID, {
+    name: "Foreign Tenant Workspace",
+    slug: "foreign-tenant-workspace",
+  });
 });
 
 afterAll(async () => {
@@ -451,6 +483,65 @@ describe("updateProject", () => {
     expect(body.project.status).toBe("archived");
   });
 
+  // `updateProject` assigns columns field-by-field rather than spreading the
+  // request body, so that the set of client-writable columns is visible at the
+  // write site and `coverImageKey` cannot creep back in. The cost of that
+  // choice is that a field present in `updateProjectSchema` but forgotten in the
+  // handler would be silently ignored — a PATCH that returns 200 and changes
+  // nothing. This test is the guard: it drives EVERY field the schema still
+  // permits through one request and reads the stored row back.
+  it("writes every field the update schema permits", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "All Fields" });
+
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${projId}`,
+      jsonRequest("PATCH", `/projects/${projId}`, {
+        name: "All Fields Updated",
+        description: "Every writable column",
+        status: "completed",
+        icon: "sparkles",
+        coverImagePosition: 73,
+        theme: "ocean",
+        budget: 12345,
+        autoAssignCreator: true,
+      }),
+    );
+
+    expect(res.status).toBe(200);
+
+    const row = await d1
+      .prepare(
+        "SELECT name, description, status, icon, cover_image_position AS pos, theme, budget, auto_assign_creator AS auto FROM project WHERE id = ?",
+      )
+      .bind(projId)
+      .first<Record<string, unknown>>();
+
+    expect(row).toMatchObject({
+      name: "All Fields Updated",
+      description: "Every writable column",
+      status: "completed",
+      icon: "sparkles",
+      pos: 73,
+      theme: "ocean",
+      budget: 12345,
+      auto: 1,
+    });
+
+    // Every schema key is exercised above — if someone adds a field to the
+    // schema without adding it here, this fails and forces the decision.
+    expect(Object.keys(updateProjectSchema.shape).sort()).toEqual([
+      "autoAssignCreator",
+      "budget",
+      "coverImagePosition",
+      "description",
+      "icon",
+      "name",
+      "status",
+      "theme",
+    ]);
+  });
+
   it("allows partial updates (only name)", async () => {
     const app = createApp();
     const res = await app.request(
@@ -465,6 +556,119 @@ describe("updateProject", () => {
     expect(body.project.name).toBe("Renamed Again");
     // status should remain from the previous update
     expect(body.project.status).toBe("archived");
+  });
+
+  // -------------------------------------------------------------------------
+  // `coverImageKey` is NOT client-writable through this endpoint.
+  //
+  // Why this matters: `serveUpload` authorizes a `project-cover` download by
+  // finding the project whose `cover_image_key` equals the requested R2 key. If
+  // a client could write that column, "which project owns this object" would be
+  // client-declared — a user could point their OWN project at another
+  // workspace's cover key and read the image back through their own legitimate
+  // project access. The field is therefore absent from `updateProjectSchema`,
+  // and `updateProject` assigns columns field-by-field (never `...body`) so a
+  // future schema addition cannot silently re-open the hole.
+  //
+  // These tests assert the STORED ROW, not the response echo: a handler that
+  // returned the requested key while writing nothing, or wrote it while
+  // returning the old one, must both be caught.
+  // -------------------------------------------------------------------------
+  describe("coverImageKey is not writable via PATCH", () => {
+    /** Read `cover_image_key` straight from SQLite, bypassing the handler. */
+    async function storedCoverKey(projectIdParam: string): Promise<string | null> {
+      const row = await d1
+        .prepare("SELECT cover_image_key AS k FROM project WHERE id = ?")
+        .bind(projectIdParam)
+        .first<{ k: string | null }>();
+      return row?.k ?? null;
+    }
+
+    it("is absent from updateProjectSchema", () => {
+      expect(Object.keys(updateProjectSchema.shape)).not.toContain("coverImageKey");
+      expect(Object.keys(updateProjectSchema.shape)).not.toContain("coverUnsplash");
+      // The framing offset stays patchable — it carries no authorization meaning.
+      expect(Object.keys(updateProjectSchema.shape)).toContain("coverImagePosition");
+    });
+
+    it("leaves an existing cover key untouched when a PATCH tries to overwrite it", async () => {
+      const victimKey = "project-cover/victim-user/secret.jpg";
+      const projId = await seedProject(d1, workspaceId, {
+        name: "Has A Cover",
+        coverImageKey: victimKey,
+      });
+
+      const app = createApp();
+      const res = await app.request(
+        `/projects/${projId}`,
+        jsonRequest("PATCH", `/projects/${projId}`, {
+          coverImageKey: "project-cover/attacker/forged.jpg",
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      expect(await storedCoverKey(projId)).toBe(victimKey);
+      const body = await res.json<{ project: { coverImageKey: string | null } }>();
+      expect(body.project.coverImageKey).toBe(victimKey);
+    });
+
+    it("does not let a project with no cover claim someone else's key (the forge case)", async () => {
+      const projId = await seedProject(d1, workspaceId, { name: "No Cover" });
+
+      const app = createApp();
+      const res = await app.request(
+        `/projects/${projId}`,
+        jsonRequest("PATCH", `/projects/${projId}`, {
+          coverImageKey: "project-cover/other-workspace-user/private.jpg",
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      expect(await storedCoverKey(projId)).toBeNull();
+    });
+
+    it("ignores a null coverImageKey — a PATCH cannot clear someone's cover either", async () => {
+      const victimKey = "project-cover/victim-user/keep-me.jpg";
+      const projId = await seedProject(d1, workspaceId, {
+        name: "Clear Attempt",
+        coverImageKey: victimKey,
+      });
+
+      const app = createApp();
+      const res = await app.request(
+        `/projects/${projId}`,
+        jsonRequest("PATCH", `/projects/${projId}`, { coverImageKey: null }),
+      );
+
+      expect(res.status).toBe(200);
+      expect(await storedCoverKey(projId)).toBe(victimKey);
+    });
+
+    it("still applies legitimate fields sent alongside coverImageKey", async () => {
+      // The field is STRIPPED by zod, not rejected — a client that PATCHes a
+      // whole project object must keep working, just without cover authority.
+      const victimKey = "project-cover/victim-user/alongside.jpg";
+      const projId = await seedProject(d1, workspaceId, {
+        name: "Mixed Patch",
+        coverImageKey: victimKey,
+      });
+
+      const app = createApp();
+      const res = await app.request(
+        `/projects/${projId}`,
+        jsonRequest("PATCH", `/projects/${projId}`, {
+          name: "Mixed Patch Renamed",
+          coverImagePosition: 42,
+          coverImageKey: "project-cover/attacker/forged.jpg",
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      const body = await res.json<{ project: { name: string; coverImagePosition: number | null } }>();
+      expect(body.project.name).toBe("Mixed Patch Renamed");
+      expect(body.project.coverImagePosition).toBe(42);
+      expect(await storedCoverKey(projId)).toBe(victimKey);
+    });
   });
 
   it("returns 400 for invalid status value", async () => {
@@ -764,7 +968,7 @@ describe("duplicateProject", () => {
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ project: { id: string } }>();
+    const body = await res.json<{ project: { id: string }; skippedMemberIds: string[] }>();
 
     const members = await d1
       .prepare("SELECT userId, role FROM project_member WHERE projectId = ? ORDER BY role")
@@ -775,6 +979,182 @@ describe("duplicateProject", () => {
     // duplicating user is always admin, not duplicated
     expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER.id, role: "admin" }));
     expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER_2.id, role: "viewer" }));
+    // Nobody was dropped — the workspace-membership filter must not be a
+    // blanket "copy nobody".
+    expect(body.skippedMemberIds).toEqual([]);
+  });
+
+  // -------------------------------------------------------------------------
+  // Orphaned `project_member` rows must not propagate through duplication.
+  //
+  // When a user is removed from a workspace their `project_member` rows are
+  // left behind. Such a row confers no access on its own, but copying it
+  // forward mints a FRESH stale row on a brand-new project — duplication would
+  // be actively spreading exactly the state that has to be treated as
+  // meaningless. `addMember` already refuses to create a `project_member` row
+  // for a non-workspace-member ("User is not a member of the workspace", 400);
+  // duplication performs the same write and consults the same authority
+  // (`workspace_member`), so the two can never drift apart.
+  //
+  // It SKIPS rather than refuses: a departed teammate is routine and invisible
+  // to whoever clicks Duplicate, so a 400 would permanently brick duplication
+  // of any project someone ever left. The drop is made visible instead, via
+  // `skippedMemberIds` on the 201 — that field is the whole reason skipping is
+  // an acceptable choice, so it is asserted here rather than left implicit.
+  // -------------------------------------------------------------------------
+  describe("orphaned project members", () => {
+    const ORPHAN_USER = makeTestUser("dup-orphan-user-id", "Offboarded User");
+    const ORPHAN_USER_ID = ORPHAN_USER.id;
+
+    beforeAll(async () => {
+      // A real user row with NO `workspace_member` row for `workspaceId` —
+      // exactly the state left behind by removing someone from the workspace.
+      await seedUser(d1, ORPHAN_USER);
+    });
+
+    it("does not copy a source member who is no longer a workspace member", async () => {
+      const projId = await seedProject(d1, workspaceId, { name: "Has Orphan" });
+      await seedProjectMember(d1, projId, TEST_USER.id, "admin");
+      await seedProjectMember(d1, projId, TEST_USER_2.id, "viewer");
+      await seedProjectMember(d1, projId, ORPHAN_USER_ID, "member");
+
+      const app = createApp();
+      const res = await app.request(
+        `/projects/${projId}/duplicate`,
+        jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true }),
+      );
+
+      expect(res.status).toBe(201);
+      const body = await res.json<{ project: { id: string }; skippedMemberIds: string[] }>();
+
+      const members = await d1
+        .prepare("SELECT userId, role FROM project_member WHERE projectId = ?")
+        .bind(body.project.id)
+        .all<{ userId: string; role: string }>();
+      const copiedIds = members.results.map((m) => m.userId);
+
+      // The orphan is gone from the copy...
+      expect(copiedIds).not.toContain(ORPHAN_USER_ID);
+      // ...and the genuine member is still there (the filter is not "copy nobody").
+      expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER_2.id, role: "viewer" }));
+      expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER.id, role: "admin" }));
+      expect(members.results).toHaveLength(2);
+
+      // The drop is reported, not silent.
+      expect(body.skippedMemberIds).toEqual([ORPHAN_USER_ID]);
+
+      // The source project is untouched — duplication cleans the COPY, it does
+      // not retroactively repair the original.
+      const sourceMembers = await d1
+        .prepare("SELECT userId FROM project_member WHERE projectId = ?")
+        .bind(projId)
+        .all<{ userId: string }>();
+      expect(sourceMembers.results.map((m) => m.userId)).toContain(ORPHAN_USER_ID);
+    });
+
+    it("still produces a usable project when every source member is orphaned", async () => {
+      const projId = await seedProject(d1, workspaceId, { name: "All Orphans" });
+      await seedProjectMember(d1, projId, ORPHAN_USER_ID, "admin");
+
+      const app = createApp();
+      const res = await app.request(
+        `/projects/${projId}/duplicate`,
+        jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true }),
+      );
+
+      expect(res.status).toBe(201);
+      const body = await res.json<{ project: { id: string }; skippedMemberIds: string[] }>();
+
+      const members = await d1
+        .prepare("SELECT userId, role FROM project_member WHERE projectId = ?")
+        .bind(body.project.id)
+        .all<{ userId: string; role: string }>();
+
+      // The duplicating user is still admin — the guard must never strand a
+      // project with no one able to administer it.
+      expect(members.results).toEqual([
+        expect.objectContaining({ userId: TEST_USER.id, role: "admin" }),
+      ]);
+      expect(body.skippedMemberIds).toEqual([ORPHAN_USER_ID]);
+    });
+
+    it("never copies orphans when includeMembers is false, and reports nothing skipped", async () => {
+      const projId = await seedProject(d1, workspaceId, { name: "Orphan No Include" });
+      await seedProjectMember(d1, projId, ORPHAN_USER_ID, "member");
+      await seedProjectMember(d1, projId, TEST_USER_2.id, "viewer");
+
+      const app = createApp();
+      const res = await app.request(
+        `/projects/${projId}/duplicate`,
+        jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+      );
+
+      expect(res.status).toBe(201);
+      const body = await res.json<{ project: { id: string }; skippedMemberIds: string[] }>();
+
+      const members = await d1
+        .prepare("SELECT userId FROM project_member WHERE projectId = ?")
+        .bind(body.project.id)
+        .all<{ userId: string }>();
+
+      expect(members.results.map((m) => m.userId)).toEqual([TEST_USER.id]);
+      // Nothing was "skipped" — members simply weren't requested. Reporting the
+      // orphan here would be a false alarm on every non-member duplicate.
+      expect(body.skippedMemberIds).toEqual([]);
+    });
+
+    /**
+     * Same helper, second caller, and the half of it the orphan cases above
+     * cannot reach.
+     *
+     * Every principal in the orphan tests belongs to no workspace at all, so
+     * they are dropped by the "is a member" half of `selectWorkspaceMemberIds`
+     * on its own. Deleting the `workspaceId` predicate leaves all three of them
+     * still skipped and this whole describe still green — while duplication
+     * starts minting `project_member` rows for members of OTHER tenants, on a
+     * brand-new project, in one click, with the drop silently absent from
+     * `skippedMemberIds`. `addMember` and `duplicateProject` share the helper
+     * precisely so they cannot drift, which is why the boundary is pinned from
+     * both callers rather than once.
+     */
+    it("does not copy a source member who belongs to a different workspace", async () => {
+      const projId = await seedProject(d1, workspaceId, { name: "Has Foreign Member" });
+      await seedProjectMember(d1, projId, TEST_USER.id, "admin");
+      await seedProjectMember(d1, projId, TEST_USER_2.id, "viewer");
+      // A live member of `foreignWorkspaceId`, stray-listed on a project of ours.
+      await seedProjectMember(d1, projId, FOREIGN_WORKSPACE_USER_ID, "member");
+
+      const app = createApp();
+      const res = await app.request(
+        `/projects/${projId}/duplicate`,
+        jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true }),
+      );
+
+      expect(res.status).toBe(201);
+      const body = await res.json<{ project: { id: string }; skippedMemberIds: string[] }>();
+
+      const members = await d1
+        .prepare("SELECT userId, role FROM project_member WHERE projectId = ?")
+        .bind(body.project.id)
+        .all<{ userId: string; role: string }>();
+
+      expect(members.results.map((m) => m.userId)).not.toContain(FOREIGN_WORKSPACE_USER_ID);
+      // The genuine members still copy — the rule is "wrong tenant", not "copy nobody".
+      expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER.id, role: "admin" }));
+      expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER_2.id, role: "viewer" }));
+      expect(members.results).toHaveLength(2);
+
+      expect(body.skippedMemberIds).toEqual([FOREIGN_WORKSPACE_USER_ID]);
+
+      // The copy lives in OUR workspace, so the foreign user's own tenant is
+      // not what excluded them — the workspace of the project being copied is.
+      const copiedProject = await d1
+        .prepare("SELECT workspaceId FROM project WHERE id = ?")
+        .bind(body.project.id)
+        .first<{ workspaceId: string }>();
+      expect(copiedProject!.workspaceId).toBe(workspaceId);
+      expect(copiedProject!.workspaceId).not.toBe(foreignWorkspaceId);
+    });
   });
 
   it("duplicating user is promoted to admin even if they were member in source", async () => {
@@ -996,6 +1376,47 @@ describe("addMember", () => {
     expect(body.error).toBe("User is not a member of the workspace");
   });
 
+  /**
+   * The WORKSPACE half of the membership check — the half that makes this a
+   * tenancy boundary rather than a "does this account exist" test.
+   *
+   * `selectWorkspaceMemberIds` asks two things at once: is this user a member,
+   * and is it THIS workspace they are a member of. Every other negative fixture
+   * here uses a user who belongs to no workspace at all, and such a user is
+   * rejected by the first half alone — so the `workspaceId` predicate can be
+   * deleted, silently weakening the rule from "member of this workspace" to
+   * "member of any workspace", without a single assertion in this file
+   * changing colour. What ships then is cross-tenant member injection: any
+   * signed-up user of any other customer's workspace can be dropped into this
+   * project, and because `resolveProjectAccess` honours a `project_member` row
+   * joined against workspace membership they land inside someone else's data.
+   *
+   * The fixture therefore has to be a real, live member of a DIFFERENT
+   * workspace — the one shape that separates the two rules.
+   */
+  it("returns 400 when the user is a member of a DIFFERENT workspace", async () => {
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${addMemberProjectId}/members`,
+      jsonRequest("POST", `/projects/${addMemberProjectId}/members`, {
+        userId: FOREIGN_WORKSPACE_USER_ID,
+        role: "member",
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("User is not a member of the workspace");
+
+    // And nothing was written — a handler that returns 400 after inserting is
+    // exactly what a status-only assertion cannot see.
+    const row = await d1
+      .prepare("SELECT id FROM project_member WHERE projectId = ? AND userId = ?")
+      .bind(addMemberProjectId, FOREIGN_WORKSPACE_USER_ID)
+      .first();
+    expect(row).toBeNull();
+  });
+
   it("returns 400 for invalid role", async () => {
     const app = createApp();
     const res = await app.request(
@@ -1056,6 +1477,202 @@ describe("addMember", () => {
 // removeMember
 // ---------------------------------------------------------------------------
 
+describe("updateMemberRole", () => {
+  /**
+   * Mounts the route WITHOUT `fakeAuth`'s `projectAccess` injection on purpose.
+   *
+   * In production `requireProjectRole("admin")` runs first and caches the
+   * answer, so the handler's own `resolveProjectAccess` call never fires. Tests
+   * that pre-seed the cache would therefore only ever exercise the branch that
+   * cannot fail, and the fallback — the thing standing between a dropped
+   * middleware and an open member-management endpoint — would be untested
+   * forever. Leaving the cache empty makes every test below run the real
+   * resolution against real rows, which is also what lets the "not an admin"
+   * case be expressed as a seeded role rather than as an injected claim.
+   */
+  function createApp(user = TEST_USER) {
+    const app = new Hono<AppEnv>();
+    app.patch(
+      "/projects/:projectId/members/:userId",
+      fakeAuth(d1, user, {
+        workspaceMembership: { id: "wm-update-role", role: "owner" },
+      }),
+      validateBody(updateProjectMemberRoleSchema),
+      updateMemberRole,
+    );
+    return app;
+  }
+
+  async function patchRole(app: Hono<AppEnv>, projId: string, userId: string, role: string) {
+    const path = `/projects/${projId}/members/${userId}`;
+    return app.request(path, jsonRequest("PATCH", path, { role }));
+  }
+
+  it("changes a member's role and returns the updated row", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "Role Change Project" });
+    await seedProjectMember(d1, projId, TEST_USER_2.id, "viewer");
+
+    const res = await patchRole(createApp(), projId, TEST_USER_2.id, "admin");
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ member: { userId: string; role: string } }>();
+    expect(body.member).toMatchObject({ userId: TEST_USER_2.id, role: "admin" });
+
+    const row = await d1
+      .prepare("SELECT role FROM project_member WHERE projectId = ? AND userId = ?")
+      .bind(projId, TEST_USER_2.id)
+      .first<{ role: string }>();
+    expect(row?.role).toBe("admin");
+  });
+
+  /**
+   * Bounds the blast radius, which asserting the target row alone cannot.
+   *
+   * The UPDATE is keyed on (projectId, userId, oldRole). Drop the `projectId`
+   * half and the statement still satisfies the assertion above while rewriting
+   * that user's role in every project they belong to, across every workspace in
+   * the deployment — "make Dana an admin of the Q3 board" would make Dana an
+   * admin of the company. Silent, 200, no error path. A bystander membership in
+   * a DIFFERENT WORKSPACE is the only thing that catches it, and it is asserted
+   * to keep its original role rather than merely to exist.
+   */
+  it("changes the role in ONLY the named project", async () => {
+    const targetProjId = await seedProject(d1, workspaceId, { name: "Scoped Role Target" });
+    const bystanderProjId = await seedProject(d1, workspaceId, { name: "Scoped Role Bystander" });
+    const foreignProjId = await seedProject(d1, foreignWorkspaceId, {
+      name: "Scoped Role Foreign Bystander",
+    });
+    await seedProjectMember(d1, targetProjId, TEST_USER_2.id, "viewer");
+    await seedProjectMember(d1, bystanderProjId, TEST_USER_2.id, "viewer");
+    await seedProjectMember(d1, foreignProjId, TEST_USER_2.id, "viewer");
+
+    const res = await patchRole(createApp(), targetProjId, TEST_USER_2.id, "admin");
+    expect(res.status).toBe(200);
+
+    const rows = await d1
+      .prepare("SELECT projectId, role FROM project_member WHERE userId = ?")
+      .bind(TEST_USER_2.id)
+      .all<{ projectId: string; role: string }>();
+    const byProject = new Map(rows.results.map((r) => [r.projectId, r.role]));
+    expect(byProject.get(targetProjId)).toBe("admin");
+    expect(byProject.get(bystanderProjId)).toBe("viewer");
+    expect(byProject.get(foreignProjId)).toBe("viewer");
+  });
+
+  it("returns 404 when the target has no membership row in this project", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "Role Change Absent Target" });
+
+    const res = await patchRole(createApp(), projId, TEST_USER_2.id, "admin");
+
+    expect(res.status).toBe(404);
+    expect((await res.json<{ error: string }>()).error).toBe("Member not found");
+  });
+
+  /**
+   * Self-demotion is the one move whose damage the actor cannot undo: a project
+   * admin who is only a plain workspace member and re-roles their own row to
+   * `viewer` loses the settings page that submitted the request. The refusal is
+   * asserted alongside the row being untouched, because a 403 that had already
+   * written would be the worst of both outcomes.
+   */
+  it("refuses to let an admin change their own role", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "Self Role Change" });
+    await seedProjectMember(d1, projId, TEST_USER.id, "admin");
+
+    const res = await patchRole(createApp(), projId, TEST_USER.id, "viewer");
+
+    expect(res.status).toBe(403);
+    expect((await res.json<{ error: string }>()).error).toBe(
+      "You cannot change your own project role",
+    );
+
+    const row = await d1
+      .prepare("SELECT role FROM project_member WHERE projectId = ? AND userId = ?")
+      .bind(projId, TEST_USER.id)
+      .first<{ role: string }>();
+    expect(row?.role).toBe("admin");
+  });
+
+  /**
+   * The handler's own authority check, exercised with NO middleware in front of
+   * it — which is precisely the scenario it exists for. `TEST_USER_2` is a plain
+   * workspace member seeded as a project `member`, so `resolveProjectAccess`
+   * resolves a real, non-elevated, non-admin role and the handler must refuse
+   * on its own rather than on a mount it cannot see.
+   */
+  it("returns 403 when the caller is not a project admin", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "Non Admin Role Change" });
+    await seedProjectMember(d1, projId, TEST_USER_2.id, "member");
+    await seedProjectMember(d1, projId, FOREIGN_WORKSPACE_USER_ID, "viewer");
+
+    const app = new Hono<AppEnv>();
+    app.patch(
+      "/projects/:projectId/members/:userId",
+      // No `workspaceMembership` and no `projectAccess`: nothing is injected,
+      // so the handler's own resolution is the only thing deciding.
+      fakeAuth(d1, TEST_USER_2),
+      validateBody(updateProjectMemberRoleSchema),
+      updateMemberRole,
+    );
+
+    const res = await patchRole(app, projId, FOREIGN_WORKSPACE_USER_ID, "admin");
+
+    expect(res.status).toBe(403);
+    expect((await res.json<{ error: string }>()).error).toBe("Forbidden");
+
+    const row = await d1
+      .prepare("SELECT role FROM project_member WHERE projectId = ? AND userId = ?")
+      .bind(projId, FOREIGN_WORKSPACE_USER_ID)
+      .first<{ role: string }>();
+    expect(row?.role).toBe("viewer");
+  });
+
+  /**
+   * Submitting the role the member already holds is the default path through
+   * the dialog (it pre-selects the current role), so it must succeed — and it
+   * must not be reported as a change. The `project.updatedAt` bump is the
+   * observable proxy for "the write path ran": a no-op that touches it would
+   * also have emitted a `member_role_changed` webhook whose `from` equals its
+   * `to`, teaching every integration downstream to filter our events for us.
+   */
+  it("treats an unchanged role as a no-op and does not touch the project", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "No Op Role Change" });
+    await seedProjectMember(d1, projId, TEST_USER_2.id, "member");
+
+    const before = await d1
+      .prepare("SELECT updatedAt FROM project WHERE id = ?")
+      .bind(projId)
+      .first<{ updatedAt: number }>();
+
+    const res = await patchRole(createApp(), projId, TEST_USER_2.id, "member");
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ member: { role: string } }>();
+    expect(body.member.role).toBe("member");
+
+    const after = await d1
+      .prepare("SELECT updatedAt FROM project WHERE id = ?")
+      .bind(projId)
+      .first<{ updatedAt: number }>();
+    expect(after?.updatedAt).toBe(before?.updatedAt);
+  });
+
+  it("returns 400 for a role outside PROJECT_ROLES", async () => {
+    const projId = await seedProject(d1, workspaceId, { name: "Invalid Role Change" });
+    await seedProjectMember(d1, projId, TEST_USER_2.id, "member");
+
+    const res = await patchRole(createApp(), projId, TEST_USER_2.id, "owner");
+
+    expect(res.status).toBe(400);
+
+    const row = await d1
+      .prepare("SELECT role FROM project_member WHERE projectId = ? AND userId = ?")
+      .bind(projId, TEST_USER_2.id)
+      .first<{ role: string }>();
+    expect(row?.role).toBe("member");
+  });
+});
+
 describe("removeMember", () => {
   function createApp() {
     const app = new Hono<AppEnv>();
@@ -1096,6 +1713,80 @@ describe("removeMember", () => {
       .bind(projId, TEST_USER_2.id)
       .first();
     expect(row).toBeNull();
+  });
+
+  /**
+   * The blast radius of the removal, which asserting only that the target row
+   * is gone can never bound.
+   *
+   * The DELETE is keyed on (projectId, userId). Drop the `projectId` half and
+   * the statement still removes the row this test looks for — and every other
+   * `project_member` row that user holds, in every project, in every workspace
+   * in the deployment. "Remove Dana from the Q3 launch board" would evict Dana
+   * from the company. It is a destructive, unrecoverable write with a 200
+   * response and no error path, and the only thing that catches it is a
+   * BYSTANDER membership that is asserted to survive.
+   *
+   * The surviving membership is deliberately in a different workspace as well
+   * as a different project, so a scope that is narrowed to the workspace rather
+   * than the project is still caught. The exact remaining-row count is asserted
+   * too, because "the bystander survived" alone would still pass a delete that
+   * took out some third project's row.
+   */
+  it("removes the membership from ONLY the named project", async () => {
+    const targetProjId = await seedProject(d1, workspaceId, {
+      name: "Scoped Remove Target",
+    });
+    const bystanderProjId = await seedProject(d1, workspaceId, {
+      name: "Scoped Remove Bystander",
+    });
+    const foreignProjId = await seedProject(d1, foreignWorkspaceId, {
+      name: "Scoped Remove Foreign Bystander",
+    });
+    await seedProjectMember(d1, targetProjId, TEST_USER_2.id, "member");
+    await seedProjectMember(d1, bystanderProjId, TEST_USER_2.id, "admin");
+    await seedProjectMember(d1, foreignProjId, TEST_USER_2.id, "viewer");
+
+    const before = await d1
+      .prepare("SELECT COUNT(*) AS n FROM project_member WHERE userId = ?")
+      .bind(TEST_USER_2.id)
+      .first<{ n: number }>();
+
+    const app = createApp();
+    const res = await app.request(
+      `/projects/${targetProjId}/members/${TEST_USER_2.id}`,
+      jsonRequest("DELETE", `/projects/${targetProjId}/members/${TEST_USER_2.id}`),
+    );
+    expect(res.status).toBe(200);
+
+    // The named membership is gone...
+    const removed = await d1
+      .prepare("SELECT id FROM project_member WHERE projectId = ? AND userId = ?")
+      .bind(targetProjId, TEST_USER_2.id)
+      .first();
+    expect(removed).toBeNull();
+
+    // ...and no other membership of theirs was touched, role intact.
+    const bystander = await d1
+      .prepare("SELECT role FROM project_member WHERE projectId = ? AND userId = ?")
+      .bind(bystanderProjId, TEST_USER_2.id)
+      .first<{ role: string }>();
+    expect(bystander).not.toBeNull();
+    expect(bystander!.role).toBe("admin");
+
+    const foreignBystander = await d1
+      .prepare("SELECT role FROM project_member WHERE projectId = ? AND userId = ?")
+      .bind(foreignProjId, TEST_USER_2.id)
+      .first<{ role: string }>();
+    expect(foreignBystander).not.toBeNull();
+    expect(foreignBystander!.role).toBe("viewer");
+
+    // Exactly one row left, deployment-wide.
+    const after = await d1
+      .prepare("SELECT COUNT(*) AS n FROM project_member WHERE userId = ?")
+      .bind(TEST_USER_2.id)
+      .first<{ n: number }>();
+    expect(after!.n).toBe(before!.n - 1);
   });
 
   it("returns 404 for a nonexistent membership", async () => {

@@ -1,6 +1,6 @@
 import type { UnsplashCoverPayload } from "../../shared/schemas/unsplash";
 import type { NotificationType } from "../../shared/types/roles";
-import { TEST_USER, TEST_USER_2 } from "./fakes";
+import { TEST_USER, type TestUserFixture } from "./fakes";
 
 // ---------------------------------------------------------------------------
 // Data seeding helpers
@@ -38,7 +38,7 @@ function nextSeedPosition(): string {
 /** Insert a test user into the database. */
 export async function seedUser(
   d1: D1Database,
-  user: typeof TEST_USER | typeof TEST_USER_2 = TEST_USER,
+  user: TestUserFixture = TEST_USER,
 ) {
   await d1
     .prepare(

@@ -16,7 +16,7 @@ Common use cases:
 
 ## Event Types
 
-There are 23 event types organized into four domains. Each webhook subscription can listen to any combination of events.
+There are 24 event types organized into four domains. Each webhook subscription can listen to any combination of events.
 
 ### Task Events (11)
 
@@ -36,7 +36,7 @@ There are 23 event types organized into four domains. Each webhook subscription 
 
 > **Note:** `task.assigned`, `task.unassigned`, and `task.moved` are secondary events that fire automatically alongside `task.updated` when the relevant field changes. They carry the same `changes` object as the parent `task.updated` event.
 
-### Project Events (6)
+### Project Events (7)
 
 | Event                    | Description                          | `changes` field |
 | ------------------------ | ------------------------------------ | :-------------: |
@@ -46,6 +46,7 @@ There are 23 event types organized into four domains. Each webhook subscription 
 | `project.deleted`        | A project is permanently deleted     |       No        |
 | `project.member_added`   | A user is added to a project         |       No        |
 | `project.member_removed` | A user is removed from a project     |       No        |
+| `project.member_role_changed` | A project member's role is changed |       Yes       |
 
 ### Workspace Events (3)
 
@@ -172,7 +173,7 @@ Every webhook delivery sends a JSON envelope with a consistent structure. The to
 ### Data Shapes by Domain
 
 - **Task events** (`task.*`): Full task object with `id`, `title`, `description`, `projectId`, `taskGroupId`, `taskGroup`, `assigneeId`, `assignee`, `priority`, `startDate`, `dueDate`, `cost`, `completed`, `completedAt`, `completedBy`, `completedByUser`, `position`, `icon`, `recurrenceRule`, `recurrenceParentId`, `recurrenceSeriesId`, `sourceUid`, `createdAt`, `updatedAt`. The `recurrenceRule` field is the JSON-encoded rule string (or `null`); `recurrenceParentId` links to the previous instance in a recurring series; `recurrenceSeriesId` groups all instances in the same series. `sourceUid` is the ICS `UID` of the calendar event a task was imported from (or `null`), included so consumers can match a task back to its source event without an API round-trip — it is set once at import and immutable, so it never appears in `changes`. Exception: `task.comment_created` sends the comment object (`id`, `taskId`, `authorId`, `author`, `body`, `createdAt`, `updatedAt`); `task.label_added` and `task.label_removed` send `{ task: { id, projectId }, label: { id, name } }`.
-- **Project events** (`project.*`): Full project object with `id`, `workspaceId`, `name`, `description`, `status`, `icon`, `budget`, `createdAt`, `updatedAt`. Exception: `project.member_added` and `project.member_removed` send `{ userId, user, projectId, role }`.
+- **Project events** (`project.*`): Full project object with `id`, `workspaceId`, `name`, `description`, `status`, `icon`, `budget`, `createdAt`, `updatedAt`. Exception: `project.member_added`, `project.member_removed` and `project.member_role_changed` send `{ userId, user, projectId, role }` — on `member_role_changed`, `role` is the **new** role, and the previous one is in `changes.role.from`.
 - **Workspace events** (`workspace.*`): Member data with `{ userId, user, workspaceId, role }`.
 - **Invitation events** (`invitation.*`): Full invitation object with `id`, `workspaceId`, `email`, `role`, `status`, `expiresAt`, `createdAt`.
 
@@ -194,9 +195,15 @@ For `task.updated` and `task.moved` events, the `changes` field also includes en
 
 The `changes` field uses `computeChanges()` to diff specific tracked fields before and after the mutation. Each changed field maps to an object with `from` (previous value) and `to` (new value). Date values are normalized to ISO 8601 strings. Fields that did not change are omitted.
 
-Tracked fields for `task.updated`: `title`, `description`, `assigneeId`, `priority`, `startDate`, `dueDate`, `cost`, `icon`, `taskGroupId`, `coverImageKey`, `coverImagePosition`, `recurrenceRule`.
+Tracked fields for `task.updated`: `title`, `description`, `assigneeId`, `priority`, `startDate`, `dueDate`, `cost`, `icon`, `taskGroupId`, `coverImagePosition`, `recurrenceRule`.
+
+Neither cover *source* column (`coverImageKey`, `coverUnsplash`) is tracked: `task.updated` is fired only by `PATCH /api/tasks/:taskId`, which cannot write either one — the dedicated cover endpoints are their only writers and they do not fire this event. `coverImagePosition` is tracked because it is still patchable.
 
 Tracked fields for `project.updated`: `name`, `description`, `status`, `icon`, `budget`, `autoAssignCreator`.
+
+`project.member_role_changed` is the one event whose `changes` is **not** produced by `computeChanges()`. It has exactly one field and the handler already holds both sides of it, so it is built directly as `{ "role": { "from": …, "to": … } }`. The shape consumers see is identical.
+
+Its guarantee is stronger than "fields that did not change are omitted": if the submitted role equals the one the member already holds, **no event fires at all**. The role-change dialog pre-selects the current role, so opening it and pressing Update without touching the picker is a normal thing for a human to do — and an event whose `from` equals its `to` would be a lie that every integration downstream had to write a filter for. `PATCH /api/projects/:projectId/members/:userId` still answers `200` with the unchanged row, so the client's success path is unaffected.
 
 ---
 
@@ -407,7 +414,7 @@ Webhook URLs are validated against an extensive set of bypass classes so a compr
 - **Blocked IPv6 ranges** -- `::1` (loopback), `::` (unspecified), `fc00::/7` (unique-local), `fe80::/10` (link-local), plus IPv4-mapped IPv6 (`::ffff:127.0.0.1` or `::ffff:7f00:1`) where the embedded IPv4 is re-checked against the IPv4 private ranges.
 - **Blocked domains** -- `*.local` (mDNS / Bonjour).
 
-> **DNS rebinding caveat:** the validator runs against the URL as supplied. The Cloudflare Workers `fetch` runtime resolves the hostname fresh at delivery time, so an attacker who controls a DNS record can in principle flip a public IP to a private one between validation and delivery. The residual risk is small (Workers' egress is public-internet-only — there is no in-VPC IMDS to attack) but if you move off Workers, add a resolve-and-recheck step at delivery time.
+> **Deployment caveat — validation time vs delivery time:** the validator runs against the URL as supplied. The Cloudflare Workers `fetch` runtime resolves the hostname fresh at delivery time, so a hostname whose DNS record changes between the two can resolve to a different address than the one that was checked. On Workers this does not reach anything: egress is public-internet-only, with no in-VPC metadata service behind it. If you host this API somewhere with private network reachability, add a resolve-and-recheck step at delivery time.
 
 ### Security Email on Creation
 
@@ -444,6 +451,37 @@ Project-scoped webhooks are managed under `/api/projects/:projectId/webhooks`. T
 | `PATCH`  | `/api/projects/:projectId/webhooks/:id`           | Update webhook fields, optionally regenerate secret |
 | `DELETE` | `/api/projects/:projectId/webhooks/:id`           | Delete webhook and all delivery records           |
 | `POST`   | `/api/projects/:projectId/webhooks/:id/test`      | Send a synchronous test delivery                  |
+
+### Authorization and API-Token Scopes
+
+Both surfaces require an authenticated caller. Workspace-scoped webhook routes require the workspace `owner` or `admin` role; project-scoped webhook routes require the `admin` project role.
+
+Requests authenticated with a Personal Access Token additionally need a scope:
+
+| Action | Required scope |
+| --- | --- |
+| List, get | `webhook:read` |
+| Create, update, delete, test-fire | `webhook:write` |
+
+There is no `webhook:delete` in the v1 scope grammar, so `DELETE` falls under `webhook:write`. A missing scope returns `403` with `Insufficient scope: requires webhook:read` (or `:write`). Cookie sessions are unaffected — the scope check no-ops without a token. See [API Tokens](./api-tokens.md).
+
+#### Project-scoped tokens
+
+A token created with `projectScope: "selected"` may only manage webhooks that belong to a project on its list. Workspace-wide webhooks (`projectId: null`) see the whole workspace's events, so they sit outside what a project-scoped token is entitled to manage at all.
+
+| Operation with a `selected`-scope token | Result |
+| --- | --- |
+| List | `200` with the list narrowed to webhooks on the token's projects. Workspace-wide webhooks are simply absent, not an error. |
+| Get, delete, test-fire a webhook on a listed project | Allowed |
+| Get, delete, test-fire a webhook on any other project, or a workspace-wide one | `403 Forbidden` |
+| Create a webhook for a listed project | Allowed |
+| Create a webhook for another project, or with `projectId` omitted (workspace-wide) | `403 Forbidden` |
+| Update a webhook, repointing it to a listed project | Allowed |
+| Update a webhook on another project, or repoint one to another project or to workspace-wide | `403 Forbidden` |
+
+Update is checked against both the webhook's current project and its resulting project, so a token can neither take over a webhook outside its list nor move one out of its list. The refusal is a plain `403 Forbidden`, and on create and update it is decided before the `projectId` is looked up — so a `projectId` the token may not use always answers `403`, whether or not such a project exists.
+
+Tokens with `projectScope: "all"` and cookie sessions are unaffected by all of the above.
 
 ---
 

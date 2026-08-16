@@ -59,6 +59,12 @@ vi.mock("@/web/contexts/WorkspaceContext", () => ({
       slug: "test-workspace",
       description: "A test workspace",
       theme: "default",
+      // Always present, matching `WorkspaceDetail` and the wire format: the
+      // server resolves every toggle before responding. The card reads
+      // `policy.allowMemberProjectCreation` directly and deliberately carries
+      // no client-side fallback, because a second copy of the default is the
+      // thing that drifts from the server's.
+      policy: { allowMemberProjectCreation: true },
     },
     members: [
       {

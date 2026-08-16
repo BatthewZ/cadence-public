@@ -24,8 +24,15 @@
  * `.cause`. We walk the cause chain so the helper works for both the raw
  * error shape (direct D1 call sites) and the wrapped shape (Drizzle
  * `db.insert().values()` etc.).
+ *
+ * Deliberately named for the CONSTRAINT, not for positions: every
+ * "insert and let the unique index arbitrate the race" site in the API needs
+ * exactly this predicate, and the one place that hand-rolled its own
+ * (`spawnNextRecurringInstance`'s duplicate-spawn guard) got it wrong by
+ * testing only the outer `.message` — silently turning its documented race
+ * guard into a 500. One predicate, one place to be right.
  */
-export function isUniquePositionConflict(err: unknown): boolean {
+export function isUniqueConstraintViolation(err: unknown): boolean {
   let current: unknown = err;
   while (current instanceof Error) {
     if (/UNIQUE constraint failed/i.test(current.message)) return true;
@@ -57,7 +64,7 @@ export async function retryOnPositionConflict<T>(
     try {
       return await fn();
     } catch (err) {
-      if (!isUniquePositionConflict(err)) throw err;
+      if (!isUniqueConstraintViolation(err)) throw err;
       lastError = err;
     }
   }

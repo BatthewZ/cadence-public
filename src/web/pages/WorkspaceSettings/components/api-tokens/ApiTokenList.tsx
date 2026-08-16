@@ -41,11 +41,18 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 interface ApiTokenListProps {
   tokens: ApiTokenRow[];
   projects: WorkspaceProjectSummary[];
+  canRotate: boolean;
   onRotate: (token: ApiTokenRow) => void;
   onRevoke: (token: ApiTokenRow) => void;
 }
 
-export function ApiTokenList({ tokens, projects, onRotate, onRevoke }: ApiTokenListProps) {
+export function ApiTokenList({
+  tokens,
+  projects,
+  canRotate,
+  onRotate,
+  onRevoke,
+}: ApiTokenListProps) {
   const projectsById = new Map(projects.map((p) => [p.id, p]));
 
   return (
@@ -55,6 +62,7 @@ export function ApiTokenList({ tokens, projects, onRotate, onRevoke }: ApiTokenL
           key={token.id}
           token={token}
           projectsById={projectsById}
+          canRotate={canRotate}
           onRotate={() => onRotate(token)}
           onRevoke={() => onRevoke(token)}
         />
@@ -70,6 +78,7 @@ export function ApiTokenList({ tokens, projects, onRotate, onRevoke }: ApiTokenL
 interface ApiTokenCardProps {
   token: ApiTokenRow;
   projectsById: Map<string, WorkspaceProjectSummary>;
+  canRotate: boolean;
   onRotate: () => void;
   onRevoke: () => void;
 }
@@ -96,7 +105,13 @@ function computeLifecycle(token: ApiTokenRow) {
   return { expiresSoon, daysUntilRevoke };
 }
 
-function ApiTokenCard({ token, projectsById, onRotate, onRevoke }: ApiTokenCardProps) {
+function ApiTokenCard({
+  token,
+  projectsById,
+  canRotate,
+  onRotate,
+  onRevoke,
+}: ApiTokenCardProps) {
   const status = deriveStatus(token);
   const scopes = token.scopes;
   const projectIds = token.projectIds ?? [];
@@ -157,8 +172,9 @@ function ApiTokenCard({ token, projectsById, onRotate, onRevoke }: ApiTokenCardP
                   onSelect={onRotate}
                   // Rotating tokens already have a pending sibling; the backend
                   // rejects a second rotation with 409. Expired/revoked tokens
-                  // cannot be rotated either.
-                  disabled={isTerminal || status === "rotating"}
+                  // cannot be rotated either. `canRotate` is the role gate —
+                  // rotation mints a fresh secret, so it is owner/admin-only.
+                  disabled={!canRotate || isTerminal || status === "rotating"}
                 >
                   Rotate
                 </DropdownMenu.Item>

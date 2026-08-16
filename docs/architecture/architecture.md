@@ -22,3 +22,4 @@ The stack:
 - [Folder Structure](./folder-structure.md) -- domain-driven folder organization and conventions
 - [How to Add a New Domain](./adding-a-domain.md) -- step-by-step guide for adding a new domain
 - [Frontend Routing](./routing.md) -- lazy loading, route guards, and page transitions
+- [API Middleware & Authorization](../api/middleware.md) -- the global middleware stack and its order, the per-route workspace/project/task guards, and where API-token binding and scopes are enforced

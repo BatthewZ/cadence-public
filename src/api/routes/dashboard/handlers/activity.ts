@@ -8,6 +8,7 @@ import { task, taskActivity } from "../../../../db/schema/task";
 import type { AppEnv } from "../../../env";
 import { compoundCursorCondition, computeCompoundNextCursor, parseCompoundCursor, parseCursorParams } from "../../../lib/pagination";
 import { requireParam } from "../../../lib/params";
+import { tokenProjectScopeFilter } from "../../../middleware/authorize";
 import { isElevatedRole } from "./helpers";
 
 /**
@@ -74,6 +75,13 @@ export async function projectActivity(c: Context<AppEnv>) {
  *
  * Returns a paginated workspace-wide activity feed across all projects
  * the user can access, including project context for each activity item.
+ *
+ * The feed carries `oldValue` / `newValue` for every field change, so an
+ * unfiltered row is not merely metadata — it is the literal before-and-after
+ * text of a task title, description or assignee. That makes the PAT project
+ * narrowing below load-bearing: a token scoped to one project would otherwise
+ * be able to reconstruct much of a sibling project's task content from its
+ * change history alone, without ever calling a project-scoped route.
  */
 export async function workspaceActivity(c: Context<AppEnv>) {
   const db = c.get("db");
@@ -85,6 +93,14 @@ export async function workspaceActivity(c: Context<AppEnv>) {
   const { limit, cursor } = parseCursorParams(c, { defaultLimit: 15, maxLimit: 50 });
 
   const conditions = [eq(project.workspaceId, workspaceId)];
+
+  // PAT project narrowing — no-op for cookie sessions and `all`-scope tokens.
+  // In `conditions` (not on one branch) so both the elevated and non-elevated
+  // queries below inherit it.
+  const patScope = tokenProjectScopeFilter(c, project.id);
+  if (patScope) {
+    conditions.push(patScope);
+  }
 
   const compound = parseCompoundCursor(cursor);
   if (compound) {

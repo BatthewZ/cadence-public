@@ -87,6 +87,7 @@ export function SortableTaskCard({
   onMoveDown,
   canMoveUp,
   canMoveDown,
+  canEditTasks = true,
 }: {
   task: Task;
   overlay?: boolean;
@@ -100,6 +101,19 @@ export function SortableTaskCard({
   canMoveUp?: boolean;
   /** False when the card is already last in its column. */
   canMoveDown?: boolean;
+  /**
+   * Whether the viewer may mutate this task. Gates both write affordances on
+   * the card — the hover "..." actions menu (priority, assignee, move, due
+   * date, delete) and the completion checkbox. Every one of them is a write a
+   * project `viewer` cannot perform, so offering them only buys an affordance
+   * that dead-ends in an error toast; the checkbox stays rendered, disabled,
+   * because completion state is information a viewer is meant to read.
+   *
+   * Defaults to `true` so the permissive placeholder that
+   * `useProjectPermissions` returns while the roster loads does not flash the
+   * controls away and back; see `ProjectPermissions.isResolved`.
+   */
+  canEditTasks?: boolean;
 }) {
   const [, setSearchParams] = useSearchParams();
   const {
@@ -237,7 +251,15 @@ export function SortableTaskCard({
         <Card
           padding="r5"
           shadow="sm"
-          className={`group relative cursor-grab active:cursor-grabbing hover:shadow-md transition-shadow duration-200 ${
+          // The grab cursor is a promise the board cannot keep for a viewer:
+          // ProjectBoard builds its sensors with `enabled: canEditTasks`, so
+          // without edit rights there is no sensor to arm and the card cannot
+          // be dragged at all. Fall back to `cursor-pointer` rather than
+          // `cursor-default` — the card is still clickable, it just opens the
+          // task detail panel instead of moving.
+          className={`group relative ${
+            canEditTasks ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
+          } hover:shadow-md transition-shadow duration-200 ${
             PRIORITY_BORDER_CLASS[task.priority] ?? ""
           } ${overlay ? "shadow-lg rotate-2" : ""} ${task.completed ? "opacity-60" : ""} ${
             selected ? "ring-2 ring-accent border-accent" : ""
@@ -250,8 +272,8 @@ export function SortableTaskCard({
               <Check size={12} className="text-fg-on-accent" />
             </div>
           )}
-          {/* Quick actions menu — visible on hover */}
-          {!overlay && (
+          {/* Quick actions menu — visible on hover, editors only */}
+          {!overlay && canEditTasks && (
             <div
               className="absolute top-1 right-1 hover-reveal z-10"
               onClick={(e) => e.stopPropagation()}
@@ -297,6 +319,7 @@ export function SortableTaskCard({
                 <TaskCheckbox
                   size="sm"
                   checked={task.completed}
+                  disabled={!canEditTasks}
                   onChange={(checked) => void handleCheckboxChange(checked)}
                 />
               </div>

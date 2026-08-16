@@ -1,5 +1,14 @@
 export { createTestD1, createTestD1WithR2 } from "./test-utils/db-setup";
-export { fakeAuth, fakeEnv, TEST_TOKEN_HASH_PEPPER, TEST_USER, TEST_USER_2 } from "./test-utils/fakes";
+export {
+  fakeAuth,
+  fakeEnv,
+  fakePat,
+  makeTestUser,
+  TEST_TOKEN_HASH_PEPPER,
+  TEST_USER,
+  TEST_USER_2,
+  type TestUserFixture,
+} from "./test-utils/fakes";
 export { jsonRequest } from "./test-utils/request-helpers";
 export {
   seedComment,

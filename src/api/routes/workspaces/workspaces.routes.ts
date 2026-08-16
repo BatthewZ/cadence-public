@@ -115,7 +115,8 @@ const getWorkspaceRoute = createRoute({
   path: "/workspaces/{workspaceId}",
   tags: ["Workspaces"],
   summary: "Get a workspace",
-  description: "Returns a single workspace with `memberCount`. Caller must be a member.",
+  description:
+    "Returns a single workspace with `memberCount` and its resolved `policy`. Caller must be a member.\n\n`policy` always arrives fully resolved — every toggle present, defaults already applied — so a client never needs its own copy of the defaults and never has to distinguish \"unset\" from \"off\".",
   security,
   middleware: [requireAuth, requireWorkspaceMember()],
   request: {

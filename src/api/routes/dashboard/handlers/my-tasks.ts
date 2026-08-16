@@ -10,6 +10,7 @@ import type { AppEnv } from "../../../env";
 import { parseCursorParams } from "../../../lib/pagination";
 import { requireParam } from "../../../lib/params";
 import { validQuery } from "../../../lib/validated";
+import { tokenProjectScopeFilter } from "../../../middleware/authorize";
 import { DUE_DATE_SENTINEL, getPeriodCutoff } from "./helpers";
 
 /**
@@ -86,6 +87,21 @@ export async function myTasks(c: Context<AppEnv>) {
     eq(task.assigneeId, user.id),
     eq(task.completed, false),
   ];
+
+  // PAT project narrowing, applied to `project.id` (the join is already
+  // present). It is a SEPARATE condition from the caller's own `projectIds`
+  // filter below rather than a replacement for it, so the two are ANDed and
+  // therefore intersect: a narrowed token asking for a project outside its
+  // list gets nothing back, not that project's tasks. (Both simply have to be
+  // in `conditions`; their order within the array is irrelevant — Drizzle ANDs
+  // the whole array.) Pushed into the WHERE rather than filtered after the
+  // fact because this endpoint is cursor-paginated, and dropping rows
+  // post-query would corrupt `nextCursor` and silently truncate the caller's
+  // own results. No-op for cookie sessions and `projectScope: "all"` tokens.
+  const patScope = tokenProjectScopeFilter(c, project.id);
+  if (patScope) {
+    conditions.push(patScope);
+  }
 
   if (period) {
     const cutoff = getPeriodCutoff(period);

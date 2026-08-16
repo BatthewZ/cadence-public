@@ -10,6 +10,7 @@ export function ChangeRoleDialog({
   open,
   onClose,
   selectedMember,
+  canGrantAdmin,
   newRole,
   onNewRoleChange,
   updatingRole,
@@ -19,6 +20,20 @@ export function ChangeRoleDialog({
   open: boolean;
   onClose: () => void;
   selectedMember: WorkspaceMember | null;
+  /**
+   * Whether the viewer may hand out the `admin` role — owner-only on the
+   * server, decided by `mayGrantAdmin` in `src/api/lib/workspace-roles.ts`,
+   * which exists so one freshly promoted admin cannot mint a peer and strip the
+   * rest. The same gate is on `InviteMemberDialog`, because the server applies
+   * the same predicate to the invitation door.
+   *
+   * Offering the option to anyone else produced a guaranteed
+   * `403 "Only the workspace owner can grant the admin role"`. This gate is
+   * deliberately kept even though `MemberColumns` now shows the "Change Role"
+   * item to the owner alone: the dialog is what actually submits the role, so
+   * it should not depend on a caller elsewhere having filtered correctly.
+   */
+  canGrantAdmin: boolean;
   newRole: WorkspaceRole;
   onNewRoleChange: (value: WorkspaceRole) => void;
   updatingRole: boolean;
@@ -49,7 +64,7 @@ export function ChangeRoleDialog({
               value={newRole}
               onChange={(e) => onNewRoleChange(e.target.value as WorkspaceRole)}
             >
-              <option value="admin">Admin</option>
+              {canGrantAdmin && <option value="admin">Admin</option>}
               <option value="member">Member</option>
             </Select>
           </Field>

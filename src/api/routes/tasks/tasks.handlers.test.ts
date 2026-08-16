@@ -45,8 +45,10 @@ import {
   seedUser,
   seedWebhook,
   seedWorkspace,
+  seedWorkspaceMember,
   TEST_USER,
   TEST_USER_2,
+  type TestUserFixture,
 } from "../../test-utils";
 import {
   applyTaskUnsplashCover,
@@ -91,6 +93,16 @@ beforeAll(async () => {
   await seedUser(d1, TEST_USER_2);
 
   workspaceId = await seedWorkspace(d1, TEST_USER.id);
+  // TEST_USER_2 needs a `workspace_member` row, not just `project_member` rows.
+  // Project access resolves workspace membership joined with project membership,
+  // so a `project_member` row whose user has no workspace membership is an
+  // ORPHAN and confers nothing. `seedWorkspace` seeds only its owner, and
+  // `seedProjectMember` does not imply workspace membership, so without this the
+  // fixture models a state production cannot produce (`addMember` refuses a
+  // non-workspace-member) — an offboarded user. Every test that treats
+  // TEST_USER_2 as a reachable collaborator, such as assigning them a task,
+  // would then fail for a reason unrelated to what it is testing.
+  await seedWorkspaceMember(d1, workspaceId, TEST_USER_2.id, "member");
   projectId = await seedProject(d1, workspaceId);
   await seedProjectMember(d1, projectId, TEST_USER.id, "admin");
   await seedProjectMember(d1, projectId, TEST_USER_2.id, "member");
@@ -115,6 +127,39 @@ const auth = () =>
   fakeAuth(d1, TEST_USER, {
     workspaceMembership: { id: "wm-1", role: "owner" },
   });
+
+/**
+ * ExecutionContext whose waitUntil promises can be flushed. Passing this to
+ * `app.request` routes deferWork (activity logging) and webhook dispatch
+ * through waitUntil so tests can deterministically await those side-effects
+ * instead of racing the inline fire-and-forget fallback.
+ *
+ * Module-scoped because several unrelated describes need it: any test that
+ * asserts on an activity row, a notification or a webhook delivery is asserting
+ * on deferred work, and a per-describe copy would be the same helper drifting
+ * in four places.
+ */
+function createAwaitableExecutionCtx() {
+  const promises: Promise<unknown>[] = [];
+  return {
+    ctx: {
+      waitUntil: (p: Promise<unknown>) => {
+        promises.push(p);
+      },
+      passThroughOnException: () => {},
+    } as ExecutionContext,
+    flush: async () => {
+      // Loop: a flushed promise may schedule further waitUntil work
+      // (e.g. webhook delivery recording) that must also settle.
+      let awaited = 0;
+      while (awaited < promises.length) {
+        const batch = promises.slice(awaited);
+        awaited = promises.length;
+        await Promise.all(batch);
+      }
+    },
+  };
+}
 
 
 // =========================================================================
@@ -265,6 +310,12 @@ describe("createTask", () => {
     beforeAll(async () => {
       autoAssignProjectId = await seedProject(d1, workspaceId, { autoAssignCreator: true });
       await seedProjectMember(d1, autoAssignProjectId, TEST_USER.id, "admin");
+      // TEST_USER_2 must belong to THIS project too: "respects explicit
+      // assigneeId" below assigns to them, and createTask now rejects an
+      // assignee who cannot access the target project (they were previously
+      // only a member of the sibling `projectId` fixture). Without this the
+      // test would exercise a cross-project assignment it never meant to.
+      await seedProjectMember(d1, autoAssignProjectId, TEST_USER_2.id, "member");
       autoAssignGroupId = await seedTaskGroup(d1, autoAssignProjectId, { name: "To Do" });
     });
 
@@ -429,6 +480,106 @@ describe("listTasks", () => {
       expect(typeof t.subtaskCompletedCount).toBe("number");
     }
   });
+
+  /**
+   * The tenancy boundary of `listTasks`, which nothing else in the codebase
+   * asserts.
+   *
+   * `listTasks` is reached through middleware that authorizes the project named
+   * in the URL, and there its protection stops: the middleware decides WHETHER
+   * the caller may ask, it does not filter WHICH rows come back. The only thing
+   * that scopes the result set is the single `eq(task.projectId, projectId)`
+   * condition inside the handler. Lose it and the endpoint returns every task
+   * row in the database — every project, every workspace, every tenant —
+   * through a request the authorization layer considers entirely legitimate.
+   * That is a full cross-tenant data disclosure with no error, no log, and a
+   * 200.
+   *
+   * The assertion is an EXACT SET of ids against a dedicated project, not a
+   * count or a lower bound, because that is the only shape a leak cannot
+   * satisfy: `>= 2` is still true when the response contains the whole
+   * deployment. The foreign task deliberately lives in a second WORKSPACE so
+   * the fixture models the boundary that actually matters commercially, and it
+   * is asserted absent by id as well, so a future filter that scopes by
+   * workspace but not by project is caught by the same test.
+   */
+  it("returns only the requested project's tasks, never another workspace's", async () => {
+    // A project of our own with a known, closed set of tasks. Dedicated so the
+    // set stays exact regardless of what earlier describes seeded into the
+    // shared `projectId` fixture.
+    const ownProjectId = await seedProject(d1, workspaceId, { name: "Tenancy Own Project" });
+    const ownGroupId = await seedTaskGroup(d1, ownProjectId, { name: "To Do" });
+    const ownTaskIds = [
+      await seedTask(d1, ownProjectId, ownGroupId, { title: "Tenancy Own Task A" }),
+      await seedTask(d1, ownProjectId, ownGroupId, { title: "Tenancy Own Task B" }),
+    ].sort();
+
+    // A different tenant entirely: separate workspace, separate project, one
+    // distinctively-titled task that must never appear in our response.
+    const foreignWorkspaceId = await seedWorkspace(d1, TEST_USER_2.id, {
+      name: "Foreign Tenant WS",
+      slug: "foreign-tenant-ws",
+    });
+    const foreignProjectId = await seedProject(d1, foreignWorkspaceId, { name: "Foreign Project" });
+    const foreignGroupId = await seedTaskGroup(d1, foreignProjectId, { name: "To Do" });
+    const foreignTaskId = await seedTask(d1, foreignProjectId, foreignGroupId, {
+      title: "FOREIGN TENANT SECRET TASK",
+    });
+
+    const app = new Hono<AppEnv>();
+    app.get("/projects/:projectId/tasks", auth(), listTasks);
+
+    const res = await app.request(`/projects/${ownProjectId}/tasks`);
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ tasks: { id: string; title: string; projectId: string }[] }>();
+
+    expect(body.tasks.map((t) => t.id).sort()).toEqual(ownTaskIds);
+    expect(body.tasks.map((t) => t.id)).not.toContain(foreignTaskId);
+    expect(body.tasks.map((t) => t.title)).not.toContain("FOREIGN TENANT SECRET TASK");
+    for (const t of body.tasks) {
+      expect(t.projectId).toBe(ownProjectId);
+    }
+  });
+
+  /**
+   * The same boundary under a filter. Filters are appended to the same
+   * `conditions` array that carries the project scope, so a refactor that
+   * rebuilds that array per-filter can drop the project condition on the
+   * filtered path only — leaving the unfiltered test above green while every
+   * board column, priority chip and assignee filter in the UI silently pages in
+   * other tenants' tasks. The filter chosen here matches the foreign task too,
+   * so the filter alone cannot be what excludes it.
+   */
+  it("keeps the project scope when a filter is also applied", async () => {
+    const ownProjectId = await seedProject(d1, workspaceId, { name: "Tenancy Filter Project" });
+    const ownGroupId = await seedTaskGroup(d1, ownProjectId, { name: "To Do" });
+    const ownTaskId = await seedTask(d1, ownProjectId, ownGroupId, {
+      title: "Tenancy Filtered Own Task",
+      priority: "urgent",
+    });
+
+    const foreignWorkspaceId = await seedWorkspace(d1, TEST_USER_2.id, {
+      name: "Foreign Filter WS",
+      slug: "foreign-filter-ws",
+    });
+    const foreignProjectId = await seedProject(d1, foreignWorkspaceId, { name: "Foreign Filter Project" });
+    const foreignGroupId = await seedTaskGroup(d1, foreignProjectId, { name: "To Do" });
+    const foreignTaskId = await seedTask(d1, foreignProjectId, foreignGroupId, {
+      title: "FOREIGN TENANT URGENT TASK",
+      priority: "urgent",
+    });
+
+    const app = new Hono<AppEnv>();
+    app.get("/projects/:projectId/tasks", auth(), listTasks);
+
+    const res = await app.request(`/projects/${ownProjectId}/tasks?priority=urgent`);
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ tasks: { id: string }[] }>();
+    expect(body.tasks.map((t) => t.id)).toEqual([ownTaskId]);
+    expect(body.tasks.map((t) => t.id)).not.toContain(foreignTaskId);
+  });
 });
 
 // =========================================================================
@@ -548,6 +699,155 @@ describe("updateTask", () => {
 
     expect(res.status).toBe(404);
   });
+
+  // -------------------------------------------------------------------------
+  // `coverImageKey` is NOT client-writable through this endpoint.
+  //
+  // Why this matters: `serveUpload` authorizes a `task-cover` download by
+  // finding the task whose `cover_image_key` equals the requested R2 key. If a
+  // client could write that column, "which task owns this object" would be
+  // client-declared — a user could point their OWN task at another workspace's
+  // cover key and read the image back through their own legitimate task access.
+  // The field is therefore absent from `updateTaskSchema` and there is no
+  // `coverImageKey` line in `updateTask`'s `updateData`.
+  //
+  // These tests assert the STORED ROW, not the response echo: a handler that
+  // returned the requested key while writing nothing, or wrote it while
+  // returning the old one, must both be caught.
+  // -------------------------------------------------------------------------
+  describe("coverImageKey is not writable via PATCH", () => {
+    /** Read `cover_image_key` straight from SQLite, bypassing the handler. */
+    async function storedCoverKey(id: string): Promise<string | null> {
+      const row = await d1
+        .prepare("SELECT cover_image_key AS k FROM task WHERE id = ?")
+        .bind(id)
+        .first<{ k: string | null }>();
+      return row?.k ?? null;
+    }
+
+    it("is absent from updateTaskSchema", () => {
+      const shape = Object.keys(updateTaskSchema.shape);
+      expect(shape).not.toContain("coverImageKey");
+      expect(shape).not.toContain("coverUnsplash");
+      // The framing offset stays patchable — it carries no authorization meaning.
+      expect(shape).toContain("coverImagePosition");
+    });
+
+    it("leaves an existing cover key untouched when a PATCH tries to overwrite it", async () => {
+      const victimKey = "task-cover/victim-user/secret.jpg";
+      const id = await seedTask(d1, projectId, taskGroupId, {
+        title: "Has A Cover",
+        coverImageKey: victimKey,
+      });
+
+      const app = new Hono<AppEnv>();
+      app.patch("/tasks/:taskId", auth(), validateBody(updateTaskSchema), updateTask);
+
+      const res = await app.request(
+        `/tasks/${id}`,
+        jsonRequest("PATCH", `/tasks/${id}`, {
+          coverImageKey: "task-cover/attacker/forged.jpg",
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      expect(await storedCoverKey(id)).toBe(victimKey);
+      const body = await res.json<{ task: { coverImageKey: string | null } }>();
+      expect(body.task.coverImageKey).toBe(victimKey);
+    });
+
+    it("does not let a task with no cover claim someone else's key (the forge case)", async () => {
+      const id = await seedTask(d1, projectId, taskGroupId, { title: "No Cover" });
+
+      const app = new Hono<AppEnv>();
+      app.patch("/tasks/:taskId", auth(), validateBody(updateTaskSchema), updateTask);
+
+      const res = await app.request(
+        `/tasks/${id}`,
+        jsonRequest("PATCH", `/tasks/${id}`, {
+          coverImageKey: "task-cover/other-workspace-user/private.jpg",
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      expect(await storedCoverKey(id)).toBeNull();
+    });
+
+    it("ignores a null coverImageKey — a PATCH cannot clear someone's cover either", async () => {
+      const victimKey = "task-cover/victim-user/keep-me.jpg";
+      const id = await seedTask(d1, projectId, taskGroupId, {
+        title: "Clear Attempt",
+        coverImageKey: victimKey,
+      });
+
+      const app = new Hono<AppEnv>();
+      app.patch("/tasks/:taskId", auth(), validateBody(updateTaskSchema), updateTask);
+
+      const res = await app.request(
+        `/tasks/${id}`,
+        jsonRequest("PATCH", `/tasks/${id}`, { coverImageKey: null }),
+      );
+
+      expect(res.status).toBe(200);
+      expect(await storedCoverKey(id)).toBe(victimKey);
+    });
+
+    it("still applies legitimate fields sent alongside coverImageKey", async () => {
+      // The field is STRIPPED by zod, not rejected — the web client PATCHes
+      // whole task objects and must keep working, just without cover authority.
+      const victimKey = "task-cover/victim-user/alongside.jpg";
+      const id = await seedTask(d1, projectId, taskGroupId, {
+        title: "Mixed Patch",
+        coverImageKey: victimKey,
+      });
+
+      const app = new Hono<AppEnv>();
+      app.patch("/tasks/:taskId", auth(), validateBody(updateTaskSchema), updateTask);
+
+      const res = await app.request(
+        `/tasks/${id}`,
+        jsonRequest("PATCH", `/tasks/${id}`, {
+          title: "Mixed Patch Renamed",
+          coverImagePosition: 42,
+          coverImageKey: "task-cover/attacker/forged.jpg",
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      const body = await res.json<{ task: { title: string; coverImagePosition: number | null } }>();
+      expect(body.task.title).toBe("Mixed Patch Renamed");
+      expect(body.task.coverImagePosition).toBe(42);
+      expect(await storedCoverKey(id)).toBe(victimKey);
+    });
+
+    it("cannot overwrite an Unsplash-covered task's key, preserving the XOR invariant", async () => {
+      // A forged `coverImageKey` on a task whose cover is an Unsplash payload
+      // would leave BOTH columns populated — breaking the XOR invariant that
+      // only `api/lib/cover-image.ts` is allowed to transition.
+      const id = await seedTask(d1, projectId, taskGroupId, {
+        title: "Unsplash Cover",
+        coverUnsplash: sampleUnsplashPayload(),
+      });
+
+      const app = new Hono<AppEnv>();
+      app.patch("/tasks/:taskId", auth(), validateBody(updateTaskSchema), updateTask);
+
+      const res = await app.request(
+        `/tasks/${id}`,
+        jsonRequest("PATCH", `/tasks/${id}`, {
+          coverImageKey: "task-cover/attacker/forged.jpg",
+        }),
+      );
+
+      expect(res.status).toBe(200);
+      const row = await d1
+        .prepare("SELECT cover_image_key AS k, cover_unsplash AS u FROM task WHERE id = ?")
+        .bind(id)
+        .first<{ k: string | null; u: string | null }>();
+      expect(row?.k).toBeNull();
+      expect(row?.u).not.toBeNull();
+    });
+  });
 });
 
 // =========================================================================
@@ -592,34 +892,6 @@ describe("startDate", () => {
     const app = new Hono<AppEnv>();
     app.patch("/tasks/:taskId", auth(), validateBody(updateTaskSchema), updateTask);
     return app;
-  }
-
-  /**
-   * ExecutionContext whose waitUntil promises can be flushed. Passing this to
-   * `app.request` routes deferWork (activity logging) and webhook dispatch
-   * through waitUntil so tests can deterministically await those side-effects
-   * instead of racing the inline fire-and-forget fallback.
-   */
-  function createAwaitableExecutionCtx() {
-    const promises: Promise<unknown>[] = [];
-    return {
-      ctx: {
-        waitUntil: (p: Promise<unknown>) => {
-          promises.push(p);
-        },
-        passThroughOnException: () => {},
-      } as ExecutionContext,
-      flush: async () => {
-        // Loop: a flushed promise may schedule further waitUntil work
-        // (e.g. webhook delivery recording) that must also settle.
-        let awaited = 0;
-        while (awaited < promises.length) {
-          const batch = promises.slice(awaited);
-          awaited = promises.length;
-          await Promise.all(batch);
-        }
-      },
-    };
   }
 
   async function fetchActivities(taskId: string) {
@@ -1148,6 +1420,56 @@ describe("moveTask", () => {
 // completeTask / uncompleteTask
 // =========================================================================
 
+/**
+ * Row shape the idempotency tests below compare across two requests. Read
+ * straight from D1 rather than from the response body so the assertion is
+ * about what was PERSISTED, not about what the handler chose to echo back.
+ */
+type CompletionRow = {
+  completed: number;
+  completedAt: number | null;
+  completedBy: string | null;
+  taskGroupId: string;
+  position: string;
+};
+
+async function completionRow(taskId: string): Promise<CompletionRow> {
+  const row = await d1
+    .prepare(
+      "SELECT completed, completedAt, completedBy, taskGroupId, position FROM task WHERE id = ?",
+    )
+    .bind(taskId)
+    .first<CompletionRow>();
+  expect(row).toBeTruthy();
+  return row!;
+}
+
+/** How many activity rows of a given action exist for a task. */
+async function activityCount(taskId: string, action: string): Promise<number> {
+  const row = await d1
+    .prepare("SELECT COUNT(*) AS n FROM task_activity WHERE taskId = ? AND action = ?")
+    .bind(taskId, action)
+    .first<{ n: number }>();
+  return row!.n;
+}
+
+/** Marks a task as recurring; `seedTask` has no recurrence knob. */
+async function makeRecurring(taskId: string): Promise<void> {
+  await d1
+    .prepare("UPDATE task SET recurrence_rule = ?, recurrence_series_id = ? WHERE id = ?")
+    .bind(JSON.stringify({ frequency: "daily", interval: 1 }), crypto.randomUUID(), taskId)
+    .run();
+}
+
+/** Every task spawned as the next instance of `taskId`'s recurring series. */
+async function recurringChildrenOf(taskId: string): Promise<{ id: string }[]> {
+  const { results } = await d1
+    .prepare("SELECT id FROM task WHERE recurrence_parent_id = ?")
+    .bind(taskId)
+    .all<{ id: string }>();
+  return results;
+}
+
 describe("completeTask", () => {
   it("marks a task as completed and moves to completion group", async () => {
     const taskId = await seedTask(d1, projectId, taskGroupId, {
@@ -1185,6 +1507,150 @@ describe("completeTask", () => {
     expect(res.status).toBe(200);
     const body = await res.json<{ task: { completed: boolean } }>();
     expect(body.task.completed).toBe(true);
+  });
+
+  /**
+   * Pins the already-completed early return in `handlers/completion.ts`, which
+   * is the ONLY thing making `POST /complete` idempotent.
+   *
+   * The neighbouring "returns task unchanged if already completed" test cannot
+   * see that guard: it seeds `completed: true` and asserts `completed === true`,
+   * which holds whether the handler short-circuits or re-runs the entire
+   * completion path. Delete the early return and that test stays green while
+   * every one of the following ships:
+   *
+   *  - `completedBy`/`completedAt` are re-stamped onto whoever replayed the
+   *    request, silently rewriting the audit trail to credit the wrong person.
+   *    Hence the replay below is issued by a DIFFERENT user — a re-stamp cannot
+   *    hide behind an identical value.
+   *  - A second `completed` activity row appears, so the task history claims
+   *    the work was finished twice.
+   *  - The `if (foundTask.recurrenceRule)` branch is re-entered, i.e. a merely
+   *    RETRIED request becomes an attempt to mint another task. Only the
+   *    partial unique index on `recurrence_parent_id` keeps that from being an
+   *    unbounded task-creation primitive; this test pins both halves — the
+   *    child count (the index) and the absence of a re-announced spawn in the
+   *    response plus a duplicated "created (Recurring)" activity row (the
+   *    handler). The two defences live in different files and either one
+   *    regressing is a bug.
+   *
+   * Assertions compare against the FIRST completion rather than against
+   * literals, because a literal is exactly what made the original test blind.
+   */
+  it("is inert on a repeated complete: no re-stamp, no duplicate activity, no second recurring instance", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Daily standup",
+      dueDate: new Date("2030-04-01"),
+    });
+    await makeRecurring(taskId);
+
+    const completeAppAs = (u: TestUserFixture) => {
+      const app = new Hono<AppEnv>();
+      app.post(
+        "/tasks/:taskId/complete",
+        fakeAuth(d1, u, { workspaceMembership: { id: "wm-1", role: "owner" } }),
+        completeTask,
+      );
+      return app;
+    };
+
+    // ---- First completion: the legitimate one, by TEST_USER. ----
+    const first = createAwaitableExecutionCtx();
+    const firstRes = await completeAppAs(TEST_USER).request(
+      `/tasks/${taskId}/complete`,
+      jsonRequest("POST", `/tasks/${taskId}/complete`),
+      {},
+      first.ctx,
+    );
+    expect(firstRes.status).toBe(200);
+    const firstBody = await firstRes.json<{
+      task: { completed: boolean; completedBy: string | null };
+      nextRecurringTask: { id: string } | null;
+    }>();
+    expect(firstBody.task.completed).toBe(true);
+    expect(firstBody.task.completedBy).toBe(TEST_USER.id);
+    // A recurring task must actually spawn, or the duplicate-spawn assertions
+    // below would be vacuously satisfied.
+    expect(firstBody.nextRecurringTask).not.toBeNull();
+    await first.flush();
+
+    const afterFirst = await completionRow(taskId);
+    const children = await recurringChildrenOf(taskId);
+    expect(children).toHaveLength(1);
+    const childId = children[0].id;
+
+    // ---- Replay: same task, DIFFERENT user (a retried/duplicated request). ----
+    const second = createAwaitableExecutionCtx();
+    const secondRes = await completeAppAs(TEST_USER_2).request(
+      `/tasks/${taskId}/complete`,
+      jsonRequest("POST", `/tasks/${taskId}/complete`),
+      {},
+      second.ctx,
+    );
+    expect(secondRes.status).toBe(200);
+    const secondBody = await secondRes.json<{
+      task: { completed: boolean };
+      nextRecurringTask?: { id: string } | null;
+    }>();
+    await second.flush();
+
+    expect(secondBody.task.completed).toBe(true);
+
+    // Attribution survives the replay intact.
+    const afterSecond = await completionRow(taskId);
+    expect(afterSecond.completedBy).toBe(TEST_USER.id);
+    expect(afterSecond.completedBy).toBe(afterFirst.completedBy);
+    expect(afterSecond.completedAt).toBe(afterFirst.completedAt);
+    // Re-running the path would also re-position the task within Done.
+    expect(afterSecond.taskGroupId).toBe(afterFirst.taskGroupId);
+    expect(afterSecond.position).toBe(afterFirst.position);
+
+    // The history records one completion, not two.
+    expect(await activityCount(taskId, "completed")).toBe(1);
+
+    // And the series advanced exactly once — no extra instance, no second
+    // "created (Recurring)" entry claiming one was made, and no spawn
+    // re-announced to the caller (the early return echoes the stored row and
+    // nothing else).
+    expect(await recurringChildrenOf(taskId)).toHaveLength(1);
+    expect(await activityCount(childId, "created")).toBe(1);
+    expect(secondBody.nextRecurringTask).toBeUndefined();
+  });
+
+  /**
+   * The already-completed early return is a check-then-act, so it cannot help
+   * two requests that both read `completed: false` before either writes — the
+   * real-world double-click / client-retry race. What catches THOSE is the
+   * partial unique index on `recurrence_parent_id` plus the duplicate-spawn
+   * catch in `spawnNextRecurringInstance`, and that catch must recognise the
+   * violation through Drizzle's `DrizzleQueryError` wrapper (the SQLite text
+   * lives on `.cause`, not on the outer `.message`).
+   *
+   * A regression here is invisible in the single-request tests and, worse,
+   * degrades gracefully-looking: the task is genuinely completed, but the
+   * loser of the race gets a 500 for work that succeeded. Clients that retry
+   * on 5xx then hammer the endpoint. This test is the only place that
+   * exercises the catch at all.
+   */
+  it("survives a concurrent double completion of a recurring task with exactly one spawned instance", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Race to complete",
+      dueDate: new Date("2030-05-01"),
+    });
+    await makeRecurring(taskId);
+
+    const app = new Hono<AppEnv>();
+    app.post("/tasks/:taskId/complete", auth(), completeTask);
+
+    const responses = await Promise.all([
+      app.request(`/tasks/${taskId}/complete`, jsonRequest("POST", `/tasks/${taskId}/complete`)),
+      app.request(`/tasks/${taskId}/complete`, jsonRequest("POST", `/tasks/${taskId}/complete`)),
+    ]);
+
+    for (const res of responses) {
+      expect(res.status).toBe(200);
+    }
+    expect(await recurringChildrenOf(taskId)).toHaveLength(1);
   });
 
   it("returns 404 for nonexistent task", async () => {
@@ -1238,6 +1704,109 @@ describe("uncompleteTask", () => {
     expect(res.status).toBe(200);
     const body = await res.json<{ task: { completed: boolean } }>();
     expect(body.task.completed).toBe(false);
+  });
+
+  /**
+   * Mirror of the completeTask idempotency guard, for the same reason: the
+   * test directly above seeds `completed: false` and asserts
+   * `completed === false`, so it is satisfied whether the early return in
+   * `handlers/completion.ts` exists or the handler re-runs the whole reopen
+   * path.
+   *
+   * A re-run is not harmless. It appends a second `reopened` activity row — a
+   * history claiming the task was reopened twice when a client merely retried
+   * — and it re-dispatches `task.uncompleted` to every subscribed webhook, so
+   * one retried request becomes a duplicate outbound event landing in a
+   * customer's Slack channel or firing their CI pipeline a second time.
+   * Neither effect appears in the response body, which is exactly why a
+   * body-only assertion cannot catch it.
+   */
+  it("is inert on a repeated uncomplete: no duplicate activity, no duplicate webhook", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Reopen once",
+    });
+
+    // Scoped to this test and removed afterwards: a surviving webhook row
+    // would fire real `fetch` calls from every later test in this file.
+    const webhookId = crypto.randomUUID();
+    await seedWebhook(d1, workspaceId, {
+      id: webhookId,
+      url: "https://hooks.example.com/uncomplete-idempotency",
+      events: JSON.stringify(["task.uncompleted"]),
+    });
+
+    const fetchSpy = installFetchSpy();
+    try {
+      const appAs = (u: TestUserFixture, handler: typeof uncompleteTask) => {
+        const app = new Hono<AppEnv>();
+        app.post(
+          "/tasks/:taskId/:action",
+          // currentProject is required for dispatchWebhook to resolve the
+          // workspace; without it the dispatch silently no-ops and the
+          // duplicate-delivery assertion below would be vacuous.
+          fakeAuth(d1, u, {
+            workspaceMembership: { id: "wm-1", role: "owner" },
+            currentProject: { id: projectId, workspaceId },
+          }),
+          handler,
+        );
+        return app;
+      };
+
+      // Put the task into the completed state through the real handler, so the
+      // uncomplete under test operates on production-shaped data.
+      const setup = createAwaitableExecutionCtx();
+      const setupRes = await appAs(TEST_USER, completeTask).request(
+        `/tasks/${taskId}/complete`,
+        jsonRequest("POST", `/tasks/${taskId}/complete`),
+        {},
+        setup.ctx,
+      );
+      expect(setupRes.status).toBe(200);
+      await setup.flush();
+
+      // ---- First uncomplete: the legitimate one. ----
+      const first = createAwaitableExecutionCtx();
+      const firstRes = await appAs(TEST_USER, uncompleteTask).request(
+        `/tasks/${taskId}/uncomplete`,
+        jsonRequest("POST", `/tasks/${taskId}/uncomplete`),
+        {},
+        first.ctx,
+      );
+      expect(firstRes.status).toBe(200);
+      expect((await firstRes.json<{ task: { completed: boolean } }>()).task.completed).toBe(false);
+      await first.flush();
+
+      const afterFirst = await completionRow(taskId);
+
+      // ---- Replay by a DIFFERENT user. ----
+      const second = createAwaitableExecutionCtx();
+      const secondRes = await appAs(TEST_USER_2, uncompleteTask).request(
+        `/tasks/${taskId}/uncomplete`,
+        jsonRequest("POST", `/tasks/${taskId}/uncomplete`),
+        {},
+        second.ctx,
+      );
+      expect(secondRes.status).toBe(200);
+      expect((await secondRes.json<{ task: { completed: boolean } }>()).task.completed).toBe(false);
+      await second.flush();
+
+      const afterSecond = await completionRow(taskId);
+      expect(afterSecond.taskGroupId).toBe(afterFirst.taskGroupId);
+      expect(afterSecond.position).toBe(afterFirst.position);
+
+      // One reopen in the history, not two.
+      expect(await activityCount(taskId, "reopened")).toBe(1);
+
+      // One outbound `task.uncompleted` delivery, not two.
+      const deliveries = fetchSpy.calls.filter(
+        ([url]) => url === "https://hooks.example.com/uncomplete-idempotency",
+      );
+      expect(deliveries).toHaveLength(1);
+    } finally {
+      fetchSpy.restore();
+      await d1.prepare("DELETE FROM webhook WHERE id = ?").bind(webhookId).run();
+    }
   });
 
   it("returns 404 for nonexistent task", async () => {

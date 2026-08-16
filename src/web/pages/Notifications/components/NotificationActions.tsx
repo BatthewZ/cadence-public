@@ -6,9 +6,15 @@ import { type Notification } from "@/web/components/layout/NotificationPanel";
 import { type useNotificationMutations } from "@/web/hooks/use-notification-mutations";
 
 export interface NotificationActionsContext {
-  pendingTokenMap: Map<string, string>;
+  /**
+   * Ids of the invitations that are still pending for the signed-in user.
+   * Membership in this set is what makes the Accept button appear. It used to
+   * be an id → token map, but the pending endpoint no longer discloses tokens
+   * (audit finding 04) and acceptance is by id.
+   */
+  pendingInvitationIds: Set<string>;
   isAccepting: boolean;
-  acceptInvitation: (token: string) => void;
+  acceptInvitation: (invitationId: string) => void;
   dismissInvitation: (invitationId: string) => void;
   slugMap: Map<string, string>;
   markReadMutation: ReturnType<typeof useNotificationMutations>["markReadMutation"];
@@ -20,7 +26,7 @@ export function renderNotificationActions(
   ctx: NotificationActionsContext,
 ): ReactNode | undefined {
   const {
-    pendingTokenMap,
+    pendingInvitationIds,
     isAccepting,
     acceptInvitation,
     dismissInvitation,
@@ -32,8 +38,7 @@ export function renderNotificationActions(
   // Invitation notifications — show Accept/Dismiss if invitation is still pending
   if (n.type === "invitation_received" && n.invitationId) {
     const invitationId = n.invitationId;
-    const token = pendingTokenMap.get(invitationId);
-    if (token) {
+    if (pendingInvitationIds.has(invitationId)) {
       return (
         <>
           <button
@@ -41,7 +46,7 @@ export function renderNotificationActions(
             className="notification-action-btn"
             data-variant="primary"
             disabled={isAccepting}
-            onClick={() => acceptInvitation(token)}
+            onClick={() => acceptInvitation(invitationId)}
           >
             <Check size={12} />
             Accept

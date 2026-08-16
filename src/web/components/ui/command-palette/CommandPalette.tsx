@@ -18,6 +18,7 @@ import { Text } from "@/web/components/ui/Text";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useDebounce } from "@/web/hooks/use-debounce";
 import { useFavorites } from "@/web/hooks/use-favorites";
+import { useWorkspacePermissions } from "@/web/hooks/use-permissions";
 import { useRecents } from "@/web/hooks/use-recents";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
@@ -66,6 +67,7 @@ interface UnifiedEntry {
 export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps) {
   const navigate = useNavigate();
   const { workspace, projects } = useWorkspace();
+  const { canCreateProject } = useWorkspacePermissions();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -128,10 +130,21 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
   }, [query]);
 
   const filteredActionItems = useMemo(() => {
-    if (!query.trim()) return QUICK_ACTIONS;
+    // Removed rather than disabled — the opposite of the New Project button's
+    // treatment, and for a reason the two surfaces do not share. A palette is
+    // a list of things you can do right now, navigated by typing and pressing
+    // Enter; a row that looks selectable but refuses on Enter breaks that
+    // contract, and there is nowhere to hover for the explanation. The button
+    // stays put because it occupies a place in the layout that would look
+    // broken empty. Nothing is hidden by this: the Projects page and dashboard
+    // still explain the policy in words.
+    const available = canCreateProject
+      ? QUICK_ACTIONS
+      : QUICK_ACTIONS.filter((item) => item.action !== "create-project");
+    if (!query.trim()) return available;
     const q = query.toLowerCase();
-    return QUICK_ACTIONS.filter((item) => item.label.toLowerCase().includes(q));
-  }, [query]);
+    return available.filter((item) => item.label.toLowerCase().includes(q));
+  }, [query, canCreateProject]);
 
   // Build unified items list with section markers
   const allItems = useMemo<UnifiedEntry[]>(() => {

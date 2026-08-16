@@ -30,6 +30,7 @@ import {
   createProjectSchema,
   duplicateProjectSchema,
   reorderProjectSchema,
+  updateProjectMemberRoleSchema,
   updateProjectSchema,
 } from "../../../shared/schemas/project";
 import {
@@ -41,6 +42,7 @@ import { createWebhookSchema, updateWebhookSchema } from "../../../shared/schema
 import type { AppEnv } from "../../env";
 import {
   requireProjectAccess,
+  requireProjectCreation,
   requireProjectRole,
   requireReadScopeForResource,
   requireWorkspaceMember,
@@ -78,6 +80,7 @@ import {
   listProjects,
   removeMember,
   reorderProject,
+  updateMemberRole,
   updateProject,
   uploadProjectCover,
 } from "./projects.handlers";
@@ -207,9 +210,9 @@ const createProjectRoute = createRoute({
   tags: ["Projects"],
   summary: "Create a project",
   description:
-    "Create a new project inside a workspace. The calling user is automatically added as a project admin. Three default task groups (`To Do`, `In Progress`, `Done`) are created in the same atomic batch.",
+    "Create a new project inside a workspace. The calling user is automatically added as a project admin. Three default task groups (`To Do`, `In Progress`, `Done`) are created in the same atomic batch.\n\nWorkspace owners and admins may always create projects. Members may only do so while the workspace's `allowMemberProjectCreation` policy is enabled (the default); when an admin turns it off, a member's request answers `403`.",
   security,
-  middleware: [requireAuth, requireWorkspaceMember()],
+  middleware: [requireAuth, requireWorkspaceMember(), requireProjectCreation()],
   request: {
     params: workspaceIdParam,
     body: {
@@ -500,10 +503,19 @@ app.delete(
   deleteProject,
 );
 
+// Duplicating is a project-creating path, so it carries the workspace's
+// project-creation policy as well as the project-admin check. Without it the
+// policy would be trivially bypassable: `createProject` makes its caller a
+// project admin, so any member who created a project while the setting was on
+// keeps passing `requireProjectRole("admin")` on it forever and could go on
+// minting projects from that seed after an admin turned the setting off.
+// `requireProjectCreation` must run AFTER `requireProjectRole` — it reads the
+// owning workspace from the project access that guard resolves and caches.
 app.post(
   "/projects/:projectId/duplicate",
   requireAuth,
   requireProjectRole("admin"),
+  requireProjectCreation(),
   validateBody(duplicateProjectSchema),
   duplicateProject,
 );
@@ -547,6 +559,14 @@ app.post(
   requireProjectRole("admin"),
   validateBody(addProjectMemberSchema),
   addMember,
+);
+
+app.patch(
+  "/projects/:projectId/members/:userId",
+  requireAuth,
+  requireProjectRole("admin"),
+  validateBody(updateProjectMemberRoleSchema),
+  updateMemberRole,
 );
 
 app.delete(

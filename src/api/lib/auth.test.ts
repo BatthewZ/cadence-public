@@ -163,3 +163,46 @@ describe("resolveAllowedOrigin", () => {
     expect(resolveAllowedOrigin(baseUrl, baseUrl, undefined)).toBe(baseUrl);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Email verification policy
+// ---------------------------------------------------------------------------
+//
+// `betterAuth` is mocked in this file, so the options object handed to it is
+// directly inspectable — which makes it the only place these three flags can
+// be asserted without standing up a full auth server. They are asserted
+// because each one is load-bearing and each one is a single boolean that a
+// future edit could flip without any test noticing.
+
+describe("email verification policy", () => {
+  beforeEach(() => {
+    resetAuthCache();
+    mockBetterAuth.mockClear();
+  });
+
+  function optionsFor() {
+    createAuth(fakeEnv());
+    return mockBetterAuth.mock.calls[0][0];
+  }
+
+  it("requires a verified email before sign-in", () => {
+    // This is what makes `acceptInvitation`'s email match mean anything. With
+    // it off, registering a colleague's address was enough to claim their
+    // workspace invitation (audit finding 04, reproduced live).
+    expect(optionsFor().emailAndPassword?.requireEmailVerification).toBe(true);
+  });
+
+  it("re-sends the verification link on a refused sign-in", () => {
+    // Without this the flag is a trap: the signup email is the only link ever
+    // issued, so a user whose link expired has no self-service way to get
+    // another one and the account is permanently unreachable.
+    expect(optionsFor().emailVerification?.sendOnSignIn).toBe(true);
+  });
+
+  it("signs the user in when they follow the verification link", () => {
+    // The invitation journey depends on it: invite email → register → verify →
+    // signed in and returned to /invite/:token, which then has a session and
+    // can accept.
+    expect(optionsFor().emailVerification?.autoSignInAfterVerification).toBe(true);
+  });
+});

@@ -1,51 +1,58 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  isUniquePositionConflict,
+  isUniqueConstraintViolation,
   retryOnPositionConflict,
 } from "./position-conflict";
 
 /**
- * Unit tests for the position-conflict retry helper.
+ * Unit tests for the UNIQUE-constraint predicate and the retry helper built on
+ * it.
  *
- * The helper guards fractional-index INSERT/UPDATE paths that race against
- * concurrent writers. Regressions here would either (a) swallow real
- * non-UNIQUE errors by retrying them, or (b) fail to retry genuine UNIQUE
- * races and surface spurious 500s to the user on column/task/subtask
- * creation. Both are load-bearing behaviors for the UNIQUE index on
- * (parentId, position).
+ * `isUniqueConstraintViolation` is deliberately NOT position-specific — the
+ * cases below use `foo` and `task.title` alongside the fractional-index columns
+ * for exactly that reason. Every "insert and let the unique index arbitrate the
+ * race" site in the API needs this one predicate, and the site that hand-rolled
+ * its own (`spawnNextRecurringInstance`) got it wrong by testing only the outer
+ * `.message`, which is why the cause-chain walk is pinned here rather than
+ * trusted.
+ *
+ * `retryOnPositionConflict` is the position-specific consumer. Regressions in
+ * it would either (a) swallow real non-UNIQUE errors by retrying them, or
+ * (b) fail to retry genuine UNIQUE races and surface spurious 500s on
+ * column/task/subtask creation.
  */
 
-describe("isUniquePositionConflict", () => {
+describe("isUniqueConstraintViolation", () => {
   it("matches D1's UNIQUE constraint error message", () => {
     const err = new Error(
       "D1_ERROR: UNIQUE constraint failed: task_group.projectId, task_group.position",
     );
-    expect(isUniquePositionConflict(err)).toBe(true);
+    expect(isUniqueConstraintViolation(err)).toBe(true);
   });
 
   it("matches the bare SQLite phrasing without the D1_ERROR prefix", () => {
     expect(
-      isUniquePositionConflict(new Error("UNIQUE constraint failed: task.position")),
+      isUniqueConstraintViolation(new Error("UNIQUE constraint failed: task.position")),
     ).toBe(true);
   });
 
   it("is case-insensitive so it tolerates future driver changes", () => {
     expect(
-      isUniquePositionConflict(new Error("unique constraint failed: foo")),
+      isUniqueConstraintViolation(new Error("unique constraint failed: foo")),
     ).toBe(true);
   });
 
   it("does not match unrelated errors", () => {
-    expect(isUniquePositionConflict(new Error("NOT NULL constraint failed"))).toBe(false);
-    expect(isUniquePositionConflict(new Error("database is locked"))).toBe(false);
+    expect(isUniqueConstraintViolation(new Error("NOT NULL constraint failed"))).toBe(false);
+    expect(isUniqueConstraintViolation(new Error("database is locked"))).toBe(false);
   });
 
   it("returns false for non-Error values", () => {
-    expect(isUniquePositionConflict(null)).toBe(false);
-    expect(isUniquePositionConflict(undefined)).toBe(false);
-    expect(isUniquePositionConflict("UNIQUE constraint failed")).toBe(false);
-    expect(isUniquePositionConflict({ message: "UNIQUE constraint failed" })).toBe(false);
+    expect(isUniqueConstraintViolation(null)).toBe(false);
+    expect(isUniqueConstraintViolation(undefined)).toBe(false);
+    expect(isUniqueConstraintViolation("UNIQUE constraint failed")).toBe(false);
+    expect(isUniqueConstraintViolation({ message: "UNIQUE constraint failed" })).toBe(false);
   });
 
   it("walks the cause chain to find a wrapped UNIQUE error", () => {
@@ -54,20 +61,20 @@ describe("isUniquePositionConflict", () => {
     // traversal the helper would miss every production INSERT conflict.
     const inner = new Error("UNIQUE constraint failed: task_group.position");
     const wrapper = new Error("Failed query: insert into task_group...", { cause: inner });
-    expect(isUniquePositionConflict(wrapper)).toBe(true);
+    expect(isUniqueConstraintViolation(wrapper)).toBe(true);
   });
 
   it("walks multiple levels of cause chain", () => {
     const innermost = new Error("UNIQUE constraint failed: subtask.position");
     const middle = new Error("D1_ERROR", { cause: innermost });
     const outer = new Error("DrizzleQueryError", { cause: middle });
-    expect(isUniquePositionConflict(outer)).toBe(true);
+    expect(isUniqueConstraintViolation(outer)).toBe(true);
   });
 
   it("does not false-positive on a non-UNIQUE error wrapped in DrizzleQueryError", () => {
     const inner = new Error("NOT NULL constraint failed: task.title");
     const wrapper = new Error("Failed query: insert into task...", { cause: inner });
-    expect(isUniquePositionConflict(wrapper)).toBe(false);
+    expect(isUniqueConstraintViolation(wrapper)).toBe(false);
   });
 });
 

@@ -1,5 +1,28 @@
 # Endpoints
 
+## Authentication and scopes
+
+Every endpoint below accepts either a **cookie session** (a human in a browser) or a **Personal Access Token** (a machine client), unless its entry says otherwise. The per-endpoint **Auth**, **PAT scope**, and **Authorization** lines describe three different questions, answered by three different pieces of the request path:
+
+1. **Auth** — is there a valid credential at all?
+2. **PAT scope** — was *this credential* granted the capability being used? Cookie sessions are never scope-checked; a session simply carries everything its user can do. Scopes only ever narrow, never widen: they are AND-ed with the user's real role, so a `write:*` token held by a viewer still cannot write. See [API Tokens § Scopes Reference](./api-tokens.md#scopes-reference).
+3. **Authorization** — may the *person* behind the credential act on this resource? Workspace membership, workspace role, and project role.
+
+A token additionally carries a **workspace binding** (exactly one workspace) and a **project scope** (`all`, or a selected list). Both are checked independently of scopes — the answer is "no" even when the scopes would allow it. See [API Tokens § Project Scoping](./api-tokens.md#project-scoping) and [§ Workspace Scoping](./api-tokens.md#workspace-scoping).
+
+**Three denial shapes**, which are not interchangeable — read them as they appear per endpoint:
+
+| Situation | Response |
+|-----------|----------|
+| The token lacks a required capability scope | `403 {"error": "Insufficient scope: requires <scope>"}` — the scope is named, because the caller has already proved it holds the token |
+| The token's binding excludes a resource the URL names | `403 {"error": "Forbidden"}` — deliberately identical to a role or membership failure, so the response never distinguishes the two |
+| The token's binding excludes rows on a list or cross-project read | **No error.** The result set is narrowed. For single-row notification and file-download lookups this surfaces as `404`, identical to a row that does not exist |
+
+Two further rules catch people out often enough to state up front:
+
+- **`write:*` never grants a delete scope.** Where an endpoint below lists `project:delete` or `task:delete`, that scope must be ticked individually when minting the token; neither aggregate implies it.
+- **A handful of endpoints refuse token auth outright**, at any scope: the API-token management surface, the calendar-feed management surface, `GET /api/workspaces/:workspaceId/invitations/:id/link`, `GET /api/invitations/pending`, and `POST /api/invitations/accept`. A machine credential must not be able to mint or harvest another credential, and joining a workspace is a human act. Each returns `403` with a message naming the credential at stake.
+
 ## Available Endpoints
 
 ### `GET /api/health`
@@ -76,7 +99,7 @@ Returns the authenticated user's data. Requires authentication (uses `requireAut
 
 ### `PUT /api/users/me/avatar`
 
-Uploads a user avatar image. Requires authentication. Rate-limited to 10 requests per minute.
+Uploads a user avatar image. Requires authentication (cookie session, or a PAT with `attachment:write` / `write:*`). Rate-limited to 10 requests per minute.
 
 **Request:** `multipart/form-data` with a `file` field (JPEG, PNG, GIF, or WebP, max 2 MB).
 
@@ -98,11 +121,15 @@ See [File Storage](./storage.md) for full details and error responses.
 
 ### `GET /api/uploads/:purpose/:userId/:filename`
 
-Serves a stored file from R2. No authentication required. Responses are cached with `Cache-Control: public, max-age=31536000, immutable`.
+Serves a stored file from R2. Requires authentication. Every purpose except `avatar` is additionally authorized against the task or project that owns the file, using the same access rules as the rest of the API, and is served with `Cache-Control: private, max-age=31536000, immutable`. Avatars are readable by any signed-in user and keep `Cache-Control: public, max-age=31536000, immutable`. See [File Storage](./storage.md) for the per-purpose rules.
+
+**PAT scope:** `attachment:read` (or `read:*` / `write:*`). Authorization and capability are separate questions: the per-purpose access check above says *whose* files the caller may see, and the scope says whether this credential was granted file access at all. The scope applies to `avatar` too — cookie sessions are unaffected (the scope middleware no-ops without a token), but a machine credential asking for file bytes has to hold a file scope whichever bucket the bytes sit in, rather than the capability layer carrying a per-purpose exception the authorization layer already owns.
+
+**PAT project binding:** for the `task-attachment`, `task-cover`, and `project-cover` purposes the owning project is resolved from the file and checked against the token's workspace binding and selected-project list. A file outside that binding answers `404 File not found` — byte-identical to a file that does not exist, so the response never confirms which keys are real. `avatar` carries no project and is not project-bound. Rate-limited to 100 requests/minute per caller.
 
 ### `DELETE /api/uploads/:id`
 
-Deletes an upload. Requires authentication. Only the file owner can delete.
+Deletes an upload. Requires authentication. Only the file owner can delete. **PAT scope:** `attachment:write` — there is no `attachment:delete` in the v1 scope grammar, so deletes sit under the write scope (the same treatment `workspace` gets).
 
 **Response** (200):
 
@@ -152,7 +179,8 @@ Creates a new workspace. The authenticated user is automatically added as the wo
 Lists all workspaces the authenticated user is a member of, including their role and member count in each.
 
 **Auth:** Required.
-**Authorization:** Any authenticated user.
+**PAT scope:** `workspace:read` (or `read:*` / `write:*`).
+**Authorization:** Any authenticated user. For a PAT caller the list is filtered to the **token's bound workspace**, so it returns at most one entry regardless of how many workspaces the owning user belongs to. This applies to every token, `projectScope: "all"` included — it is the workspace binding, not project scope. Cookie sessions see every workspace they belong to.
 
 **Response** (200):
 
@@ -176,7 +204,9 @@ Lists all workspaces the authenticated user is a member of, including their role
 
 ### `GET /api/workspaces/:workspaceId/freshness`
 
-Returns lightweight timestamps indicating when workspace-level data was last modified. Clients poll this at a moderate interval (~3s) to detect changes made by other users and selectively invalidate stale caches. Polling is only active for multi-user workspaces — single-member workspaces skip polling entirely since no other user can modify data. Responses are edge-cached (Cloudflare Cache API, 2s TTL) since freshness data is identical for all workspace members.
+Returns lightweight timestamps indicating when workspace-level data was last modified. Clients poll this at a moderate interval (3s, jittered ±20% per tick — see [Project Freshness](#get-apiprojectsprojectidfreshness) for why) to detect changes made by other users and selectively invalidate stale caches. Polling is only active for multi-user workspaces — single-member workspaces skip polling entirely since no other user can modify data. Responses are edge-cached (Cloudflare Cache API, 2s TTL) since freshness data is identical for all workspace members.
+
+A `tasks` change also invalidates the per-task cache prefix, so a task detail dialog opened from the dashboard or My Tasks keeps updating while it is open.
 
 **Auth:** Required.
 **Authorization:** Workspace member.
@@ -237,27 +267,50 @@ Updates workspace details.
 | `name` | `string` | 1--100 characters |
 | `slug` | `string` | 2--50 characters, lowercase alphanumeric and hyphens only |
 | `description` | `string \| null` | max 500 characters |
+| `policy` | `object` | Governance toggles — see below |
+
+**`policy`** is **merged**, not replaced. Send only the toggles you mean to
+change; the rest keep their stored values. The merge happens in SQL
+(`json_patch`), so two admins saving different toggles concurrently cannot
+clobber each other. Unknown keys are rejected with `400` rather than ignored —
+a typo that returned `200` would leave an admin certain they had changed a
+setting that is still on.
+
+| Toggle | Type | Default | Effect |
+|--------|------|---------|--------|
+| `allowMemberProjectCreation` | `boolean` | `true` | When `false`, workspace `member`s cannot create projects or duplicate ones they administer. Owners and admins are unaffected. |
+
+```json
+{ "policy": { "allowMemberProjectCreation": false } }
+```
 
 **Response** (200):
 
 ```json
-{ "workspace": { "id": "...", "name": "...", "slug": "...", "..." } }
+{ "workspace": { "id": "...", "name": "...", "slug": "...", "policy": { "allowMemberProjectCreation": true }, "..." } }
 ```
 
-**Errors:** 409 (slug already exists for this owner).
+`policy` always comes back **fully resolved** — every toggle present, defaults
+already applied — so a client never needs its own copy of the defaults to
+interpret the response, and never has to distinguish "unset" from "off".
+
+**Errors:** 409 (slug already exists for this owner), 400 (unknown `policy` key).
 
 ### `DELETE /api/workspaces/:workspaceId`
 
 Deletes a workspace and all associated data.
 
 **Auth:** Required.
-**Authorization:** Workspace owner only.
+**PAT scope:** `workspace:write` (or `write:*`) — there is no `workspace:delete` in the v1 scope grammar.
+**Authorization:** Workspace owner only. A PAT with `projectScope: "selected"` is **refused with `403 Forbidden`** whatever scopes it holds, and nothing is deleted. A selected-projects token is a request for a *smaller* blast radius, and this operation has no smaller version of itself — it destroys every project in the workspace, including the ones the token was never given. The guard runs before any data is read or written. Cookie sessions and `projectScope: "all"` tokens are unaffected.
 
 **Response** (200):
 
 ```json
 { "ok": true }
 ```
+
+**Errors:** 403 (not the owner, or a `projectScope: "selected"` token — the body is the same `{"error": "Forbidden"}` either way).
 
 ### `GET /api/workspaces/:workspaceId/members`
 
@@ -292,7 +345,8 @@ Lists all members of a workspace with their user profile data.
 Updates the role of a workspace member. Cannot change the owner's role.
 
 **Auth:** Required.
-**Authorization:** Workspace owner or admin.
+**PAT scope:** `workspace:write` (or `write:*`).
+**Authorization:** Workspace owner or admin, **and** the caller must outrank the target — an admin may change plain members' roles, but only the **owner** may touch an admin's row. Granting the `admin` role is owner-only as well, matching the same rule on `POST /api/workspaces/:workspaceId/invitations`: an admin who can mint peer admins can manufacture people immune to every admin in the workspace.
 
 **Request body** (validated via `updateMemberRoleSchema` from `src/shared/schemas/workspace.ts`):
 
@@ -306,12 +360,17 @@ Updates the role of a workspace member. Cannot change the owner's role.
 { "member": { "id": "...", "workspaceId": "...", "userId": "...", "role": "admin", "..." } }
 ```
 
+**Errors:** 403 (caller is not a member, target is the owner, an admin targeting another admin, or `role: "admin"` requested by a non-owner — `Only the workspace owner can grant the admin role`), 404 (member not found), 409 (`This member's role changed while you were editing. Please retry.` — the write is pinned to the role the permission check was made against, so a concurrent change is reported rather than silently applied).
+
 ### `DELETE /api/workspaces/:workspaceId/members/:userId`
 
 Removes a member from the workspace. Cannot remove the workspace owner.
 
 **Auth:** Required.
-**Authorization:** Workspace owner or admin.
+**PAT scope:** `workspace:write` (or `write:*`).
+**Authorization:** Workspace owner or admin, **and** the caller must outrank the target: an admin may remove plain members, but only the **owner** may remove an admin. Nobody may remove themselves here. As with `DELETE /api/workspaces/:workspaceId`, a PAT with `projectScope: "selected"` is **refused with `403 Forbidden`** and nothing is written: removing someone from the workspace revokes their access to every project in it, including projects outside the token's list, so there is no narrowed version of the operation to perform. The guard runs before the membership is read, so it does not reveal whether the named user is a member.
+
+**Behaviour:** removal revokes every grant that workspace membership was the premise for — the `workspace_member` row, all `project_member` rows for projects in this workspace, and all `team_member` rows for teams in this workspace — in one atomic batch, so a partial revocation is not reachable. Memberships in *other* workspaces are untouched.
 
 **Response** (200):
 
@@ -319,11 +378,13 @@ Removes a member from the workspace. Cannot remove the workspace owner.
 { "ok": true }
 ```
 
+**Errors:** 400 (`Cannot remove yourself from the workspace`), 403 (caller is not a member of the workspace, target is the workspace owner, an admin targeting another admin — `Only the workspace owner can remove an admin` — or a `projectScope: "selected"` token), 404 (`Member not found`).
+
 ### `GET /api/workspaces/:workspaceId/export`
 
 Downloads a canonical, versioned JSON archive of the entire workspace (`Content-Type: application/json; charset=utf-8`, `Content-Disposition: attachment; filename="<slug>-export-<YYYY-MM-DD>.json"`). The document is defined by `workspaceExportSchema` (`src/shared/schemas/workspace-export.ts`) — the single source of truth — and contains the workspace, members, teams, webhooks, invitations, and every project with its task groups, labels, tasks, subtasks, comments, and attachment manifests. A top-level `users` ref directory resolves every referenced user id — including **ex-members** who are no longer in the workspace but who created or were assigned work — to `{ ref, email, name }`, so the archive never loses the answer to "who did this work?".
 
-**Auth:** Required. Reachable by a `workspace:read` PAT, but only when the owning user is an owner/admin (PAT scopes are AND-ed with the user's role).
+**Auth:** Required. Reachable by a `workspace:read` PAT, but only when the owning user is an owner/admin (PAT scopes are AND-ed with the user's role). A PAT with `projectScope: "selected"` is **refused with `403 Forbidden`** before any data is read — the archive is whole-workspace by definition, and a partial archive that still called itself a workspace export would be worse than none. Use the per-project [CSV export](#get-apiprojectsprojectidexportcsv) for a narrowed token.
 **Authorization:** Workspace **owner or admin** only — the most privileged read in the API (full data egress).
 **Rate limit:** 5 requests/hour per caller, keyed PAT > user > IP (`defaultRateLimitKey`).
 
@@ -399,6 +460,14 @@ Creates **new** projects in the workspace from an uploaded export file — the w
 
 A dry-run response (`?dryRun=true`) is identical minus `failedProjects` — nothing executed, so nothing can have failed — and with `"dryRun": true`.
 
+### Personal Access Token management
+
+Five further endpoints live under `/api/workspaces/:workspaceId/api-tokens` — list, mint, get, rotate, and revoke. They are documented in full in [API Tokens](./api-tokens.md), including the token format, the scope reference, project scoping, expiry, and the 7-day rotation grace period.
+
+All five are **cookie-session only**: a PAT calling any of them gets `403 API tokens cannot manage other tokens`, whatever scopes it holds. A machine credential that could mint or read its siblings could quietly widen its own reach or outlive its own revocation, so the boundary is drawn at the credential class rather than at a scope. They are also rate-limited to 20 requests/minute per caller and sent `Cache-Control: no-store`.
+
+**Authorization** splits the five: list, get and revoke require workspace membership, while **mint and rotate require the workspace `owner` or `admin` role** — issuing a credential is an administrative act, and gating rotate alongside mint is what stops a demoted member from renewing a token indefinitely. Rotate additionally requires the caller to be the token's own owner. A plain member therefore keeps read and revoke over their own tokens and gets `403` on the other two.
+
 ---
 
 ## Projects
@@ -408,7 +477,9 @@ A dry-run response (`?dryRun=true`) is identical minus `failedProjects` — noth
 Creates a new project within a workspace. The creator is automatically added as a project admin. Three default task groups ("To Do", "In Progress", "Done") are created, with "Done" marked as the completion group (`isCompletionGroup: true`).
 
 **Auth:** Required.
-**Authorization:** Workspace member.
+**Authorization:** Workspace member, **subject to the workspace's `allowMemberProjectCreation` policy**. Owners and admins may always create. A `member` may create only while that toggle is on (its default); when an admin turns it off, a member's request answers **403** `{"error": "Only workspace owners and admins can create projects in this workspace"}`.
+
+> The 403 here deliberately explains itself, unlike the deliberately-generic 403s from the membership and PAT-scope guards. There is nothing to conceal: the caller has already proved workspace membership, and the policy is their own workspace's configuration, visible to their admins in **Workspace Settings > Member Permissions**. A bare "Forbidden" would send an integrator hunting for a scope or membership bug instead of reading the setting.
 
 **Request body:**
 
@@ -448,7 +519,8 @@ Creates a new project within a workspace. The creator is automatically added as 
 Lists all projects in a workspace, enriched with member and task group counts.
 
 **Auth:** Required.
-**Authorization:** Workspace member.
+**PAT scope:** `project:read` (or `read:*` / `write:*`).
+**Authorization:** Workspace member. A PAT with `projectScope: "selected"` sees only its selected projects — the list is narrowed rather than refused, so a correctly-narrowed integration gets its own projects and a mis-scoped one gets an obviously short list instead of what looks like a permissions outage.
 
 **Response** (200):
 
@@ -472,7 +544,11 @@ Lists all projects in a workspace, enriched with member and task group counts.
 
 ### `GET /api/projects/:projectId/freshness`
 
-Returns lightweight timestamps indicating when each entity type in a project was last modified. Clients poll this at short intervals (~1.5s) and selectively refetch only the data that changed. Polling is only active for multi-user workspaces — single-member workspaces skip polling entirely since no other user can modify data. Responses are edge-cached (Cloudflare Cache API, 2s TTL) since freshness data is identical for all project viewers.
+Returns lightweight timestamps indicating when each entity type in a project was last modified. Clients poll this at short intervals (1.5s, jittered ±20% per tick) and selectively refetch only the data that changed. Polling is only active for multi-user workspaces — single-member workspaces skip polling entirely since no other user can modify data. Responses are edge-cached (Cloudflare Cache API, 2s TTL) since freshness data is identical for all project viewers.
+
+**Why the interval is jittered.** This endpoint is cheap, but what it triggers is not: every viewer of a project detects the same mutation inside the same poll window and then fires the same follow-up refetches (tasks, members, labels) within milliseconds of each other, and those reads miss the edge cache. Randomizing the interval spreads detection, which spreads the stampede. The delay is re-rolled on every tick rather than fixed per client, because a fixed offset leaves N clients on N perfectly periodic timers and any alignment they drift into would persist. See `src/web/lib/poll-interval.ts`.
+
+Because the payload is a single `MAX(updatedAt)` per entity type, it cannot say *which* task changed. A `tasks` change therefore invalidates both the project's task list and the per-task cache prefix (`["tasks"]`), which is what keeps an open task detail panel live. Invalidation defaults to refetching only *active* queries, so this costs one refetch for the open panel and merely marks the rest stale.
 
 **Auth:** Required.
 **Authorization:** Project member, or workspace owner/admin.
@@ -523,11 +599,12 @@ Updates project details.
 | `description` | `string \| null` | max 1000 characters |
 | `status` | `string` | `"active"`, `"archived"`, or `"completed"` |
 | `icon` | `string \| null` | max 50 characters |
-| `coverImageKey` | `string \| null` | R2 object key for cover image (mutually exclusive with `coverUnsplash`) |
 | `coverImagePosition` | `number \| null` | 0–100, vertical position of cover image (applies to either cover source) |
 | `theme` | `string \| null` | One of the supported theme names |
 | `budget` | `number \| null` | Project budget in cents (integer, >= 0) |
 | `autoAssignCreator` | `boolean` | Auto-assign new tasks to their creator |
+
+`coverImageKey` and `coverUnsplash` are **not** accepted here — use the dedicated cover endpoints below, which enforce the XOR invariant between the two cover sources. This matters most for `coverImageKey`: because [`GET /api/uploads/...`](./storage.md#get-apiuploadspurposeuseridfilename) authorizes a `project-cover` download by matching the requested key against `project.cover_image_key`, a client-writable key would be a forgeable read capability. Nothing in the API writes a non-null `coverImageKey` except the cover upload endpoint, using a key the server just minted for the caller's own upload. (Workspace import also restores a `coverUnsplash` payload from an uploaded export; that column holds absolute Unsplash URLs rather than a key into storage, and import nulls `coverImageKey` alongside it.) Unknown fields are stripped, so sending one is ignored rather than rejected.
 
 **Response** (200):
 
@@ -539,7 +616,7 @@ Updates project details.
 
 Deletes a project and all associated data.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `project:delete` — neither `project:write` nor `write:*` grants it; the scope must be ticked individually when the token is minted).
 **Authorization:** Project admin (or workspace owner/admin).
 
 **Response** (200):
@@ -586,7 +663,11 @@ Updates a project's sidebar position using a fractional index key. Used by the d
 Duplicates a project, creating a new copy with the name `"{original name} (copy)"`. Copies the project's settings (description, icon, budget, theme, autoAssignCreator), task groups (with positions and colors), and labels. Optionally includes members and their roles. Tasks, comments, attachments, and cover images are not copied. The duplicating user is always added as an admin on the new project.
 
 **Auth:** Required.
-**Authorization:** Project admin or member.
+**Authorization:** Project **admin** (the route mounts `requireProjectRole("admin")`; a project `member` is refused), **and** the workspace's `allowMemberProjectCreation` policy.
+
+> **Why a creation policy applies to a "duplicate" route.** This is a project-creating path, and skipping it would make the whole toggle decorative. `POST /workspaces/:id/projects` adds its caller as project **admin**, so any member who created a project while the toggle was on still satisfies the project-admin check on that project forever — they could go on minting projects by duplicating it after an admin turned member creation off. A policy about who may bring projects into existence has to be enforced on every path that brings one into existence.
+>
+> Workspace import (`POST /api/workspaces/:workspaceId/import`) also creates projects and is deliberately *not* subject to this policy — it is already owner/admin-only, so the toggle could neither widen nor narrow it.
 
 **Request body** (JSON, validated via `duplicateProjectSchema`):
 
@@ -599,7 +680,7 @@ Duplicates a project, creating a new copy with the name `"{original name} (copy)
 2. Creates a new project with copied settings and status set to `"active"`.
 3. Copies all task groups with their positions, colors, and completion-group flags.
 4. Copies all labels with their names and colors.
-5. If `includeMembers` is `true`, copies all members with their roles (the duplicating user is always admin regardless).
+5. If `includeMembers` is `true`, copies members with their roles — but **only those still in the workspace**. A `project_member` row whose user has since been removed from the workspace is orphaned: it confers no access on its own, and copying it forward would mint a fresh stale row on a new project. The same rule `POST /api/projects/:projectId/members` enforces up front (`"User is not a member of the workspace"`, 400) is therefore applied here. Duplication *skips* rather than refuses, because a departed teammate is routine and invisible to whoever clicks Duplicate — a 400 would permanently brick duplication of any project someone ever left. The skipped user ids are returned in `skippedMemberIds` so the omission can be surfaced. The duplicating user is always admin regardless.
 6. Writes all records in an atomic batch operation.
 7. Fires a `project.created` webhook event.
 
@@ -621,9 +702,12 @@ Duplicates a project, creating a new copy with the name `"{original name} (copy)
     "coverImagePosition": null,
     "createdAt": "...",
     "updatedAt": "..."
-  }
+  },
+  "skippedMemberIds": []
 }
 ```
+
+`skippedMemberIds` is always present. It lists source project members that were **not** copied because they are no longer members of the workspace (see behaviour step 5). It is `[]` when nothing was skipped, and always `[]` when `includeMembers` is `false`.
 
 **Error responses:**
 
@@ -730,7 +814,7 @@ Applies an Unsplash-hosted photo as the project's cover image. Replaces any exis
 
 Removes the cover image (R2 or Unsplash) from a project. Clears both `coverImageKey` and `coverUnsplash` atomically. Idempotent -- returns success even if no cover exists.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `project:delete` — the delete scope is required by HTTP method, so it applies here even though nothing but the cover is removed).
 **Authorization:** Project admin (or workspace owner/admin).
 
 **Response** (200):
@@ -797,11 +881,41 @@ Adds a workspace member to the project. The target user must already be a member
 { "member": { "id": "...", "projectId": "...", "userId": "...", "role": "member", "addedAt": "..." } }
 ```
 
+### `PATCH /api/projects/:projectId/members/:userId`
+
+Changes an existing project member's role.
+
+**Auth:** Required (cookie session or PAT with `project:write`).
+**Authorization:** Project admin (or workspace owner/admin). Unlike the workspace equivalent there is no rank hierarchy — projects have no owner tier, so any project admin may re-role any project member. The one refusal is **your own row**: an admin cannot change their own project role, because a self-demotion is the one change the person making it cannot undo.
+
+**Request body:**
+
+| Field | Type | Constraints | Required |
+|-------|------|-------------|----------|
+| `role` | `string` | `z.enum(["admin", "member", "viewer"])` via `updateProjectMemberRoleSchema` | Yes |
+
+**Response** (200):
+
+```json
+{ "member": { "id": "...", "projectId": "...", "userId": "...", "role": "admin", "addedAt": "..." } }
+```
+
+Submitting the role the member already holds is accepted as a no-op: the row is returned unchanged, the project's `updatedAt` is untouched, and **no `project.member_role_changed` webhook fires** — a change event whose `from` equals its `to` would be a lie every consumer had to filter out.
+
+| Status | Meaning |
+| --- | --- |
+| 400 | `role` missing or outside `PROJECT_ROLES` |
+| 403 | Not a project admin, or the target is the caller |
+| 404 | No membership row for that user in this project. A workspace owner/admin who has never been added to the project has an *effective* role but no row to edit — their access is changed from the workspace members list |
+| 409 | The member's role changed between the page loading and this request. The write is pinned to the role it was authorized against, so a stale choice is refused rather than applied — reload and retry |
+
+Fires [`project.member_role_changed`](./webhooks.md#project-events-7) with a `changes` object of `{ "role": { "from": …, "to": … } }`.
+
 ### `DELETE /api/projects/:projectId/members/:userId`
 
 Removes a member from the project.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `project:delete`).
 **Authorization:** Project admin (or workspace owner/admin).
 
 **Response** (200):
@@ -895,7 +1009,8 @@ Labels are project-scoped rows and name uniqueness is only enforced case-insensi
 Archived projects are excluded: their tasks no longer appear in workspace task views, so offering their labels as filter options would only produce dead filters.
 
 **Auth:** Required.
-**Authorization:** Workspace member. Owners/admins see labels from all workspace projects; non-elevated members only from projects they are a direct member of (mirrors `GET /api/workspaces/:workspaceId/task-groups` visibility), so a plain member can never enumerate label names from projects they cannot open.
+**PAT scope:** `label:read` (or `read:*` / `write:*`).
+**Authorization:** Workspace member. Owners/admins see labels from all workspace projects; non-elevated members only from projects they are a direct member of (mirrors `GET /api/workspaces/:workspaceId/task-groups` visibility), so a plain member can never enumerate label names from projects they cannot open. A PAT with `projectScope: "selected"` is narrowed to its selected projects on top of that, including when its owning user is an owner or admin.
 
 **Response** (200):
 
@@ -1081,7 +1196,7 @@ Renames a view and/or overwrites its `state` snapshot. Last-write-wins — the d
 
 Deletes one of the caller's saved views. The creator-scoped `WHERE` plus `.returning()` means another user's (or a non-existent) view id deletes nothing and yields the same 404.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `project:delete` — saved views ride the `project:*` scope family; there is no `view:*` scope).
 **Authorization:** Project member (any role); the view must belong to the caller, else 404.
 
 **Response** (200):
@@ -1159,7 +1274,8 @@ Lists all task groups in a project, ordered by position. Includes a task count p
 Lists task groups belonging to a given set of projects in the workspace. Used by workspace-level views (e.g. My Tasks filter bar) where the user narrows to specific columns across one or more projects. Requested project IDs that the caller cannot see are silently dropped (mirrors `listProjects` partial-visibility behavior). Query parameters are validated via `workspaceTaskGroupsQuerySchema`.
 
 **Auth:** Required.
-**Authorization:** Workspace member. Elevated members (owner/admin) see all requested projects; non-elevated members see only projects they are a direct member of.
+**PAT scope:** `task:read` (or `read:*` / `write:*`).
+**Authorization:** Workspace member. Elevated members (owner/admin) see all requested projects; non-elevated members see only projects they are a direct member of. A PAT with `projectScope: "selected"` is narrowed to its selected projects as well — a requested project outside its list is dropped from the result, the same silent treatment an unseeable project gets, rather than raising an error.
 
 **Query parameters:**
 
@@ -1191,8 +1307,10 @@ Task groups are ordered by `projectId` then `position` ascending.
 
 Updates a task group's name, color, or completion-group flag. Access is checked inline by resolving the parent project.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `task:write` / `write:*`). There is no `task-group:*` scope; task groups are task-internal.
 **Authorization:** Project admin or member (via inline check).
+
+> **PAT note:** the URL names neither a project nor a task, so this route resolves the owning project itself and applies the token's workspace binding and selected-project list to it — `403 Forbidden` when the token may not reach that project, even though its owning user can. The same applies to `DELETE /api/task-groups/:taskGroupId` and `PATCH /api/task-groups/:taskGroupId/reorder` below.
 
 **Request body (all fields optional):**
 
@@ -1212,7 +1330,7 @@ Updates a task group's name, color, or completion-group flag. Access is checked 
 
 Deletes a task group. All tasks in the group are reassigned to the target group.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `task:delete` — `write:*` does **not** grant it).
 **Authorization:** Project admin (via inline check).
 
 **Query parameters:**
@@ -1231,7 +1349,7 @@ Deletes a task group. All tasks in the group are reassigned to the target group.
 
 Updates the position of a task group for drag-and-drop reordering.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `task:write` / `write:*`).
 **Authorization:** Project admin or member (via inline check).
 
 **Request body:**
@@ -1264,7 +1382,7 @@ Creates a new task within a project. The task is placed at the end of the specif
 | `title` | `string` | 1--200 characters | Yes |
 | `description` | `string` | max 5000 characters | No |
 | `taskGroupId` | `string` | UUID, must belong to the project | Yes |
-| `assigneeId` | `string \| null` | UUID | No |
+| `assigneeId` | `string \| null` | UUID of a user who can access this project (see [Assignee rule](#assignee-rule)); anyone else is rejected with 400. `null` creates the task unassigned | No |
 | `priority` | `string` | `"urgent"`, `"high"`, `"medium"`, `"low"`, or `"none"` (default: `"none"`) | No |
 | `startDate` | `string \| null` | Task start date, same format/validation as `dueDate`. Independently optional; when a `dueDate` is also present it must be on or before it (see range note below) | No |
 | `dueDate` | `string \| null` | A `YYYY-MM-DD` calendar date (what the web date picker sends) or a full ISO 8601 datetime. Validated calendar-aware: shape-correct-but-impossible dates (e.g. `2030-02-30`) are rejected with 400 | No |
@@ -1275,6 +1393,10 @@ Creates a new task within a project. The task is placed at the end of the specif
 > **Note:** When `recurrenceRule` is provided but `dueDate` is omitted, `dueDate` defaults to the current date. A `recurrenceSeriesId` (UUID) is automatically generated for new recurring tasks.
 
 > **Start/due ordering invariant:** `startDate` and `dueDate` are each independently optional — a task may carry a start date alone (work that begins on a day with no deadline), a due date alone, both (a start → due range), or neither. The only cross-field rule is ordering: when **both** are present, `startDate` must not fall after `dueDate` (`"Start date must be on or before the due date"`, 400). On create the full state is in the payload, so the rule is checked by the schema. Comparison is on the `YYYY-MM-DD` prefix (lexicographic, no timezone parse).
+
+<a id="assignee-rule"></a>
+
+> **Assignee rule:** a task can only be assigned to someone who can actually open its project — a direct project member, or a workspace owner/admin (who hold project-admin access by elevation and need no `project_member` row). A plain workspace member who is not on the project, an unknown user id, and a user outside the workspace are all rejected with **400** `{"error": "Assignee must have access to this project"}`; nothing is written and no notification is sent. `null` (unassign) is always accepted, and re-sending a task's **current** `assigneeId` unchanged is a no-op that is never re-validated, so whole-object PATCHes keep working after a membership change. The rule is enforced identically on `POST /projects/:projectId/tasks` and `PATCH /tasks/:taskId`. Where an assignee is *inherited* rather than supplied — `POST /tasks/:taskId/duplicate` and the instance spawned when a recurring task is completed — the operation still succeeds, but an assignee who has since lost access is dropped, so the new task comes back unassigned and no assignment notification is sent. The same check gates the completion notification, so a task assigned before its assignee was offboarded stops notifying them.
 
 **Response** (201):
 
@@ -1331,6 +1453,8 @@ Bulk-creates up to **500 tasks** in one request from a **client-parsed** `.ics` 
 | `startDate` | `string \| null` | Same format/validation as `dueDate`; independently optional and must be on or before `dueDate` when both are present (a `DTSTART` without a resolvable end imports as a start-only task, exactly like a create payload with a start and no due date) | No |
 | `dueDate` | `string \| null` | A `YYYY-MM-DD` calendar date or a full ISO 8601 datetime; validated calendar-aware (impossible dates such as `2030-02-30` rejected with 400) | No |
 | `sourceUid` | `string` | The source event's ICS `UID`, 1--512 characters | No |
+
+> **Always unassigned:** the item shape has no `assigneeId` and the handler never writes the column, so every imported task is created unassigned. A calendar event carries no notion of "who on this project owns the work", and inventing one would route the [assignee rule](#assignee-rule) through a 500-row batch where a single ineligible id would have to either fail the whole import or be silently dropped. Assign after import via `PATCH /tasks/:taskId`, which validates one id at a time and can report exactly which one was rejected.
 
 > **Re-import dedupe:** events that carry a `sourceUid` are imported **at most once per project** — a partial unique index on (`projectId`, `source_uid`) is the ground truth, and the handler pre-reads existing UIDs so re-importing the same file reports those events as `skipped` rather than failing the batch. A UID repeated within a single payload is also collapsed to one insert. Events **without** a `sourceUid` cannot be recognised on re-import and are created again every time — documented behavior.
 
@@ -1416,16 +1540,17 @@ Updates task fields.
 |-------|------|-------------|
 | `title` | `string` | 1--200 characters |
 | `description` | `string \| null` | max 5000 characters |
-| `assigneeId` | `string \| null` | UUID |
+| `assigneeId` | `string \| null` | UUID of a user who can access this task's project (see [Assignee rule](#assignee-rule)); anyone else is rejected with 400. `null` unassigns |
 | `priority` | `string` | `"urgent"`, `"high"`, `"medium"`, `"low"`, or `"none"` |
 | `status` | `string` | `"open"`, `"in_progress"`, `"completed"`, or `"cancelled"` |
 | `startDate` | `string \| null` | Task start date, same format/validation as `dueDate`. Independently optional; subject only to the start/due ordering invariant (see below) |
 | `dueDate` | `string \| null` | A `YYYY-MM-DD` calendar date or a full ISO 8601 datetime. Validated calendar-aware: impossible dates (e.g. `2030-02-30`) are rejected with 400 |
 | `cost` | `integer \| null` | Non-negative integer (cents) |
 | `icon` | `string \| null` | max 50 characters |
-| `coverImageKey` | `string \| null` | R2 object key for cover image (mutually exclusive with `coverUnsplash`) |
 | `coverImagePosition` | `integer \| null` | 0--100, vertical position of cover image (applies to either cover source) |
 | `recurrenceRule` | `object \| null` | See [Recurrence Rule](#recurrence-rule-object) below |
+
+`coverImageKey` and `coverUnsplash` are **not** accepted here — use the dedicated cover endpoints below, which enforce the XOR invariant between the two cover sources. This matters most for `coverImageKey`: because [`GET /api/uploads/...`](./storage.md#get-apiuploadspurposeuseridfilename) authorizes a `task-cover` download by matching the requested key against `task.cover_image_key`, a client-writable key would be a forgeable read capability. Nothing in the API writes a non-null `coverImageKey` except the cover upload endpoint, using a key the server just minted for the caller's own upload. (Workspace import also restores a `coverUnsplash` payload from an uploaded export; that column holds absolute Unsplash URLs rather than a key into storage, and import nulls `coverImageKey` alongside it.) Unknown fields are stripped, so sending one is ignored rather than rejected.
 
 **Response** (200):
 
@@ -1444,8 +1569,8 @@ Updates task fields.
 
 Deletes a task and its subtasks/comments.
 
-**Auth:** Required.
-**Authorization:** Project member, or workspace owner/admin (resolved via `requireTaskAccess`).
+**Auth:** Required (cookie session or PAT with `task:delete` — neither `task:write` nor `write:*` grants it).
+**Authorization:** Project **admin or member** (a project viewer cannot delete), or workspace owner/admin by elevation.
 
 **Response** (200):
 
@@ -1610,8 +1735,8 @@ Applies an Unsplash-hosted photo as the task's cover image. Replaces any existin
 
 Removes the cover image (R2 or Unsplash) from a task. Clears both `coverImageKey` and `coverUnsplash` atomically. Idempotent -- returns success even if no cover exists.
 
-**Auth:** Required.
-**Authorization:** Project member, or workspace owner/admin (resolved via `requireTaskAccess`).
+**Auth:** Required (cookie session or PAT with `task:delete`).
+**Authorization:** Project **admin or member**, or workspace owner/admin by elevation.
 
 **Response** (200):
 
@@ -1664,8 +1789,10 @@ Creates a subtask on a task. Position is automatically assigned at the end.
 
 Updates a subtask's title or completion status. Access is verified by looking up the parent task's project.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `task:write` / `write:*`).
 **Authorization:** Project member (via inline check).
+
+> **PAT note:** the URL names neither a project nor a task, so the route resolves the owning project itself and applies the token's workspace binding and selected-project list to it — `403 Forbidden` when the token may not reach that project, even though its owning user can. There is no `subtask:*` scope in the v1 grammar; subtasks are task-internal and sit under `task:*`.
 
 **Request body (all fields optional):**
 
@@ -1684,8 +1811,8 @@ Updates a subtask's title or completion status. Access is verified by looking up
 
 Deletes a subtask. Access is verified by looking up the parent task's project.
 
-**Auth:** Required.
-**Authorization:** Project member (via inline check).
+**Auth:** Required (cookie session or PAT with `task:delete`).
+**Authorization:** Project member (via inline check). The same PAT project-binding note as `PATCH /api/subtasks/:subtaskId` applies.
 
 **Response** (200):
 
@@ -1803,8 +1930,10 @@ Adds a comment to a task. The authenticated user is recorded as the author. Crea
 
 Updates a comment's body. Only the comment author can edit. Creates a `comment_updated` activity log entry.
 
-**Auth:** Required.
-**Authorization:** Comment author only.
+**Auth:** Required (cookie session or PAT with `task:write` / `write:*`).
+**Authorization:** The comment author, **and** that author must still have access to the task's project. Authorship records who wrote the row; it is not a standing permission. Access is resolved on every request, so someone removed from the project can no longer edit comments they wrote while they were on it.
+
+> **PAT note:** the URL names neither a project nor a task, so this route resolves the owning project itself and applies the token's workspace binding and selected-project list to it. A token that may not reach the owning project gets `403 Forbidden` even when its owning user is the author.
 
 **Request body:**
 
@@ -1820,16 +1949,20 @@ Updates a comment's body. Only the comment author can edit. Creates a `comment_u
 
 ### `DELETE /api/comments/:commentId`
 
-Deletes a comment. The comment author can always delete their own comment. Project admins (or workspace owners/admins) can also delete any comment. Creates a `comment_deleted` activity log entry.
+Deletes a comment. Creates a `comment_deleted` activity log entry.
 
-**Auth:** Required.
-**Authorization:** Comment author, or project admin.
+**Auth:** Required (cookie session or PAT with `task:delete`).
+**Authorization:** Project access is resolved first, for every caller. Given access, the **author** may delete their own comment at any access level; a **non-author** must be project admin (or a workspace owner/admin, who hold project-admin access by elevation). A caller with no current access to the project is refused regardless of who wrote the comment — the author check narrows an access the caller already has, it does not stand in for one. This matches `PATCH /api/comments/:commentId` above.
+
+> **PAT note:** as with `PATCH`, the owning project is resolved from the comment and the token's workspace binding and selected-project list are applied to it (`403 Forbidden` when the token may not reach that project).
 
 **Response** (200):
 
 ```json
 { "ok": true }
 ```
+
+**Errors:** 403 (no current project access; or a non-author who is not a project admin; or a token that may not reach the project), 404 (no such comment, or its parent task no longer exists).
 
 ---
 
@@ -1937,7 +2070,7 @@ Deletes an attachment from a task. Removes the R2 object (best-effort), the `tas
 
 Creates a new team within a workspace.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `team:write` / `write:*`).
 **Authorization:** Workspace owner or admin.
 
 **Request body:**
@@ -1966,7 +2099,7 @@ Creates a new team within a workspace.
 
 Lists all teams in a workspace, including a member count per team.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `team:read` / `read:*` / `write:*`).
 **Authorization:** Workspace member.
 
 **Response** (200):
@@ -1987,11 +2120,44 @@ Lists all teams in a workspace, including a member count per team.
 }
 ```
 
+### `GET /api/workspaces/:workspaceId/teams/:teamId`
+
+Returns a single team with its full member roster (each member's `id`, `userId`, `role`, `joinedAt`, and nested `user` profile).
+
+**Auth:** Required (cookie session or PAT with `team:read` / `read:*` / `write:*`).
+**Authorization:** Workspace member. Teams are workspace-owned, so a token's workspace binding is the applicable control and project scope has nothing to narrow.
+
+**Response** (200):
+
+```json
+{
+  "id": "uuid",
+  "workspaceId": "workspaceId",
+  "name": "Engineering",
+  "description": null,
+  "createdAt": "...",
+  "updatedAt": "...",
+  "members": [
+    {
+      "id": "teamMemberId",
+      "userId": "userId",
+      "role": "member",
+      "joinedAt": "...",
+      "user": { "id": "userId", "name": "John Doe", "email": "john@example.com", "image": null }
+    }
+  ]
+}
+```
+
+The team fields are at the top level here rather than under a `team` key — unlike the list endpoint above, which wraps its rows in `{ "teams": [...] }`.
+
+**Errors:** 404 (`Team not found` — no such team **in this workspace**).
+
 ### `PATCH /api/workspaces/:workspaceId/teams/:teamId`
 
 Updates a team's name or description.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `team:write` / `write:*`).
 **Authorization:** Workspace owner or admin.
 
 **Request body (all fields optional):**
@@ -2011,7 +2177,7 @@ Updates a team's name or description.
 
 Deletes a team.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `team:write` — there is no `team:delete` in the v1 scope grammar).
 **Authorization:** Workspace owner or admin.
 
 **Response** (200):
@@ -2024,7 +2190,7 @@ Deletes a team.
 
 Adds a workspace member to a team. The target user must already be a member of the workspace.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `team:write` / `write:*`).
 **Authorization:** Workspace owner or admin.
 
 **Request body:**
@@ -2044,7 +2210,7 @@ Adds a workspace member to a team. The target user must already be a member of t
 
 Removes a member from a team.
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `team:write`).
 **Authorization:** Workspace owner or admin.
 
 **Response** (200):
@@ -2142,17 +2308,19 @@ Records the authenticated user's acceptance of the current Terms of Service vers
 
 ### `POST /api/workspaces/:workspaceId/invitations`
 
-Creates a workspace invitation. Sends an invite to the specified email. A unique token is generated and the invitation expires after 7 days.
+Creates a workspace invitation and emails the invitee a link to `/invite/:token`. The email is dispatched after the response is sent, so a mail-provider outage logs an error but never fails the request — recover with the copy-link endpoint below. A unique token is generated and the invitation expires after 7 days.
 
-**Auth:** Required.
-**Authorization:** Workspace owner or admin.
+Rate-limited to 20 per hour, keyed on the caller (API token id, else user id, else client IP) and applied *after* the role check, so a rejected non-admin cannot spend an admin's allowance. Creating an invitation now sends mail to a caller-chosen address carrying caller-influenced content, which makes an unmetered endpoint a mail-bomb and a way to burn this deployment's sending-domain reputation — damage that outlives the session that caused it. The duplicate-pending guard below already blocks repeat sends to one address, so reaching the ceiling means 20 *distinct* new addresses in an hour.
+
+**Auth:** Required (cookie session or PAT with `invitation:write` / `write:*`).
+**Authorization:** Workspace owner or admin — but inviting someone as an `admin` requires the **owner**, and an admin who tries gets a 403 (`Only the workspace owner can invite someone as an admin`). Role *promotion* is already owner-only, because an admin who can mint peer admins can manufacture people immune to every admin in the workspace, including their creator. A rule enforced on only one of two routes to the same end state is not a rule; it just tells an attacker which door to use. Admins keep the whole of their member-management authority — what they lose is the ability to enlarge the tier that outranks their own peers.
 
 **Request body:**
 
 | Field | Type | Constraints | Required |
 |-------|------|-------------|----------|
-| `email` | `string` | Valid email address | Yes |
-| `role` | `string` | `"admin"` or `"member"` (cannot be `"owner"`; defaults to `"member"`) | No |
+| `email` | `string` | Valid email address. Trimmed and lower-cased before it is stored or compared, so `Alice@Example.com` and `alice@example.com` are the same invitee. Previously a stray capital was stored verbatim and silently stranded the invitee: no `invitation_received` notification and an empty pending list, with the emailed link their only remaining way in. | Yes |
+| `role` | `string` | `"admin"` or `"member"` (cannot be `"owner"`; defaults to `"member"`). `"admin"` is owner-only — see Authorization above. | No |
 
 **Response** (201):
 
@@ -2164,19 +2332,26 @@ Creates a workspace invitation. Sends an invite to the specified email. A unique
     "email": "invitee@example.com",
     "role": "member",
     "invitedBy": "userId",
-    "token": "uuid-token",
     "status": "pending",
     "expiresAt": "...",
+    "acceptedAt": null,
     "createdAt": "..."
   }
 }
 ```
+
+> The raw `token` is deliberately absent. It is a bearer credential: whoever holds it can join the workspace after signing in with the invited address. It leaves the server through exactly two doors — the invitation email, and `GET .../invitations/:id/link` below.
+
+> The echoed `email` is the **canonical** address actually stored, so it may differ from what was submitted (`  Alice@Example.com ` comes back as `alice@example.com`). Clients that display the invitee should render this value rather than the string they sent, or the members list will disagree with the row the server will match on.
+
+**Errors:** 400 (invalid email, `role: "owner"`, the invitee is already a member, or a pending invitation already exists for this address), 403 (not an owner/admin, or an admin attempting `role: "admin"` — `Only the workspace owner can invite someone as an admin`), 429 (more than 20 invitations in an hour from this caller).
 
 ### `GET /api/workspaces/:workspaceId/invitations`
 
 Lists all pending invitations for a workspace.
 
 **Auth:** Required.
+**PAT scope:** none. There is no `invitation:read` in the v1 scope grammar — `invitation:write` covers creating and revoking only — so a PAT reaching this route is gated by its workspace binding and the owner/admin requirement below rather than by a scope. The response carries no `token`, so it hands out no credential.
 **Authorization:** Workspace owner or admin.
 
 **Response** (200):
@@ -2190,20 +2365,68 @@ Lists all pending invitations for a workspace.
       "email": "invitee@example.com",
       "role": "member",
       "invitedBy": "userId",
-      "token": "...",
       "status": "pending",
       "expiresAt": "...",
+      "acceptedAt": null,
       "createdAt": "..."
     }
   ]
 }
 ```
 
+> No `token` field — see the note above.
+
+### `GET /api/workspaces/:workspaceId/invitations/:id/link`
+
+Returns the shareable `/invite/:token` URL for one **pending** invitation. This is the copy-link control on the workspace members page: the fallback for when invitation email bounces, lands in spam, or was never sent because the deployment has no mail provider configured.
+
+The link is fetched on demand rather than carried in the list response above, so the token comes to rest in as few places as possible.
+
+**Auth:** Required. **Cookie sessions only — API tokens are refused with 403**, because a machine credential must never be able to harvest another credential (the same rule the API-token management and calendar-feed surfaces follow).
+**Authorization:** Workspace owner or admin.
+
+**Response** (200):
+
+```json
+{
+  "url": "https://your-app.example.com/invite/uuid-token",
+  "expiresAt": "..."
+}
+```
+
+**Errors:** 400 (invitation revoked, already accepted, or expired — a dead link is never handed out), 403 (not an owner/admin, or the caller used an API token — `API tokens cannot retrieve invitation links`), 404 (no such invitation in this workspace).
+
+### `GET /api/invitations/pending`
+
+Lists the caller's own pending, unexpired invitations — the in-app "Pending Invitations" list on the workspaces page and the Accept action on invitation notifications. Matched on the session's account email, with both sides folded to canonical form (trimmed, lower-cased). The previous byte-for-byte comparison returned an **empty list** to anyone whose invitation was addressed with a capital letter — silently, and with no signal on either side that the admin's pending list and the invitee's disagreed.
+
+**Auth:** Required. **Cookie sessions only — API tokens are refused with `403` (`API tokens cannot list invitations`) whatever scopes they hold.** The list is a queue of pending credential grants addressed to a human's mailbox, and the actions it exists to enable — accepting them — are themselves closed to tokens, so exposing the queue to one would only tell a machine credential which workspaces its owner could be joined to. There is no `invitation:read` scope to narrow it with either.
+**Authorization:** Any authenticated user; the result is always scoped to their own address.
+
+**Response** (200):
+
+```json
+{
+  "invitations": [
+    {
+      "id": "uuid",
+      "role": "member",
+      "expiresAt": "...",
+      "createdAt": "...",
+      "workspace": { "id": "workspaceId", "name": "My Workspace" },
+      "invitedBy": { "id": "userId", "name": "John Doe", "email": "john@example.com" }
+    }
+  ]
+}
+```
+
+> No `token` field. Signed-in users accept from this list with `{ "invitationId": "<id>" }` — the server authorizes against the session's verified email, so the client never needs the secret.
+
 ### `DELETE /api/workspaces/:workspaceId/invitations/:id`
 
 Revokes a pending invitation (sets its status to `"revoked"`).
 
-**Auth:** Required.
+**Auth:** Required (cookie session or PAT with `invitation:write` / `write:*`).
 **Authorization:** Workspace owner or admin.
 
 **Response** (200):
@@ -2239,14 +2462,17 @@ Looks up an invitation by its token. Returns workspace and inviter details. No a
 
 Accepts a workspace invitation. The authenticated user is added as a workspace member with the role specified in the invitation. Rate-limited to 10 requests per minute.
 
-**Auth:** Required.
-**Authorization:** Any authenticated user.
+**Auth:** Required. **Cookie sessions only — API tokens are refused with 403 whatever scopes they hold.** PAT auth bridges its owning user into the request context as an ordinary user, so without this a token minted with nothing but `task:read` satisfied the auth check and reached the handler, where it could insert a workspace membership, flip an invitation to accepted, and fire `invitation.accepted` / `workspace.member_joined`. Scoping was not the fix: accepting an invitation converts a bearer credential into durable membership — a second, longer-lived credential of a different class — so the correct answer is "no token may do this at all", the same rule the copy-link, API-token management and calendar-feed surfaces enforce. Joining a workspace is a human act taken from a browser after clicking a link in a mailbox that human controls.
+**Authorization:** The session's account email must match the invited address, compared in canonical (trimmed, lower-cased) form on both sides so this check cannot drift from the write-side rule or from the pending list. Since email verification is mandatory (`requireEmailVerification`), that match is evidence of mailbox control rather than merely of what someone typed into a signup form.
 
-**Request body:**
+**Request body — exactly one selector:**
 
 | Field | Type | Constraints | Required |
 |-------|------|-------------|----------|
-| `token` | `string` | non-empty | Yes |
+| `token` | `string` | non-empty | Exactly one of the two |
+| `invitationId` | `string` | non-empty | Exactly one of the two |
+
+Use `token` when arriving from the emailed `/invite/:token` link; use `invitationId` when accepting from the in-app pending list, which no longer receives the token. Both selectors run the identical checks — the id is an identifier, never a capability. Supplying both, or neither, is a 400.
 
 **Response** (200):
 
@@ -2254,7 +2480,11 @@ Accepts a workspace invitation. The authenticated user is added as a workspace m
 { "ok": true, "workspaceId": "workspaceId" }
 ```
 
-**Errors:** 400 (invitation expired), 404 (invalid token), 409 (invitation already accepted/declined), 429 (rate limit exceeded).
+**Errors:** 400 (invitation expired, already a member, or a malformed selector pair), 403 (the caller authenticated with an API token — `API tokens cannot accept invitations` — or the invitation was sent to a different email address), 404 (no such invitation), 409 (`Invitation is accepted` / `Invitation is revoked`, **including losing a race** to a concurrent accept), 429 (rate limit exceeded).
+
+The 409 body is byte-identical whether the caller arrived late or lost a race, because those are the same fact from the client's side; branching on a distinction that is pure timing would be a bug waiting to happen.
+
+Membership and consumption are written by a **single `db.batch()`**, which D1 runs as one implicit transaction: a guarded `INSERT ... SELECT ... WHERE status = 'pending'` followed by the matching guarded `UPDATE`. So there are exactly three outcomes and no partial state — both writes land (200), the invitation was not pending so *nothing at all* was written (409), or the unique index on `(workspaceId, userId)` aborts and rolls back the whole batch (400, and the invitation is left **pending** rather than burned, so the invitee can still use it). Two separate statements could not achieve this in either order: insert-then-update leaves a member with access and a still-pending invitation, and update-then-insert consumes the invitation with no membership behind it — locking the invitee out permanently, silently, with no retry available.
 
 ---
 
@@ -2265,7 +2495,8 @@ Accepts a workspace invitation. The authenticated user is added as a workspace m
 Returns a workspace-level dashboard scoped to **active projects only**. Includes task count breakdowns by status, aggregate task counts, priority breakdown, per-member workload, overdue tasks, cost aggregation, and a summary of non-active (completed/archived) projects across the workspace.
 
 **Auth:** Required.
-**Authorization:** Workspace member. Non-elevated members only see projects they belong to.
+**PAT scope:** `task:read` **and** `project:read` (or `read:*` / `write:*`). Two scopes because the body genuinely carries two resources — a task rollup *and* a project collection equivalent to [`GET /api/workspaces/:workspaceId/projects`](#get-apiworkspacesworkspaceidprojects). See [API Tokens § Aggregate and cross-resource endpoints](./api-tokens.md#aggregate-and-cross-resource-endpoints).
+**Authorization:** Workspace member. Non-elevated members only see projects they belong to. A PAT with `projectScope: "selected"` is narrowed the same way — the rollup and the project list are computed over its selected projects only, so it gets a smaller dashboard rather than an error.
 
 **Response** (200):
 
@@ -2308,7 +2539,8 @@ Cost values are in cents. `costAggregation` sums costs across all tasks in visib
 Returns tasks assigned to the authenticated user across **active projects** in the workspace. Excludes completed and cancelled tasks. Supports compound cursor-based pagination (`createdAt|id`), ordered by `createdAt` descending then `id` descending for stable pagination without gaps or duplicates. Query parameters are validated via `myTasksQuerySchema`.
 
 **Auth:** Required.
-**Authorization:** Workspace member.
+**PAT scope:** `task:read` (or `read:*` / `write:*`).
+**Authorization:** Workspace member. A PAT with `projectScope: "selected"` sees only tasks in its selected projects. That narrowing is **intersected** with the `projectIds` query filter below rather than replacing it, so asking for a project outside the token's list returns nothing for that project instead of widening the token. It is applied in the query, not after it, so `nextCursor` stays correct.
 
 **Query parameters (all optional):**
 
@@ -2359,7 +2591,8 @@ Date boundaries are UTC days, matching how task creation stores due dates (`new 
 Returns upcoming tasks across **active projects** in the workspace with due dates, grouped into time buckets. Excludes completed and cancelled tasks. Supports compound cursor-based pagination (`dueDate|id`), ordered by `dueDate` ascending then `id` ascending for stable pagination without gaps or duplicates. Query parameters are validated via `upcomingTasksQuerySchema`.
 
 **Auth:** Required.
-**Authorization:** Workspace member.
+**PAT scope:** `task:read` (or `read:*` / `write:*`).
+**Authorization:** Workspace member — an owner/admin sees the whole workspace, a plain member sees only projects they belong to. A PAT with `projectScope: "selected"` is narrowed to its selected projects on top of that, including when its owning user is an owner or admin.
 
 **Query parameters:**
 
@@ -2397,7 +2630,8 @@ Each task object in the buckets includes: `id`, `title`, `status`, `priority`, `
 Lists activity log entries for a task with compound cursor-based pagination (`createdAt|id`). Returns activities in descending order by creation date then id for stable pagination without gaps or duplicates. Query parameters are validated via `listActivityQuerySchema`.
 
 **Auth:** Required.
-**Authorization:** Project member, or workspace owner/admin (resolved via `requireTaskAccess`).
+**PAT scope:** `task:read` (or `read:*` / `write:*`).
+**Authorization:** Project member, or workspace owner/admin (resolved via `requireTaskAccess`). A PAT is additionally checked against its workspace binding and selected-project list.
 
 **Query parameters:**
 
@@ -2435,7 +2669,8 @@ Lists activity log entries for a task with compound cursor-based pagination (`cr
 Lists activity log entries across all tasks in a project with compound cursor-based pagination (`createdAt|id`). Returns activities in descending order by creation date then id. Each entry includes the task title for context.
 
 **Auth:** Required.
-**Authorization:** Project member, or workspace owner/admin.
+**PAT scope:** `task:read` (or `read:*` / `write:*`) — a change feed is a task read whether it is asked for per-task, per-project, or per-workspace.
+**Authorization:** Project member, or workspace owner/admin. A PAT is additionally checked against its workspace binding and selected-project list.
 
 **Query parameters:**
 
@@ -2469,12 +2704,57 @@ Lists activity log entries across all tasks in a project with compound cursor-ba
 
 `nextCursor` is `null` when there are no more pages. `actorName` and `actorImage` are `null` when the actor has been deleted.
 
+### `GET /api/workspaces/:workspaceId/activity`
+
+Lists activity log entries across **every project in the workspace the caller can see**, with the same compound cursor pagination (`createdAt|id`) and descending order as the two feeds above. Each entry additionally carries `projectId` and `projectName`, so a client can render one workspace-wide feed without a second lookup. Query parameters are validated via `workspaceActivityQuerySchema`.
+
+**Auth:** Required.
+**PAT scope:** `task:read` (or `read:*` / `write:*`).
+**Authorization:** Workspace member. An owner/admin sees every project in the workspace; a plain member sees only projects they belong to. A PAT with `projectScope: "selected"` is narrowed to its selected projects **in addition** to that, including when its owning user is an owner or admin. The narrowing is deliberate rather than incidental: entries carry `oldValue` / `newValue`, so a row is the literal before-and-after text of a task field, not just metadata about it.
+
+**Query parameters:**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `limit` | `number` | 15 | Number of activities per page (1–50) |
+| `cursor` | `string` | — | Compound cursor in `"isoDate\|id"` format (paginates by `createdAt` + `id` tiebreaker) |
+
+**Response** (200):
+
+```json
+{
+  "activities": [
+    {
+      "id": "uuid",
+      "taskId": "taskId",
+      "taskTitle": "Implement login flow",
+      "projectId": "projectId",
+      "projectName": "Website Redesign",
+      "actorId": "userId",
+      "actorName": "John Doe",
+      "actorImage": "https://...",
+      "action": "completed",
+      "field": null,
+      "oldValue": null,
+      "newValue": null,
+      "createdAt": "...",
+      "apiTokenId": null,
+      "tokenName": null
+    }
+  ],
+  "nextCursor": "2025-01-15T10:30:00.000Z|def456-uuid"
+}
+```
+
+`nextCursor` is `null` when there are no more pages. `actorName` and `actorImage` are `null` when the actor has been deleted. `apiTokenId` and `tokenName` are non-null only for changes made through a Personal Access Token, which lets a client render "via *TokenName*" attribution; `tokenName` is `null` once the token has been deleted, even though `apiTokenId` survives.
+
 ### `GET /api/projects/:projectId/dashboard`
 
 Returns a project-level dashboard with task breakdowns by status, by task group, per member, upcoming tasks for the next 30 days, overdue tasks (past-due incomplete tasks with assignee details), priority breakdown (count of active tasks by priority level), cost aggregation across the project's tasks, project budget, and cost per assigned member.
 
 **Auth:** Required.
-**Authorization:** Project member, or workspace owner/admin.
+**PAT scope:** `task:read` **and** `project:read` (or `read:*` / `write:*`). The second scope is required because the body carries a project-entity field (`budget`) rather than only task data — see [API Tokens § Aggregate and cross-resource endpoints](./api-tokens.md#aggregate-and-cross-resource-endpoints).
+**Authorization:** Project member, or workspace owner/admin. A PAT is additionally checked against its workspace binding and selected-project list.
 
 **Response** (200):
 
@@ -2538,6 +2818,182 @@ Returns a project-level dashboard with task breakdowns by status, by task group,
 `costAggregation` sums task costs for the project (values in cents). `budget` is the project's budget in cents (or `null` if unset). `costPerMember` lists each member's total cost from assigned tasks that have a cost value.
 
 ---
+
+## Search
+
+### `GET /api/workspaces/:workspaceId/search`
+
+Free-text search over projects and tasks in one workspace. Matches project name/description and task title/description with a case-insensitive substring match; `%`, `_` and `\` in the query are matched literally rather than as wildcards. `limit` applies to each collection independently, so a request can return up to `limit` projects **and** `limit` tasks.
+
+**Auth:** Required.
+**PAT scope:** `task:read` **and** `project:read` (or `read:*` / `write:*`). Both are required because the response is two first-class resources: gating on one would leave the other searchable by a token that may not read it. See [API Tokens § Aggregate and cross-resource endpoints](./api-tokens.md#aggregate-and-cross-resource-endpoints).
+**Authorization:** Workspace member. An owner/admin searches every project in the workspace; a plain member searches only projects they belong to. A PAT with `projectScope: "selected"` is narrowed to its selected projects on top of that — it gets its own results rather than an error, which keeps a mis-scoped token obvious (fewer hits) instead of looking like an outage.
+**Rate limit:** 60 requests/minute per caller, keyed PAT > user > IP.
+
+**Query parameters:**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `q` | `string` | — | Search term, 1--200 characters. Required |
+| `limit` | `number` | 20 | Max results **per collection** (1--50) |
+
+**Response** (200):
+
+```json
+{
+  "projects": [
+    { "id": "uuid", "name": "Website Redesign", "description": null, "status": "active", "icon": null }
+  ],
+  "tasks": [
+    {
+      "id": "uuid",
+      "title": "Implement login flow",
+      "priority": "high",
+      "completed": false,
+      "projectId": "projectId",
+      "projectName": "Website Redesign",
+      "projectIcon": null
+    }
+  ]
+}
+```
+
+**Errors:** 400 (missing or over-long `q`, or `limit` outside 1--50), 403 (not a member of this workspace, or a PAT bound to a different workspace / lacking a required scope), 429 (rate limit exceeded).
+
+---
+
+## Notifications
+
+The notification feed is the one tenant-data surface in the API keyed by **user** rather than by workspace: there is no `:workspaceId` in these URLs, and a row always belongs to exactly one person. Every endpoint below is therefore filtered by the caller's own user id first.
+
+There is no `notification:*` scope. The inbox takes the scope of the data it exposes — its `title`/`body` are copied from task and comment content — so reads require `task:read` and mutations require `task:write`. `task:delete` is deliberately **not** required for `DELETE /api/notifications/:id`: removing a notification is not removing a task. See [API Tokens § Aggregate and cross-resource endpoints](./api-tokens.md#aggregate-and-cross-resource-endpoints).
+
+**PAT visibility rule.** For a token caller the feed is additionally narrowed by row shape, and the same predicate governs the list, the count, and every mutation, so the badge can never disagree with the list it labels:
+
+| Row shape | Visible to a PAT when |
+|-----------|-----------------------|
+| `projectId` set (task assigned, task completed, comment mention) | The owning project is in the token's workspace **and** on its selected-project list |
+| `projectId` null, `workspaceId` set (today only `invitation_received`) | The workspace is the token's own. Project scope narrows project-owned data; for workspace-owned data the workspace binding is the applicable control |
+| Both null | Always — there is nothing to narrow |
+
+An out-of-scope notification id is **not** distinguished from one that does not exist: both answer `404 Notification not found`. Cookie sessions see their whole inbox and are unaffected by any of this.
+
+### `GET /api/notifications`
+
+Lists the caller's notifications, newest first, with cursor pagination on `createdAt`.
+
+**Auth:** Required.
+**PAT scope:** `task:read` (or `read:*` / `write:*`).
+
+**Query parameters:**
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `unreadOnly` | `"true" \| "false"` | `false` | Return only unread notifications |
+| `limit` | `number` | 30 | Notifications per page (1--100) |
+| `cursor` | `string` | — | ISO date cursor; returns rows strictly older than it |
+
+**Response** (200):
+
+```json
+{
+  "notifications": [
+    {
+      "id": "uuid",
+      "type": "task_assigned",
+      "title": "You were assigned a task",
+      "body": "Implement login flow",
+      "read": false,
+      "workspaceId": null,
+      "projectId": "projectId",
+      "taskId": "taskId",
+      "commentId": null,
+      "invitationId": null,
+      "actorId": "userId",
+      "actorName": "John Doe",
+      "actorImage": "https://...",
+      "createdAt": "...",
+      "readAt": null
+    }
+  ],
+  "nextCursor": "2025-01-15T10:30:00.000Z"
+}
+```
+
+`nextCursor` is `null` when there are no more pages. `actorName` and `actorImage` are `null` when the actor has been deleted.
+
+### `GET /api/notifications/unread-count`
+
+Returns the caller's unread count — scoped identically to the feed above.
+
+**Auth:** Required.
+**PAT scope:** `task:read` (or `read:*` / `write:*`).
+
+**Response** (200):
+
+```json
+{ "count": 3 }
+```
+
+### `PATCH /api/notifications/:id/read`
+
+Marks one notification read.
+
+**Auth:** Required.
+**PAT scope:** `task:write` (or `write:*`).
+
+**Response** (200):
+
+```json
+{ "ok": true }
+```
+
+**Errors:** 404 (`Notification not found` — no such id, someone else's row, or outside the token's visibility).
+
+### `POST /api/notifications/mark-all-read`
+
+Marks all of the caller's unread notifications read. For a token caller, "all" means all it can see — the sweep never touches rows outside its visibility.
+
+**Auth:** Required.
+**PAT scope:** `task:write` (or `write:*`).
+
+**Response** (200):
+
+```json
+{ "ok": true }
+```
+
+### `DELETE /api/notifications/:id`
+
+Deletes one notification.
+
+**Auth:** Required.
+**PAT scope:** `task:write` (or `write:*`) — **not** `task:delete`.
+
+**Response** (200):
+
+```json
+{ "ok": true }
+```
+
+**Errors:** 404 (`Notification not found` — same three cases as `PATCH .../read`).
+
+---
+
+## Webhooks
+
+Workspace-scoped webhooks are documented below. **Project-scoped webhooks** live under `/api/projects/:projectId/webhooks` (create, list, get, update, delete, test) and are covered in [Webhooks § Project-Scoped Webhooks](./webhooks.md#project-scoped-webhooks) along with event types, payload format, signature verification, and retry behaviour.
+
+Every endpoint in this section requires the workspace `owner` or `admin` role, and a PAT needs `webhook:read` for the two reads and `webhook:write` for create, update, delete, and test (there is no `webhook:delete`).
+
+**PAT project binding applies to the webhook's *target*, not just to the workspace in the URL.** A webhook is a standing egress pipe: once registered it streams event payloads — task titles, descriptions, assignees, comment bodies — to a URL for as long as it exists, so which projects it may point at is checked separately from who may manage webhooks. A webhook's target has two shapes and each gets its own rule:
+
+| Webhook target | A `projectScope: "selected"` token |
+|----------------|------------------------------------|
+| `projectId` set — a project-scoped subscription | Allowed only when that project is on the token's list; otherwise `403 Forbidden`. Same predicate as every project route |
+| `projectId` null — workspace-wide, receiving `task.*` from **every** project | Refused with `403 Forbidden`. There is no partial version of a workspace-wide subscription, and allowing one would route around the project list rather than honour it |
+
+The rule applies to reads as well as writes — a webhook row carries the target URL, event list, and failure state, all of which describe how a project outside the token's list is wired up. `GET /api/workspaces/:workspaceId/webhooks` therefore **filters**: a narrowed token sees its own projects' webhooks and no workspace-wide ones. `PATCH` checks the binding **twice**, against the webhook's current target and against the target it would have afterwards, so a token can neither widen its own project's webhook to a sibling project (or to workspace-wide) nor claim a sibling's webhook by repointing it onto its own list. Both checks run before the target project's existence is verified, so a refusal never doubles as a way to probe which project ids exist. Cookie sessions and `projectScope: "all"` tokens are unaffected throughout.
 
 ### `POST /api/workspaces/:workspaceId/webhooks`
 

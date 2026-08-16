@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 
 import { Container, Stack } from "@/web/components/layout";
-import { Alert, Tabs, Text } from "@/web/components/ui";
+import { Alert, Spinner, Tabs, Text } from "@/web/components/ui";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { useProject } from "@/web/contexts/ProjectContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
@@ -16,10 +16,27 @@ import { WebhooksTab } from "./components/WebhooksTab";
 export default function ProjectSettings() {
   const { project, members, refetch, updateProject } = useProject();
   useDocumentTitle(`${project.name} — Settings`);
-  const { isProjectAdmin } = useProjectPermissions(members);
+  const { isProjectAdmin, isResolved } = useProjectPermissions(members);
   const { toast } = useToast();
   const navigate = useNavigate();
   const projectId = project?.id ?? "";
+
+  // Deny only once the rosters have actually arrived. Until then
+  // `isProjectAdmin` is the permissive placeholder's `false`, which is
+  // indistinguishable from a real refusal — so denying on it alone told a
+  // project admin who is not a workspace admin that they lacked permission,
+  // then silently replaced the message with the settings page a moment later.
+  // Reachable on any hard refresh straight onto this URL, which is what a
+  // bookmark or a shared link is.
+  if (!isResolved) {
+    return (
+      <Container size="md">
+        <Stack gap="r3" className="items-center py-r5">
+          <Spinner size="lg" />
+        </Stack>
+      </Container>
+    );
+  }
 
   if (!isProjectAdmin) {
     return (

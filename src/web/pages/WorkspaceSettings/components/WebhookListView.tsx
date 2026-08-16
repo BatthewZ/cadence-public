@@ -19,6 +19,7 @@ import {
 } from "@/web/hooks/use-workspace-webhooks";
 
 import { SettingsNav } from "../SettingsNav";
+import { AdminOnlyNotice } from "./AdminOnlyNotice";
 import { CreateWebhookDialog } from "./CreateWebhookDialog";
 
 /* ------------------------------------------------------------------ */
@@ -34,6 +35,8 @@ export function WebhookListView({ hook }: { hook: UseWorkspaceWebhooksReturn }) 
     projects,
     activeProjects,
     canManageWorkspace,
+    roleResolved,
+    workspaceError,
     webhooks,
     listLoading,
     listError,
@@ -47,6 +50,13 @@ export function WebhookListView({ hook }: { hook: UseWorkspaceWebhooksReturn }) 
     createMutation,
     handleCopiedSecret,
   } = hook;
+
+  // The role comes from the workspace roster. If that request failed the role
+  // never resolves, so `listPending` alone would spin forever on a page whose
+  // list query is disabled until the role arrives — no error, no way out.
+  const roleUnavailable = !roleResolved && workspaceError !== null;
+  const listWithheld = roleUnavailable || (roleResolved && !canManageWorkspace);
+  const listPending = !roleResolved || listLoading;
 
   return (
     <Container size="lg">
@@ -85,82 +95,98 @@ export function WebhookListView({ hook }: { hook: UseWorkspaceWebhooksReturn }) 
           )}
         </Row>
 
-        {listError && (
+        <AdminOnlyNotice>
+          Only workspace owners and admins can create or manage webhooks. Ask a
+          workspace admin if you need a webhook for this workspace.
+        </AdminOnlyNotice>
+
+        {roleUnavailable && (
+          <Alert variant="error">
+            {workspaceError || "Failed to load workspace permissions."}
+          </Alert>
+        )}
+
+        {canManageWorkspace && listError && (
           <Alert variant="error">
             {listError.message || "Failed to load webhooks."}
           </Alert>
         )}
 
-        {listLoading ? (
-          <Row justify="center" className="py-r1">
-            <Spinner size="lg" />
-          </Row>
-        ) : webhooks.length === 0 ? (
-          <EmptyState size="md">
-            <EmptyStateTitle>No webhooks</EmptyStateTitle>
-            <EmptyStateDescription>
-              Create a webhook to start receiving event notifications via HTTP callbacks.
-            </EmptyStateDescription>
-          </EmptyState>
-        ) : (
-          <Stack gap="r5">
-            {webhooks.map((wh) => {
-              const events = parseEvents(wh.events);
-              return (
-                <button
-                  key={wh.id}
-                  type="button"
-                  className="w-full text-left bg-surface-0 rounded-lg border border-border-default/50 shadow-md p-r3 hover:border-accent/40 hover:shadow-lg transition-all duration-fast cursor-pointer focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-2 focus-visible:outline-none"
-                  onClick={() => handleSelectWebhook(wh.id)}
-                  aria-label={`View ${wh.name} details`}
-                >
-                  <Row justify="between" align="center" className="flex-wrap gap-r5">
-                    <Row gap="r5" align="center" className="min-w-0 flex-1">
-                      <Webhook size={18} className="text-fg-muted shrink-0" />
-                      <Stack gap="r6" className="min-w-0">
-                        <Row gap="r5" align="center">
-                          <Text variant="body-2" weight="semibold" as="span">
-                            {wh.name}
+        {/* Reading the list is owner/admin-only, so a member has no list to be
+            empty — "No webhooks" would assert something we never asked the
+            server, and could be flatly untrue. The notice above is the whole
+            page for them. */}
+        {!listWithheld &&
+          (listPending ? (
+            <Row justify="center" className="py-r1">
+              <Spinner size="lg" />
+            </Row>
+          ) : webhooks.length === 0 ? (
+            <EmptyState size="md">
+              <EmptyStateTitle>No webhooks</EmptyStateTitle>
+              <EmptyStateDescription>
+                Create a webhook to start receiving event notifications via HTTP callbacks.
+              </EmptyStateDescription>
+            </EmptyState>
+          ) : (
+            <Stack gap="r5">
+              {webhooks.map((wh) => {
+                const events = parseEvents(wh.events);
+                return (
+                  <button
+                    key={wh.id}
+                    type="button"
+                    className="w-full text-left bg-surface-0 rounded-lg border border-border-default/50 shadow-md p-r3 hover:border-accent/40 hover:shadow-lg transition-all duration-fast cursor-pointer focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-2 focus-visible:outline-none"
+                    onClick={() => handleSelectWebhook(wh.id)}
+                    aria-label={`View ${wh.name} details`}
+                  >
+                    <Row justify="between" align="center" className="flex-wrap gap-r5">
+                      <Row gap="r5" align="center" className="min-w-0 flex-1">
+                        <Webhook size={18} className="text-fg-muted shrink-0" />
+                        <Stack gap="r6" className="min-w-0">
+                          <Row gap="r5" align="center">
+                            <Text variant="body-2" weight="semibold" as="span">
+                              {wh.name}
+                            </Text>
+                            {wh.consecutiveFailures > 0 && (
+                              <AlertTriangle size={14} className="text-status-warning shrink-0" />
+                            )}
+                          </Row>
+                          <Text
+                            variant="body-3"
+                            color="muted"
+                            as="span"
+                            className="font-mono truncate block max-w-80"
+                          >
+                            {wh.url}
                           </Text>
-                          {wh.consecutiveFailures > 0 && (
-                            <AlertTriangle size={14} className="text-status-warning shrink-0" />
-                          )}
-                        </Row>
-                        <Text
-                          variant="body-3"
-                          color="muted"
-                          as="span"
-                          className="font-mono truncate block max-w-80"
-                        >
-                          {wh.url}
-                        </Text>
-                      </Stack>
-                    </Row>
+                        </Stack>
+                      </Row>
 
-                    <Row gap="r5" align="center" className="shrink-0">
-                      {wh.projectId && (
-                        <Badge variant="info">
-                          {projectName(projects, wh.projectId) ?? "Project"}
+                      <Row gap="r5" align="center" className="shrink-0">
+                        {wh.projectId && (
+                          <Badge variant="info">
+                            {projectName(projects, wh.projectId) ?? "Project"}
+                          </Badge>
+                        )}
+                        <Text variant="body-3" color="muted" as="span">
+                          {events.length} {events.length === 1 ? "event" : "events"}
+                        </Text>
+                        <Badge variant={wh.active ? "success" : "default"}>
+                          {wh.active ? "Active" : "Disabled"}
                         </Badge>
-                      )}
-                      <Text variant="body-3" color="muted" as="span">
-                        {events.length} {events.length === 1 ? "event" : "events"}
-                      </Text>
-                      <Badge variant={wh.active ? "success" : "default"}>
-                        {wh.active ? "Active" : "Disabled"}
-                      </Badge>
-                      {wh.consecutiveFailures > 0 && (
-                        <Badge variant="warning">
-                          {wh.consecutiveFailures} failures
-                        </Badge>
-                      )}
+                        {wh.consecutiveFailures > 0 && (
+                          <Badge variant="warning">
+                            {wh.consecutiveFailures} failures
+                          </Badge>
+                        )}
+                      </Row>
                     </Row>
-                  </Row>
-                </button>
-              );
-            })}
-          </Stack>
-        )}
+                  </button>
+                );
+              })}
+            </Stack>
+          ))}
       </Stack>
 
       {/* Create Dialog */}

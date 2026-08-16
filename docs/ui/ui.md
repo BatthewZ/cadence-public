@@ -61,6 +61,7 @@ General-purpose interactive and display primitives.
 | [AvatarUpload](avatar-upload.md)  | Circular avatar upload with optimistic preview         |
 | [CoverImagePicker](cover-image-picker.md) | Modal with Upload + Unsplash tabs for selecting a cover image; Unsplash tab gated by `features.unsplash` |
 | [Markdown / MarkdownEditor / EditableMarkdown](markdown.md) | Lite-markdown renderer + click-to-edit editor for task descriptions and comments. Renderer emits React elements directly (XSS-safe by construction); `@mention` rendering (formerly `MentionText`) is absorbed here |
+| NewProjectButton                   | The **New Project** button with the workspace's `allowMemberProjectCreation` policy already applied. Bundles the three things a refusal has to get right — disabled control, hover explanation, and the same sentence everywhere — so a new surface gets all of them by construction. A UX affordance only — `requireProjectCreation` on the server is what actually refuses |
 | BulkActionBar                      | Fixed bottom toolbar for multi-select task actions (priority, assign, move, due date, duplicate, delete) with optimistic updates |
 | DueDatePopover                     | Shared date-picker popover for setting task due dates, with optional custom trigger and current-date display |
 | CommandPalette                     | Unified search, navigation, favorites, recents, and quick actions overlay (Ctrl+K) |
@@ -219,6 +220,7 @@ Hooks shared across multiple UI components.
 | [useTaskSubtasks](hooks.md#usetasksubtasks)                | Subtask CRUD, DnD reorder, and optimistic updates with rollback for the task detail panel |
 | [useTaskCommentActions](hooks.md#usetaskcommentactions)    | Comment CRUD mutations + optimistic cache updates, shared between TaskDetailDialog and TaskDetailPanelInner |
 | [useTaskDetailActions](hooks.md#usetaskdetailactions)      | Task complete/duplicate/delete actions with delete dialog state, shared between TaskDetailDialog and TaskDetailPanelInner |
+| [useTaskServerSync](hooks.md#usetaskserversync)            | Adopts the fetched task row wholesale into a detail view's local copy, keeping an open Dialog/Panel live as collaborators edit |
 | [useWorkspaceWebhooks](hooks.md#useworkspacewebhooks)      | Centralised state, queries, mutations, and handlers for the workspace webhooks settings page |
 | [useWorkspaceProjects](hooks.md#useworkspaceprojects)      | Fetches the projects in a workspace the current user can see (visibility-scoped) |
 | [useWorkspaceTaskGroups](hooks.md#useworkspacetaskgroups)  | Fetches task groups across a set of projects in a workspace, for workspace-level column filters |

@@ -7,6 +7,7 @@ import { Popover } from "@/web/components/ui/Popover";
 import { useWorkspace, type WorkspacesResponse } from "@/web/contexts/WorkspaceContext";
 import { useNotificationMutations } from "@/web/hooks/use-notification-mutations";
 import { api } from "@/web/lib/api/client";
+import { jitteredInterval } from "@/web/lib/poll-interval";
 import { queryKeys } from "@/web/lib/query-keys";
 
 import { type Notification, NotificationPanel } from "./NotificationPanel";
@@ -17,12 +18,11 @@ export function NotificationBell() {
   const { workspace } = useWorkspace();
   const { markReadMutation, markAllReadMutation } = useNotificationMutations();
 
-  // Poll unread count every 30s
   const { data: countData } = useQuery({
     queryKey: queryKeys.notifications.unreadCount,
     queryFn: () =>
       api.get<{ count: number }>("/api/notifications/unread-count"),
-    refetchInterval: 30_000,
+    refetchInterval: jitteredInterval(30_000),
     staleTime: 15_000,
   });
 

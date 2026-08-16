@@ -5,7 +5,6 @@ import { cn } from "@/web/util/style/style";
 const TABS = [
   { label: "General", path: "" },
   { label: "Members", path: "/members" },
-  { label: "Teams", path: "/teams" },
   { label: "Webhooks", path: "/webhooks" },
   { label: "API Tokens", path: "/api-tokens" },
   { label: "Data", path: "/data" },

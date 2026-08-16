@@ -55,6 +55,7 @@ import { queryKeys } from "@/web/lib/query-keys";
 import { formatBytes } from "@/web/util/format";
 import { cn } from "@/web/util/style/style";
 
+import { AdminOnlyNotice } from "./components/AdminOnlyNotice";
 import { SettingsNav } from "./SettingsNav";
 
 /* ------------------------------------------------------------------ */
@@ -563,12 +564,10 @@ export default function WorkspaceData() {
         <Text variant="h3">Workspace Settings</Text>
         <SettingsNav basePath={`/w/${workspace.slug}/settings`} />
 
-        {!canManageWorkspace && (
-          <Alert variant="info">
-            Only workspace owners and admins can export or import workspace data. Ask a
-            workspace admin if you need a copy of this workspace.
-          </Alert>
-        )}
+        <AdminOnlyNotice>
+          Only workspace owners and admins can export or import workspace data. Ask a
+          workspace admin if you need a copy of this workspace.
+        </AdminOnlyNotice>
 
         <ExportCard workspaceId={workspace.id} canManage={canManageWorkspace} />
         <ImportCard workspaceId={workspace.id} canManage={canManageWorkspace} />

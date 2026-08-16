@@ -4,6 +4,7 @@ All table definitions live in `src/db/schema/`. The barrel file `src/db/schema/i
 
 ```ts
 export * from "./api-token";
+export * from "./audit-log";
 export * from "./auth";
 export * from "./calendar-feed-token";
 export * from "./invitation";
@@ -116,8 +117,40 @@ export * from "./workspace";
 | `createdAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                | Creation timestamp             |
 | `updatedAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                | Last update timestamp          |
 | `theme`       | `text`                        |                                           | Workspace theme                |
+| `policy`      | `text`                        |                                           | Governance toggles, JSON object |
 
 **Indexes:** unique on (`ownerId`, `slug`) — slugs are unique per owner, not globally
+
+**`policy` — why one JSON column instead of a column per toggle.** The pressure a
+governance setting creates is not "we need one boolean", it is "we will need the
+next eight". A column per toggle answers that with a migration, a schema edit and
+a new plumbing path each time, plus a backfill decision for existing rows on every
+addition. One JSON object with the defaults resolved in code makes the next toggle
+a field on an interface.
+
+The column is nullable with **no** database default, and nothing is ever
+backfilled — that is the point, not an omission. `NULL` means "this workspace has
+never expressed a preference" and resolves to every code default, so a toggle
+added later takes effect correctly for workspaces that predate it.
+
+Never read this column directly. `resolveWorkspacePolicy`
+(`src/shared/types/workspace-policy.ts`) is the single source of truth for the
+defaults, and it is total over malformed input: a corrupt or hand-edited value
+degrades to the defaults rather than throwing, because this resolves inside
+`getWorkspace` — the query every workspace route blocks on, where a throw would
+take a whole tenant's UI down over one bad row. That trade is only acceptable
+because the toggles here are governance preferences rather than access controls;
+a flag that gated data access must not be added to this object.
+
+Writes go through `json_patch` (see `updateWorkspace`), so a `PATCH` carrying one
+toggle merges rather than replacing — two admins saving different toggles cannot
+clobber each other.
+
+Current toggles:
+
+| Key                          | Default | Effect                                                                                                                       |
+| ---------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `allowMemberProjectCreation` | `true`  | When `false`, workspace `member`s cannot create projects or duplicate ones they administer. Owners and admins are unaffected. |
 
 #### `workspaceMember`
 
@@ -389,16 +422,18 @@ Private, per-user-per-project **saved views**: named snapshots of the task board
 | ------------- | ----------------------------- | ---------------------------------------------- | --------------------------------------------- |
 | `id`          | `text`                        | **Primary key**                                | Unique invitation identifier                  |
 | `workspaceId` | `text`                        | `NOT NULL`, **FK** -> `workspace.id` (cascade) | References the workspace                      |
-| `email`       | `text`                        | `NOT NULL`                                     | Email address of the invitee                  |
+| `email`       | `text`                        | `NOT NULL`                                     | Email address of the invitee, stored in canonical form (trimmed, lower-cased). Normalised on write by `createInvitationSchema` and folded in place for pre-existing rows by `migrations/0036_normalize_invitation_email.sql`, so an equality probe against a folded address is exact — the invariant holds for every row, not just recent ones |
 | `role`        | `text`                        | `NOT NULL`, default `"member"`                 | Role granted upon acceptance                  |
 | `invitedBy`   | `text`                        | **FK** -> `user.id` (set null)                 | References the user who sent the invite       |
-| `token`       | `text`                        | `NOT NULL`, `UNIQUE`                           | Unique invitation token                       |
+| `token`       | `text`                        | `NOT NULL`, `UNIQUE`                           | Unique invitation token. **Stored in plaintext today** — unlike `apiToken` and `calendarFeedToken`, which store a digest. Hashing was considered and deliberately deferred: an invitation token is not sufficient on its own (acceptance also requires a session whose *verified* email matches the invited address), it is single-use, and it expires in 7 days, so the residual risk is materially smaller. See the token-handling policy comment in `invitations.handlers.ts` for the migration plan and its prerequisites |
 | `status`      | `text`                        | `NOT NULL`, default `"pending"`                | Invitation status (e.g. `"pending"`, `"accepted"`) |
 | `expiresAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                     | Invitation expiration time                    |
 | `acceptedAt`  | `integer` (mode: `timestamp`) |                                                | Timestamp when accepted                       |
 | `createdAt`   | `integer` (mode: `timestamp`) | `NOT NULL`                                     | Creation timestamp                            |
 
-**Indexes:** unique on `token`, index on `workspaceId`, index on `email`
+**Indexes:** unique on (`token`), index on (`workspaceId`, `status`) — the admin's pending list — and index on (`email`, `status`, `expiresAt`) — the invitee's "what am I invited to?" lookup. The email index is only an exact-equality probe because of the canonicalisation invariant above: addresses are folded on write and every comparison site folds the account address it is matched against, so a lookup never needs a case-insensitive scan.
+
+> **Invariant — invited addresses are canonical.** `invitation.email` is always stored trimmed and lower-cased. There is no schema-level constraint expressing this (the column is plain `text`); it is upheld by `createInvitationSchema` on write and was applied to every pre-existing row by the data-only migration `0036_normalize_invitation_email.sql`. See [Migration Workflow](./migrations.md#hand-written-migrations) for what that migration did to rows that only differed by case. `user.email` is deliberately **not** rewritten by that migration — Better Auth owns that column and already stores it folded.
 
 #### `legalAcceptance`
 
@@ -488,6 +523,31 @@ Private, per-user-per-project **saved views**: named snapshots of the task board
 
 See [API Tokens](../api/api-tokens.md) for the full lifecycle, scope reference, and security best practices.
 
+#### `auditLog`
+
+**File:** `src/db/schema/audit-log.ts`
+
+The cross-resource ledger of mutations made through a Personal Access Token. `taskActivity` is the user-facing changelog for one task; `auditLog` answers the operator's question — "what has this integration done?" — across every resource a PAT can touch (projects, workspaces, labels, teams, webhooks, invitations, attachments, and the token-management endpoints themselves), which is the question that has to be answerable before deciding whether to revoke a token.
+
+| Column         | Type                          | Constraints                                        | Description                                                                                                                              |
+| -------------- | ----------------------------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`           | `text`                        | **Primary key**                                    | Unique audit-row identifier                                                                                                              |
+| `workspaceId`  | `text`                        | `NOT NULL`, **FK** -> `workspace.id` (cascade)     | Tenant partition — every audit query is scoped to one workspace                                                                          |
+| `actorUserId`  | `text`                        | `NOT NULL`, **FK** -> `user.id` (cascade)          | The human the token was minted under. Not nullable, so attribution survives even if the token row is later deleted                        |
+| `apiTokenId`   | `text`                        | **FK** -> `api_token.id` (set null)                | The token used. `set null` rather than cascade so deleting a token cannot erase its own trail — the row becomes "via a deleted token"     |
+| `resourceType` | `text`                        | `NOT NULL`                                         | Resource family (e.g. `"project"`, `"task"`), derived from the matched route pattern by the audit middleware                              |
+| `resourceId`   | `text`                        |                                                    | The specific resource, when the route names one                                                                                          |
+| `action`       | `text`                        | `NOT NULL`                                         | Verb: `create` / `update` / `delete` for collection and item mutations, plus route-specific verbs such as `complete` or `rotate`          |
+| `method`       | `text`                        | `NOT NULL`                                         | Raw HTTP method, retained so an investigator can reconstruct the request even if the derivation logic changes later                       |
+| `path`         | `text`                        | `NOT NULL`                                         | Raw request path, retained for the same reason                                                                                           |
+| `status`       | `integer`                     | `NOT NULL`                                         | Response status, captured **after** the handler runs — only successful requests are persisted, so failures do not pollute the trail       |
+| `metadata`     | `text`                        |                                                    | JSON-encoded route params that supplement the resource pointer. `TEXT` keeps the column schema-flexible as new routes are added           |
+| `createdAt`    | `integer` (mode: `timestamp`) | `NOT NULL`                                         | When the mutation happened                                                                                                               |
+
+**Indexes:** `(workspaceId, createdAt)`, `(apiTokenId, createdAt)`, `(resourceType, resourceId)`, `(actorUserId, createdAt)` — one per audit question that matters ("this workspace's trail", "everything this token did", "who touched this resource", "everything this person did"). Reverse-chronological reads are the common case, so each composite index leads with the grouping column and trails with `createdAt` for a fast range scan.
+
+**Why one denormalised ledger rather than per-resource activity tables:** the query the table exists to serve is "everything this token touched, regardless of resource type", which is one `SELECT` here and a `UNION` over every resource table otherwise. The audited surface is also open-ended — each new resource is a new thing to audit — and a single ledger absorbs new resource types without a schema migration.
+
 #### `calendarFeedToken`
 
 **File:** `src/db/schema/calendar-feed-token.ts`
@@ -562,8 +622,30 @@ The credential behind per-user ICS calendar subscription URLs — a deliberately
 - `taskActivity.apiTokenId` -> `apiToken.id` (foreign key, set null on delete — so historical attribution survives token deletion)
 - `calendarFeedToken.userId` -> `user.id` (foreign key, cascade delete)
 - `calendarFeedToken.workspaceId` -> `workspace.id` (foreign key, cascade delete)
+- `auditLog.workspaceId` -> `workspace.id` (foreign key, cascade delete)
+- `auditLog.actorUserId` -> `user.id` (foreign key, cascade delete)
+- `auditLog.apiTokenId` -> `apiToken.id` (foreign key, set null on delete — so a deleted token cannot erase its own audit trail)
 
-The `user`, `session`, `account`, and `verification` tables are managed by **Better Auth** and follow its expected schema conventions. The `upload` table is application-managed. The `workspace`, `workspaceMember`, `team`, `teamMember`, `project`, `projectMember`, `taskGroup`, `task`, `subtask`, `comment`, `taskActivity`, `taskAttachment`, `label`, `taskLabel`, `savedView`, `notification`, `invitation`, `webhook`, `webhookDelivery`, `legalAcceptance`, and `apiToken` tables are application-managed.
+The `user`, `session`, `account`, and `verification` tables are managed by **Better Auth** and follow its expected schema conventions. The `upload` table is application-managed. The `workspace`, `workspaceMember`, `team`, `teamMember`, `project`, `projectMember`, `taskGroup`, `task`, `subtask`, `comment`, `taskActivity`, `taskAttachment`, `label`, `taskLabel`, `savedView`, `notification`, `invitation`, `webhook`, `webhookDelivery`, `legalAcceptance`, `apiToken`, and `auditLog` tables are application-managed.
+
+#### What the foreign keys do *not* cover: member removal
+
+Every relationship above is a database-level rule about **row deletion**, and reading them as a model of *access* revocation gets one important case wrong. `projectMember.userId` and `teamMember.userId` cascade when the **`user` row** is deleted. Neither has any relationship to `workspaceMember` at all, so deleting a `workspaceMember` row cascades to nothing: the FK graph has no edge that could express "this person lost their footing in this workspace".
+
+That gap is closed in the handler, not in the schema. `removeMember` in `src/api/routes/workspaces/workspaces.handlers.ts` issues three explicit deletes in a single `db.batch` — which D1 runs as one implicit transaction — so removing a workspace member also revokes:
+
+1. their `projectMember` rows for every project in that workspace,
+2. their `teamMember` rows for every team in that workspace,
+3. the `workspaceMember` row itself, which is ordered **last** so the first two statements can still test the membership they are predicated on.
+
+Scoping is by subquery (`projectId IN (SELECT id FROM project WHERE workspaceId = ?)`), which both keeps the blast radius to the one workspace — the same user's memberships elsewhere are untouched — and avoids D1's bound-parameter ceiling on workspaces with many projects. Batching all three matters for the same reason the ordering does: a partial revocation that dropped the membership row while leaving project grants alive would look like offboarding in the UI while still granting read, write and export on those projects.
+
+Two consequences worth holding on to when reasoning about this data:
+
+- **A raw `DELETE` against `workspace_member` does not offboard anyone.** Direct SQL, a future handler, or a fixture that removes only that row leaves the project and team grants intact. Route removals through the handler.
+- **Deleting the `workspace` row *is* complete**, because `project`, `team`, and `workspaceMember` all cascade from it, and `projectMember` / `teamMember` cascade from `project` / `team` in turn.
+
+For rows that predate this cascade, or that some future path orphans anyway, `resolveProjectAccess` in `src/api/lib/access.ts` re-checks workspace membership at read time rather than trusting a `projectMember` row on its own.
 
 ### Role & Status Types
 
@@ -577,6 +659,6 @@ While `role`, `status`, `priority`, and similar columns are stored as `text` in 
 | `TaskPriority` | `"urgent"`, `"high"`, `"medium"`, `"low"`, `"none"` | `task.priority` |
 | `ProjectStatus` | `"active"`, `"archived"`, `"completed"` | `project.status` |
 | `InvitationStatus` | `"pending"`, `"accepted"`, `"expired"`, `"revoked"` | `invitation.status` |
-| `WebhookEventType` | 25 event types across 4 domains: `task.*` (13), `project.*` (6), `workspace.*` (3), `invitation.*` (3) | `webhookDelivery.event`, `webhook.events` (JSON array) |
+| `WebhookEventType` | 24 event types across 4 domains: `task.*` (11), `project.*` (7), `workspace.*` (3), `invitation.*` (3) | `webhookDelivery.event`, `webhook.events` (JSON array) |
 
 These types are used in the Hono environment (`src/api/env.ts`), frontend contexts (`ProjectContext`, `WorkspaceContext`), and Zod validation schemas to ensure type safety across the stack. Webhook event types are defined in `src/shared/types/webhook.ts`.

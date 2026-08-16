@@ -9,7 +9,6 @@ import { PriorityBreakdownSection } from "@/web/components/dashboard/PriorityBre
 import { TeamWorkloadSection } from "@/web/components/dashboard/TeamWorkload";
 import { Container, Row, Stack } from "@/web/components/layout";
 import {
-  Button,
   Card,
   EmptyState,
   EmptyStateActions,
@@ -20,10 +19,15 @@ import {
 } from "@/web/components/ui";
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { CreateProjectDialog } from "@/web/components/ui/CreateProjectDialog";
+import { NewProjectButton } from "@/web/components/ui/NewProjectButton";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { TaskDetailDialog } from "@/web/components/ui/TaskDetailDialog";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
+import {
+  NO_PROJECTS_FOR_MEMBER_DESCRIPTION,
+  useWorkspacePermissions,
+} from "@/web/hooks/use-permissions";
 import { useWorkspaceActivity } from "@/web/hooks/use-workspace-activity";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
@@ -44,6 +48,7 @@ import type { DashboardStatsResponse } from "./components/types";
 export default function Dashboard() {
   const { workspace, projects, members } = useWorkspace();
   useDocumentTitle(`${workspace.name} — Dashboard`);
+  const { canCreateProject } = useWorkspacePermissions();
   const navigate = useNavigate();
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
@@ -128,12 +133,26 @@ export default function Dashboard() {
               <FolderKanban />
             </EmptyStateIcon>
             <EmptyStateTitle>No projects yet</EmptyStateTitle>
+            {/*
+              This is the first screen a newly-invited member lands on. When
+              the workspace has turned off member project creation, the default
+              copy would open their account by instructing them to do the one
+              thing they cannot — so the empty state explains the situation and
+              names who can resolve it instead.
+            */}
             <EmptyStateDescription>
-              Create your first project to start tracking tasks.
+              {canCreateProject
+                ? "Create your first project to start tracking tasks."
+                : NO_PROJECTS_FOR_MEMBER_DESCRIPTION}
             </EmptyStateDescription>
-            <EmptyStateActions>
-              <Button onClick={() => setCreateProjectOpen(true)}>Create Project</Button>
-            </EmptyStateActions>
+            {canCreateProject && (
+              <EmptyStateActions>
+                <NewProjectButton
+                  onClick={() => setCreateProjectOpen(true)}
+                  label="Create Project"
+                />
+              </EmptyStateActions>
+            )}
           </EmptyState>
         </Stack>
 

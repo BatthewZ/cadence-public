@@ -22,6 +22,17 @@ export const workspace = sqliteTable(
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
     theme: text("theme"),
+    /**
+     * Admin-configurable governance toggles, stored as a JSON object.
+     *
+     * Deliberately nullable with no DB-side default: `null` means "every
+     * toggle at its code default", which is what lets a new toggle ship
+     * without a backfill. Never read this column directly — resolve it
+     * through `resolveWorkspacePolicy` (`src/shared/types/workspace-policy.ts`),
+     * which is the single source of truth for the defaults and is total over
+     * malformed input.
+     */
+    policy: text("policy"),
   },
   (table) => [
     uniqueIndex("workspace_owner_slug_unique").on(table.ownerId, table.slug),

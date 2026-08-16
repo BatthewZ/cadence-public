@@ -1779,6 +1779,39 @@ Encapsulates task-level actions (complete/uncomplete, duplicate, delete) and the
 | `handleDeleteTask` | `() => Promise<void>` | Delete the task, cancel in-flight queries, remove from context. |
 | `isDeleting` | `boolean` | Whether a delete request is in flight. |
 
+## useTaskServerSync
+
+Mirrors the fetched task row into a detail view's local optimistic copy, so an already-open view keeps showing collaborators' edits. Shared between `TaskDetailDialog` and `TaskDetailPanelInner`.
+
+The server row is adopted **wholesale** — a field allowlist would discard whatever else a collaborator changed, freezing an open view on the row it loaded with. Two preconditions on the caller keep that safe:
+
+- Fields the user can be mid-edit on must not render from the local copy — see [`useTaskEditing`](#usetaskediting)'s `dirtyFields` and [`EditableMarkdown`](markdown.md).
+- Task mutations must call `freshnessTracker.recordMutation("tasks")` in `onMutate`, so a poll landing mid-write cannot refetch the pre-write row over an unacknowledged optimistic value.
+
+The write is deferred with `queueMicrotask`, because `setState` in an effect body re-renders synchronously.
+
+**Source:** `src/web/hooks/use-task-server-sync.ts`
+
+### Parameters
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `taskFromServer` | `TaskDetail \| null \| undefined` | The task row from the detail query. Nullish values are ignored, so the local copy survives a loading or errored refetch. |
+| `setLocalTask` | `Dispatch<SetStateAction<TaskDetail \| null>>` | Setter for the view's local optimistic copy. |
+
+Returns `void`.
+
+### Usage
+
+```tsx
+import { useTaskServerSync } from "@/web/hooks/use-task-server-sync";
+
+const { data: taskData } = useQuery({ queryKey: queryKeys.tasks.detail(taskId), ... });
+const [localTask, setLocalTask] = useState<TaskDetail | null>(null);
+
+useTaskServerSync(taskData?.task, setLocalTask);
+```
+
 ## useWorkspaceWebhooks
 
 Centralises all state, queries, mutations, and handler functions for the workspace webhooks settings page. View components (`WebhookListView`, `WebhookDetailView`) receive slices of this hook's return value as props, keeping them stateless and presentational.

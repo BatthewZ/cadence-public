@@ -4,6 +4,7 @@ import type { Context } from "hono";
 import { task, taskGroup } from "../../../../db/schema/task";
 import { generateKeyBetween } from "../../../../shared/lib/fractional-index";
 import type { AppEnv } from "../../../env";
+import { canUserBeAssigned } from "../../../lib/assignee-validation";
 import { deferWork } from "../../../lib/defer";
 import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
@@ -139,7 +140,16 @@ export async function completeTask(c: Context<AppEnv>) {
 
       await logActivityBatch(db, activities);
 
-      if (assigneeId && assigneeId !== user.id) {
+      // The stored assignee is re-checked rather than trusted: this
+      // notification carries the task title, and a task assigned before the
+      // assignee was removed from the project (or the workspace) would
+      // otherwise keep leaking it to them on every completion. Re-checking
+      // costs one read on an already-deferred path.
+      if (
+        assigneeId
+        && assigneeId !== user.id
+        && await canUserBeAssigned(db, projectId, assigneeId)
+      ) {
         await createNotification(db, {
           userId: assigneeId,
           type: "task_completed",
@@ -150,12 +160,14 @@ export async function completeTask(c: Context<AppEnv>) {
         });
       }
 
-      // Log activity and notify assignee for the spawned recurring instance
+      // Log activity and notify the assignee of the spawned recurring instance.
+      // Uses the SPAWNED task's assignee, which the spawn helper has already
+      // filtered — the completed task's assignee may no longer have access.
       if (capturedNextRecurringTask) {
         await logRecurringInstanceCreated(db, {
           nextTaskId: capturedNextRecurringTask.id,
           actorId: user.id,
-          assigneeId,
+          assigneeId: capturedNextRecurringTask.assigneeId,
           taskTitle,
           projectId,
           apiTokenId: completeApiTokenId,

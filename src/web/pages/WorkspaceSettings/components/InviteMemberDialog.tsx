@@ -12,6 +12,7 @@ export function InviteMemberDialog({
   onInviteEmailChange,
   inviteRole,
   onInviteRoleChange,
+  canGrantAdmin,
   inviting,
   inviteError,
   onSubmit,
@@ -22,6 +23,20 @@ export function InviteMemberDialog({
   onInviteEmailChange: (value: string) => void;
   inviteRole: WorkspaceRole;
   onInviteRoleChange: (value: WorkspaceRole) => void;
+  /**
+   * Whether the viewer may hand out the `admin` role — owner-only on the
+   * server, decided by `mayGrantAdmin` in `src/api/lib/workspace-roles.ts`.
+   *
+   * The identical gate exists on `ChangeRoleDialog`, and it has to exist twice
+   * because inviting and promoting are two doors onto the same end state: an
+   * admin blocked from promoting a member to admin can otherwise invite a
+   * brand-new admin instead. The server closes both with one predicate; if only
+   * the promotion dialog gates its option, a workspace admin is shown "Admin"
+   * here, submits, and is handed a guaranteed
+   * `403 "Only the workspace owner can invite someone as an admin"` — an
+   * affordance for something the product refuses.
+   */
+  canGrantAdmin: boolean;
   inviting: boolean;
   inviteError: string | null;
   onSubmit: (e: FormEvent) => void;
@@ -50,7 +65,7 @@ export function InviteMemberDialog({
               value={inviteRole}
               onChange={(e) => onInviteRoleChange(e.target.value as WorkspaceRole)}
             >
-              <option value="admin">Admin</option>
+              {canGrantAdmin && <option value="admin">Admin</option>}
               <option value="member">Member</option>
             </Select>
           </Field>

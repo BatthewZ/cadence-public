@@ -17,6 +17,10 @@ import { errorResponse } from "../../lib/error-response";
 import { requireParam } from "../../lib/params";
 import { retryOnPositionConflict } from "../../lib/position-conflict";
 import { validJson, validQuery } from "../../lib/validated";
+import {
+  enforceTokenProjectBinding,
+  tokenProjectScopeFilter,
+} from "../../middleware/authorize";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -24,10 +28,19 @@ import { validJson, validQuery } from "../../lib/validated";
 
 /**
  * Look up a taskGroup by id, then verify the current user has project access.
- * Returns the taskGroup and effective role, or null if not found / no access.
+ * Returns the taskGroup, effective role and owning project, or null if not
+ * found / no access.
  *
  * Delegates the project access check to the shared resolveProjectAccess
  * function, keeping the task-group lookup as the only concern here.
+ *
+ * The resolved `project` (id + owning workspace id) is surfaced because the
+ * `/task-groups/:taskGroupId` routes carry no projectId in the URL and so
+ * cannot mount `requireProjectAccess`. Each handler must therefore run the
+ * PAT binding guard itself — see `enforceTokenProjectBinding`. The guard is
+ * deliberately NOT applied inside this function: this function's `null` means
+ * "404 Not found", while a PAT binding failure must answer `403 Forbidden`,
+ * uniform with every other authorization denial in the API.
  */
 async function resolveTaskGroupWithAccess(
   db: Database,
@@ -46,7 +59,7 @@ async function resolveTaskGroupWithAccess(
 
   if (!accessResult) return null;
 
-  return { group, role: accessResult.role };
+  return { group, role: accessResult.role, project: accessResult.project };
 }
 
 // ---------------------------------------------------------------------------
@@ -110,6 +123,17 @@ export async function createTaskGroup(c: Context<AppEnv>) {
  * only projects they are a direct member of are returned; requested ids the
  * caller can't see are silently dropped, mirroring how listProjects handles
  * partial visibility.
+ *
+ * "Can see" has two independent halves, and the visibility query below applies
+ * both. The human half is workspace role / project membership. The token half
+ * is the PAT's selected-project list: because the caller supplies the ids they
+ * want (`?projectIds=`), this endpoint is the most direct probe in the API —
+ * name a sibling project id and, before this filter, its column layout came
+ * back verbatim. Silently dropping ids the token may not see (rather than
+ * 403ing the whole request) keeps the endpoint's existing partial-visibility
+ * contract: the caller already cannot tell "id you can't see" from "id that
+ * does not exist", which is the property that stops it being an enumeration
+ * oracle.
  */
 export async function listWorkspaceTaskGroups(c: Context<AppEnv>) {
   const db = c.get("db");
@@ -118,6 +142,7 @@ export async function listWorkspaceTaskGroups(c: Context<AppEnv>) {
   const membership = c.get("workspaceMembership")!;
   const { projectIds } = validQuery(c, workspaceTaskGroupsQuerySchema);
   const isElevated = membership.role === "owner" || membership.role === "admin";
+  const patScope = tokenProjectScopeFilter(c, project.id);
 
   // Restrict to projects in this workspace the caller can see
   const visibleProjects = isElevated
@@ -128,6 +153,7 @@ export async function listWorkspaceTaskGroups(c: Context<AppEnv>) {
           and(
             eq(project.workspaceId, workspaceId),
             inArray(project.id, projectIds),
+            patScope,
           ),
         )
     : await db
@@ -144,6 +170,7 @@ export async function listWorkspaceTaskGroups(c: Context<AppEnv>) {
           and(
             eq(project.workspaceId, workspaceId),
             inArray(project.id, projectIds),
+            patScope,
           ),
         );
 
@@ -223,6 +250,11 @@ export async function updateTaskGroup(c: Context<AppEnv>) {
     return errorResponse(c, "Forbidden", 403);
   }
 
+  // PAT binding guard — no projectId in this URL, so the shared policy has to
+  // be invoked here rather than by middleware.
+  const denied = enforceTokenProjectBinding(c, result.project);
+  if (denied) return denied;
+
   const now = new Date();
 
   const updateData: Record<string, unknown> = { updatedAt: now };
@@ -253,6 +285,11 @@ export async function deleteTaskGroup(c: Context<AppEnv>) {
   if (result.role !== "admin") {
     return errorResponse(c, "Forbidden", 403);
   }
+
+  // PAT binding guard — see `updateTaskGroup`. Runs before the destructive
+  // reassign-and-delete batch below.
+  const denied = enforceTokenProjectBinding(c, result.project);
+  if (denied) return denied;
 
   // targetGroupId is required in query params to reassign tasks
   const targetGroupId = c.req.query("targetGroupId");
@@ -302,6 +339,10 @@ export async function reorderTaskGroup(c: Context<AppEnv>) {
   if (result.role !== "admin" && result.role !== "member") {
     return errorResponse(c, "Forbidden", 403);
   }
+
+  // PAT binding guard — see `updateTaskGroup`.
+  const denied = enforceTokenProjectBinding(c, result.project);
+  if (denied) return denied;
 
   const now = new Date();
 

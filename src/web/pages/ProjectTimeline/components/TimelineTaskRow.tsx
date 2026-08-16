@@ -27,11 +27,29 @@ export function TimelineTaskRow({
   onToggleCompleted,
   selected,
   onToggleSelect,
+  canEditTasks = true,
 }: {
   task: TimelineTask;
   onToggleCompleted: (taskId: string, currentlyCompleted: boolean) => void;
   selected?: boolean;
   onToggleSelect?: (taskId: string) => void;
+  /**
+   * Whether the viewer may mutate this task. Gates EVERY write affordance on
+   * the row — the completion checkbox, the three inline editors (assignee,
+   * priority, due date) and the hover "..." menu — because each one is a write
+   * a project `viewer` cannot perform and the server rejects. Gating only the
+   * menu would be worse than gating nothing: the same three actions sit inline
+   * one click away, so the row would look restricted while still dead-ending in
+   * an error toast.
+   *
+   * The values themselves stay rendered read-only; a viewer is meant to see who
+   * is assigned, what the priority is and when it is due.
+   *
+   * Defaults to `true` so the permissive placeholder that
+   * `useProjectPermissions` returns while the roster loads does not flash the
+   * controls away and back; see `ProjectPermissions.isResolved`.
+   */
+  canEditTasks?: boolean;
 }) {
   const [, setSearchParams] = useSearchParams();
   const { project, updateTask: ctxUpdateTask, removeTask: ctxRemoveTask, members, taskGroups } = useProject();
@@ -86,6 +104,7 @@ export function TimelineTaskRow({
           <TaskCheckbox
             size="sm"
             checked={task.completed}
+            disabled={!canEditTasks}
             onChange={() => onToggleCompleted(task.id, task.completed)}
             aria-label={`Mark "${task.title}" as ${task.completed ? "incomplete" : "complete"}`}
           />
@@ -101,148 +120,186 @@ export function TimelineTaskRow({
           {task.title}
         </span>
 
-        {/* Inline editable assignee */}
-        <div onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu placement="bottom-end">
-            <DropdownMenu.Trigger asChild>
-              {task.assigneeName ? (
-                <button type="button" className="shrink-0" aria-label="Change assigned person">
-                  <Avatar
-                    name={task.assigneeName}
-                    src={task.assigneeAvatarUrl}
-                    size="xs"
-                  />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="shrink-0 size-6 rounded-full border border-dashed border-border-default flex items-center justify-center hover-reveal text-fg-muted hover:text-fg-primary hover:border-border-strong"
-                  aria-label="Assign task"
-                >
-                  <UserPlus size={12} />
-                </button>
-              )}
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content className="min-w-[10rem]">
-              <DropdownMenu.Label>Assign to</DropdownMenu.Label>
-              <DropdownMenu.Item
-                index={0}
-                icon={<UserX size={14} className="text-fg-muted" />}
-                onSelect={() => void handleAssigneeChange(null)}
-              >
-                <span className={!task.assigneeId ? "font-semibold" : ""}>
-                  Unassigned
-                </span>
-              </DropdownMenu.Item>
-              {members.map((member, i) => (
-                <DropdownMenu.Item
-                  key={member.userId}
-                  index={i + 1}
-                  icon={<Avatar size="xs" name={member.name} src={member.image} className="!size-4" />}
-                  onSelect={() => void handleAssigneeChange(member.userId, member.name)}
-                >
-                  <span className={task.assigneeId === member.userId ? "font-semibold" : ""}>
-                    {member.name}
-                  </span>
-                </DropdownMenu.Item>
-              ))}
-            </DropdownMenu.Content>
-          </DropdownMenu>
-        </div>
-
-        {/* Inline editable priority */}
-        <div onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu placement="bottom-end">
-            <DropdownMenu.Trigger asChild>
-              {task.priority && task.priority !== "none" ? (
-                <button type="button" aria-label="Change priority">
-                  <Badge variant={getPriorityBadgeVariant(task.priority)}>
-                    {getPriorityLabel(task.priority)}
-                  </Badge>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="shrink-0 hover-reveal"
-                  aria-label="Set priority"
-                >
-                  <Badge variant="default">Priority</Badge>
-                </button>
-              )}
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content className="min-w-[8.75rem]">
-              <DropdownMenu.Label>Set priority</DropdownMenu.Label>
-              {PRIORITY_OPTIONS.map((opt, i) => (
-                <DropdownMenu.Item
-                  key={opt.value}
-                  index={i}
-                  icon={
-                    <span
-                      className={`size-2 rounded-full ${PRIORITY_DOT_CLASS[opt.value] ?? "bg-surface-3"}`}
+        {/* Inline editable assignee — a plain avatar for viewers, and nothing
+            at all when unassigned: the dashed "Assign task" placeholder is an
+            invitation to do something the server refuses. */}
+        {!canEditTasks ? (
+          task.assigneeName ? (
+            <Avatar
+              name={task.assigneeName}
+              src={task.assigneeAvatarUrl}
+              size="xs"
+              className="shrink-0"
+            />
+          ) : null
+        ) : (
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu placement="bottom-end">
+              <DropdownMenu.Trigger asChild>
+                {task.assigneeName ? (
+                  <button type="button" className="shrink-0" aria-label="Change assigned person">
+                    <Avatar
+                      name={task.assigneeName}
+                      src={task.assigneeAvatarUrl}
+                      size="xs"
                     />
-                  }
-                  onSelect={() => void handlePriorityChange(opt.value)}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="shrink-0 size-6 rounded-full border border-dashed border-border-default flex items-center justify-center hover-reveal text-fg-muted hover:text-fg-primary hover:border-border-strong"
+                    aria-label="Assign task"
+                  >
+                    <UserPlus size={12} />
+                  </button>
+                )}
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content className="min-w-[10rem]">
+                <DropdownMenu.Label>Assign to</DropdownMenu.Label>
+                <DropdownMenu.Item
+                  index={0}
+                  icon={<UserX size={14} className="text-fg-muted" />}
+                  onSelect={() => void handleAssigneeChange(null)}
                 >
-                  <span className={task.priority === opt.value ? "font-semibold" : ""}>
-                    {opt.label}
+                  <span className={!task.assigneeId ? "font-semibold" : ""}>
+                    Unassigned
                   </span>
                 </DropdownMenu.Item>
-              ))}
-            </DropdownMenu.Content>
-          </DropdownMenu>
-        </div>
+                {members.map((member, i) => (
+                  <DropdownMenu.Item
+                    key={member.userId}
+                    index={i + 1}
+                    icon={<Avatar size="xs" name={member.name} src={member.image} className="!size-4" />}
+                    onSelect={() => void handleAssigneeChange(member.userId, member.name)}
+                  >
+                    <span className={task.assigneeId === member.userId ? "font-semibold" : ""}>
+                      {member.name}
+                    </span>
+                  </DropdownMenu.Item>
+                ))}
+              </DropdownMenu.Content>
+            </DropdownMenu>
+          </div>
+        )}
 
-        {/* Inline editable due date */}
-        <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-          <DueDatePopover
-            onSelect={(date) => void handleDueDateChange(date)}
-            currentDate={task.dueDate}
-            placement="bottom-end"
-            trigger={
-              <button
-                type="button"
-                className={`text-sm shrink-0 ${
-                  task.dueDate && isOverdue(task.dueDate)
-                    ? "text-status-error font-medium"
-                    : "text-fg-secondary"
-                }`}
-                aria-label="Change due date"
-              >
-                {formatDueDate(task.dueDate)}
-              </button>
-            }
-          />
-        </div>
+        {/* Inline editable priority — the badge stays for viewers, the picker
+            behind it does not; an unset priority shows nothing rather than a
+            "Priority" placeholder that cannot be filled in. */}
+        {!canEditTasks ? (
+          task.priority && task.priority !== "none" ? (
+            <Badge variant={getPriorityBadgeVariant(task.priority)}>
+              {getPriorityLabel(task.priority)}
+            </Badge>
+          ) : null
+        ) : (
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu placement="bottom-end">
+              <DropdownMenu.Trigger asChild>
+                {task.priority && task.priority !== "none" ? (
+                  <button type="button" aria-label="Change priority">
+                    <Badge variant={getPriorityBadgeVariant(task.priority)}>
+                      {getPriorityLabel(task.priority)}
+                    </Badge>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="shrink-0 hover-reveal"
+                    aria-label="Set priority"
+                  >
+                    <Badge variant="default">Priority</Badge>
+                  </button>
+                )}
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content className="min-w-[8.75rem]">
+                <DropdownMenu.Label>Set priority</DropdownMenu.Label>
+                {PRIORITY_OPTIONS.map((opt, i) => (
+                  <DropdownMenu.Item
+                    key={opt.value}
+                    index={i}
+                    icon={
+                      <span
+                        className={`size-2 rounded-full ${PRIORITY_DOT_CLASS[opt.value] ?? "bg-surface-3"}`}
+                      />
+                    }
+                    onSelect={() => void handlePriorityChange(opt.value)}
+                  >
+                    <span className={task.priority === opt.value ? "font-semibold" : ""}>
+                      {opt.label}
+                    </span>
+                  </DropdownMenu.Item>
+                ))}
+              </DropdownMenu.Content>
+            </DropdownMenu>
+          </div>
+        )}
 
-        {/* Quick actions three-dot menu */}
-        <div
-          className="shrink-0 hover-reveal"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <DropdownMenu placement="bottom-end">
-            <DropdownMenu.Trigger asChild>
-              <IconButton
-                aria-label="Task actions"
-                className="size-9 shrink-0 bg-surface-1/80 hover:bg-surface-2 backdrop-blur-sm"
-              >
-                <MoreHorizontal size={22} />
-              </IconButton>
-            </DropdownMenu.Trigger>
-            <DropdownMenu.Content className="min-w-[11.25rem]">
-              <TaskContextMenuItems
-                task={task}
-                members={members}
-                taskGroups={taskGroups}
-                dotSize="sm"
-                onPriorityChange={(p) => void handlePriorityChange(p)}
-                onAssigneeChange={(id, name) => void handleAssigneeChange(id, name)}
-                onMoveToGroup={(id) => void handleMoveToGroup(id)}
-                onDueDateChange={(d) => void handleDueDateChange(d)}
-                onDeleteRequest={() => setShowDeleteDialog(true)}
-              />
-            </DropdownMenu.Content>
-          </DropdownMenu>
-        </div>
+        {/* Inline editable due date — viewers get the same text without the
+            popover, since the date is information they are meant to have. */}
+        {!canEditTasks ? (
+          <span
+            className={`text-sm shrink-0 ${
+              task.dueDate && isOverdue(task.dueDate)
+                ? "text-status-error font-medium"
+                : "text-fg-secondary"
+            }`}
+          >
+            {formatDueDate(task.dueDate)}
+          </span>
+        ) : (
+          <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+            <DueDatePopover
+              onSelect={(date) => void handleDueDateChange(date)}
+              currentDate={task.dueDate}
+              placement="bottom-end"
+              trigger={
+                <button
+                  type="button"
+                  className={`text-sm shrink-0 ${
+                    task.dueDate && isOverdue(task.dueDate)
+                      ? "text-status-error font-medium"
+                      : "text-fg-secondary"
+                  }`}
+                  aria-label="Change due date"
+                >
+                  {formatDueDate(task.dueDate)}
+                </button>
+              }
+            />
+          </div>
+        )}
+
+        {/* Quick actions three-dot menu — editors only */}
+        {canEditTasks && (
+          <div
+            className="shrink-0 hover-reveal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DropdownMenu placement="bottom-end">
+              <DropdownMenu.Trigger asChild>
+                <IconButton
+                  aria-label="Task actions"
+                  className="size-9 shrink-0 bg-surface-1/80 hover:bg-surface-2 backdrop-blur-sm"
+                >
+                  <MoreHorizontal size={22} />
+                </IconButton>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Content className="min-w-[11.25rem]">
+                <TaskContextMenuItems
+                  task={task}
+                  members={members}
+                  taskGroups={taskGroups}
+                  dotSize="sm"
+                  onPriorityChange={(p) => void handlePriorityChange(p)}
+                  onAssigneeChange={(id, name) => void handleAssigneeChange(id, name)}
+                  onMoveToGroup={(id) => void handleMoveToGroup(id)}
+                  onDueDateChange={(d) => void handleDueDateChange(d)}
+                  onDeleteRequest={() => setShowDeleteDialog(true)}
+                />
+              </DropdownMenu.Content>
+            </DropdownMenu>
+          </div>
+        )}
       </Row>
 
       <ConfirmDialog

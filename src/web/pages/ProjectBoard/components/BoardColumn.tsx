@@ -340,7 +340,17 @@ export function SortableColumn({
                 className="text-body-3 py-0 px-1 h-6"
               />
             ) : (
-              <Text variant="body-2" weight="semibold" className="truncate cursor-grab">
+              // Column reorder rides the same disabled-sensor path as card
+              // reorder (`useDndSensors({ enabled: canEditTasks })`), so a
+              // viewer's grab cursor advertises a drag that can never start.
+              // Unlike a task card there is nothing else to click here — the
+              // header is a drag handle and nothing more — so drop to the
+              // default cursor rather than swapping in `cursor-pointer`.
+              <Text
+                variant="body-2"
+                weight="semibold"
+                className={`truncate ${canEditTasks ? "cursor-grab" : ""}`}
+              >
                 {group.name}
               </Text>
             )}
@@ -420,6 +430,7 @@ export function SortableColumn({
                   }
                   canMoveUp={i > 0}
                   canMoveDown={i < sortedTasks.length - 1}
+                  canEditTasks={canEditTasks}
                 />
               ))
             )}

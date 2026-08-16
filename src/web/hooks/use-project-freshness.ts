@@ -3,7 +3,11 @@ import { useEffect, useRef } from "react";
 
 import { api } from "@/web/lib/api/client";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
+import { jitteredInterval } from "@/web/lib/poll-interval";
 import { queryKeys } from "@/web/lib/query-keys";
+
+/** Centre of the project poll interval; jittered per tick. */
+const PROJECT_POLL_MS = 1500;
 
 interface ProjectFreshness {
   freshness: {
@@ -28,7 +32,7 @@ export function useProjectFreshness(projectId: string, multiUser = true): void {
     queryKey: queryKeys.freshness.project(projectId),
     queryFn: () => api.get<ProjectFreshness>(`/api/projects/${projectId}/freshness`),
     enabled,
-    refetchInterval: enabled ? 1500 : false,
+    refetchInterval: enabled ? jitteredInterval(PROJECT_POLL_MS) : false,
     refetchIntervalInBackground: false,
     staleTime: 0,
     gcTime: 0,
@@ -56,10 +60,12 @@ export function useProjectFreshness(projectId: string, multiUser = true): void {
       }
     }
 
-    // Tasks
+    // Board list, plus the `tasks` prefix for any open detail view — the payload
+    // is one MAX(updatedAt) and names no task id.
     if (freshness.tasks !== null && freshness.tasks !== prev.tasks) {
       if (freshnessTracker.shouldInvalidate("tasks")) {
         void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(projectId) });
+        void qc.invalidateQueries({ queryKey: queryKeys.tasks.all });
       }
     }
 

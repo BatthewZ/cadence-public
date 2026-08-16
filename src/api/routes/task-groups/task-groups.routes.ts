@@ -71,7 +71,12 @@ app.get(
 
 // Task-group-scoped routes — no projectId in URL, so access is resolved
 // inline in handlers via resolveTaskGroupWithAccess (looks up the parent
-// project and delegates to resolveProjectAccess).
+// project and delegates to resolveProjectAccess). That resolver answers only
+// "can the human reach this project?", so each handler additionally calls
+// `enforceTokenProjectBinding` — the `task:*` scopes mounted above are
+// capability scope, not project selection, and without that call a PAT
+// narrowed to one project (or bound to another workspace) would be
+// unconstrained here.
 app.patch(
   "/task-groups/:taskGroupId",
   requireAuth,

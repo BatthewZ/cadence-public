@@ -6,6 +6,11 @@ import { createDb } from "../../db";
 import * as schema from "../../db/schema";
 import type { AppBindings } from "../env";
 import { createEmailService } from "./email";
+// Imported from the leaf module rather than the `./email` barrel on purpose:
+// `auth.test.ts` replaces the barrel wholesale with a `createEmailService`-only
+// stub, so pulling the sender resolver through it would hand this module an
+// `undefined` at test time and silently reinstate the very bug it fixes.
+import { resolveEmailFrom } from "./email/from";
 import { emailVerificationEmail } from "./email/templates/email-verification";
 import { passwordResetEmail } from "./email/templates/password-reset";
 import { createMigratingVerify, hashPassword } from "./password";
@@ -33,7 +38,9 @@ export function createAuth(env: AppBindings) {
 
   const db = createDb(env.DB);
   const emailService = createEmailService(env);
-  const fromAddress = env.EMAIL_FROM ?? "noreply@example.com";
+  // Shared with the invitation mailer — see `./email/from.ts` for why the
+  // fallback had to stop being a per-call-site expression.
+  const fromAddress = resolveEmailFrom(env);
 
   const options: BetterAuthOptions = {
     database: drizzleAdapter(db, {
@@ -53,6 +60,36 @@ export function createAuth(env: AppBindings) {
     },
     emailAndPassword: {
       enabled: true,
+      /**
+       * Sign-in is refused (403 `EMAIL_NOT_VERIFIED`) until an account has
+       * proved it controls the address it registered.
+       *
+       * Why this is load-bearing rather than hygiene: workspace invitations
+       * are authorised by comparing the invited address with the session's
+       * account email (`acceptInvitation`). With verification off, that check
+       * only asks "did you type this address into a signup form?" — so anyone
+       * who guessed that a colleague had been invited could register their
+       * address and join the workspace (audit finding 04, reproduced live).
+       * Enabling verification is what turns the email match into evidence of
+       * mailbox control, and it closes the same hole for any future feature
+       * that treats an email address as an identity.
+       *
+       * Existing accounts: every user created before this flag has
+       * `emailVerified = 0`, so switching it on alone would lock out the
+       * entire user base — including workspace owners, who have no
+       * self-service route back in. Migration
+       * `migrations/0035_backfill_email_verified.sql` grandfathers those rows
+       * to verified in the same change. The flag and the migration must ship
+       * together; neither is safe alone.
+       *
+       * Two intentional side effects of this flag in Better Auth 1.5.6:
+       *  - `POST /sign-up/email` no longer returns a session (`token: null`),
+       *    so the Register page shows a "check your email" state instead of
+       *    navigating into the app.
+       *  - Signing up with an already-registered address returns a synthetic
+       *    success instead of 422, removing an email-enumeration oracle.
+       */
+      requireEmailVerification: true,
       password: {
         hash: hashPassword,
         verify: createMigratingVerify(async (oldHash, newHash) => {
@@ -82,6 +119,31 @@ export function createAuth(env: AppBindings) {
       },
     },
     emailVerification: {
+      /**
+       * Re-send the verification link when an unverified account attempts to
+       * sign in.
+       *
+       * Without this, `requireEmailVerification` is a trap: the signup email
+       * is the only link ever issued, so a user who lost it, whose link
+       * expired (1 hour by default), or who signed up while the mail provider
+       * was down has no way whatsoever to get another one — the account is
+       * permanently unreachable with no self-service recovery. Better Auth
+       * still returns the same 403 either way, so this only adds the recovery
+       * path and leaks nothing extra: the mail goes to the registered
+       * address, which is by definition the person entitled to it.
+       */
+      sendOnSignIn: true,
+      /**
+       * Clicking the verification link signs the user in and drops them at
+       * `callbackURL`.
+       *
+       * This is what makes the invitation journey land: invite email →
+       * register → verify → signed in and returned to `/invite/:token`, which
+       * then has a session and can accept. Without it the user verifies, sees
+       * a bare redirect, and has to sign in again before the invite link does
+       * anything — the drop-off point the invite flow can least afford.
+       */
+      autoSignInAfterVerification: true,
       sendVerificationEmail: async ({ user, url }) => {
         try {
           const { subject, html, text } = emailVerificationEmail({ url });

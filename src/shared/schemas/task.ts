@@ -115,6 +115,27 @@ export const createTaskSchema = z
   // invariant can always be checked here.
   .superRefine((data, ctx) => validateDateRange(data.startDate, data.dueDate, ctx));
 
+/**
+ * Fields a client may change through `PATCH /api/tasks/:taskId`.
+ *
+ * `coverImageKey` and `coverUnsplash` are deliberately ABSENT and must stay
+ * absent. `serveUpload` authorizes a `task-cover` download by finding the task
+ * whose `cover_image_key` equals the requested key, so a client that could
+ * write that column could point its own task at another workspace's R2 object
+ * and read it back through its own legitimate access. Nothing outside
+ * `api/lib/cover-image.ts` ever writes a non-null `coverImageKey`, and the key
+ * it writes is one the server just minted for the caller's own upload — that is
+ * what makes the download check an authorization check rather than a lookup.
+ *
+ * (`coverUnsplash` carries no such authority — it holds absolute Unsplash URLs,
+ * not a key into our own storage — so the workspace importer is allowed to
+ * restore one from an uploaded export. It nulls `coverImageKey` on the same row,
+ * preserving the XOR invariant that `api/lib/cover-image.ts` otherwise owns.)
+ *
+ * `coverImagePosition` stays: it is a 0–100 framing offset with no
+ * authorization meaning and no bearing on the XOR invariant. The web client
+ * PATCHes it directly (`use-task-cover.ts`).
+ */
 export const updateTaskSchema = z
   .object({
     title: z.string().min(1, "Title is required").max(200).optional(),
@@ -125,7 +146,6 @@ export const updateTaskSchema = z
     dueDate: taskDateSchema("Due date").optional().nullable(),
     cost: z.number().int().min(0).nullable().optional(),
     icon: z.string().max(50).optional().nullable(),
-    coverImageKey: z.string().max(500).optional().nullable(),
     coverImagePosition: z.number().int().min(0).max(100).optional().nullable(),
     recurrenceRule: recurrenceRuleSchema.nullable().optional(),
   })

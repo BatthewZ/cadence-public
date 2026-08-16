@@ -11,6 +11,8 @@ Auth routes have rate limits to prevent brute-force attacks. These are applied i
 
 Rate limits are applied **per client IP** (determined from the `cf-connecting-ip` or `x-forwarded-for` header). The more specific limits (`sign-in`, `sign-up`) are applied first, then the general limit applies to all auth endpoints.
 
+The `auth-signin` limit also caps verification email resends. A sign-in refused with `EMAIL_NOT_VERIFIED` issues a fresh verification link (`emailVerification.sendOnSignIn`), so that resend path is bounded by the same 10-per-60-seconds budget as sign-in itself and needs no separate rule. Password reset keeps its own tighter limit *and* a D1-backed 5-minute cooldown, because that path is reachable without knowing a password — see [Auth Flows § Password Reset](./flows.md#password-reset).
+
 When rate-limited, the response is:
 
 ```json

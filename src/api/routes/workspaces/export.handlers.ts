@@ -96,6 +96,7 @@ import type { AppEnv } from "../../env";
 import { recordWorkspaceDataEvent } from "../../lib/audit-log";
 import { errorResponse } from "../../lib/error-response";
 import { requireParam } from "../../lib/params";
+import { enforceTokenWorkspaceWideAccess } from "../../middleware/authorize";
 
 // ---------------------------------------------------------------------------
 // Plain-text column validators
@@ -806,11 +807,43 @@ function buildExportStream(
  * workspaces.routes.ts): `requireAuth` + `requireWorkspaceRole("owner",
  * "admin")` + 5/hour rate limit — a workspace-wide egress is deliberately
  * the most-restricted read in the API.
+ *
+ * ## Why a `projectScope: "selected"` PAT is refused rather than filtered
+ *
+ * Every other workspace-level read in the API narrows its result set for a
+ * project-scoped token. This one refuses outright, for three reasons that all
+ * point the same way:
+ *
+ * 1. **The document asserts completeness about itself.** The envelope is a
+ *    versioned `format`/`formatVersion` archive of a *workspace*: its
+ *    `workspaceExportSchema` contract, its `users` ref directory, its members,
+ *    teams and invitations are all workspace-level, not project-level. A
+ *    filtered export would be a file that looks byte-for-byte like a complete
+ *    archive, imports like one, and is silently missing projects. The import
+ *    side would faithfully reconstruct a workspace that never existed. There is
+ *    no honest partial form of this response without a new format version.
+ * 2. **It is the loudest egress surface in the product.** One request returns
+ *    every task, comment, subtask, label, attachment manifest and (optionally)
+ *    the full activity history. If a narrowed token can call it at all, the
+ *    containment promise that motivates narrow tokens is decorative.
+ * 3. **The intended callers are unaffected.** Export is already restricted to
+ *    workspace owners/admins at 5 requests per hour; a backup integration is
+ *    naturally an `all`-scope token, and one written against the old behaviour
+ *    keeps working unchanged. The tokens this refuses are exactly the ones
+ *    whose operator wrote down "this credential must not see the rest of the
+ *    workspace".
+ *
+ * The refusal is placed before any DB read so a denied token cannot use
+ * response timing to infer workspace size, and it is the same bare 403 as
+ * every other binding denial.
  */
 export async function exportWorkspace(c: Context<AppEnv>) {
   const db = c.get("db");
   const user = c.get("user")!;
   const workspaceId = requireParam(c, "workspaceId");
+
+  const denied = enforceTokenWorkspaceWideAccess(c);
+  if (denied) return denied;
 
   const includeActivityParam = c.req.query("includeActivity");
   const includeActivity = includeActivityParam === "1" || includeActivityParam === "true";

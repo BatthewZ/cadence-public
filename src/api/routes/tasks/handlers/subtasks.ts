@@ -10,6 +10,7 @@ import { errorResponse } from "../../../lib/error-response";
 import { requireParam } from "../../../lib/params";
 import { retryOnPositionConflict } from "../../../lib/position-conflict";
 import { validJson } from "../../../lib/validated";
+import { enforceTokenProjectBinding } from "../../../middleware/authorize";
 
 // ---------------------------------------------------------------------------
 // Subtask Handlers
@@ -98,6 +99,16 @@ export async function updateSubtask(c: Context<AppEnv>) {
     return errorResponse(c, "Forbidden", 403);
   }
 
+  // PAT binding guard. This route is `/subtasks/:subtaskId` — it carries no
+  // projectId or taskId, so `requireProjectAccess` / `requireTaskAccess`
+  // cannot be mounted and their PAT checks never run. The check above proves
+  // only that the *human* can reach this project; without this line a token
+  // minted in another workspace, or narrowed to a different project, would
+  // still be honoured here purely because its owner is a member. Same shared
+  // policy and same generic 403 as the middleware.
+  const denied = enforceTokenProjectBinding(c, accessResult.project);
+  if (denied) return denied;
+
   const updateData = {
     ...(body.title !== undefined && { title: body.title }),
     ...(body.completed !== undefined && { completed: body.completed }),
@@ -151,6 +162,11 @@ export async function deleteSubtask(c: Context<AppEnv>) {
   if (accessResult.role === "viewer") {
     return errorResponse(c, "Forbidden", 403);
   }
+
+  // PAT binding guard — see `updateSubtask` for why this route needs it
+  // inline rather than via middleware.
+  const denied = enforceTokenProjectBinding(c, accessResult.project);
+  if (denied) return denied;
 
   const now = new Date();
   await db.batch([

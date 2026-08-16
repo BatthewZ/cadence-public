@@ -9,6 +9,7 @@ import type { AppEnv } from "../../env";
 import { errorResponse } from "../../lib/error-response";
 import { requireParam, requireParams } from "../../lib/params";
 import { validJson } from "../../lib/validated";
+import { tokenProjectScopeFilter } from "../../middleware/authorize";
 
 export async function createLabel(c: Context<AppEnv>) {
   const db = c.get("db");
@@ -109,6 +110,14 @@ export async function listLabels(c: Context<AppEnv>) {
  * open. Archived projects are excluded because their tasks no longer appear
  * in workspace task views, so offering their labels as filter options would
  * only produce dead filters.
+ *
+ * PAT callers are narrowed a third way, by the token's selected-project list
+ * (`tokenProjectScopeFilter`). Label names are chosen by humans and routinely
+ * encode customer, release or incident names, so the deduplicated cross-project
+ * list is a compact index of what a workspace is working on — a token scoped to
+ * one project must not receive the other projects' entries. The filter applies
+ * to the project-visibility query, so the dedupe below only ever groups rows
+ * the caller was allowed to see in the first place.
  */
 export async function listWorkspaceLabels(c: Context<AppEnv>) {
   const db = c.get("db");
@@ -116,6 +125,7 @@ export async function listWorkspaceLabels(c: Context<AppEnv>) {
   const user = c.get("user")!;
   const membership = c.get("workspaceMembership")!;
   const isElevated = membership.role === "owner" || membership.role === "admin";
+  const patScope = tokenProjectScopeFilter(c, project.id);
 
   // Restrict to active projects in this workspace the caller can see
   const visibleProjects = isElevated
@@ -126,6 +136,7 @@ export async function listWorkspaceLabels(c: Context<AppEnv>) {
           and(
             eq(project.workspaceId, workspaceId),
             eq(project.status, "active"),
+            patScope,
           ),
         )
     : await db
@@ -142,6 +153,7 @@ export async function listWorkspaceLabels(c: Context<AppEnv>) {
           and(
             eq(project.workspaceId, workspaceId),
             eq(project.status, "active"),
+            patScope,
           ),
         );
 

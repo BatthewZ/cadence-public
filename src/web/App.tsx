@@ -42,7 +42,6 @@ const ThemeEditor = lazy(() => import("./pages/ThemeEditor/ThemeEditor"));
 const Workspaces = lazy(() => import("./pages/Workspaces/Workspaces"));
 const WorkspaceSettings = lazy(() => import("./pages/WorkspaceSettings/WorkspaceSettings"));
 const WorkspaceMembers = lazy(() => import("./pages/WorkspaceSettings/WorkspaceMembers"));
-const WorkspaceTeams = lazy(() => import("./pages/WorkspaceSettings/WorkspaceTeams"));
 const WorkspaceWebhooks = lazy(() => import("./pages/WorkspaceSettings/WorkspaceWebhooks"));
 const WorkspaceApiTokens = lazy(() => import("./pages/WorkspaceSettings/WorkspaceApiTokens"));
 const WorkspaceData = lazy(() => import("./pages/WorkspaceSettings/WorkspaceData"));
@@ -178,7 +177,6 @@ export function App() {
                     </Route>
                     <Route path="settings" element={<WorkspaceSettings />} />
                     <Route path="settings/members" element={<WorkspaceMembers />} />
-                    <Route path="settings/teams" element={<WorkspaceTeams />} />
                     <Route path="settings/webhooks" element={<WorkspaceWebhooks />} />
                     <Route path="settings/api-tokens" element={<WorkspaceApiTokens />} />
                     <Route path="settings/data" element={<WorkspaceData />} />

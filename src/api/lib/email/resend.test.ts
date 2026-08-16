@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { DEFAULT_EMAIL_FROM } from "./from";
 import { ResendEmailService } from "./resend";
 
 function jsonResponse(body: object, status = 200, statusText = "OK") {
@@ -150,5 +151,57 @@ describe("ResendEmailService", () => {
         html: "<p>Err</p>",
       })
     ).rejects.toThrow("fetch failed");
+  });
+
+  it("supplies the default sender when a message omits 'from'", async () => {
+    // The Resend API rejects a request whose `from` is absent, and on the
+    // invitation path that rejection is swallowed into a log line — so a
+    // message reaching this transport without a sender used to mean "the
+    // invitation silently never arrives". The transport now refuses to
+    // construct that request at all.
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "msg_default_from" }));
+
+    await service.send({
+      to: "user@example.com",
+      subject: "No sender supplied",
+      html: "<p>Hi</p>",
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body.from).toBe(DEFAULT_EMAIL_FROM);
+  });
+
+  it("prefers an explicit 'from' over the injected default", async () => {
+    // The default is a floor, not an override: a deployment that configured
+    // EMAIL_FROM must still send as itself.
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "msg_explicit_from" }));
+    const configured = new ResendEmailService(apiKey, "ops@cadence.app");
+
+    await configured.send({
+      to: "user@example.com",
+      from: "billing@cadence.app",
+      subject: "Explicit",
+      html: "<p>Hi</p>",
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body.from).toBe("billing@cadence.app");
+  });
+
+  it("uses the sender injected at construction when none is supplied", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ id: "msg_injected_from" }));
+    const configured = new ResendEmailService(apiKey, "ops@cadence.app");
+
+    await configured.send({
+      to: "user@example.com",
+      subject: "Injected",
+      html: "<p>Hi</p>",
+    });
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string) as Record<string, unknown>;
+    expect(body.from).toBe("ops@cadence.app");
   });
 });

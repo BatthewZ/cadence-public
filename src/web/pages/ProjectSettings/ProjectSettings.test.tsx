@@ -204,6 +204,13 @@ function setupDefaultMocks(overrides: {
   members?: ReturnType<typeof makeProjectMember>[];
   taskGroups?: TaskGroup[];
   isProjectAdmin?: boolean;
+  /**
+   * Mirrors `ProjectPermissions.isResolved`. Defaults to `true` because every
+   * test below is about the settled page; pass `false` to exercise the
+   * roster-still-loading branch, where `isProjectAdmin: false` is the
+   * permissive placeholder rather than a refusal.
+   */
+  isResolved?: boolean;
 } = {}) {
   const project = makeProject(overrides.project);
   const members = overrides.members ?? [
@@ -242,6 +249,7 @@ function setupDefaultMocks(overrides: {
     isProjectAdmin: overrides.isProjectAdmin ?? true,
     canEditTasks: true,
     canViewProject: true,
+    isResolved: overrides.isResolved ?? true,
   });
 }
 
@@ -292,9 +300,18 @@ beforeEach(() => {
   mockApiDelete.mockResolvedValue({});
   mockApiGet.mockResolvedValue({ members: [] });
 
-  // jsdom does not implement HTMLDialogElement.showModal / .close
-  HTMLDialogElement.prototype.showModal = vi.fn();
-  HTMLDialogElement.prototype.close = vi.fn();
+  // jsdom implements neither `showModal` nor `close`, and `Dialog` calls both
+  // directly in an effect. These stand in for them by toggling the `open`
+  // attribute the way the real methods do — inert `vi.fn()`s would leave every
+  // dialog on this page permanently `open`-less, and since a closed `<dialog>`
+  // keeps its children in the DOM, that attribute is the only signal a test has
+  // for whether a dialog is actually showing.
+  HTMLDialogElement.prototype.showModal = function (this: HTMLDialogElement) {
+    this.setAttribute("open", "");
+  };
+  HTMLDialogElement.prototype.close = function (this: HTMLDialogElement) {
+    this.removeAttribute("open");
+  };
 });
 
 afterEach(() => {
@@ -329,6 +346,32 @@ describe("ProjectSettings", () => {
 
     it("does not render tabs when user is not a project admin", () => {
       setupDefaultMocks({ isProjectAdmin: false });
+      renderPage();
+
+      expect(screen.queryByRole("tab", { name: "General" })).not.toBeInTheDocument();
+    });
+
+    // The guard must distinguish "not an admin" from "we do not know yet".
+    // While the workspace/project rosters are in flight `useProjectPermissions`
+    // returns the permissive placeholder, whose `isProjectAdmin` is `false` —
+    // byte-identical to a real refusal. Denying on that alone showed a project
+    // admin who is not also a workspace admin the permission-denied alert on
+    // every hard refresh of this URL (a bookmark, a shared link), then swapped
+    // it for the settings page once the roster landed. These two tests pin
+    // both halves: no false accusation while unresolved, and no leak of the
+    // admin-only tabs to someone who may yet turn out to be a non-admin.
+    it("shows a loading state instead of the denial alert while permissions are unresolved", () => {
+      setupDefaultMocks({ isProjectAdmin: false, isResolved: false });
+      renderPage();
+
+      expect(screen.getByRole("status")).toBeInTheDocument();
+      expect(
+        screen.queryByText("You do not have permission to manage project settings."),
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not render tabs while permissions are unresolved", () => {
+      setupDefaultMocks({ isProjectAdmin: false, isResolved: false });
       renderPage();
 
       expect(screen.queryByRole("tab", { name: "General" })).not.toBeInTheDocument();
@@ -620,6 +663,164 @@ describe("ProjectSettings", () => {
       });
     });
 
+    /**
+     * Two members with different relationships to the viewer, reused by every
+     * role-menu test below: Alice IS the signed-in user (`user-1`, per the
+     * `auth-client` mock at the top of this file) and Charlie is somebody else.
+     * The distinction is the whole subject of these tests — the server refuses
+     * to let anyone change their own project role, so the menu must not offer
+     * it on your own row.
+     */
+    function seedTwoMembers() {
+      mockApiGet.mockResolvedValue({
+        members: [
+          {
+            id: "pm-1",
+            userId: "user-1",
+            role: "admin",
+            addedAt: "2024-01-01T00:00:00Z",
+            user: { id: "user-1", name: "Alice", email: "alice@test.com", image: null },
+          },
+          {
+            id: "pm-2",
+            userId: "user-3",
+            role: "member",
+            addedAt: "2024-02-01T00:00:00Z",
+            user: { id: "user-3", name: "Charlie", email: "charlie@test.com", image: null },
+          },
+        ],
+      });
+    }
+
+    /**
+     * Find a button by label INSIDE the open dialog rather than through
+     * `getByRole`.
+     *
+     * The dropdown that opened this dialog leaves floating-ui's
+     * `aria-hidden`/`data-floating-ui-inert` wrapper on the app root, and
+     * role-based queries skip hidden subtrees — so the dialog's own buttons are
+     * unreachable by role even though they are rendered and clickable. Scoping
+     * to the `<dialog>` element is the same approach `WorkspaceMembers.test.tsx`
+     * takes for its confirm dialog.
+     */
+    function dialogButton(dialog: HTMLElement, label: string) {
+      const button = Array.from(dialog.querySelectorAll("button")).find(
+        (b) => b.textContent?.trim() === label,
+      );
+      expect(button).toBeDefined();
+      return button!;
+    }
+
+    async function openMembersTab() {
+      const { user } = renderPage();
+      await user.click(screen.getByRole("tab", { name: "Members" }));
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: "Actions for Charlie" })).toBeInTheDocument();
+      });
+      return user;
+    }
+
+    it("offers Change Role on another member's row", async () => {
+      setupDefaultMocks();
+      seedTwoMembers();
+      const user = await openMembersTab();
+
+      await user.click(screen.getByRole("button", { name: "Actions for Charlie" }));
+
+      expect(
+        await screen.findByRole("menuitem", { name: "Change Role" }),
+      ).toBeInTheDocument();
+    });
+
+    /**
+     * The client mirror of the server's self-role-change refusal (see
+     * `updateMemberRole` in `projects.handlers.ts`). Without this the menu
+     * advertises an action that can only ever come back 403 — and the one row
+     * where it is offered wrongly is the row where acting on it would lock the
+     * admin out of the page they are standing on.
+     *
+     * "Remove" is asserted present in the same breath because the two items
+     * share an index space: `DropdownMenu.Item.index` drives roving focus and
+     * must stay 0-based and gapless, so dropping "Change Role" has to renumber
+     * "Remove" rather than leave a hole at slot 0.
+     */
+    it("hides Change Role on the signed-in user's own row but keeps Remove", async () => {
+      setupDefaultMocks();
+      seedTwoMembers();
+      const user = await openMembersTab();
+
+      await user.click(screen.getByRole("button", { name: "Actions for Alice" }));
+
+      // Queried by role, not by text: the dialogs on this tab are native
+      // `<dialog>` elements whose children stay in the DOM while closed, so a
+      // bare text query would match the closed dialog's own "Change Role"
+      // heading and pass no matter what the menu rendered.
+      expect(await screen.findByRole("menuitem", { name: "Remove" })).toBeInTheDocument();
+      expect(screen.queryByRole("menuitem", { name: "Change Role" })).not.toBeInTheDocument();
+    });
+
+    it("PATCHes the selected role and closes the dialog", async () => {
+      setupDefaultMocks();
+      seedTwoMembers();
+      mockApiPatch.mockResolvedValue({ member: { userId: "user-3", role: "admin" } });
+      const user = await openMembersTab();
+
+      await user.click(screen.getByRole("button", { name: "Actions for Charlie" }));
+      await user.click(await screen.findByRole("menuitem", { name: "Change Role" }));
+
+      const select = await waitFor(() => {
+        const el = document.getElementById("change-proj-role");
+        expect(el?.closest("dialog")).toHaveAttribute("open");
+        return el as HTMLElement;
+      });
+      // Pre-selected to the role Charlie already holds, so the admin is picking
+      // a destination rather than restating the whole assignment.
+      expect(select).toHaveValue("member");
+
+      await user.selectOptions(select, "admin");
+      await user.click(dialogButton(select.closest("dialog")!, "Update Role"));
+
+      await waitFor(() => {
+        expect(mockApiPatch).toHaveBeenCalledWith("/api/projects/proj-1/members/user-3", {
+          role: "admin",
+        });
+      });
+      await waitFor(() => {
+        expect(select.closest("dialog")).not.toHaveAttribute("open");
+      });
+    });
+
+    /**
+     * Every way this endpoint refuses — 403 for re-roling yourself, 404 for a
+     * member removed underneath you, 409 for a role that moved while the dialog
+     * was open — is a statement about the choice still on screen. Surfacing it
+     * as a toast would dismiss the reason and leave the stale form up, so the
+     * dialog must stay open with the server's own words inside it.
+     */
+    it("keeps the dialog open and shows the server's reason when the change fails", async () => {
+      setupDefaultMocks();
+      seedTwoMembers();
+      mockApiPatch.mockRejectedValue(
+        new Error("This member's role changed while you were editing. Please retry."),
+      );
+      const user = await openMembersTab();
+
+      await user.click(screen.getByRole("button", { name: "Actions for Charlie" }));
+      await user.click(await screen.findByRole("menuitem", { name: "Change Role" }));
+      const dialog = await waitFor(() => {
+        const el = document.getElementById("change-proj-role")?.closest("dialog");
+        expect(el).toHaveAttribute("open");
+        return el as HTMLElement;
+      });
+      await user.click(dialogButton(dialog, "Update Role"));
+
+      expect(
+        await screen.findByText(
+          "This member's role changed while you were editing. Please retry.",
+        ),
+      ).toBeInTheDocument();
+      expect(dialog).toHaveAttribute("open");
+    });
   });
 
   // -----------------------------------------------------------------------

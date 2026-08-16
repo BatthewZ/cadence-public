@@ -1,4 +1,4 @@
-import { UserPlus } from "lucide-react";
+import { UserPlus, UserX } from "lucide-react";
 
 import { Avatar } from "../Avatar";
 import { Button } from "../Button";
@@ -20,7 +20,11 @@ export function AssignDropdown({
         </Button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Content className="min-w-[10rem] max-h-[15rem] overflow-y-auto">
-        <DropdownMenu.Item index={0} onSelect={() => void onSelect(null)}>
+        <DropdownMenu.Item
+          index={0}
+          icon={<UserX size={14} className="text-fg-muted" />}
+          onSelect={() => void onSelect(null)}
+        >
           Unassigned
         </DropdownMenu.Item>
         <DropdownMenu.Divider />
@@ -28,7 +32,7 @@ export function AssignDropdown({
           <DropdownMenu.Item
             key={m.userId}
             index={i + 1}
-            icon={<Avatar size="xs" name={m.name} src={m.image} />}
+            icon={<Avatar size="xs" name={m.name} src={m.image} className="!size-4" />}
             onSelect={() => void onSelect(m.userId, m.name)}
           >
             {m.name}

@@ -8,6 +8,26 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * The message to show a user for a failed request: the server's own wording
+ * when there is one, otherwise the caller's fallback.
+ *
+ * Why the server's wording is preferred rather than a per-screen generic: the
+ * API's refusals name a rule the user can act on — "Only the workspace owner
+ * can remove an admin", "This invitation has expired", "Cannot remove yourself
+ * from the workspace" — and replacing those with "Something went wrong" is a
+ * strictly worse product for the same amount of code. The fallback is for the
+ * one case with no server message at all: a transport failure, where `err` is
+ * not an `ApiError`.
+ *
+ * Lives here rather than in a page module because it is a rule about what every
+ * screen tells the user, and the same ternary had already been written twice
+ * (CLAUDE.md rule 4).
+ */
+export function apiErrorMessage(err: unknown, fallback: string): string {
+  return err instanceof ApiError && err.message ? err.message : fallback;
+}
+
 let onUnauthorized: (() => void) | null = null;
 
 export function setOnUnauthorized(handler: (() => void) | null) {

@@ -15,8 +15,15 @@
  *
  * Ownership semantics mirror the GitHub PAT model: tokens are user-owned
  * inside a workspace. Workspace admins / owners can list and revoke any
- * member's token for incident response, but only the owner can mint or
- * rotate their own tokens.
+ * member's token for incident response; a member sees and can revoke only
+ * their own.
+ *
+ * Issuance is a second, narrower axis, enforced by `tokenIssuanceMiddleware`
+ * in [api-tokens.routes.ts](./api-tokens.routes.ts): minting and rotating
+ * both require the `owner` or `admin` role, so a plain member can never
+ * bring a new credential into existence. Rotation stacks the owner-only
+ * check below on top of that — an admin rotating someone else's token would
+ * be handed their plaintext.
  *
  * Status derivation (active / rotating / expired / revoked) lives in this
  * file because it is purely a presentation concern over the timestamp
@@ -47,6 +54,10 @@ import {
 } from "../../lib/api-tokens";
 import { deferWork } from "../../lib/defer";
 import { createEmailService } from "../../lib/email";
+// From the leaf module, not the `./email` barrel: this file's tests replace the
+// barrel wholesale with a `createEmailService`-only stub, so pulling the sender
+// resolver through it would yield `undefined` under test.
+import { resolveEmailFrom } from "../../lib/email/from";
 import { apiTokenCreatedEmail } from "../../lib/email/templates/api-token-created";
 import { apiTokenRevokedEmail } from "../../lib/email/templates/api-token-revoked";
 import { apiTokenRotatedEmail } from "../../lib/email/templates/api-token-rotated";
@@ -499,7 +510,7 @@ function scheduleCreationEmail(
       });
       await emailService.send({
         to: args.recipientEmail,
-        from: env.EMAIL_FROM,
+        from: resolveEmailFrom(env),
         subject,
         html,
         text,
@@ -563,7 +574,7 @@ function scheduleRotationEmail(
       });
       await emailService.send({
         to: args.recipientEmail,
-        from: env.EMAIL_FROM,
+        from: resolveEmailFrom(env),
         subject,
         html,
         text,
@@ -625,7 +636,7 @@ function scheduleRevocationEmail(
       });
       await emailService.send({
         to: args.recipientEmail,
-        from: env.EMAIL_FROM,
+        from: resolveEmailFrom(env),
         subject,
         html,
         text,

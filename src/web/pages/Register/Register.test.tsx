@@ -26,17 +26,11 @@ vi.mock("@/web/lib/auth/auth-client", () => ({
   },
 }));
 
-const mockApiPost = vi.fn();
-
-vi.mock("@/web/lib/api/client", () => ({
-  api: Object.assign(vi.fn(), {
-    get: vi.fn(),
-    post: (...args: unknown[]) => mockApiPost(...args) as Promise<unknown>,
-    put: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn(),
-  }),
-}));
+// No api-client mock: Register no longer calls the API directly. ToS
+// acceptance used to be POSTed here; sign-up returns no session under
+// `requireEmailVerification`, so that POST would 401. The page therefore stops
+// asking, and the single recorded acceptance happens at `/accept-terms` — the
+// page `TosGuard` redirects to on the first authenticated load.
 
 vi.mock("@/web/hooks/use-document-title", () => ({
   useDocumentTitle: vi.fn(),
@@ -48,10 +42,10 @@ import Register from "./Register";
 // Helpers
 // ---------------------------------------------------------------------------
 
-function renderRegister() {
+function renderRegister({ route = "/register" }: { route?: string } = {}) {
   const user = userEvent.setup();
   const result = render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={[route]}>
       <Register />
     </MemoryRouter>,
   );
@@ -74,10 +68,6 @@ function getConfirmPasswordInput() {
   return screen.getByLabelText("Confirm Password");
 }
 
-function getTosCheckbox() {
-  return screen.getByRole("checkbox");
-}
-
 function getSubmitButton() {
   return screen.getByRole("button", { name: /create account/i });
 }
@@ -90,7 +80,6 @@ describe("Register", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockSignUpEmail.mockResolvedValue({ error: null });
-    mockApiPost.mockResolvedValue({ accepted: true });
   });
 
   // 1. Renders all form fields and submit button
@@ -117,7 +106,6 @@ describe("Register", () => {
     expect(screen.getByText("Invalid email")).toBeInTheDocument();
     expect(screen.getByText("Password must be at least 8 characters")).toBeInTheDocument();
     expect(screen.getByText("Please confirm your password")).toBeInTheDocument();
-    expect(screen.getByText("You must accept the Terms of Service")).toBeInTheDocument();
 
     // signUp should not have been called
     expect(mockSignUpEmail).not.toHaveBeenCalled();
@@ -131,7 +119,6 @@ describe("Register", () => {
     await user.type(getEmailInput(), "test@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password2");
-    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     await waitFor(() => {
@@ -169,7 +156,6 @@ describe("Register", () => {
     await user.type(getEmailInput(), "test@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password1");
-    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     await waitFor(() => {
@@ -177,24 +163,71 @@ describe("Register", () => {
         name: "Test User",
         email: "test@example.com",
         password: "Password1",
+        // Where the verification link returns the user. Defaults to "/" and is
+        // overridden by `?redirect=` so an invite link survives registration.
+        callbackURL: "/",
       });
     });
   });
 
-  // 5b. Navigates to "/" on successful registration
-  it("navigates to home after successful registration", async () => {
+  it("passes a ?redirect= destination through as the verification callback", async () => {
+    // The invite flow's whole point: `/invite/:token` sends a signed-out
+    // visitor here with `?redirect=/invite/<token>`, and the post-verification
+    // hop must land back on that invite rather than the dashboard.
+    const { user } = renderRegister({ route: "/register?redirect=%2Finvite%2Fabc123" });
+
+    await user.type(getNameInput(), "Test User");
+    await user.type(getEmailInput(), "test@example.com");
+    await user.type(getPasswordInput(), "Password1");
+    await user.type(getConfirmPasswordInput(), "Password1");
+    await user.click(getSubmitButton());
+
+    await waitFor(() => {
+      expect(mockSignUpEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ callbackURL: "/invite/abc123" }),
+      );
+    });
+  });
+
+  it("ignores an off-site ?redirect= destination", async () => {
+    // Hostile input: an attacker-chosen absolute URL would turn the callback
+    // into an open redirect straight after a successful registration.
+    const { user } = renderRegister({
+      route: "/register?redirect=https%3A%2F%2Fevil.example%2Fphish",
+    });
+
+    await user.type(getNameInput(), "Test User");
+    await user.type(getEmailInput(), "test@example.com");
+    await user.type(getPasswordInput(), "Password1");
+    await user.type(getConfirmPasswordInput(), "Password1");
+    await user.click(getSubmitButton());
+
+    await waitFor(() => {
+      expect(mockSignUpEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ callbackURL: "/" }),
+      );
+    });
+  });
+
+  // 5b. Sign-up no longer yields a session, so the page must not navigate.
+  it("shows a check-your-email state instead of entering the app", async () => {
+    // `requireEmailVerification` makes Better Auth withhold the session on
+    // sign-up (`token: null`, no cookie). Navigating to "/" here — the old
+    // behaviour — would bounce the user straight back out through the auth
+    // guard with no explanation of why.
     const { user } = renderRegister();
 
     await user.type(getNameInput(), "Test User");
     await user.type(getEmailInput(), "test@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password1");
-    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     await waitFor(() => {
-      expect(mockNavigate).toHaveBeenCalledWith("/");
+      expect(screen.getByRole("alert")).toHaveTextContent(/verification link/i);
     });
+    expect(screen.getByRole("alert")).toHaveTextContent("test@example.com");
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   // 6. Displays server-side error messages
@@ -209,7 +242,6 @@ describe("Register", () => {
     await user.type(getEmailInput(), "taken@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password1");
-    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     await waitFor(() => {
@@ -232,7 +264,6 @@ describe("Register", () => {
     await user.type(getEmailInput(), "test@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password1");
-    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     await waitFor(() => {
@@ -250,7 +281,6 @@ describe("Register", () => {
     await user.type(getEmailInput(), "test@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password1");
-    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     await waitFor(() => {
@@ -281,7 +311,6 @@ describe("Register", () => {
     await user.type(getEmailInput(), "test@example.com");
     await user.type(getPasswordInput(), "Password1");
     await user.type(getConfirmPasswordInput(), "Password1");
-    await user.click(getTosCheckbox());
     await user.click(getSubmitButton());
 
     // While loading, button should be disabled and show loading text
@@ -292,10 +321,12 @@ describe("Register", () => {
     // Resolve the promise
     resolveSignUp({ error: null });
 
-    // After resolution, button should revert
+    // After resolution the form is replaced by the confirmation view, so the
+    // submit button is gone rather than re-enabled.
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /create account/i })).not.toBeDisabled();
+      expect(screen.getByRole("alert")).toHaveTextContent(/verification link/i);
     });
+    expect(screen.queryByRole("button", { name: /create account/i })).toBeNull();
   });
 
   // 9. Clearing field errors on input change
@@ -314,6 +345,41 @@ describe("Register", () => {
 
     await waitFor(() => {
       expect(screen.queryByText("Name is required")).not.toBeInTheDocument();
+    });
+  });
+
+  // 10. Terms of Service are linked, not collected.
+  it("links the Terms without asking the user to accept them here", async () => {
+    // Registration used to carry a ToS checkbox whose value went nowhere:
+    // sign-up produces no session under `requireEmailVerification`, so the
+    // `requireAuth`-gated POST could never run. The user ticked a box that was
+    // discarded, then met the `/accept-terms` wall after verifying and accepted
+    // a second time. Acceptance now happens once, on the page that records it
+    // against `CURRENT_TOS_VERSION`; this page only points at the documents.
+    const { user } = renderRegister();
+
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    expect(screen.getByRole("link", { name: /terms of service/i })).toHaveAttribute(
+      "href",
+      "/terms",
+    );
+    expect(screen.getByRole("link", { name: /privacy policy/i })).toHaveAttribute(
+      "href",
+      "/privacy",
+    );
+
+    // …and the form is submittable without one. A leftover
+    // `tosAccepted: z.literal(true)` in the schema would block every
+    // registration outright, with the error attached to a field that no longer
+    // renders — an unexplained dead button.
+    await user.type(getNameInput(), "Test User");
+    await user.type(getEmailInput(), "test@example.com");
+    await user.type(getPasswordInput(), "Password1");
+    await user.type(getConfirmPasswordInput(), "Password1");
+    await user.click(getSubmitButton());
+
+    await waitFor(() => {
+      expect(mockSignUpEmail).toHaveBeenCalledTimes(1);
     });
   });
 });

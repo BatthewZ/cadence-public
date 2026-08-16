@@ -3,6 +3,7 @@ import { useCallback } from "react";
 import { useParams } from "react-router-dom";
 
 import type { WorkspaceRole } from "@/shared/types/roles";
+import type { WorkspacePolicy } from "@/shared/types/workspace-policy";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 
@@ -26,6 +27,25 @@ export interface Workspace {
   memberCount?: number;
   members?: WorkspaceMember[];
   teams?: WorkspaceTeam[];
+}
+
+/**
+ * A workspace as returned by the DETAIL endpoint (`GET /api/workspaces/:id`).
+ *
+ * The extra field over {@link Workspace} is `policy`, and it is non-optional
+ * on purpose. The server resolves every toggle before responding, so consumers
+ * read a plain boolean and no screen carries its own copy of a default that
+ * could drift from the server's.
+ *
+ * This is a distinct type from {@link Workspace} rather than an optional field
+ * on it because the list endpoint genuinely does not return a policy — making
+ * it `policy?:` would push an `undefined` case onto every call site, and the
+ * natural way to resolve that case (`?? true`) is exactly the duplicated
+ * default this design is avoiding. Anything that needs the policy needs the
+ * detail query, and the type now says so.
+ */
+export interface WorkspaceDetail extends Workspace {
+  policy: WorkspacePolicy;
 }
 
 export interface WorkspacesResponse {
@@ -59,7 +79,7 @@ export interface WorkspaceProject {
 }
 
 export interface WorkspaceContextValue {
-  workspace: Workspace;
+  workspace: WorkspaceDetail;
   members: WorkspaceMember[];
   projects: WorkspaceProject[];
   refetchProjects: () => Promise<void>;
@@ -119,7 +139,7 @@ function useWorkspaceQueries(workspaceId: string | null) {
 
   const { data: workspaceData } = useQuery({
     queryKey: queryKeys.workspaces.detail(id),
-    queryFn: () => api.get<{ workspace: Workspace }>(`/api/workspaces/${id}`),
+    queryFn: () => api.get<{ workspace: WorkspaceDetail }>(`/api/workspaces/${id}`),
     staleTime: 5 * 60_000,
     enabled,
   });

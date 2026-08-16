@@ -64,6 +64,17 @@ const USER_E = {
   updatedAt: new Date("2025-01-01"),
 } as const;
 
+/** Collaborator used exclusively by the orphaned-membership test below. */
+const USER_F = {
+  id: "test-user-f",
+  name: "User F",
+  email: "f@test.com",
+  emailVerified: true,
+  image: null,
+  createdAt: new Date("2025-01-01"),
+  updatedAt: new Date("2025-01-01"),
+} as const;
+
 // ---------------------------------------------------------------------------
 // Shared test state
 // ---------------------------------------------------------------------------
@@ -89,22 +100,11 @@ beforeAll(async () => {
   await seedUser(d1, TEST_USER);
   await seedUser(d1, TEST_USER_2);
 
-  // Seed custom users via raw SQL (seedUser only accepts TEST_USER / TEST_USER_2)
-  for (const u of [USER_C, USER_D, USER_E]) {
-    await d1
-      .prepare(
-        "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      )
-      .bind(
-        u.id,
-        u.name,
-        u.email,
-        u.emailVerified ? 1 : 0,
-        u.image,
-        Math.floor(u.createdAt.getTime() / 1000),
-        Math.floor(u.updatedAt.getTime() / 1000),
-      )
-      .run();
+  // The four extra collaborators. `seedUser` accepts any `TestUserFixture`, so
+  // these need no hand-rolled INSERT — the two exported fixtures are a
+  // convenience, not a limit on who a test may seed.
+  for (const u of [USER_C, USER_D, USER_E, USER_F]) {
+    await seedUser(d1, u);
   }
 
   // --- Workspace 1 setup (owned by TEST_USER) ---
@@ -197,6 +197,63 @@ describe("cross-workspace authorization isolation", () => {
       // User E is a workspace member but has no project_member row
       const result = await resolveProjectAccess(db, proj1Id, USER_E.id);
       expect(result).toBeNull();
+    });
+  });
+
+  /**
+   * Workspace membership is the outer boundary; a project role narrows it,
+   * it never survives it. A `project_member` row with no matching
+   * `workspace_member` row is the state that made offboarding cosmetic —
+   * the user vanished from the workspace while keeping read, write and CSV
+   * export on every project they were on.
+   *
+   * `removeMember` now deletes those rows, but this test guards the *class*
+   * rather than that one handler. No current write path creates an orphan
+   * (see the note on `resolveProjectAccess`), so what this pins is rows
+   * predating the offboarding fix, plus the fact that `duplicateProject`
+   * propagates any orphan it finds into the copied project. Either way the
+   * row must confer nothing here — this resolver is the row-level choke
+   * point every protected project and task endpoint funnels through.
+   */
+  describe("orphaned project membership (workspace membership revoked)", () => {
+    it("stops granting project and task access once the workspace_member row is gone", async () => {
+      // Set User F up as an ordinary collaborator: in the workspace, on the project.
+      await seedWorkspaceMember(d1, ws1Id, USER_F.id, "member");
+      await seedProjectMember(d1, proj1Id, USER_F.id, "member");
+
+      // Baseline — the access they are supposed to have while they are a member.
+      // Without this the test could pass for the wrong reason (e.g. a typo'd id).
+      const projectBefore = await resolveProjectAccess(db, proj1Id, USER_F.id);
+      expect(projectBefore).not.toBeNull();
+      expect(projectBefore!.source).toBe("project");
+      expect(projectBefore!.role).toBe("member");
+      const taskBefore = await resolveTaskAccess(db, task1Id, USER_F.id);
+      expect(taskBefore).toEqual({
+        found: true,
+        access: {
+          role: "member",
+          source: "project",
+          project: { id: proj1Id, workspaceId: ws1Id },
+        },
+      });
+
+      // Revoke ONLY the workspace membership, leaving the project_member row
+      // behind — precisely the residue the unfixed removeMember left.
+      await d1
+        .prepare("DELETE FROM workspace_member WHERE workspaceId = ? AND userId = ?")
+        .bind(ws1Id, USER_F.id)
+        .run();
+      const orphan = await d1
+        .prepare("SELECT * FROM project_member WHERE projectId = ? AND userId = ?")
+        .bind(proj1Id, USER_F.id)
+        .first();
+      expect(orphan).not.toBeNull(); // the stale row really is still there
+
+      expect(await resolveProjectAccess(db, proj1Id, USER_F.id)).toBeNull();
+      expect(await resolveTaskAccess(db, task1Id, USER_F.id)).toEqual({
+        found: true,
+        access: null,
+      });
     });
   });
 });

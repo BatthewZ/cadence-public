@@ -17,9 +17,11 @@ import {
 } from "@/web/components/ui";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { useToast } from "@/web/components/ui/ToastContext";
+import { useWorkspacePermissions } from "@/web/hooks/use-permissions";
 import { useWorkspaceProjects } from "@/web/hooks/use-workspace-projects";
 import { api } from "@/web/lib/api/client";
 
+import { AdminOnlyNotice } from "./AdminOnlyNotice";
 import { ApiTokenList } from "./api-tokens/ApiTokenList";
 import {
   CreateApiTokenDialog,
@@ -70,6 +72,14 @@ interface ApiTokensTabProps {
 export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
   const qc = useQueryClient();
   const { toast } = useToast();
+  // Mirrors `tokenIssuanceMiddleware` on the API: minting and rotating are
+  // owner/admin-only, while listing and revoking stay open so a member can
+  // still audit and retire tokens they already hold.
+  const { canManageWorkspace, isResolved } = useWorkspacePermissions();
+  // Controls gate on `canManageWorkspace` alone (fail closed); copy that tells
+  // the caller they may not mint has to wait for the role, or an admin whose
+  // roster is still in flight reads an accusation we then retract.
+  const issuanceDenied = isResolved && !canManageWorkspace;
 
   /* ------- Dialog state -------------------------------------------- */
   const [createOpen, setCreateOpen] = useState(false);
@@ -264,6 +274,11 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
           </Text>
         </Stack>
 
+        <AdminOnlyNotice>
+          Only workspace owners and admins can create or rotate API tokens. Ask a
+          workspace admin if you need a token for an integration.
+        </AdminOnlyNotice>
+
         {/* Action bar: "New Token" pinned to the far left, "Show revoked"
             pinned to the far right. `ml-auto` on the toggle label keeps it
             anchored right even when "New Token" is suppressed in the empty
@@ -271,7 +286,7 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
             jump to the left and the toggle's position would feel unstable
             between renders. */}
         <Row align="center" className="flex-wrap gap-r4">
-          {!showEmpty && (
+          {!showEmpty && canManageWorkspace && (
             <Button variant="primary" size="md" onClick={handleOpenCreate}>
               <KeyRound size={16} className="mr-r6" />
               New Token
@@ -311,20 +326,24 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
             </EmptyStateIcon>
             <EmptyStateTitle>No API tokens yet</EmptyStateTitle>
             <EmptyStateDescription>
-              Generate a token to integrate Cadence with Slack, GitHub Actions,
-              or your own tools.
+              {issuanceDenied
+                ? "A workspace owner or admin can issue a token to integrate Cadence with Slack, GitHub Actions, or your own tools."
+                : "Generate a token to integrate Cadence with Slack, GitHub Actions, or your own tools."}
             </EmptyStateDescription>
-            <EmptyStateActions>
-              <Button variant="primary" size="md" onClick={handleOpenCreate}>
-                <KeyRound size={16} className="mr-r6" />
-                New Token
-              </Button>
-            </EmptyStateActions>
+            {canManageWorkspace && (
+              <EmptyStateActions>
+                <Button variant="primary" size="md" onClick={handleOpenCreate}>
+                  <KeyRound size={16} className="mr-r6" />
+                  New Token
+                </Button>
+              </EmptyStateActions>
+            )}
           </EmptyState>
         ) : (
           <ApiTokenList
             tokens={tokens}
             projects={projects}
+            canRotate={canManageWorkspace}
             onRotate={handleOpenRotate}
             onRevoke={handleOpenRevoke}
           />
@@ -337,28 +356,32 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
         )}
       </Stack>
 
-      <CreateApiTokenDialog
-        open={createOpen}
-        onClose={handleCloseCreate}
-        onSubmit={handleCreate}
-        isPending={createMutation.isPending}
-        errorMessage={createMutation.error?.message}
-        plaintext={createdPlaintext}
-        projects={projects}
-        projectsLoading={projectsQuery.isLoading}
-        onRevealDismissed={handleCreateRevealDismissed}
-      />
+      {canManageWorkspace && (
+        <>
+          <CreateApiTokenDialog
+            open={createOpen}
+            onClose={handleCloseCreate}
+            onSubmit={handleCreate}
+            isPending={createMutation.isPending}
+            errorMessage={createMutation.error?.message}
+            plaintext={createdPlaintext}
+            projects={projects}
+            projectsLoading={projectsQuery.isLoading}
+            onRevealDismissed={handleCreateRevealDismissed}
+          />
 
-      <RotateTokenDialog
-        open={rotateTarget !== null}
-        tokenName={rotateTarget?.name}
-        onClose={handleCloseRotate}
-        onConfirm={handleConfirmRotate}
-        isPending={rotateMutation.isPending}
-        errorMessage={rotateMutation.error?.message}
-        plaintext={rotatedPlaintext}
-        onRevealDismissed={handleRotateRevealDismissed}
-      />
+          <RotateTokenDialog
+            open={rotateTarget !== null}
+            tokenName={rotateTarget?.name}
+            onClose={handleCloseRotate}
+            onConfirm={handleConfirmRotate}
+            isPending={rotateMutation.isPending}
+            errorMessage={rotateMutation.error?.message}
+            plaintext={rotatedPlaintext}
+            onRevealDismissed={handleRotateRevealDismissed}
+          />
+        </>
+      )}
 
       <RevokeTokenConfirmation
         open={revokeTarget !== null}

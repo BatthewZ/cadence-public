@@ -20,6 +20,7 @@ Access control reflects what this is — the most privileged read in the API (fu
 
 - **Owner or admin only**, rate-limited to **5 exports/hour** per caller.
 - Reachable with a `workspace:read` [PAT](../api/api-tokens.md), but only when the token's owning user is an owner/admin (scopes are AND-ed with role).
+- **A token with `projectScope: "selected"` is refused with `403 Forbidden`**, not served a filtered file. This export is a workspace-wide read by definition — it carries the member and team directory, workspace settings, and webhook and invitation configuration, none of which belongs to any one project — so there is no honest way to narrow it to a project list. A caller that needs data from selected projects should use the per-project CSV export, or a token scoped to all projects. The refusal is returned before any data is read, so it costs nothing on a large workspace.
 - Every successful export writes an `audit_log` row (action `export`) — for cookie sessions and PATs alike — so "who pulled a full copy of this workspace, and when" is always answerable after the fact.
 
 ---
@@ -105,12 +106,13 @@ Columns: `title`, `group`, `assignee_email`, `due_date` (`YYYY-MM-DD`), `priorit
 
 - **Any project member — including viewers — may export.** Viewers can already read every exported field one request at a time through the task API; gating the CSV tighter would be theater, not a control. Rate limit: 30/hour.
 - Output is RFC 4180-quoted and hardened against **CSV formula injection** (OWASP): user-controlled cells beginning `=`, `+`, `-`, `@`, tab, or CR are prefixed with `'` so spreadsheets render them as text instead of executing them.
+- Reachable with a `project:read` [PAT](../api/api-tokens.md). Unlike the workspace export, this one **is** available to a `projectScope: "selected"` token — for the projects on its list. A project outside the list answers `403 Forbidden`, exactly as every other project-addressed endpoint does for that token.
 
 ---
 
 ## Importing
 
-**Workspace Settings → Data → upload a file.** The same endpoint ([`POST /api/workspaces/:workspaceId/import`](../api/endpoints.md#post-apiworkspacesworkspaceidimport), owner/admin only, 10/hour, multipart file ≤ 20 MB) accepts two formats, sniffed automatically:
+**Workspace Settings → Data → upload a file.** The same endpoint ([`POST /api/workspaces/:workspaceId/import`](../api/endpoints.md#post-apiworkspacesworkspaceidimport), owner/admin only, 10/hour, multipart file ≤ 20 MB, `workspace:write` for [PAT](../api/api-tokens.md) callers) accepts two formats, sniffed automatically:
 
 - a **Cadence workspace export** (recognized by its `format: "cadence.workspace"` field), or
 - a **Trello board JSON export** (see the next section).

@@ -25,8 +25,13 @@ import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import { UserMenu } from "@/web/components/layout/UserMenu";
 import { AppShell } from "@/web/components/ui/AppShell";
 import { Text } from "@/web/components/ui/Text";
+import { Tooltip } from "@/web/components/ui/Tooltip";
 import type { WorkspaceProject } from "@/web/contexts/WorkspaceContext";
 import { useDndSensors } from "@/web/hooks/use-dnd-sensors";
+import {
+  PROJECT_CREATION_DENIED_HINT,
+  useWorkspacePermissions,
+} from "@/web/hooks/use-permissions";
 import { api } from "@/web/lib/api/client";
 import { getIconComponent } from "@/web/lib/icon-map";
 import { queryKeys } from "@/web/lib/query-keys";
@@ -61,6 +66,7 @@ export function SidebarNav({
   toggleFavorite,
 }: SidebarNavProps) {
   const qc = useQueryClient();
+  const { canCreateProject } = useWorkspacePermissions();
 
   const sensors = useDndSensors();
 
@@ -172,14 +178,34 @@ export function SidebarNav({
           >
             Projects
           </Link>
-          <button
-            type="button"
-            onClick={() => setCreateDialogOpen(true)}
-            className="inline-flex items-center justify-center size-5 rounded hover:bg-surface-2 text-fg-muted hover:text-fg-primary transition-colors"
-            aria-label="Create project"
-          >
-            <Plus size={14} />
-          </button>
+          {/*
+            Disabled rather than removed. The `+` sits in a fixed spot members
+            have learned; deleting it makes the sidebar look subtly broken and
+            gives them nothing to hover for an explanation. Kept mounted, it
+            still answers the question it raises.
+          */}
+          <Tooltip content={canCreateProject ? "Create project" : PROJECT_CREATION_DENIED_HINT}>
+            {/*
+              A disabled <button> fires no pointer events, so hovering it opens
+              nothing — the refusal would be silent, which is the one thing this
+              button is kept mounted to avoid. The span is the hover target that
+              keeps the explanation reachable; same wrapper, same reason, as
+              `NewProjectButton`.
+            */}
+            <span
+              className={`inline-flex ${canCreateProject ? "" : "cursor-not-allowed"}`}
+            >
+              <button
+                type="button"
+                onClick={() => setCreateDialogOpen(true)}
+                disabled={!canCreateProject}
+                className="inline-flex items-center justify-center size-5 rounded hover:bg-surface-2 text-fg-muted hover:text-fg-primary transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-fg-muted"
+                aria-label="Create project"
+              >
+                <Plus size={14} />
+              </button>
+            </span>
+          </Tooltip>
         </div>
         <div className="overflow-y-none flex-1">
           <DndContext

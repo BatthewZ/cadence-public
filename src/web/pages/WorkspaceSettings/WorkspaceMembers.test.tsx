@@ -96,18 +96,26 @@ vi.mock("@/web/components/ui/ToastContext", () => ({
   useToast: () => ({ toast: mockToast, dismiss: vi.fn(), dismissAll: vi.fn() }),
 }));
 
-const mockCanManageWorkspace = { value: true };
+/**
+ * The viewer's own workspace role, switchable per test.
+ *
+ * It has to be switchable because the server's member rules are a *hierarchy*,
+ * not a single "can manage" bit: only the owner may grant `admin` or act on an
+ * admin's row, while an admin may act on plain members only. A mock that could
+ * only be an owner would let the UI offer admins buttons that hard-403.
+ */
+const mockViewerRole = { value: "owner" as "owner" | "admin" | "member" };
 vi.mock("@/web/hooks/use-permissions", () => ({
   useWorkspacePermissions: () => ({
-    workspaceRole: "owner" as const,
-    isWorkspaceOwner: true,
-    isWorkspaceAdmin: true,
-    canManageWorkspace: mockCanManageWorkspace.value,
-    canDeleteWorkspace: true,
+    workspaceRole: mockViewerRole.value,
+    isWorkspaceOwner: mockViewerRole.value === "owner",
+    isWorkspaceAdmin: mockViewerRole.value !== "member",
+    canManageWorkspace: mockViewerRole.value !== "member",
+    canDeleteWorkspace: mockViewerRole.value === "owner",
   }),
 }));
 
-import { api } from "@/web/lib/api/client";
+import { api,ApiError } from "@/web/lib/api/client";
 
 const mockGet = api.get as ReturnType<typeof vi.fn>;
 const mockPost = api.post as ReturnType<typeof vi.fn>;
@@ -164,7 +172,7 @@ function getDropdownTriggers(): HTMLElement[] {
 describe("WorkspaceMembers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockCanManageWorkspace.value = true;
+    mockViewerRole.value = "owner";
     setupDefaultMocks();
   });
 
@@ -387,9 +395,17 @@ describe("WorkspaceMembers", () => {
     );
     await user.click(updateButton);
 
+    // `user-2`, NOT `member-2`. The member row carries both a
+    // `workspace_member` PK (`id`) and the person (`userId`), and
+    // `PATCH /api/workspaces/:workspaceId/members/:userId` matches on the
+    // latter. Sending the row id addressed a user that does not exist, so this
+    // returned 404 "Member not found" every single time — role changes had
+    // never worked from the UI. Asserting the exact URL is the only thing that
+    // catches it: both ids are non-null strings, the mocked client accepts
+    // anything, and the page's own success path still ran.
     await waitFor(() => {
       expect(mockPatch).toHaveBeenCalledWith(
-        "/api/workspaces/ws-1/members/member-2",
+        "/api/workspaces/ws-1/members/user-2",
         { role: "admin" },
       );
     });
@@ -457,6 +473,15 @@ describe("WorkspaceMembers", () => {
       expect(screen.getByText("Remove Member")).toBeInTheDocument();
     });
 
+    // The email is part of the confirmation because display names are not
+    // unique — removal is destructive (it deletes the member's project and team
+    // grants) and the name alone can identify the wrong row.
+    const confirmText = Array.from(document.querySelectorAll("dialog[open]"))
+      .find((d) => d.textContent?.includes("Remove Member"))!
+      .textContent ?? "";
+    expect(confirmText).toContain("Bob");
+    expect(confirmText).toContain("bob@test.com");
+
     // Find the confirm "Remove" button inside the ConfirmDialog's <dialog> element.
     // The dialog may not expose buttons via role queries in jsdom, so we find
     // the dialog element directly and search within it.
@@ -471,9 +496,11 @@ describe("WorkspaceMembers", () => {
     });
     await user.click(confirmButton);
 
+    // `user-2`, not the `workspace_member` row id — see the role-change test.
+    // Removal was 404-ing for the same reason.
     await waitFor(() => {
       expect(mockDelete).toHaveBeenCalledWith(
-        "/api/workspaces/ws-1/members/member-2",
+        "/api/workspaces/ws-1/members/user-2",
       );
     });
 
@@ -485,7 +512,7 @@ describe("WorkspaceMembers", () => {
   // -----------------------------------------------------------------------
 
   it("hides invite button and action dropdowns when user cannot manage workspace", async () => {
-    mockCanManageWorkspace.value = false;
+    mockViewerRole.value = "member";
 
     const Wrapper = createWrapper();
     render(
@@ -635,4 +662,282 @@ describe("WorkspaceMembers", () => {
 
     expect(mockToast).toHaveBeenCalledWith("Invitation revoked.", { variant: "success" });
   });
+  // -----------------------------------------------------------------------
+  // Copy invite link — the fallback delivery channel (audit finding 03)
+  // -----------------------------------------------------------------------
+  //
+  // Invitation email is best-effort: it bounces, it lands in spam, and a
+  // self-hosted deployment with no mail provider sends nothing at all. Without
+  // this control an admin has no way to get the link to the invitee, which is
+  // half of why inviting anyone new used to dead-end. The link is fetched on
+  // demand rather than carried in the invitations list, because the token
+  // inside it is a bearer credential (audit finding 04).
+
+  function mockPendingInvitation(linkResponse?: () => unknown) {
+    mockGet.mockImplementation((url: string): unknown => {
+      if (url.endsWith("/link")) {
+        return linkResponse
+          ? linkResponse()
+          : Promise.resolve({ url: "https://cadence.test/invite/tok-123" });
+      }
+      if (url.includes("/invitations")) {
+        return Promise.resolve({
+          invitations: [
+            {
+              id: "inv-1",
+              email: "pending@example.com",
+              role: "member",
+              createdAt: "2025-06-01T00:00:00.000Z",
+            },
+          ],
+        });
+      }
+      return Promise.resolve({});
+    });
+  }
+
+  async function renderAndClickCopy() {
+    const Wrapper = createWrapper();
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <WorkspaceMembers />
+      </Wrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("pending@example.com")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByRole("button", { name: /copy invite link/i }));
+    return user;
+  }
+
+  it("copies a pending invitation's link to the clipboard on demand", async () => {
+    mockPendingInvitation();
+    await renderAndClickCopy();
+
+    await waitFor(() => {
+      expect(mockGet).toHaveBeenCalledWith(
+        "/api/workspaces/ws-1/invitations/inv-1/link",
+      );
+    });
+
+    expect(await screen.findByText("Copied")).toBeInTheDocument();
+    await expect(window.navigator.clipboard.readText()).resolves.toBe(
+      "https://cadence.test/invite/tok-123",
+    );
+  });
+
+  it("shows the link in a selectable field when the clipboard is unavailable", async () => {
+    // `navigator.clipboard` throws in non-secure contexts and when permission
+    // is denied. Swallowing that would leave the admin with no link at all —
+    // the one thing this control exists to provide.
+    mockPendingInvitation();
+    vi.spyOn(navigator.clipboard, "writeText").mockRejectedValue(
+      new Error("clipboard blocked"),
+    );
+
+    await renderAndClickCopy();
+
+    const fallback = await screen.findByLabelText(
+      "Invite link for pending@example.com",
+    );
+    expect(fallback).toHaveValue("https://cadence.test/invite/tok-123");
+    expect(screen.queryByText("Copied")).toBeNull();
+  });
+
+  it("reports a failure to fetch the invite link rather than copying nothing", async () => {
+    mockPendingInvitation(() => Promise.reject(new Error("nope")));
+    await renderAndClickCopy();
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith("Failed to get the invite link.", {
+        variant: "error",
+      });
+    });
+    expect(screen.queryByText("Copied")).toBeNull();
+  });
+
+  // -----------------------------------------------------------------------
+  // Server error messages on the remove path
+  // -----------------------------------------------------------------------
+
+  it("shows the server's reason when a removal is refused", async () => {
+    // Removal is governed by real rules, and each refusal names one the admin
+    // can act on: "Only the workspace owner can remove an admin" (403),
+    // "Cannot remove the workspace owner" (403), "Cannot remove yourself from
+    // the workspace" (400), and a 409 when the target's role moved mid-edit.
+    // Collapsing all of them into "Failed to remove member." told the admin
+    // only that something broke, so the natural next step was to retry the
+    // identical action and fail identically.
+    mockDelete.mockRejectedValue(
+      new ApiError(403, "Only the workspace owner can remove an admin"),
+    );
+
+    const Wrapper = createWrapper();
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <WorkspaceMembers />
+      </Wrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Charlie")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText("Actions for Charlie"));
+    await user.click(await screen.findByRole("menuitem", { name: /remove/i }));
+
+    const confirmDialog = await waitFor(() => {
+      const found = Array.from(document.querySelectorAll("dialog[open]")).find((d) =>
+        d.textContent?.includes("Remove Member"),
+      );
+      expect(found).not.toBeUndefined();
+      return found as HTMLElement;
+    });
+    await user.click(within(confirmDialog).getByText("Remove", { selector: "button" }));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith(
+        "Only the workspace owner can remove an admin",
+        { variant: "error" },
+      );
+    });
+    expect(mockToast).not.toHaveBeenCalledWith(
+      "Failed to remove member.",
+      expect.anything(),
+    );
+  }, 15_000);
+
+  it("falls back to a generic message when the failure carries no server text", async () => {
+    // A dropped connection produces a plain Error, not an ApiError — there is
+    // no server message to show, and the user must still be told something.
+    mockDelete.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    const Wrapper = createWrapper();
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <WorkspaceMembers />
+      </Wrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Bob")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText("Actions for Bob"));
+    await user.click(await screen.findByRole("menuitem", { name: /remove/i }));
+
+    const confirmDialog = await waitFor(() => {
+      const found = Array.from(document.querySelectorAll("dialog[open]")).find((d) =>
+        d.textContent?.includes("Remove Member"),
+      );
+      expect(found).not.toBeUndefined();
+      return found as HTMLElement;
+    });
+    await user.click(within(confirmDialog).getByText("Remove", { selector: "button" }));
+
+    await waitFor(() => {
+      expect(mockToast).toHaveBeenCalledWith("Failed to remove member.", {
+        variant: "error",
+      });
+    });
+  }, 15_000);
+
+  // -----------------------------------------------------------------------
+  // Row actions follow the server's role hierarchy (audit finding 08)
+  // -----------------------------------------------------------------------
+  //
+  // The server now requires the actor to strictly outrank the target: only the
+  // owner may act on an admin's row or grant the `admin` role; admins manage
+  // plain members. Every control the UI offers outside those bounds is a
+  // guaranteed 403, so these assert the menu matches the rules rather than
+  // `canManageWorkspace`.
+
+  it("offers an admin viewer Remove on a plain member, and nothing else", async () => {
+    mockViewerRole.value = "admin";
+
+    const Wrapper = createWrapper();
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <WorkspaceMembers />
+      </Wrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Bob")).toBeInTheDocument();
+    });
+
+    // Bob (plain member) is the only row an admin may touch. Charlie's row is
+    // an admin row — which is also the shape of the viewer's own row, so this
+    // covers "an admin sees actions on themselves" too.
+    expect(getDropdownTriggers()).toHaveLength(1);
+    expect(screen.queryByLabelText("Actions for Charlie")).toBeNull();
+    expect(screen.queryByLabelText("Actions for Alice")).toBeNull();
+
+    await user.click(screen.getByLabelText("Actions for Bob"));
+
+    expect(await screen.findByRole("menuitem", { name: /remove/i })).toBeInTheDocument();
+    // No "Change Role": the only roles an API caller can set are `admin`
+    // (owner-only to grant) and `member` (what Bob already is), so the dialog
+    // would offer an admin nothing but a no-op.
+    expect(screen.queryByRole("menuitem", { name: /change role/i })).toBeNull();
+  }, 15_000);
+
+  it("keeps both actions for the owner on member and admin rows", async () => {
+    // The mirror of the test above: gating on the hierarchy must not quietly
+    // take anything away from the owner, who outranks every other row.
+    const Wrapper = createWrapper();
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <WorkspaceMembers />
+      </Wrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Charlie")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText("Actions for Charlie"));
+
+    expect(
+      await screen.findByRole("menuitem", { name: /change role/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: /remove/i })).toBeInTheDocument();
+  }, 15_000);
+
+  it("offers the Admin role only to the owner", async () => {
+    // `ChangeRoleDialog` is what actually submits the role, so the option list
+    // is gated there as well as on the menu — an admin who reached this dialog
+    // could otherwise submit a promotion that always 403s.
+    const Wrapper = createWrapper();
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <WorkspaceMembers />
+      </Wrapper>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText("Bob")).toBeInTheDocument();
+    });
+
+    await user.click(screen.getByLabelText("Actions for Bob"));
+    await user.click(await screen.findByRole("menuitem", { name: /change role/i }));
+
+    const roleSelect = await waitFor(() => {
+      const el = document.getElementById("new-role") as HTMLSelectElement | null;
+      expect(el).not.toBeNull();
+      return el!;
+    });
+
+    expect(
+      Array.from(roleSelect.options).map((o) => o.value),
+    ).toEqual(["admin", "member"]);
+  }, 15_000);
 });

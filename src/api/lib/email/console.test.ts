@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { ConsoleEmailService } from "./console";
+import { DEFAULT_EMAIL_FROM } from "./from";
 
 describe("ConsoleEmailService", () => {
   it("returns an id matching the console-<timestamp> pattern", async () => {
@@ -55,6 +56,33 @@ describe("ConsoleEmailService", () => {
     });
     const loggedMessage = logSpy.mock.calls[0][0] as string;
     expect(loggedMessage).toContain("(no text content)");
+    logSpy.mockRestore();
+  });
+
+  it("echoes the sender so a misconfigured EMAIL_FROM is visible in dev", async () => {
+    // The dev transport sends nothing, so this line is purely diagnostic —
+    // but it is the diagnostic that matters. An operator debugging why real
+    // mail never arrives can see which sender the same call would have used
+    // against Resend without having to configure Resend to find out.
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    await new ConsoleEmailService().send({
+      to: "test@example.com",
+      subject: "Test",
+      html: "<p>Hi</p>",
+    });
+    expect(logSpy.mock.calls[0][0] as string).toContain(DEFAULT_EMAIL_FROM);
+    logSpy.mockRestore();
+  });
+
+  it("prefers an explicit sender over the injected default", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    await new ConsoleEmailService("ops@cadence.app").send({
+      to: "test@example.com",
+      from: "billing@cadence.app",
+      subject: "Test",
+      html: "<p>Hi</p>",
+    });
+    expect(logSpy.mock.calls[0][0] as string).toContain("billing@cadence.app");
     logSpy.mockRestore();
   });
 });

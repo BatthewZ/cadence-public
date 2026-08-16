@@ -11,13 +11,14 @@ export const WEBHOOK_EVENT_TYPES = [
   "task.comment_created",
   "task.label_added",
   "task.label_removed",
-  // Project events (6)
+  // Project events (7)
   "project.created",
   "project.updated",
   "project.archived",
   "project.deleted",
   "project.member_added",
   "project.member_removed",
+  "project.member_role_changed",
   // Workspace events (3)
   "workspace.member_joined",
   "workspace.member_removed",

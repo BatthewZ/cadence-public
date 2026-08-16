@@ -88,6 +88,7 @@ vi.mock("@/web/hooks/use-permissions", () => ({
     isWorkspaceAdmin: mockCanManage,
     canManageWorkspace: mockCanManage,
     canDeleteWorkspace: mockCanManage,
+    isResolved: true,
   }),
 }));
 

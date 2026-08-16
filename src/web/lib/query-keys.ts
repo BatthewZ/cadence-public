@@ -100,6 +100,14 @@ export const queryKeys = {
       ["projects", projectId, "webhooks", webhookId] as const,
   },
   tasks: {
+    /**
+     * Prefix over every per-task cache entry. Not fetched directly — it exists
+     * so freshness polling can invalidate an open detail panel without knowing
+     * which task is open. Invalidation defaults to `refetchType: "active"`, so
+     * this refetches only mounted queries (at most one panel) and merely marks
+     * the rest stale.
+     */
+    all: ["tasks"] as const,
     detail: (id: string) => ["tasks", id] as const,
     activity: (id: string) => ["tasks", id, "activity"] as const,
     comments: (id: string) => ["tasks", id, "comments"] as const,

@@ -3,6 +3,38 @@ import { describe, expect, it } from "vitest";
 import { queryKeys } from "./query-keys";
 
 describe("queryKeys", () => {
+  describe("tasks.all", () => {
+    /**
+     * The freshness poll can only say "some task in this project changed" — the
+     * payload is one MAX(updatedAt) and names no task id. Invalidating an open
+     * detail view therefore depends entirely on `tasks.all` being a true prefix
+     * of every per-task key. If any of these drift apart, the poll stops
+     * reaching the detail panel and it silently freezes on load — the exact
+     * regression this key was added to fix.
+     */
+    it("is the shared root of every per-task key", () => {
+      const root = queryKeys.tasks.all;
+      expect(root).toEqual(["tasks"]);
+
+      for (const key of [
+        queryKeys.tasks.detail("task-1"),
+        queryKeys.tasks.activity("task-1"),
+        queryKeys.tasks.comments("task-1"),
+        queryKeys.tasks.attachments("task-1"),
+      ]) {
+        expect(key.slice(0, root.length)).toEqual(root);
+      }
+    });
+
+    it("does not collide with the project-scoped task list key", () => {
+      // ["projects", id, "tasks"] is the board list and lives under a different
+      // root, so invalidating one must never implicitly invalidate the other.
+      expect(queryKeys.projects.tasks("proj-1").slice(0, 1)).not.toEqual(
+        queryKeys.tasks.all,
+      );
+    });
+  });
+
   describe("tasks.comments", () => {
     it("returns the correct key structure", () => {
       expect(queryKeys.tasks.comments("task-1")).toEqual(["tasks", "task-1", "comments"]);

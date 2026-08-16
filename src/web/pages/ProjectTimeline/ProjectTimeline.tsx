@@ -23,6 +23,7 @@ import { useToast } from "@/web/components/ui/ToastContext";
 import { type Task, useProject } from "@/web/contexts/ProjectContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useMultiSelect } from "@/web/hooks/use-multi-select";
+import { useProjectPermissions } from "@/web/hooks/use-permissions";
 import { useTaskFilters } from "@/web/hooks/use-task-filters";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
@@ -47,6 +48,10 @@ export default function ProjectTimeline() {
   const { toast } = useToast();
   const qc = useQueryClient();
   const { filteredTasks, filters } = useTaskFilters(tasks);
+  // Resolved once for the page rather than per row: `useProjectPermissions`
+  // memoises per call site, so hooking it inside TimelineTaskRow would redo the
+  // roster lookup for every task in the timeline.
+  const { canEditTasks } = useProjectPermissions(members);
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Grouping mode from URL (defaults to "dueDate")
@@ -214,6 +219,7 @@ export default function ProjectTimeline() {
                         onToggleCompleted={(taskId, completed) => { void handleToggleCompleted(taskId, completed); }}
                         selected={selectedIds.has(task.id)}
                         onToggleSelect={handleToggleSelect}
+                        canEditTasks={canEditTasks}
                       />
                     ))}
                   </Stack>

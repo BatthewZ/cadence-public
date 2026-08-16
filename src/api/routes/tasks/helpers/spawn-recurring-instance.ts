@@ -8,16 +8,30 @@ import {
   computeNextStartDate,
   parseRecurrenceRule,
 } from "../../../../shared/lib/recurrence";
+import { retainAssignableAssignee } from "../../../lib/assignee-validation";
 import { createNotification } from "../../../lib/notifications";
+import {
+  isUniqueConstraintViolation,
+  retryOnPositionConflict,
+} from "../../../lib/position-conflict";
 import { logActivity } from "../log-activity";
 import { copyTaskRelations } from "./copy-task-relations";
 
 type TaskRow = typeof task.$inferSelect;
 
-/** Spawned recurring task data — carries explicit `id` and `projectId` for downstream consumers. */
+/**
+ * Spawned recurring task data — carries explicit `id`, `projectId` and
+ * `assigneeId` for downstream consumers.
+ *
+ * `assigneeId` is declared (rather than left to the index signature) because
+ * callers must notify the *spawned* instance's assignee, not the completed
+ * task's: the two differ whenever the original assignee has lost access to the
+ * project, in which case the new instance is spawned unassigned.
+ */
 export interface SpawnedTaskData extends Record<string, unknown> {
   id: string;
   projectId: string;
+  assigneeId: string | null;
 }
 
 interface SpawnResult {
@@ -74,25 +88,28 @@ export async function spawnNextRecurringInstance(
       : null;
   const nextDueDate = recurOnStartOnly ? null : nextAnchor;
 
-  // 3. Get position at end of target group
-  const [lastTask] = await db
-    .select({ position: task.position })
-    .from(task)
-    .where(eq(task.taskGroupId, targetGroupId))
-    .orderBy(desc(task.position))
-    .limit(1);
-  const position = generateKeyBetween(lastTask?.position ?? null, null);
+  // 3. Resolve the assignee for the new instance.
+  //
+  // The assignee carries forward only while that person can still reach the
+  // project. A recurring series outlives membership changes, so an assignee
+  // who was removed months ago would otherwise keep receiving a fresh task —
+  // and a "new instance" notification carrying its title — every cycle,
+  // forever. Dropping to null (rather than failing the completion that
+  // triggered the spawn) keeps the series alive for the team while cutting off
+  // the leak; the next person to open the task can reassign it.
+  const nextAssigneeId = await retainAssignableAssignee(
+    db, completedTask.projectId, completedTask.assigneeId,
+  );
 
-  // 4. Create the new task
   const newTaskId = crypto.randomUUID();
   const now = new Date();
-  const newTask = {
+  const newTaskBase = {
     id: newTaskId,
     projectId: completedTask.projectId,
     taskGroupId: targetGroupId,
     title: completedTask.title,
     description: completedTask.description,
-    assigneeId: completedTask.assigneeId,
+    assigneeId: nextAssigneeId,
     priority: completedTask.priority,
     completed: false,
     completedAt: null,
@@ -113,40 +130,88 @@ export async function spawnNextRecurringInstance(
     // task only. Inheriting would also collide with the partial unique
     // index on (projectId, source_uid) the first time a series respawned.
     sourceUid: null,
-    position,
     createdAt: now,
     updatedAt: now,
   };
 
-  // 5. Insert with race condition guard.
-  // The unique partial index on recurrenceParentId prevents duplicates.
-  // If two concurrent completions race, the second insert fails.
-  try {
-    await db.insert(task).values(newTask);
-  } catch (error: unknown) {
-    // Check if this is a unique constraint violation (duplicate spawn)
-    const message = error instanceof Error ? error.message : String(error);
-    if (
-      message.includes("UNIQUE constraint failed") ||
-      message.includes("unique")
-    ) {
-      // Another request already spawned the next instance — query it
+  // 4. Read the end-of-group position and insert, honouring BOTH race guards.
+  //
+  // Two different unique indexes can reject this insert, and they mean opposite
+  // things:
+  //
+  //  * `task_recurrence_parent_unique_idx` — a concurrent completion of the
+  //    SAME task already spawned the next instance. There is nothing left to
+  //    do but adopt the winner's row.
+  //  * `task_group_position_unique_idx` on `(taskGroupId, position)` — reading
+  //    the group's last position and inserting after it is not atomic, so any
+  //    other writer into the same group (a second recurring completion, a
+  //    create, a duplicate, a move, an import) can take the computed key in
+  //    between. Nothing is wrong with this spawn; it needs a fresh position,
+  //    which is exactly what every other insert-at-end site in the API gets
+  //    from `retryOnPositionConflict`. This was the only one that did not.
+  //
+  // Telling the two apart is load-bearing, because getting it wrong fails
+  // SILENTLY rather than loudly. `isUniqueConstraintViolation` matches both —
+  // it is named for the constraint, not for positions — so treating every
+  // match as a duplicate spawn would end the series: the parent-id re-query
+  // finds nothing, the caller receives `nextRecurringTask: null`, the
+  // completion still answers 200 (the task row was updated before this
+  // function was called), and the recurrence stops forever with no error and
+  // no log line. The re-query is therefore POSITIVE evidence for the
+  // duplicate-spawn branch and never its default; anything else is rethrown so
+  // the retry loop re-reads the position and tries again, and exhausting the
+  // attempts throws — a spawn that cannot be placed must fail loudly.
+  //
+  // The position read lives INSIDE the retried block on purpose: retrying with
+  // the stale boundary value would recompute the identical key and collide
+  // again.
+  //
+  // `isUniqueConstraintViolation` must also be used rather than a local
+  // `error.message.includes(...)`: Drizzle wraps the D1 error, so the SQLite
+  // text lives on `.cause`, never on the outer `.message`. The hand-rolled
+  // check that used to be here never matched, which turned the loser of a
+  // concurrent double-completion into a 500 on a completion that had in fact
+  // succeeded.
+  const attempt = await retryOnPositionConflict(async () => {
+    const [lastTask] = await db
+      .select({ position: task.position })
+      .from(task)
+      .where(eq(task.taskGroupId, targetGroupId))
+      .orderBy(desc(task.position))
+      .limit(1);
+
+    const candidate = {
+      ...newTaskBase,
+      position: generateKeyBetween(lastTask?.position ?? null, null),
+    };
+
+    try {
+      await db.insert(task).values(candidate);
+      return { kind: "inserted" as const, row: candidate };
+    } catch (error: unknown) {
+      if (!isUniqueConstraintViolation(error)) throw error;
+
       const [existing] = await db
         .select()
         .from(task)
         .where(eq(task.recurrenceParentId, completedTask.id))
         .limit(1);
-      return {
-        nextRecurringTask: existing
-          ? {
-              ...existing,
-              recurrenceRule: parseRecurrenceRule(existing.recurrenceRule),
-            }
-          : null,
-      };
+      if (!existing) throw error; // Position collision — retry with a fresh key.
+
+      return { kind: "adopted" as const, row: existing };
     }
-    throw error; // Re-throw non-duplicate errors
+  });
+
+  if (attempt.kind === "adopted") {
+    return {
+      nextRecurringTask: {
+        ...attempt.row,
+        recurrenceRule: parseRecurrenceRule(attempt.row.recurrenceRule),
+      },
+    };
   }
+
+  const newTask = attempt.row;
 
   // 6. Copy subtasks and labels with completion reset
   const { subtaskCount, labels } = await copyTaskRelations(db, completedTask.id, newTaskId, {
@@ -175,6 +240,13 @@ export async function logRecurringInstanceCreated(
   opts: {
     nextTaskId: string;
     actorId: string;
+    /**
+     * The **spawned instance's** assignee, i.e. `SpawnedTaskData.assigneeId` —
+     * never the completed task's. The two diverge when the original assignee
+     * has lost access to the project: the new instance is spawned unassigned,
+     * and notifying the old assignee would leak the task title to someone who
+     * can no longer open it.
+     */
     assigneeId: string | null;
     taskTitle: string;
     projectId: string;

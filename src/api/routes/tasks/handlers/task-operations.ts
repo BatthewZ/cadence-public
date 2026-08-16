@@ -5,6 +5,7 @@ import { task, taskGroup } from "../../../../db/schema/task";
 import { generateKeyBetween } from "../../../../shared/lib/fractional-index";
 import { moveTaskSchema } from "../../../../shared/schemas/task";
 import type { AppEnv } from "../../../env";
+import { retainAssignableAssignee } from "../../../lib/assignee-validation";
 import { deferWork } from "../../../lib/defer";
 import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
@@ -80,7 +81,6 @@ export async function moveTask(c: Context<AppEnv>) {
     const wasCompleted = foundTask.completed;
     const isCompletionTarget = targetGroup.isCompletionGroup;
     const capturedNextRecurringTask = nextRecurringTask;
-    const assigneeId = foundTask.assigneeId;
     const taskTitle = foundTask.title;
     const projectId = foundTask.projectId;
 
@@ -121,12 +121,15 @@ export async function moveTask(c: Context<AppEnv>) {
 
       await logActivityBatch(db, activities);
 
-      // Log activity and notify assignee for the spawned recurring instance
+      // Log activity and notify the assignee of the spawned recurring instance.
+      // Uses the SPAWNED task's assignee (already filtered by the spawn helper)
+      // rather than the moved task's, which may name someone who has since lost
+      // access to the project.
       if (capturedNextRecurringTask) {
         await logRecurringInstanceCreated(db, {
           nextTaskId: capturedNextRecurringTask.id,
           actorId: user.id,
-          assigneeId,
+          assigneeId: capturedNextRecurringTask.assigneeId,
           taskTitle,
           projectId,
           apiTokenId: moveApiTokenId,
@@ -139,7 +142,6 @@ export async function moveTask(c: Context<AppEnv>) {
   // (e.g. reordering within a completion group while uncompleted)
   if (nextRecurringTask && !movedBetweenGroups) {
     const capturedNextRecurringTask = nextRecurringTask;
-    const assigneeId = foundTask.assigneeId;
     const taskTitle = foundTask.title;
     const projectId = foundTask.projectId;
 
@@ -147,7 +149,8 @@ export async function moveTask(c: Context<AppEnv>) {
       await logRecurringInstanceCreated(db, {
         nextTaskId: capturedNextRecurringTask.id,
         actorId: user.id,
-        assigneeId,
+        // See above: the spawned instance's own (already filtered) assignee.
+        assigneeId: capturedNextRecurringTask.assigneeId,
         taskTitle,
         projectId,
         apiTokenId: moveApiTokenId,
@@ -201,6 +204,15 @@ export async function duplicateTask(c: Context<AppEnv>) {
   const newTaskId = crypto.randomUUID();
   const now = new Date();
 
+  // The copy inherits the source's assignee, but only if that person can still
+  // reach the project — a member who was removed after the original was
+  // assigned must not be handed a fresh task, nor the "You were assigned to …"
+  // notification below (which carries the task title). Dropped to null rather
+  // than 400 so an unrelated offboarding never breaks the Duplicate button.
+  const duplicateAssigneeId = await retainAssignableAssignee(
+    db, sourceTask.projectId, sourceTask.assigneeId,
+  );
+
   // Read last position + insert inside a retry loop — concurrent
   // duplicate/create requests in the same task group can race and both
   // compute the same `generateKeyBetween(last, null)` result. The UNIQUE
@@ -222,7 +234,7 @@ export async function duplicateTask(c: Context<AppEnv>) {
       taskGroupId: sourceTask.taskGroupId,
       title: `${sourceTask.title} (copy)`,
       description: sourceTask.description,
-      assigneeId: sourceTask.assigneeId,
+      assigneeId: duplicateAssigneeId,
       priority: sourceTask.priority,
       completed: false,
       completedAt: null,
@@ -272,11 +284,12 @@ export async function duplicateTask(c: Context<AppEnv>) {
     // Non-fatal: task was already duplicated
   }
 
-  // Create notification if assignee is set
-  if (sourceTask.assigneeId) {
+  // Create notification if the copy carries an assignee (already filtered to
+  // someone who can still reach the project — see duplicateAssigneeId above).
+  if (duplicateAssigneeId) {
     try {
       await createNotification(db, {
-        userId: sourceTask.assigneeId,
+        userId: duplicateAssigneeId,
         type: "task_assigned",
         title: `You were assigned to "${newTask.title}"`,
         actorId: user.id,
@@ -284,7 +297,7 @@ export async function duplicateTask(c: Context<AppEnv>) {
         taskId: newTaskId,
       });
     } catch (error) {
-      console.error("Failed to create assignment notification for duplicateTask:", { newTaskId, assigneeId: sourceTask.assigneeId, projectId: sourceTask.projectId, userId: user.id }, error);
+      console.error("Failed to create assignment notification for duplicateTask:", { newTaskId, assigneeId: duplicateAssigneeId, projectId: sourceTask.projectId, userId: user.id }, error);
       // Non-fatal: task was already duplicated
     }
   }

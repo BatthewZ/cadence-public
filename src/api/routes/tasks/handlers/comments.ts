@@ -13,6 +13,7 @@ import { compoundCursorCondition, computeCompoundNextCursor, parseCompoundCursor
 import { requireParam } from "../../../lib/params";
 import { validJson } from "../../../lib/validated";
 import { dispatchWebhook } from "../../../lib/webhook-payloads";
+import { enforceTokenProjectBinding } from "../../../middleware/authorize";
 import { logActivity } from "../log-activity";
 
 // ---------------------------------------------------------------------------
@@ -142,6 +143,14 @@ export async function updateComment(c: Context<AppEnv>) {
     return errorResponse(c, "Forbidden", 403);
   }
 
+  // PAT binding guard. `/comments/:commentId` carries no projectId or taskId,
+  // so no project/task middleware can run here and the token's workspace
+  // binding and selected-project list would otherwise go unchecked — the
+  // author check above is about the human, not the credential. Shared policy,
+  // same generic 403 as the middleware.
+  const denied = enforceTokenProjectBinding(c, accessResult.project);
+  if (denied) return denied;
+
   const now = new Date();
 
   const [[updated]] = await db.batch([
@@ -184,24 +193,58 @@ export async function deleteComment(c: Context<AppEnv>) {
     return errorResponse(c, "Comment not found", 404);
   }
 
-  // Non-authors must be a project admin to delete
-  if (found.authorId !== user.id) {
-    const [parentTask] = await db
-      .select({ projectId: task.projectId })
-      .from(task)
-      .where(eq(task.id, found.taskId))
-      .limit(1);
+  // Resolve the owning project so access can be checked against it.
+  const [parentTask] = await db
+    .select({ projectId: task.projectId })
+    .from(task)
+    .where(eq(task.id, found.taskId))
+    .limit(1);
 
-    if (!parentTask) {
-      return errorResponse(c, "Parent task not found", 404);
-    }
-
-    const accessResult = await resolveProjectAccess(db, parentTask.projectId, user.id);
-
-    if (!accessResult || accessResult.role !== "admin") {
-      return errorResponse(c, "Forbidden", 403);
-    }
+  if (!parentTask) {
+    return errorResponse(c, "Parent task not found", 404);
   }
+
+  // Authorization, resolved UNCONDITIONALLY for every caller.
+  //
+  // The rule to preserve is about DIRECTION, not literal shape. `updateComment`
+  // above pre-filters on authorship first, but only in the DENY direction
+  // (`authorId !== user.id` → 403), which fails closed and is safe. What must
+  // never appear is the ALLOW-side mirror — `if (authorId === user.id)` used to
+  // skip ahead — because that grants without ever asking whether the caller
+  // still has access. Do not "match updateComment" by copying its ordering and
+  // flipping the comparison; that reintroduces exactly the bug below.
+  //
+  // Authorship is not authorization. `comment.authorId` records who wrote the
+  // row historically; it says nothing about whether that person may still
+  // touch the project today. Membership is revocable and authorship is not, so
+  // an `if (authorId === user.id)` short-circuit placed BEFORE this call
+  // hands every past author a permanent write key to a project they have been
+  // removed from: deleting the comment is itself a write, and it bumps the
+  // parent task's `updatedAt` for everyone still in the project. That was a
+  // real hole here — the access resolution used to live inside the non-author
+  // branch, so an offboarded user could still delete their own comments while
+  // `updateComment`, which always resolved access, correctly refused them the
+  // same second. Resolve first, decide after; the author check is a
+  // NARROWING of an already-granted access, never a bypass of it.
+  //
+  // Any access level is enough for the author (matching `updateComment`, where
+  // a viewer may edit their own words); non-authors need project admin.
+  const accessResult = await resolveProjectAccess(db, parentTask.projectId, user.id);
+
+  if (!accessResult) {
+    return errorResponse(c, "Forbidden", 403);
+  }
+
+  if (found.authorId !== user.id && accessResult.role !== "admin") {
+    return errorResponse(c, "Forbidden", 403);
+  }
+
+  // PAT binding guard — see `updateComment`. Placed after the human check so
+  // a caller failing both is denied for the human reason first and no
+  // PAT-specific signal leaks. It is a second, independent gate: the human
+  // check above says the person may act, this one says the credential may.
+  const denied = enforceTokenProjectBinding(c, accessResult.project);
+  if (denied) return denied;
 
   const now = new Date();
   await db.batch([
