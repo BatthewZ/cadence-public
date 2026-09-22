@@ -1684,7 +1684,7 @@ Centralised optimistic-update handlers for task mutations used across ProjectBoa
 | --- | --- | --- |
 | `handlePriorityChange` | `(priority: TaskPriority) => Promise<void>` | Update priority with optimistic rollback. |
 | `handleAssigneeChange` | `(assigneeId: string \| null, assigneeName?: string) => Promise<void>` | Update assignee with optimistic rollback. |
-| `handleMoveToGroup` | `(targetGroupId: string) => Promise<void>` | Move task between groups (no-op if same group). Optimistically sets `completed` based on the target group's `isCompletionGroup` flag. |
+| `handleMoveToGroup` | `(targetGroupId: string) => Promise<void>` | Move task between groups (no-op if same group). Optimistically sets `completed` based on the target group's `isCompletionGroup` flag. Moving a recurring task out of a completion group can delete its next occurrence server-side; `removedRecurringTaskId` on the response is passed to `removeTask`. |
 | `handleDueDateChange` | `(date: string \| null) => Promise<void>` | Update due date with optimistic rollback. |
 | `handleDeleteConfirm` | `() => Promise<void>` | Delete task and remove from context. Invalidates task detail and workspace dashboard queries. |
 | `deleting` | `boolean` | Whether a delete request is currently in flight. |
@@ -1765,7 +1765,7 @@ Encapsulates task-level actions (complete/uncomplete, duplicate, delete) and the
 | `onDeleteSuccess` | `() => void` | Called after successful deletion (Dialog closes; Panel clears URL param). |
 | `updateTaskInContext` | `(taskId: string, updates: Partial<Task>) => void` | Optional: update task in board context (Panel has ProjectContext, Dialog doesn't). |
 | `addTaskToContext` | `(task: Task) => void` | Optional: add task to board context (for duplicate or recurring task creation). |
-| `removeTaskFromContext` | `(taskId: string) => void` | Optional: remove task from board context on delete. |
+| `removeTaskFromContext` | `(taskId: string) => void` | Optional: remove task from board context on delete, or when reopening a recurring task removes its next occurrence. |
 | `refetchTasks` | `() => void` | Optional: refetch the project task list after duplication. |
 
 ### Return Value
@@ -1774,7 +1774,7 @@ Encapsulates task-level actions (complete/uncomplete, duplicate, delete) and the
 | --- | --- | --- |
 | `showDeleteDialog` | `boolean` | Delete confirmation dialog open state. |
 | `setShowDeleteDialog` | `(open: boolean) => void` | Control the delete confirmation dialog. |
-| `handleToggleComplete` | `() => Promise<void>` | Toggle task completion with optimistic update. Also handles recurring-task next-occurrence creation. |
+| `handleToggleComplete` | `() => Promise<void>` | Toggle task completion with optimistic update. Adds the next occurrence a completion spawns (`nextRecurringTask`) and drops the one a reopen deletes (`removedRecurringTaskId`), toasting each. |
 | `handleDuplicateTask` | `() => Promise<void>` | Duplicate the task and add to context/refetch. |
 | `handleDeleteTask` | `() => Promise<void>` | Delete the task, cancel in-flight queries, remove from context. |
 | `isDeleting` | `boolean` | Whether a delete request is in flight. |

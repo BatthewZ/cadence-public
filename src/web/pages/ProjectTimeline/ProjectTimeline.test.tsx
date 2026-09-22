@@ -523,6 +523,32 @@ describe("ProjectTimeline", () => {
         expect(mockPost).toHaveBeenCalledWith("/api/tasks/t-1/uncomplete", {});
       });
     });
+
+    it("drops the next occurrence the server deleted when a recurring task is reopened", async () => {
+      mockCompletedFilter = true;
+      const user = userEvent.setup();
+      const tasks = [
+        makeTask({ id: "t-1", title: "Weekly review", dueDate: daysFromNow(0), completed: true }),
+        makeTask({ id: "t-2", title: "Weekly review (next)", dueDate: daysFromNow(7) }),
+      ];
+      setupProjectMock(tasks);
+      const { removeTask } = mockUseProject() as { removeTask: ReturnType<typeof vi.fn> };
+
+      mockPost.mockResolvedValueOnce({
+        task: { ...tasks[0], completed: false },
+        removedRecurringTaskId: "t-2",
+      });
+
+      renderTimeline();
+
+      await user.click(
+        screen.getByRole("checkbox", { name: /Mark "Weekly review" as incomplete/ }),
+      );
+
+      await waitFor(() => {
+        expect(removeTask).toHaveBeenCalledWith("t-2");
+      });
+    });
   });
 
   // -----------------------------------------------------------------------

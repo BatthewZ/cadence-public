@@ -114,6 +114,21 @@ export interface Task {
   recurrenceSeriesId?: string | null;
 }
 
+/**
+ * Shape returned by `POST /api/tasks/:id/complete`, `/uncomplete`, and
+ * `PATCH /api/tasks/:id/move` — a move in or out of a completion group carries
+ * the same recurrence side-effects. A recurring series moves in one direction
+ * per call, so at most one of the two recurrence fields is ever populated.
+ *
+ * `removedRecurringTaskId` names a task the server has DELETED: every caller
+ * must drop it from the context, or the board keeps a card whose task 404s.
+ */
+export interface TaskCompletionResponse {
+  task: Task;
+  nextRecurringTask?: Task | null;
+  removedRecurringTaskId?: string | null;
+}
+
 export interface ProjectContextValue {
   project: Project;
   members: ProjectMember[];
@@ -239,6 +254,9 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
       queryKeys.projects.tasks(projectId),
       (old: { tasks: Task[] } | undefined) => {
         if (!old) return { tasks: [task] };
+        if (old.tasks.some((t) => t.id === task.id)) {
+          return { tasks: old.tasks.map((t) => (t.id === task.id ? task : t)) };
+        }
         return { tasks: [...old.tasks, task] };
       },
     );

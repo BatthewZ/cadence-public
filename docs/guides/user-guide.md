@@ -196,6 +196,8 @@ When a recurring task is completed (via checkbox, Mark complete, or drag to a co
 
 The new instance appears on the board in the same column as the original task (before it was moved to completion). If the computed next due date falls past the rule's end date, no new instance is created.
 
+**Undoing a completion:** Reopening a recurring task (unchecking it, clicking **Completed**, or dragging it out of the completion column) removes the instance its completion created, as long as nobody has changed that instance yet. If the instance has been edited, commented on or completed, it is kept, and completing the original again won't create another one.
+
 **Recurrence indicator:**
 
 Tasks with a recurrence rule display a repeat icon (↻) on their card in the Board and Timeline views.

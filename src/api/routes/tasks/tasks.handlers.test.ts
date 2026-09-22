@@ -1823,6 +1823,144 @@ describe("uncompleteTask", () => {
 });
 
 // =========================================================================
+// Undoing a recurring completion
+// =========================================================================
+
+describe("un-completing a recurring task", () => {
+  const WEBHOOK_URL = "https://hooks.example.com/recurring-undo";
+  let webhookId: string;
+  let fetchSpy: ReturnType<typeof installFetchSpy>;
+
+  beforeEach(async () => {
+    webhookId = crypto.randomUUID();
+    await seedWebhook(d1, workspaceId, {
+      id: webhookId,
+      url: WEBHOOK_URL,
+      events: JSON.stringify(["task.created", "task.deleted"]),
+    });
+    fetchSpy = installFetchSpy();
+  });
+
+  afterEach(async () => {
+    fetchSpy.restore();
+    // A surviving webhook row would fire real `fetch` calls from later tests.
+    await d1.prepare("DELETE FROM webhook WHERE id = ?").bind(webhookId).run();
+  });
+
+  const app = () => {
+    const a = new Hono<AppEnv>();
+    const withProject = fakeAuth(d1, TEST_USER, {
+      workspaceMembership: { id: "wm-1", role: "owner" },
+      currentProject: { id: projectId, workspaceId },
+    });
+    a.post("/tasks/:taskId/complete", withProject, completeTask);
+    a.post("/tasks/:taskId/uncomplete", withProject, uncompleteTask);
+    a.patch("/tasks/:taskId/move", withProject, validateBody(moveTaskSchema), moveTask);
+    return a;
+  };
+
+  async function call<T>(method: "POST" | "PATCH", path: string, body?: unknown): Promise<T> {
+    const exec = createAwaitableExecutionCtx();
+    const res = await app().request(path, jsonRequest(method, path, body), {}, exec.ctx);
+    expect(res.status).toBe(200);
+    const json = await res.json<T>();
+    await exec.flush();
+    return json;
+  }
+
+  type CompleteBody = { nextRecurringTask: { id: string } | null };
+  type UncompleteBody = { removedRecurringTaskId: string | null };
+
+  const complete = (id: string) => call<CompleteBody>("POST", `/tasks/${id}/complete`);
+  const uncomplete = (id: string) => call<UncompleteBody>("POST", `/tasks/${id}/uncomplete`);
+
+  const deliveredEvents = () =>
+    fetchSpy.calls
+      .filter(([url]) => url === WEBHOOK_URL)
+      .map(([, init]) => (JSON.parse((init as RequestInit).body as string) as { event: string; data: { id: string } }));
+
+  async function weeklyTaskDueSep20(): Promise<string> {
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Weekly review",
+      dueDate: new Date("2030-09-20"),
+    });
+    await makeRecurring(taskId);
+    return taskId;
+  }
+
+  async function taskExists(id: string): Promise<boolean> {
+    return (await d1.prepare("SELECT id FROM task WHERE id = ?").bind(id).first()) !== null;
+  }
+
+  it("removes the untouched next occurrence, so re-completing spawns exactly one", async () => {
+    const taskId = await weeklyTaskDueSep20();
+
+    const first = await complete(taskId);
+    const spawnedId = first.nextRecurringTask!.id;
+
+    const undo = await uncomplete(taskId);
+    expect(undo.removedRecurringTaskId).toBe(spawnedId);
+    expect(await taskExists(spawnedId)).toBe(false);
+    expect(await recurringChildrenOf(taskId)).toHaveLength(0);
+
+    const second = await complete(taskId);
+    expect(second.nextRecurringTask).not.toBeNull();
+    expect(second.nextRecurringTask!.id).not.toBe(spawnedId);
+    expect(await recurringChildrenOf(taskId)).toEqual([{ id: second.nextRecurringTask!.id }]);
+
+    expect(deliveredEvents().map((e) => [e.event, e.data.id])).toEqual([
+      ["task.created", spawnedId],
+      ["task.deleted", spawnedId],
+      ["task.created", second.nextRecurringTask!.id],
+    ]);
+  });
+
+  it("keeps a next occurrence someone has edited, and does not re-announce it on re-completion", async () => {
+    const taskId = await weeklyTaskDueSep20();
+    const spawnedId = (await complete(taskId)).nextRecurringTask!.id;
+    await d1
+      .prepare("UPDATE task SET title = 'Weekly review (agenda added)', updatedAt = updatedAt + 60 WHERE id = ?")
+      .bind(spawnedId)
+      .run();
+
+    expect((await uncomplete(taskId)).removedRecurringTaskId).toBeNull();
+    expect(await taskExists(spawnedId)).toBe(true);
+
+    expect((await complete(taskId)).nextRecurringTask).toBeNull();
+    expect(await recurringChildrenOf(taskId)).toEqual([{ id: spawnedId }]);
+    expect(deliveredEvents().map((e) => e.event)).toEqual(["task.created"]);
+  });
+
+  it("keeps a next occurrence that has itself been completed", async () => {
+    const taskId = await weeklyTaskDueSep20();
+    const spawnedId = (await complete(taskId)).nextRecurringTask!.id;
+    await d1.prepare("UPDATE task SET completed = 1 WHERE id = ?").bind(spawnedId).run();
+
+    expect((await uncomplete(taskId)).removedRecurringTaskId).toBeNull();
+    expect(await taskExists(spawnedId)).toBe(true);
+  });
+
+  it("removes the untouched next occurrence when the task is dragged out of the completion group", async () => {
+    const taskId = await weeklyTaskDueSep20();
+    const spawnedId = (await complete(taskId)).nextRecurringTask!.id;
+
+    const moved = await call<{ removedRecurringTaskId: string | null }>(
+      "PATCH",
+      `/tasks/${taskId}/move`,
+      { taskGroupId, position: `a0${crypto.randomUUID()}` },
+    );
+    expect(moved.removedRecurringTaskId).toBe(spawnedId);
+    expect(await taskExists(spawnedId)).toBe(false);
+  });
+
+  it("reports nothing removed for a non-recurring task", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, { title: "One-off" });
+    await complete(taskId);
+    expect((await uncomplete(taskId)).removedRecurringTaskId).toBeNull();
+  });
+});
+
+// =========================================================================
 // createSubtask
 // =========================================================================
 

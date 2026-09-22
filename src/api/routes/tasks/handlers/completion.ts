@@ -11,7 +11,7 @@ import { createNotification } from "../../../lib/notifications";
 import { requireParam } from "../../../lib/params";
 import { retryOnPositionConflict } from "../../../lib/position-conflict";
 import { buildTaskEventData, dispatchWebhook, resolveRecurringTaskEnrichment, resolveTaskEnrichment } from "../../../lib/webhook-payloads";
-import { logRecurringInstanceCreated, spawnNextRecurringInstance } from "../helpers/spawn-recurring-instance";
+import { logRecurringInstanceCreated, removeUntouchedRecurringInstance, type SpawnedTaskData, spawnNextRecurringInstance } from "../helpers/spawn-recurring-instance";
 import { type ActivityEntry, logActivityBatch } from "../log-activity";
 
 // ---------------------------------------------------------------------------
@@ -96,10 +96,10 @@ export async function completeTask(c: Context<AppEnv>) {
 
   // Spawn next recurring instance if applicable.
   // Uses pre-completion taskGroupId so the new instance goes to the original group.
-  let nextRecurringTask: import("../helpers/spawn-recurring-instance").SpawnedTaskData | null = null;
+  let nextRecurringTask: SpawnedTaskData | null = null;
   if (foundTask.recurrenceRule) {
     const result = await spawnNextRecurringInstance(db, foundTask, now, foundTask.taskGroupId);
-    nextRecurringTask = result.nextRecurringTask;
+    if (result.created) nextRecurringTask = result.nextRecurringTask;
   }
 
   // Defer activity logging + notifications — runs after response is sent
@@ -284,6 +284,8 @@ export async function uncompleteTask(c: Context<AppEnv>) {
         .where(eq(task.id, taskId))
         .returning();
 
+  const removedRecurringTaskId = await removeUntouchedRecurringInstance(c, taskId);
+
   // Defer activity logging — runs after response is sent
   {
     const capturedMoveFrom = moveFromName;
@@ -319,5 +321,5 @@ export async function uncompleteTask(c: Context<AppEnv>) {
     { event: "task.uncompleted", data: buildTaskEventData(updated, uncompletedEnrichment) },
   ]);
 
-  return c.json({ task: updated });
+  return c.json({ task: updated, removedRecurringTaskId });
 }

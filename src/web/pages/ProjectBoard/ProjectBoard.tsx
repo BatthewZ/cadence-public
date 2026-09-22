@@ -23,7 +23,7 @@ import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import { BulkActionBar } from "@/web/components/ui/BulkActionBar";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { useToast } from "@/web/components/ui/ToastContext";
-import { type Task, useProject } from "@/web/contexts/ProjectContext";
+import { type Task, type TaskCompletionResponse, useProject } from "@/web/contexts/ProjectContext";
 import { useDndSensors } from "@/web/hooks/use-dnd-sensors";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useMultiSelect } from "@/web/hooks/use-multi-select";
@@ -61,6 +61,7 @@ export default function ProjectBoard() {
     refetchTasks,
     refetchTaskGroups,
     updateTask: ctxUpdateTask,
+    removeTask: ctxRemoveTask,
     updateTaskGroup: ctxUpdateTaskGroup,
   } = useProject();
   useDocumentTitle(`${project.name} — Board`);
@@ -266,12 +267,15 @@ export default function ProjectBoard() {
         });
 
         try {
-          const res = await api.patch<{ task: Task }>(`/api/tasks/${activeParsed.id}/move`, {
+          const res = await api.patch<TaskCompletionResponse>(`/api/tasks/${activeParsed.id}/move`, {
             taskGroupId: targetGroupId,
             position: newPosition,
           });
           // Apply full server state (includes completedAt, completedBy)
           ctxUpdateTask(activeParsed.id, res.task);
+          if (res.removedRecurringTaskId) {
+            ctxRemoveTask(res.removedRecurringTaskId);
+          }
           void qcBoard.invalidateQueries({ queryKey: queryKeys.tasks.detail(activeParsed.id) });
           void qcBoard.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
         } catch {
@@ -285,7 +289,7 @@ export default function ProjectBoard() {
         }
       }
     },
-    [sortedGroups, tasks, toast, ctxUpdateTask, ctxUpdateTaskGroup, qcBoard, project.id]
+    [sortedGroups, tasks, toast, ctxUpdateTask, ctxRemoveTask, ctxUpdateTaskGroup, qcBoard, project.id]
   );
 
   // --- Render overlay ---

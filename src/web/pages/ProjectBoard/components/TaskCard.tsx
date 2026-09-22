@@ -28,7 +28,7 @@ import { IconDisplay } from "@/web/components/ui/IconDisplay";
 import { TaskContextMenuItems } from "@/web/components/ui/TaskContextMenuItems";
 import { Text } from "@/web/components/ui/Text";
 import { useToast } from "@/web/components/ui/ToastContext";
-import { type Task, useProject } from "@/web/contexts/ProjectContext";
+import { type Task, type TaskCompletionResponse, useProject } from "@/web/contexts/ProjectContext";
 import { useTaskActions } from "@/web/hooks/use-task-actions";
 import { useTaskFilterControls } from "@/web/hooks/use-task-filters";
 import { api } from "@/web/lib/api/client";
@@ -224,11 +224,14 @@ export function SortableTaskCard({
       const endpoint = checked
         ? `/api/tasks/${task.id}/complete`
         : `/api/tasks/${task.id}/uncomplete`;
-      const res = await api.post<{ task: Task; nextRecurringTask?: Task }>(endpoint, {});
+      const res = await api.post<TaskCompletionResponse>(endpoint, {});
       // Apply the full server response (includes new taskGroupId, position)
       ctxUpdateTask(task.id, res.task);
       if (res.nextRecurringTask) {
         addTask(res.nextRecurringTask);
+      }
+      if (res.removedRecurringTaskId) {
+        ctxRemoveTask(res.removedRecurringTaskId);
       }
       void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(task.id) });
       void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });

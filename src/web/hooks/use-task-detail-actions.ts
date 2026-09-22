@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
-import type { Task } from "@/web/contexts/ProjectContext";
+import type { Task, TaskCompletionResponse } from "@/web/contexts/ProjectContext";
 import { api } from "@/web/lib/api/client";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import { queryKeys } from "@/web/lib/query-keys";
@@ -69,12 +69,16 @@ export function useTaskDetailActions({
       ? `/api/tasks/${taskId}/uncomplete`
       : `/api/tasks/${taskId}/complete`;
     try {
-      const res = await api.post<{ task: Task; nextRecurringTask?: Task }>(endpoint, {});
+      const res = await api.post<TaskCompletionResponse>(endpoint, {});
       setLocalTask((prev) => (prev ? { ...prev, ...res.task } : prev));
       updateTaskInContext?.(taskId, res.task);
       if (res.nextRecurringTask) {
         addTaskToContext?.(res.nextRecurringTask);
         toast("Next occurrence created", { variant: "success" });
+      }
+      if (res.removedRecurringTaskId) {
+        removeTaskFromContext?.(res.removedRecurringTaskId);
+        toast("Next occurrence removed", { variant: "info" });
       }
       void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
       void qc.invalidateQueries({ queryKey: queryKeys.tasks.activity(taskId) });
@@ -95,6 +99,7 @@ export function useTaskDetailActions({
     setLocalTask,
     updateTaskInContext,
     addTaskToContext,
+    removeTaskFromContext,
     taskId,
     projectId,
     workspaceId,

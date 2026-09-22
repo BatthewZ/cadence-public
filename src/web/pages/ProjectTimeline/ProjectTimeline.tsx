@@ -20,7 +20,7 @@ import {
 import { BulkActionBar } from "@/web/components/ui/BulkActionBar";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { useToast } from "@/web/components/ui/ToastContext";
-import { type Task, useProject } from "@/web/contexts/ProjectContext";
+import { type TaskCompletionResponse, useProject } from "@/web/contexts/ProjectContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useMultiSelect } from "@/web/hooks/use-multi-select";
 import { useProjectPermissions } from "@/web/hooks/use-permissions";
@@ -39,7 +39,7 @@ import { TimelineTaskRow } from "./components/TimelineTaskRow";
 /* ------------------------------------------------------------------ */
 
 export default function ProjectTimeline() {
-  const { project, tasks, updateTask, members, taskGroups, tasksError, refetchTasks } = useProject();
+  const { project, tasks, updateTask, removeTask, members, taskGroups, tasksError, refetchTasks } = useProject();
   // ProjectContext's type says `project: Project`, but the underlying React
   // Query fetch can transiently produce a null project (see the `!project`
   // spinner guard below and the loading-state test). Fall back to a bare
@@ -111,8 +111,11 @@ export default function ProjectTimeline() {
         ? `/api/tasks/${taskId}/uncomplete`
         : `/api/tasks/${taskId}/complete`;
       try {
-        const res = await api.post<{ task: Task }>(endpoint, {});
+        const res = await api.post<TaskCompletionResponse>(endpoint, {});
         updateTask(taskId, res.task);
+        if (res.removedRecurringTaskId) {
+          removeTask(res.removedRecurringTaskId);
+        }
         if (project) {
           void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
           void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(project.workspaceId) });
@@ -123,7 +126,7 @@ export default function ProjectTimeline() {
         toast("Failed to update task", { variant: "error" });
       }
     },
-    [updateTask, toast, qc, project],
+    [updateTask, removeTask, toast, qc, project],
   );
 
   if (!project) {

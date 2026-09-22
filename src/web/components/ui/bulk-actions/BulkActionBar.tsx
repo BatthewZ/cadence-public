@@ -7,7 +7,7 @@ import {
 import { useState } from "react";
 
 import type { TaskPriority } from "@/shared/types/roles";
-import type { Task } from "@/web/contexts/ProjectContext";
+import type { Task, TaskCompletionResponse } from "@/web/contexts/ProjectContext";
 import { useProject } from "@/web/contexts/ProjectContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { api } from "@/web/lib/api/client";
@@ -147,11 +147,14 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
     try {
       await Promise.all(
         selectedTasks.map((t) =>
-          api.patch<{ task: Task }>(`/api/tasks/${t.id}/move`, {
+          api.patch<TaskCompletionResponse>(`/api/tasks/${t.id}/move`, {
             taskGroupId: targetGroupId,
             position: t.position,
           }).then((res) => {
             ctxUpdateTask(t.id, res.task);
+            if (res.removedRecurringTaskId) {
+              ctxRemoveTask(res.removedRecurringTaskId);
+            }
           })
         )
       );

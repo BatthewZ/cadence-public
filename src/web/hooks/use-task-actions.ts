@@ -3,7 +3,7 @@ import { useState } from "react";
 
 import type { TaskPriority } from "@/shared/types/roles";
 import { useToast } from "@/web/components/ui/ToastContext";
-import type { Task, TaskGroup } from "@/web/contexts/ProjectContext";
+import type { Task, TaskCompletionResponse, TaskGroup } from "@/web/contexts/ProjectContext";
 import { api } from "@/web/lib/api/client";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import { queryKeys } from "@/web/lib/query-keys";
@@ -110,8 +110,11 @@ export function useTaskActions({
       if (oldPosition != null) {
         movePayload.position = oldPosition;
       }
-      const res = await api.patch<{ task: Task }>(`/api/tasks/${task.id}/move`, movePayload);
+      const res = await api.patch<TaskCompletionResponse>(`/api/tasks/${task.id}/move`, movePayload);
       updateTask(task.id, res.task);
+      if (res.removedRecurringTaskId) {
+        removeTask(res.removedRecurringTaskId);
+      }
       invalidateTask();
     } catch {
       const revert: Partial<Task> = {

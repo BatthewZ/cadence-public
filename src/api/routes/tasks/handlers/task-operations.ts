@@ -14,7 +14,7 @@ import { retryOnPositionConflict } from "../../../lib/position-conflict";
 import { validJson } from "../../../lib/validated";
 import { buildTaskEventData, dispatchWebhook, resolveRecurringTaskEnrichment, resolveTaskEnrichment, resolveTaskGroup } from "../../../lib/webhook-payloads";
 import { copyTaskRelations } from "../helpers/copy-task-relations";
-import { logRecurringInstanceCreated, spawnNextRecurringInstance } from "../helpers/spawn-recurring-instance";
+import { logRecurringInstanceCreated, removeUntouchedRecurringInstance, type SpawnedTaskData, spawnNextRecurringInstance } from "../helpers/spawn-recurring-instance";
 import { type ActivityEntry, logActivity, logActivityBatch } from "../log-activity";
 
 export async function moveTask(c: Context<AppEnv>) {
@@ -42,17 +42,20 @@ export async function moveTask(c: Context<AppEnv>) {
   const now = new Date();
 
   // Determine completion state based on target group
+  const isCompleting = targetGroup.isCompletionGroup && !foundTask.completed;
+  const isReopening = !targetGroup.isCompletionGroup && foundTask.completed;
+
   const updateData: Record<string, unknown> = {
     taskGroupId: body.taskGroupId,
     position: body.position,
     updatedAt: now,
   };
 
-  if (targetGroup.isCompletionGroup && !foundTask.completed) {
+  if (isCompleting) {
     updateData.completed = true;
     updateData.completedAt = now;
     updateData.completedBy = user.id;
-  } else if (!targetGroup.isCompletionGroup && foundTask.completed) {
+  } else if (isReopening) {
     updateData.completed = false;
     updateData.completedAt = null;
     updateData.completedBy = null;
@@ -66,11 +69,14 @@ export async function moveTask(c: Context<AppEnv>) {
 
   // Spawn next recurring instance when auto-completing via move to done column.
   // Uses pre-completion taskGroupId so the new instance goes to the original group.
-  let nextRecurringTask: import("../helpers/spawn-recurring-instance").SpawnedTaskData | null = null;
-  if (targetGroup.isCompletionGroup && !foundTask.completed && foundTask.recurrenceRule) {
+  let nextRecurringTask: SpawnedTaskData | null = null;
+  if (isCompleting && foundTask.recurrenceRule) {
     const result = await spawnNextRecurringInstance(db, foundTask, now, foundTask.taskGroupId);
-    nextRecurringTask = result.nextRecurringTask;
+    if (result.created) nextRecurringTask = result.nextRecurringTask;
   }
+  const removedRecurringTaskId = isReopening
+    ? await removeUntouchedRecurringInstance(c, taskId)
+    : null;
 
   // Defer activity logging — runs after the response is sent
   const movedBetweenGroups = foundTask.taskGroupId !== body.taskGroupId;
@@ -78,8 +84,6 @@ export async function moveTask(c: Context<AppEnv>) {
   if (movedBetweenGroups) {
     const targetGroupName = targetGroup.name;
     const oldTaskGroupId = foundTask.taskGroupId;
-    const wasCompleted = foundTask.completed;
-    const isCompletionTarget = targetGroup.isCompletionGroup;
     const capturedNextRecurringTask = nextRecurringTask;
     const taskTitle = foundTask.title;
     const projectId = foundTask.projectId;
@@ -103,14 +107,14 @@ export async function moveTask(c: Context<AppEnv>) {
         },
       ];
 
-      if (isCompletionTarget && !wasCompleted) {
+      if (isCompleting) {
         activities.push({
           taskId,
           actorId: user.id,
           action: "completed",
           apiTokenId: moveApiTokenId,
         });
-      } else if (!isCompletionTarget && wasCompleted) {
+      } else if (isReopening) {
         activities.push({
           taskId,
           actorId: user.id,
@@ -170,7 +174,7 @@ export async function moveTask(c: Context<AppEnv>) {
     const moveEvents: Parameters<typeof dispatchWebhook>[2] = [
       { event: "task.moved", data: moveData, changes: moveChanges },
     ];
-    if (targetGroup.isCompletionGroup && !foundTask.completed) {
+    if (isCompleting) {
       moveEvents.push({ event: "task.completed", data: moveData });
     }
     dispatchWebhook(c, foundTask.projectId, moveEvents);
@@ -184,7 +188,7 @@ export async function moveTask(c: Context<AppEnv>) {
     ]);
   }
 
-  return c.json({ task: updated, nextRecurringTask });
+  return c.json({ task: updated, nextRecurringTask, removedRecurringTaskId });
 }
 
 // ---------------------------------------------------------------------------

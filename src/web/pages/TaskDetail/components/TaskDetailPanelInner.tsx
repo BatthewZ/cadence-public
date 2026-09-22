@@ -23,7 +23,7 @@ import { Popover } from "@/web/components/ui/Popover";
 import { Skeleton } from "@/web/components/ui/Skeleton";
 import { Text } from "@/web/components/ui/Text";
 import type { ToastAction } from "@/web/components/ui/Toast";
-import type { Subtask, Task } from "@/web/contexts/ProjectContext";
+import type { Subtask, TaskCompletionResponse } from "@/web/contexts/ProjectContext";
 import { useProject } from "@/web/contexts/ProjectContext";
 import type { WorkspaceMember } from "@/web/contexts/WorkspaceContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
@@ -453,7 +453,7 @@ export function TaskDetailPanelInner({
                     updateTaskInContext(taskId, { taskGroupId: newGroupId });
                     void (async () => {
                       try {
-                        const res = await api.patch<{ task: Task }>(
+                        const res = await api.patch<TaskCompletionResponse>(
                           `/api/tasks/${taskId}/move`,
                           {
                             taskGroupId: newGroupId,
@@ -462,6 +462,9 @@ export function TaskDetailPanelInner({
                         );
                         setLocalTask((prev) => (prev ? { ...prev, ...res.task } : prev));
                         updateTaskInContext(taskId, res.task);
+                        if (res.removedRecurringTaskId) {
+                          removeTaskFromContext(res.removedRecurringTaskId);
+                        }
                       } catch {
                         setLocalTask((prev) =>
                           prev ? { ...prev, taskGroupId: oldGroupId } : prev

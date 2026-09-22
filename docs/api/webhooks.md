@@ -26,7 +26,7 @@ There are 24 event types organized into four domains. Each webhook subscription 
 | `task.updated`         | One or more task fields are modified                           |       Yes       |
 | `task.completed`       | A task is marked as complete (or moved to a completion column) |       No        |
 | `task.uncompleted`     | A completed task is re-opened                                  |       No        |
-| `task.deleted`         | A task is permanently deleted                                  |       No        |
+| `task.deleted`         | A task is permanently deleted — by an explicit delete, or when reopening a recurring task removes the untouched next occurrence its completion spawned |       No        |
 | `task.assigned`        | A task is assigned to a user (fires alongside `task.updated`)  |       Yes       |
 | `task.unassigned`      | A task's assignee is removed (fires alongside `task.updated`)  |       Yes       |
 | `task.moved`           | A task is moved between groups/columns (fires alongside `task.updated`) |       Yes       |

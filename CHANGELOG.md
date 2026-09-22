@@ -4,6 +4,13 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.34.0] - 2026-09-22
+
+### Fixed
+
+- **Reopening a recurring task now undoes the next occurrence its completion created** ([cadence-public#1](https://github.com/BatthewZ/cadence-public/issues/1)). Completing a recurring task by mistake and then reopening it used to leave the spawned next occurrence on the board, so fixing a mis-click left clutter behind. Reopening a task — unchecking it, clicking **Completed**, or dragging it out of the completion column — now deletes that occurrence, but only while nobody has touched it: once it has been edited, commented on, given subtasks, labels or attachments, or completed, it is kept. `POST /api/tasks/:taskId/uncomplete` and `PATCH /api/tasks/:taskId/move` return the removed occurrence's id as `removedRecurringTaskId`, and a `task.deleted` webhook is dispatched for it.
+- **Completing a task again no longer shows its next occurrence twice.** When a next occurrence already existed, completing the task again returned that existing occurrence as though it were new, and the board added a second card with the same id every time. Deleting one of those copies deleted the real task, which is why the duplicates all disappeared on reload. A completion now reports an occurrence, and dispatches `task.created`, only when it actually created one, and the board never shows the same task twice.
+
 ## [1.33.0] - 2026-08-16
 
 ### Security

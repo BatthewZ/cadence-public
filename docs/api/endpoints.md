@@ -1592,18 +1592,19 @@ Moves a task to a different task group and/or position (drag-and-drop). The targ
 | `taskGroupId` | `string` | UUID, must be in the same project | Yes |
 | `position` | `string` | non-empty fractional index | Yes |
 
-**Recurring task behavior:** If the target group is a completion group and the task was not already completed and has a `recurrenceRule`, a new task instance is spawned (same logic as the `/complete` endpoint). A `task.created` webhook is dispatched for the spawned instance.
+**Recurring task behavior:** If the target group is a completion group and the task was not already completed and has a `recurrenceRule`, a new task instance is spawned (same logic as the `/complete` endpoint). A `task.created` webhook is dispatched for the spawned instance. Moving a completed task out of a completion group reopens it and undoes the spawn (same logic as the `/uncomplete` endpoint).
 
 **Response** (200):
 
 ```json
 {
   "task": { "id": "...", "taskGroupId": "...", "position": "...", "..." },
-  "nextRecurringTask": { "id": "...", "projectId": "...", "title": "...", "dueDate": "...", "..." } | null
+  "nextRecurringTask": { "id": "...", "projectId": "...", "title": "...", "dueDate": "...", "..." } | null,
+  "removedRecurringTaskId": "..." | null
 }
 ```
 
-`nextRecurringTask` is present when the move auto-completes a recurring task. It is `null` otherwise.
+`nextRecurringTask` is present when the move auto-completes a recurring task and a new instance was created. It is `null` otherwise. `removedRecurringTaskId` is set when the move reopens the task and removes its untouched next instance.
 
 ### `POST /api/tasks/:taskId/duplicate`
 
@@ -1877,13 +1878,15 @@ Marks a task as complete. If the project has a completion group, the task is aut
 }
 ```
 
-`nextRecurringTask` is present when the completed task had a `recurrenceRule` and the next due date falls within the rule's bounds. It is `null` otherwise.
+`nextRecurringTask` is present when the completed task had a `recurrenceRule`, the next due date falls within the rule's bounds, and this request created the instance. It is `null` otherwise — including when a next instance already exists (a concurrent completion won, or an earlier completion's instance was kept on reopen), in which case no `task.created` webhook is dispatched either.
 
 Returns 404 if the task is not found. Returns the task unchanged if already completed.
 
 ### `POST /api/tasks/:taskId/uncomplete`
 
 Marks a completed task as incomplete. If the task is in a completion group, it is automatically moved to the first non-completion group. Creates activity log entries.
+
+**Recurring task behavior:** Reopening undoes the completion's spawn: the next instance created when this task was completed is deleted if it is still untouched — not completed and never modified since it was spawned (any edit, comment, subtask, label, attachment or cover change counts). A `task.deleted` webhook is dispatched for the removed instance. A touched instance is kept, and completing the task again does not spawn a second one.
 
 **Auth:** Required.
 **Authorization:** Project admin or member (resolved via `requireTaskRole`).
@@ -1892,9 +1895,12 @@ Marks a completed task as incomplete. If the task is in a completion group, it i
 
 ```json
 {
-  "task": { "id": "...", "completed": false, "completedAt": null, "completedBy": null, "..." }
+  "task": { "id": "...", "completed": false, "completedAt": null, "completedBy": null, "..." },
+  "removedRecurringTaskId": "..." | null
 }
 ```
+
+`removedRecurringTaskId` is the id of the removed next instance, or `null` when nothing was removed.
 
 Returns 404 if the task is not found. Returns the task unchanged if already incomplete.
 

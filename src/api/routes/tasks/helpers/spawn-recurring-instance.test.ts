@@ -104,7 +104,7 @@ describe("spawnNextRecurringInstance", () => {
   it("spawns the next instance at the end of the group", async () => {
     // Control case: without it, a regression that makes every spawn throw would
     // still satisfy the two conflict tests below for the wrong reason.
-    const { nextRecurringTask } = await spawnNextRecurringInstance(
+    const { nextRecurringTask, created } = await spawnNextRecurringInstance(
       db,
       await loadTask(parentId),
       COMPLETION_DATE,
@@ -112,6 +112,7 @@ describe("spawnNextRecurringInstance", () => {
     );
 
     expect(nextRecurringTask).not.toBeNull();
+    expect(created).toBe(true);
     expect(nextRecurringTask?.recurrenceParentId).toBe(parentId);
 
     const rows = await db
@@ -135,7 +136,7 @@ describe("spawnNextRecurringInstance", () => {
       .bind(parentId, RULE, winnerId)
       .run();
 
-    const { nextRecurringTask } = await spawnNextRecurringInstance(
+    const { nextRecurringTask, created } = await spawnNextRecurringInstance(
       db,
       await loadTask(parentId),
       COMPLETION_DATE,
@@ -145,6 +146,8 @@ describe("spawnNextRecurringInstance", () => {
     // Adopted, not re-created and not swallowed. Returning null here would be
     // the silent failure: the caller reports success and the series ends.
     expect(nextRecurringTask?.id).toBe(winnerId);
+    // Callers announce (webhook, activity, response) only what they created.
+    expect(created).toBe(false);
 
     const rows = await db
       .select()

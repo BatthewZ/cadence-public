@@ -1,4 +1,5 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
+import type { Context } from "hono";
 
 import type { Database } from "../../../../db";
 import { task } from "../../../../db/schema/task";
@@ -8,12 +9,14 @@ import {
   computeNextStartDate,
   parseRecurrenceRule,
 } from "../../../../shared/lib/recurrence";
+import type { AppEnv } from "../../../env";
 import { retainAssignableAssignee } from "../../../lib/assignee-validation";
 import { createNotification } from "../../../lib/notifications";
 import {
   isUniqueConstraintViolation,
   retryOnPositionConflict,
 } from "../../../lib/position-conflict";
+import { buildTaskEventData, dispatchWebhook, resolveTaskEnrichment } from "../../../lib/webhook-payloads";
 import { logActivity } from "../log-activity";
 import { copyTaskRelations } from "./copy-task-relations";
 
@@ -36,6 +39,8 @@ export interface SpawnedTaskData extends Record<string, unknown> {
 
 interface SpawnResult {
   nextRecurringTask: SpawnedTaskData | null;
+  /** False when `nextRecurringTask` was adopted from an earlier spawn; callers must not announce it again. */
+  created: boolean;
 }
 
 /**
@@ -47,10 +52,10 @@ interface SpawnResult {
  * `recurrenceParentId`. The unique partial index on that column prevents
  * duplicate spawns when concurrent requests race to complete the same task.
  *
- * Returns the new task if one was spawned, or null if:
- * - The task has no recurrence rule
- * - The next occurrence would exceed the rule's endDate
- * - A next instance already exists (race condition guard via unique index)
+ * Returns null if the task has no recurrence rule or the next occurrence would
+ * exceed the rule's endDate. If a next instance already exists (concurrent
+ * completion, or a re-completion that kept a touched instance), that instance
+ * is returned with `created: false`.
  */
 export async function spawnNextRecurringInstance(
   db: Database,
@@ -60,7 +65,7 @@ export async function spawnNextRecurringInstance(
 ): Promise<SpawnResult> {
   // 1. Parse the recurrence rule
   const rule = parseRecurrenceRule(completedTask.recurrenceRule);
-  if (!rule) return { nextRecurringTask: null };
+  if (!rule) return { nextRecurringTask: null, created: false };
 
   // 2. Compute the next occurrence date.
   //
@@ -75,7 +80,7 @@ export async function spawnNextRecurringInstance(
   const anchor =
     completedTask.dueDate ?? completedTask.startDate ?? completionDate;
   const nextAnchor = computeNextDueDate(anchor, completionDate, rule);
-  if (!nextAnchor) return { nextRecurringTask: null }; // Past endDate
+  if (!nextAnchor) return { nextRecurringTask: null, created: false }; // Past endDate
 
   // Map the advanced anchor back onto start/due. For a start-only series the
   // anchor IS the start date; otherwise it is the due date, and any stored
@@ -208,6 +213,7 @@ export async function spawnNextRecurringInstance(
         ...attempt.row,
         recurrenceRule: parseRecurrenceRule(attempt.row.recurrenceRule),
       },
+      created: false,
     };
   }
 
@@ -227,7 +233,39 @@ export async function spawnNextRecurringInstance(
       commentCount: 0,
       labels,
     },
+    created: true,
   };
+}
+
+/**
+ * Undoes a completion's spawn on un-complete: deletes the instance spawned from
+ * `parentTaskId` when no one has touched it since, and dispatches `task.deleted`.
+ * Every user mutation bumps `updatedAt`, so `updatedAt = createdAt` is the
+ * untouched test; it runs inside the DELETE so a concurrent edit cannot slip
+ * between check and delete. Returns the removed instance's id.
+ */
+export async function removeUntouchedRecurringInstance(
+  c: Context<AppEnv>,
+  parentTaskId: string,
+): Promise<string | null> {
+  const db = c.get("db");
+  const [removed] = await db
+    .delete(task)
+    .where(
+      and(
+        eq(task.recurrenceParentId, parentTaskId),
+        eq(task.completed, false),
+        eq(task.updatedAt, task.createdAt),
+      ),
+    )
+    .returning();
+  if (!removed) return null;
+
+  const enrichment = await resolveTaskEnrichment(db, removed);
+  dispatchWebhook(c, removed.projectId, [
+    { event: "task.deleted", data: buildTaskEventData(removed, enrichment) },
+  ]);
+  return removed.id;
 }
 
 /**
