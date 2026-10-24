@@ -41,7 +41,7 @@ import { queryKeys } from "@/web/lib/query-keys";
 import { TASK_GROUP_COLORS } from "@/web/util/task-display";
 
 import { AddTaskInline } from "./AddTaskForm";
-import { COLUMN_TASK_LIMIT, groupIdStr, sortByPosition, taskIdStr } from "./dnd-helpers";
+import { columnTaskLimit, groupIdStr, sortByPosition, taskIdStr } from "./dnd-helpers";
 import { SortableTaskCard } from "./TaskCard";
 
 // ---------------------------------------------------------------------------
@@ -93,11 +93,12 @@ export function SortableColumn({
 
   const [expanded, setExpanded] = useState(false);
 
+  const taskLimit = columnTaskLimit(group);
   const sortedTasks = useMemo(() => sortByPosition(tasks), [tasks]);
-  const hiddenCount = sortedTasks.length - COLUMN_TASK_LIMIT;
+  const hiddenCount = sortedTasks.length - taskLimit;
   const visibleTasks = useMemo(
-    () => (expanded || hiddenCount <= 0 ? sortedTasks : sortedTasks.slice(0, COLUMN_TASK_LIMIT)),
-    [sortedTasks, expanded, hiddenCount]
+    () => (expanded || hiddenCount <= 0 ? sortedTasks : sortedTasks.slice(0, taskLimit)),
+    [sortedTasks, expanded, hiddenCount, taskLimit]
   );
   const visibleTaskIds = useMemo(() => visibleTasks.map((t) => taskIdStr(t.id)), [visibleTasks]);
 
@@ -435,12 +436,15 @@ export function SortableColumn({
               ))
             )}
           </SortableContext>
-          {!expanded && hiddenCount > 0 && (
+          {hiddenCount > 0 && (
             <button
-              onClick={() => setExpanded(true)}
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
               className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-body-3 text-fg-muted hover:text-accent hover:bg-accent-subtle rounded-md transition-all cursor-pointer"
             >
-              Show {hiddenCount} more task{hiddenCount !== 1 ? "s" : ""}
+              {expanded
+                ? "Show less"
+                : `Show ${hiddenCount} more task${hiddenCount !== 1 ? "s" : ""}`}
             </button>
           )}
           {canEditTasks && <AddTaskInline groupId={group.id} />}

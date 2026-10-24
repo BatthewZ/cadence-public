@@ -25,3 +25,10 @@ export function parseId(prefixedId: string): { type: "group" | "task"; id: strin
 
 /** Maximum number of task cards to render per column before showing a "Show more" button. */
 export const COLUMN_TASK_LIMIT = 30;
+
+/** Lower cap for done columns: they accumulate far more cards than any other column. */
+export const COMPLETION_COLUMN_TASK_LIMIT = 10;
+
+export function columnTaskLimit(group: Pick<TaskGroup, "isCompletionGroup">): number {
+  return group.isCompletionGroup ? COMPLETION_COLUMN_TASK_LIMIT : COLUMN_TASK_LIMIT;
+}

@@ -4,6 +4,14 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.35.0] - 2026-10-25
+
+### Changed
+
+- **The done column shows its 10 most recent tasks instead of 30.** Completed work piles up faster than anything else on a board, so the done column was always by far the longest. It now shows the 10 newest completions with a **Show N more tasks** button below them; other columns still show 30. The header badge still counts every task in the column.
+- **An expanded column can be collapsed again.** Once **Show N more tasks** is clicked, the button turns into **Show less**.
+- **Dropping a task onto the done column's header puts it at the top.** It used to go to the bottom, where it would now be hidden behind **Show more**. Ticking a task's checkbox already puts it at the top. Dropping onto a specific card still places the task right there, and other columns still put a header drop at the end.
+
 ## [1.34.0] - 2026-09-22
 
 ### Fixed

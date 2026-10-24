@@ -37,14 +37,14 @@ import { ColumnOverlay, SortableColumn } from "./components/BoardColumn";
 import { BoardSkeletonColumns } from "./components/BoardSkeleton";
 import {
   type ActiveItem,
-  COLUMN_TASK_LIMIT,
+  columnTaskLimit,
   groupIdStr,
   parseId,
   sortByPosition,
 } from "./components/dnd-helpers";
 import { TaskCardOverlay } from "./components/TaskCard";
 
-export { COLUMN_TASK_LIMIT } from "./components/dnd-helpers";
+export { COLUMN_TASK_LIMIT, COMPLETION_COLUMN_TASK_LIMIT } from "./components/dnd-helpers";
 
 // ---------------------------------------------------------------------------
 // Main Board
@@ -234,8 +234,9 @@ export default function ProjectBoard() {
         // for whether we're moving down (insert after the over item) or up (insert before).
         let dropIndex: number;
         if (overParsed.type === "group") {
-          // Dropped on column header — place at end
-          dropIndex = groupTasks.length;
+          // Done columns list newest-first, so a drop at the end would land behind "Show more".
+          const isCompletionTarget = sortedGroups.find((g) => g.id === targetGroupId)?.isCompletionGroup;
+          dropIndex = isCompletionTarget ? 0 : groupTasks.length;
         } else {
           const overIndex = groupTasks.findIndex((t) => t.id === overParsed.id);
           if (overIndex === -1) {
@@ -300,7 +301,7 @@ export default function ProjectBoard() {
       return <TaskCardOverlay task={activeItem.task} />;
     }
     const allGroupTasks = tasksByGroup[activeItem.group.id] ?? [];
-    const cappedTasks = sortByPosition(allGroupTasks).slice(0, COLUMN_TASK_LIMIT);
+    const cappedTasks = sortByPosition(allGroupTasks).slice(0, columnTaskLimit(activeItem.group));
     return <ColumnOverlay group={activeItem.group} tasks={cappedTasks} />;
   };
 

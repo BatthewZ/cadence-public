@@ -55,7 +55,7 @@ the command palette drops the **Create Project** action.
 
 Each project has five views, accessible from the tab bar:
 
-**Board** — Kanban columns representing task groups (statuses). Drag tasks between columns to change status. Drag columns to reorder them. To reorder a task *within* a column without dragging — handy on touch devices, where you press-and-hold to start a drag — open the task's actions menu (the three-dot icon) and choose **Move up** or **Move down**; these are disabled when the task is already at the top or bottom of its column.
+**Board** — Kanban columns representing task groups (statuses). Drag tasks between columns to change status. Drag columns to reorder them. To reorder a task *within* a column without dragging — handy on touch devices, where you press-and-hold to start a drag — open the task's actions menu (the three-dot icon) and choose **Move up** or **Move down**; these are disabled when the task is already at the top or bottom of its column. A column shows its first 30 tasks (the done column its first 10, newest first) with a **Show N more tasks** button below, which becomes **Show less** once expanded. Dropping a task onto the done column's header puts it at the top, where it stays visible; for the full history of completed tasks, use the **List** view with the **Status** filter set to *Completed only*.
 
 **List** — Sortable table with columns for title, status, assignee, due date, and priority. Includes search by task title.
 

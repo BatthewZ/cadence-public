@@ -8,7 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Task, TaskGroup } from "@/web/contexts/ProjectContext";
 import { api } from "@/web/lib/api/client";
 
-import ProjectBoard, { COLUMN_TASK_LIMIT } from "./ProjectBoard";
+import ProjectBoard, { COLUMN_TASK_LIMIT, COMPLETION_COLUMN_TASK_LIMIT } from "./ProjectBoard";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -72,8 +72,23 @@ vi.mock("@/web/lib/api/client", () => ({
 // Track items passed to each SortableContext so we can assert DnD integration
 const capturedSortableContextItems: string[][] = [];
 
+type CapturedDragEnd = (event: {
+  active: { id: string };
+  over: { id: string } | null;
+}) => void;
+let capturedOnDragEnd: CapturedDragEnd | null = null;
+
 vi.mock("@dnd-kit/core", () => ({
-  DndContext: ({ children }: { children: ReactNode }) => <>{children}</>,
+  DndContext: ({
+    children,
+    onDragEnd,
+  }: {
+    children: ReactNode;
+    onDragEnd: CapturedDragEnd;
+  }) => {
+    capturedOnDragEnd = onDragEnd;
+    return <>{children}</>;
+  },
   DragOverlay: () => null,
   KeyboardSensor: class {},
   MouseSensor: class {},
@@ -135,8 +150,9 @@ function makeGroup(
   id: string,
   name: string,
   position: string,
+  isCompletionGroup = false,
 ): TaskGroup {
-  return { id, name, isCompletionGroup: false, position };
+  return { id, name, isCompletionGroup, position };
 }
 
 function setupProjectMock(groups: TaskGroup[], tasks: Task[]) {
@@ -312,8 +328,84 @@ describe("Board column task cap", () => {
         expect(screen.getByText(`Task ${i}`)).toBeInTheDocument();
       }
 
-      // "Show more" button should disappear
       expect(screen.queryByText(/Show .* more task/)).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Show less" })).toHaveAttribute(
+        "aria-expanded",
+        "true",
+      );
+    });
+
+    it('collapses back to the cap when "Show less" is clicked', async () => {
+      const user = userEvent.setup();
+      const totalTasks = 45;
+      setupProjectMock([group], makeTasks(totalTasks, "g1"));
+      renderBoard();
+
+      await user.click(screen.getByText(/Show \d+ more tasks/));
+      await user.click(screen.getByRole("button", { name: "Show less" }));
+
+      expect(screen.queryByText(`Task ${totalTasks}`)).not.toBeInTheDocument();
+      expect(
+        screen.getByText(`Show ${totalTasks - COLUMN_TASK_LIMIT} more tasks`),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("done column", () => {
+    const doneGroup = makeGroup("g1", "Done", "a", true);
+
+    it("caps at COMPLETION_COLUMN_TASK_LIMIT, lower than ordinary columns", () => {
+      expect(COMPLETION_COLUMN_TASK_LIMIT).toBeLessThan(COLUMN_TASK_LIMIT);
+      const totalTasks = 25;
+      setupProjectMock([doneGroup], makeTasks(totalTasks, "g1"));
+      renderBoard();
+
+      expect(
+        screen.getByText(`Task ${COMPLETION_COLUMN_TASK_LIMIT}`),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText(`Task ${COMPLETION_COLUMN_TASK_LIMIT + 1}`),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.getByText(
+          `Show ${totalTasks - COMPLETION_COLUMN_TASK_LIMIT} more tasks`,
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("places a task dropped on the done column at the top so it stays visible", async () => {
+      const todo = makeGroup("g1", "To Do", "a");
+      const done = makeGroup("g2", "Done", "b", true);
+      const dropped = makeTask(1, "g1");
+      const doneTasks = Array.from({ length: 20 }, (_, i) => makeTask(100 + i, "g2"));
+      setupProjectMock([todo, done], [dropped, ...doneTasks]);
+      vi.mocked(api.patch).mockResolvedValue({ task: dropped });
+      renderBoard();
+
+      capturedOnDragEnd?.({ active: { id: "task-task-1" }, over: { id: "group-g2" } });
+
+      await waitFor(() => expect(api.patch).toHaveBeenCalled());
+      const [url, body] = vi.mocked(api.patch).mock.calls[0];
+      expect(url).toBe("/api/tasks/task-1/move");
+      const { taskGroupId, position } = body as { taskGroupId: string; position: string };
+      expect(taskGroupId).toBe("g2");
+      expect(position < doneTasks[0].position).toBe(true);
+    });
+
+    it("places a task dropped on an ordinary column at the end", async () => {
+      const todo = makeGroup("g1", "To Do", "a");
+      const doing = makeGroup("g2", "Doing", "b");
+      const dropped = makeTask(1, "g1");
+      const doingTasks = Array.from({ length: 5 }, (_, i) => makeTask(100 + i, "g2"));
+      setupProjectMock([todo, doing], [dropped, ...doingTasks]);
+      vi.mocked(api.patch).mockResolvedValue({ task: dropped });
+      renderBoard();
+
+      capturedOnDragEnd?.({ active: { id: "task-task-1" }, over: { id: "group-g2" } });
+
+      await waitFor(() => expect(api.patch).toHaveBeenCalled());
+      const { position } = vi.mocked(api.patch).mock.calls[0][1] as { position: string };
+      expect(position > doingTasks[doingTasks.length - 1].position).toBe(true);
     });
   });
 
