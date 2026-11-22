@@ -27,7 +27,7 @@ import { useProjectPermissions } from "@/web/hooks/use-permissions";
 import { useTaskFilters } from "@/web/hooks/use-task-filters";
 import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
-import { taskCompletionWrite } from "@/web/lib/task-writes";
+import { completionChange, completionFields, taskCompletionWrite } from "@/web/lib/task-writes";
 import { getPriorityBadgeVariant } from "@/web/util/task-display";
 
 import { GroupByDropdown } from "./components/GroupByDropdown";
@@ -106,9 +106,11 @@ export default function ProjectTimeline() {
 
   const handleToggleCompleted = useCallback(
     async (taskId: string, currentlyCompleted: boolean) => {
-      // Optimistic update
-      updateTask(taskId, { completed: !currentlyCompleted });
-      const title = tasks.find((t) => t.id === taskId)?.title ?? "task";
+      // Optimistic, including the move to (or out of) the completion group the server will make
+      const current = tasks.find((t) => t.id === taskId);
+      const before = current ? completionFields(current) : { completed: currentlyCompleted };
+      updateTask(taskId, completionChange(qc, project?.id, taskId, !currentlyCompleted));
+      const title = current?.title ?? "task";
       try {
         const result = await sendWrite<TaskCompletionResponse>(
           taskCompletionWrite({ id: taskId, title }, !currentlyCompleted),
@@ -125,7 +127,7 @@ export default function ProjectTimeline() {
         }
       } catch {
         // Revert on failure
-        updateTask(taskId, { completed: currentlyCompleted });
+        updateTask(taskId, before);
         toast("Failed to update task", { variant: "error" });
       }
     },

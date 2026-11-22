@@ -47,6 +47,13 @@ export function queuedCount(status: SyncStatus): number {
   return Math.max(0, status.pending - status.sending);
 }
 
+/**
+ * How long a write made online keeps its caller waiting for the server. Past it, the caller gets
+ * `queued` and the write carries on in the background like any queued one: on a network that is up
+ * but not answering (flaky Wi-Fi), "Saving…" would otherwise hold until the request gives up.
+ */
+export const ANSWER_DEADLINE_MS = 3_000;
+
 export const MAX_SERVER_ERROR_ATTEMPTS = 5;
 const MIN_BACKOFF_MS = 2_000;
 const MAX_BACKOFF_MS = 60_000;
@@ -71,6 +78,12 @@ export interface OutboxDeps {
   /** Cross-tab exclusive lock; the default uses Web Locks when the browser has them. */
   lock?: (name: string, run: () => Promise<void>) => Promise<void>;
   channel?: ChannelLike | null;
+  answerDeadlineMs?: number;
+}
+
+interface Waiter {
+  resolve: (answer: SendAnswer) => void;
+  deadline: ReturnType<typeof setTimeout>;
 }
 
 function defaultLock(name: string, run: () => Promise<void>): Promise<void> {
@@ -107,17 +120,21 @@ export class Outbox {
   private backoffMs = MIN_BACKOFF_MS;
   private uncommitted = 0;
   /** By idempotency key: callers of `send` awaiting that write's answer. */
-  private readonly waiters = new Map<string, (answer: SendAnswer) => void>();
+  private readonly waiters = new Map<string, Waiter>();
+  /** Awaited writes a drain has taken up to settle: no longer subject to the deadline, still `sending`. */
+  private claimed = 0;
   private stopped = false;
   private readonly channel: ChannelLike | null;
   private readonly fetchImpl: typeof fetch;
   private readonly now: () => number;
   private readonly lock: (name: string, run: () => Promise<void>) => Promise<void>;
+  private readonly answerDeadlineMs: number;
 
   constructor(private readonly deps: OutboxDeps) {
     this.fetchImpl = deps.fetch ?? ((...args) => fetch(...args));
     this.now = deps.now ?? Date.now;
     this.lock = deps.lock ?? defaultLock;
+    this.answerDeadlineMs = deps.answerDeadlineMs ?? ANSWER_DEADLINE_MS;
     this.channel = deps.channel === undefined ? defaultChannel(deps.userId) : deps.channel;
     this.status = {
       online: deps.isOnline(),
@@ -170,7 +187,7 @@ export class Outbox {
    */
   canSendNow(): boolean {
     if (!this.status.online || this.status.state === "blocked") return false;
-    return this.status.pending + this.uncommitted - this.waiters.size <= 0;
+    return this.status.pending + this.uncommitted - this.liveCount() <= 0;
   }
 
   async list(): Promise<QueuedWrite[]> {
@@ -197,14 +214,21 @@ export class Outbox {
    */
   async send(writes: NewWrite[], order: number): Promise<Promise<SendAnswer>[]> {
     const answers = writes.map(
-      ({ key }) => new Promise<SendAnswer>((resolve) => this.waiters.set(key, resolve)),
+      ({ key }) =>
+        new Promise<SendAnswer>((resolve) => {
+          const deadline = setTimeout(() => this.stopWaiting(key), this.answerDeadlineMs);
+          this.waiters.set(key, { resolve, deadline });
+        }),
     );
-    this.update({ sending: this.waiters.size });
+    this.update({ sending: this.liveCount() });
     try {
       await this.store(writes, order);
     } catch (error) {
-      for (const { key } of writes) this.waiters.delete(key);
-      this.update({ sending: this.waiters.size });
+      for (const { key } of writes) {
+        clearTimeout(this.waiters.get(key)?.deadline);
+        this.waiters.delete(key);
+      }
+      this.update({ sending: this.liveCount() });
       throw error;
     }
     this.kick();
@@ -407,28 +431,51 @@ export class Outbox {
     }
   }
 
+  private liveCount(): number {
+    return this.waiters.size + this.claimed;
+  }
+
   /**
-   * The caller awaiting `key`, if any. It stays counted in `sending` until answered, which every
-   * branch of `settle` does only after removing the write: answered first, the write would show
-   * as queued in the badge for the length of the IndexedDB delete.
+   * Claims the caller awaiting `key`, if any, for `settle`: past this point the deadline can't
+   * answer it `queued` while its real answer is in hand. It stays counted in `sending` until
+   * answered, which every branch of `settle` does only after removing the write: answered first,
+   * the write would show as queued in the badge for the length of the IndexedDB delete.
    */
   private takeWaiter(key: string): ((answer: SendAnswer) => void) | undefined {
-    const resolve = this.waiters.get(key);
-    if (!resolve) return undefined;
+    const waiter = this.waiters.get(key);
+    if (!waiter) return undefined;
+    clearTimeout(waiter.deadline);
+    this.waiters.delete(key);
+    this.claimed++;
+    let answered = false;
     return (answer) => {
-      if (this.waiters.get(key) !== resolve) return;
-      this.waiters.delete(key);
-      this.update({ sending: this.waiters.size });
-      resolve(answer);
+      if (answered) return;
+      answered = true;
+      this.claimed--;
+      this.update({ sending: this.liveCount() });
+      waiter.resolve(answer);
     };
   }
 
-  /** Answers every awaited write `queued`: it stays stored and replays like any other. */
+  /** The deadline passed with no answer: the caller gets `queued`, the write stays in the queue. */
+  private stopWaiting(key: string): void {
+    const waiter = this.waiters.get(key);
+    if (!waiter) return;
+    this.waiters.delete(key);
+    this.update({ sending: this.liveCount() });
+    waiter.resolve({ kind: "queued" });
+    this.broadcast({ type: "changed" });
+  }
+
+  /** Answers every unclaimed awaited write `queued`: it stays stored and replays like any other. */
   private releaseWaiters(): void {
     if (this.waiters.size === 0) return;
-    for (const answer of this.waiters.values()) answer({ kind: "queued" });
+    for (const waiter of this.waiters.values()) {
+      clearTimeout(waiter.deadline);
+      waiter.resolve({ kind: "queued" });
+    }
     this.waiters.clear();
-    this.update({ sending: 0 });
+    this.update({ sending: this.liveCount() });
     this.broadcast({ type: "changed" });
   }
 

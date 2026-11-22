@@ -478,7 +478,7 @@ describe("ProjectTimeline", () => {
       await user.click(checkbox);
 
       // updateTask should have been called with completed: true (optimistic)
-      expect(mockUpdateTask).toHaveBeenCalledWith("t-1", { completed: true });
+      expect(mockUpdateTask).toHaveBeenCalledWith("t-1", expect.objectContaining({ completed: true }));
     });
 
     it("calls the complete endpoint when checking an incomplete task", async () => {

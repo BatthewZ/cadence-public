@@ -17,6 +17,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Sem
 ### Changed
 
 - **Signing out deletes this device's saved Cadence data.** That includes saved pages and unsent offline changes; if any changes haven't synced you're asked first. Signing out needs a connection, and so do uploads, search, invitations, members, webhooks, API tokens, import/export and account settings. Those controls say "Needs a connection" while you're offline instead of failing.
+- **A slow or stalled connection no longer leaves "Saving…" on screen.** If the server hasn't answered within 3 seconds, the change is treated like an offline one: it's kept, shown in the sync badge, and sent when the connection answers. A request that never answers is retried after 20 seconds without being applied twice.
+- **Completing a task moves it to your Done column at once, offline too,** and reopening it moves it back, as the server will. Duplicating a task now says "Needs a connection" while offline instead of failing.
 - **Changes are always sent in the order you make them, online too.** A new subtask or comment can be edited, dragged or deleted straight away instead of waiting for the server, and that edit is never sent before the item exists. Bulk actions still send their changes together.
 - **Other people's deletions show up without a reload.** The live-refresh check used to notice edits and creations but not deletions; it now counts rows as well.
 

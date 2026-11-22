@@ -7,6 +7,7 @@ import {
 import { useState } from "react";
 
 import type { TaskPriority } from "@/shared/types/roles";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import type { Task, TaskCompletionResponse } from "@/web/contexts/ProjectContext";
 import { useProject } from "@/web/contexts/ProjectContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
@@ -44,6 +45,8 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
   const { toast } = useToast();
   const qc = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  // Duplicating can't be queued: the copies are made on the server.
+  const duplicateOnlineOnly = useOnlineOnly();
   const [deleting, setDeleting] = useState(false);
 
   const count = selectedIds.size;
@@ -274,6 +277,8 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
           variant="ghost"
           size="sm"
           onClick={() => void handleBulkDuplicate()}
+          disabled={duplicateOnlineOnly.disabled}
+          title={duplicateOnlineOnly.title}
         >
           <Copy size={14} />
           <span className="hidden sm:inline ml-1">Duplicate</span>

@@ -6,7 +6,7 @@ import { api, apiErrorMessage } from "@/web/lib/api/client";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
-import { taskCompletionWrite } from "@/web/lib/task-writes";
+import { completionChange, completionFields, taskCompletionWrite } from "@/web/lib/task-writes";
 import type { TaskDetail } from "@/web/pages/TaskDetail/types";
 
 interface UseTaskDetailActionsOptions {
@@ -59,8 +59,11 @@ export function useTaskDetailActions({
   const handleToggleComplete = useCallback(async () => {
     if (!localTask) return;
     const wasCompleted = localTask.completed;
-    setLocalTask((prev) => (prev ? { ...prev, completed: !wasCompleted } : prev));
-    updateTaskInContext?.(taskId, { completed: !wasCompleted });
+    // Optimistic, including the move to (or out of) the completion group the server will make
+    const before = completionFields(localTask);
+    const change = completionChange(qc, projectId, taskId, !wasCompleted);
+    setLocalTask((prev) => (prev ? { ...prev, ...change } : prev));
+    updateTaskInContext?.(taskId, change);
     freshnessTracker.recordMutation("tasks");
 
     try {
@@ -89,8 +92,8 @@ export function useTaskDetailActions({
         void qc.invalidateQueries({ queryKey: queryKeys.projects.activity(projectId) });
       }
     } catch {
-      setLocalTask((prev) => (prev ? { ...prev, completed: wasCompleted } : prev));
-      updateTaskInContext?.(taskId, { completed: wasCompleted });
+      setLocalTask((prev) => (prev ? { ...prev, ...before } : prev));
+      updateTaskInContext?.(taskId, before);
       toast("Failed to update task", { variant: "error" });
     }
   }, [

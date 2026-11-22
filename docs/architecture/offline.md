@@ -12,7 +12,7 @@ and webhooks as sending it live.
 
 | Works offline (queued, optimistic) | Needs a connection (control disabled, "Needs a connection") |
 | --- | --- |
-| Create, edit, move, complete/reopen and delete tasks | Attachments and cover uploads, Unsplash covers |
+| Create, edit, move, complete/reopen and delete tasks | Attachments and cover uploads, Unsplash covers, duplicating tasks |
 | Subtasks and comments (create, edit, delete, reorder) | Search |
 | Labels and label assignment | Create or duplicate a project, create a workspace, ICS/Trello import, export |
 | Task groups (create, rename, recolor, reorder, delete) | Members, teams, invitations, roles |
@@ -59,9 +59,11 @@ account's cache, and stopping it clears the read barrier only if no newer runtim
 3. **Online, nothing queued ahead** (except other writes being sent this way): `sendWrite` waits for that write's
    answer (`Outbox.send`). A reply → `{ status: "sent", data }` and the call site reconciles with it. An error reply
    (4xx, 5xx, 401, 429) → the write is removed and `sendWrite` throws `ApiError`; the call site reverts. These writes
-   don't count as "to sync" in the badge.
-4. **Offline, queued writes ahead, the queue blocked, or no answer** (connection dropped, request still running,
-   reload or sign-out mid-send): `{ status: "queued" }`. The call site keeps its optimistic state and does nothing
+   don't count as "to sync" in the badge. The wait is capped at 3 s (`ANSWER_DEADLINE_MS`). On a network that is up
+   but not answering (flaky Wi-Fi, where the browser still says online), the caller then gets `queued`, so "Saving…"
+   never sticks. The write carries on in the background, shown in the badge, and a refusal arrives as a sync notice.
+4. **Offline, queued writes ahead, the queue blocked, or no answer** (connection dropped, no answer within the 3 s
+   deadline, request still running, reload or sign-out mid-send): `{ status: "queued" }`. The call site keeps its optimistic state and does nothing
    else. The write stays stored under the key it was sent with, so if it did reach the server the replay gets the
    stored reply instead of applying it twice.
 5. The queue drains in the order the writes were made, one at a time, when the browser comes online, at start-up,
@@ -82,7 +84,7 @@ Writes that come back `queued` replay under these rules:
 | 401 | stops, keeps every write, sends the person to sign in; resumes after sign-in as the same account |
 | 429 | waits for `Retry-After` |
 | 409 `idempotency_in_progress` | the first attempt is still running: retries in a second |
-| no answer | retries with backoff (2 s doubling to 60 s), and at once on the `online` event |
+| no answer (including none within 20 s, `WRITE_TIMEOUT_MS`: the request is abandoned) | retries with backoff (2 s doubling to 60 s), and at once on the `online` event, under the same key |
 | 5xx | retries with backoff; after 5 in a row the write is **stuck** and the queue stops behind it until the person retries or discards it (sync badge) |
 
 GETs wait for an active drain (`read-barrier.ts`), so a refetch can't show server state from before the person's
@@ -149,7 +151,9 @@ shared and work computers, so nothing is kept.
 2. Apply it to the cache optimistically and revert in `catch`. Offline, the cache is the only copy until the queue syncs,
    so write every copy a screen can be rebuilt from, not just component state. The task panel and dialog do this
    through `useLocalTask`, which writes each edit to the task's detail query as well. A rollback should undo only
-   its own change, not restore a whole snapshot over edits made since.
+   its own change, not restore a whole snapshot over edits made since. If the server changes more than the request
+   says (completing a task moves it to the completion group), mirror that too: `completionChange` in
+   `src/web/lib/task-writes.ts` follows `handlers/completion.ts`, so the card moves offline as it will on the server.
 3. Call `sendWrite` with a label the person will recognise in the sync badge (`Move “Fix login”`). For the same
    change to many independent rows (a bulk action), use `sendWrites`, which returns one promise per request.
 4. On `sent`, reconcile with the reply. On `queued`, do nothing more.

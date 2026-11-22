@@ -6,7 +6,7 @@ import { Input } from "@/web/components/form/Input";
 import { Divider, Stack } from "@/web/components/layout";
 import { EditableMarkdown } from "@/web/components/markdown/EditableMarkdown";
 import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
-import { isUnavailableOffline } from "@/web/components/sync/use-online-only";
+import { isUnavailableOffline, useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { useAppShell } from "@/web/components/ui/AppShell";
 import { Button } from "@/web/components/ui/Button";
 import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
@@ -100,6 +100,8 @@ export function TaskDetailDialog({
   // Local optimistic copy of the task
   const { localTask, setLocalTask, resetLocalTask } = useLocalTask(taskId, taskFromServer);
   const task = localTask;
+  // Duplicating can't be queued: the copy is made on the server.
+  const duplicateOnlineOnly = useOnlineOnly();
 
   // Fetch task groups for the project
   const { data: taskGroupsData } = useQuery({
@@ -547,8 +549,10 @@ export function TaskDetailDialog({
                     <button
                       type="button"
                       onClick={() => void handleDuplicateTask()}
+                      disabled={duplicateOnlineOnly.disabled}
+                      title={duplicateOnlineOnly.title}
                       className={cn(
-                        "flex items-center gap-r6 text-body-3 text-primary hover:underline cursor-pointer duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-2 rounded",
+                        "flex items-center gap-r6 text-body-3 text-primary hover:underline cursor-pointer duration-fast focus:outline-none focus-visible:ring-2 focus-visible:ring-border-focus focus-visible:ring-offset-2 rounded disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline",
                         isMobile && "text-body-2 py-r4 px-r6 gap-r8"
                       )}
                     >

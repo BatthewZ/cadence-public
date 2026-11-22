@@ -463,6 +463,26 @@ describe("Outbox.send (writes made online)", () => {
     expect(outbox.canSendNow()).toBe(false);
   });
 
+  it("stops holding the caller when the server doesn't answer in time, and still reports the outcome later", async () => {
+    const { impl, sent, reply } = heldFetch();
+    const outbox = makeOutbox(impl, { answerDeadlineMs: 50 });
+    const refusals: Refusal[] = [];
+    outbox.subscribeRefusals((r) => refusals.push(r));
+    await outbox.start();
+
+    const [stalled] = await outbox.send([newWrite(1)], 1);
+    await expect(stalled).resolves.toEqual({ kind: "queued" });
+    // Now shown as waiting to sync, and the next write no longer waits on the stalled one.
+    expect(queuedCount(outbox.getStatus())).toBe(1);
+    expect(outbox.canSendNow()).toBe(false);
+
+    await vi.waitFor(() => expect(sent).toEqual(["/api/tasks/t1"]));
+    await reply("/api/tasks/t1", 404, { error: "Task not found" });
+    await settle(outbox);
+    expect(refusals.map((r) => r.status)).toEqual([404]);
+    expect(outbox.getStatus()).toMatchObject({ pending: 0, sending: 0 });
+  });
+
   it("answers callers `queued` when stopped mid-send (sign-out, account switch)", async () => {
     const { impl } = heldFetch();
     const outbox = makeOutbox(impl);

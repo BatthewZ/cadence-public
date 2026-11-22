@@ -24,6 +24,7 @@ import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { TaskDetailDialog } from "@/web/components/ui/TaskDetailDialog";
 import { useToast } from "@/web/components/ui/ToastContext";
+import type { Task } from "@/web/contexts/ProjectContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { usePrefersReducedMotion } from "@/web/hooks/use-reduced-motion";
@@ -38,7 +39,7 @@ import { useWorkspaceTaskGroups } from "@/web/hooks/use-workspace-task-groups";
 import { api } from "@/web/lib/api/client";
 import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
-import { taskCompletionWrite } from "@/web/lib/task-writes";
+import { completionChange, completionFields, taskCompletionWrite } from "@/web/lib/task-writes";
 import { formatDueDate, isDueToday, isOverdue } from "@/web/util/date";
 import { getPriorityBadgeVariant, getPriorityLabel, PRIORITY_SORT_ORDER } from "@/web/util/task-display";
 
@@ -531,7 +532,23 @@ export default function MyTasks() {
       // Snapshot for rollback. Scope to the active filter/period combo so
       // optimistic removal and rollback target the cache entry the user is
       // actually viewing.
-      const previousData = qc.getQueryData(myTasksQueryKey);
+      const previousData = qc.getQueryData<{ pages: MyTasksResponse[] }>(myTasksQueryKey);
+
+      // The project's board, if cached, shows the task completed and in its completion group at
+      // once too: offline, nothing else moves it until the queue syncs.
+      const projectId = previousData?.pages.flatMap((p) => p.tasks).find((t) => t.id === taskId)?.projectId;
+      const boardKey = projectId ? queryKeys.projects.tasks(projectId) : null;
+      const onBoard = boardKey
+        ? qc.getQueryData<{ tasks: Task[] }>(boardKey)?.tasks.find((t) => t.id === taskId)
+        : undefined;
+      const boardBefore = onBoard ? completionFields(onBoard) : null;
+      const patchBoard = (fields: Partial<Task>) => {
+        if (!boardKey || !boardBefore) return;
+        qc.setQueryData<{ tasks: Task[] }>(boardKey, (old) =>
+          old ? { tasks: old.tasks.map((t) => (t.id === taskId ? { ...t, ...fields } : t)) } : old,
+        );
+      };
+      patchBoard(completionChange(qc, projectId, taskId, true));
 
       // Optimistically remove from all pages
       qc.setQueryData<{ pages: MyTasksResponse[]; pageParams: unknown[] }>(
@@ -564,6 +581,7 @@ export default function MyTasks() {
         }
       } catch {
         qc.setQueryData(myTasksQueryKey, previousData);
+        if (boardBefore) patchBoard(boardBefore);
         toast("Failed to complete task", { variant: "error" });
       }
     },

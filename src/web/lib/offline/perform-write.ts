@@ -68,11 +68,22 @@ function retryAfterMs(res: Response, body: ErrorBody): number {
   return seconds && seconds > 0 ? seconds * 1000 : DEFAULT_RETRY_AFTER_MS;
 }
 
+/**
+ * A request with no answer by then is abandoned as "no answer" and retried under the same key. On a
+ * network that is up but not answering, fetch can otherwise wait minutes, and every later write
+ * waits behind it.
+ */
+export const WRITE_TIMEOUT_MS = 20_000;
+
 export async function performWrite(
   write: Pick<QueuedWrite, "method" | "path" | "body" | "key">,
   fetchImpl: typeof fetch = fetch,
+  timeoutMs: number = WRITE_TIMEOUT_MS,
 ): Promise<WriteOutcome> {
+  const abort = new AbortController();
+  const timer = setTimeout(() => abort.abort(), timeoutMs);
   let res: Response;
+  let data: unknown;
   try {
     res = await fetchImpl(write.path, {
       method: write.method,
@@ -82,12 +93,17 @@ export async function performWrite(
         [IDEMPOTENCY_KEY_HEADER]: write.key,
       },
       body: write.body === undefined ? undefined : JSON.stringify(write.body),
+      signal: abort.signal,
     });
+    data = await readBody(res);
   } catch {
     return { kind: "network" };
+  } finally {
+    clearTimeout(timer);
   }
+  // A body cut off by the timeout reads as empty; the answer is unknown, so retry under the key.
+  if (abort.signal.aborted) return { kind: "network" };
 
-  const data = await readBody(res);
   if (res.ok) return { kind: "ok", status: res.status, data };
 
   const body = (data && typeof data === "object" ? data : {}) as ErrorBody;

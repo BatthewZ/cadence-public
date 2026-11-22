@@ -33,7 +33,7 @@ import { useTaskActions } from "@/web/hooks/use-task-actions";
 import { useTaskFilterControls } from "@/web/hooks/use-task-filters";
 import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
-import { taskCompletionWrite } from "@/web/lib/task-writes";
+import { completionChange, completionFields, taskCompletionWrite } from "@/web/lib/task-writes";
 import { toggleArrayValue } from "@/web/util/array";
 import { isDueToday, isOverdue } from "@/web/util/date";
 import {
@@ -218,8 +218,9 @@ export function SortableTaskCard({
   };
 
   const handleCheckboxChange = async (checked: boolean) => {
-    // Optimistic update
-    ctxUpdateTask(task.id, { completed: checked });
+    // Optimistic, including the move to (or out of) the completion group the server will make
+    const before = completionFields(task);
+    ctxUpdateTask(task.id, completionChange(qc, project.id, task.id, checked));
 
     try {
       const result = await sendWrite<TaskCompletionResponse>(taskCompletionWrite(task, checked));
@@ -238,7 +239,7 @@ export function SortableTaskCard({
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(project.workspaceId) });
     } catch {
       // Revert
-      ctxUpdateTask(task.id, { completed: !checked });
+      ctxUpdateTask(task.id, before);
       toast("Failed to update task", { variant: "error" });
     }
   };
