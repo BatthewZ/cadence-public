@@ -139,8 +139,8 @@ export function formatGroupedLabelMessage(
  *
  * - apiTokenId present + tokenName present → "(via <name>)"
  * - apiTokenId present + tokenName null    → "(via deleted token)"
- *   (the token row was hard-deleted but the activity row's apiTokenId
- *    was preserved by the SET NULL contract in the schema)
+ *   (defensive: deleting a token sets apiTokenId null in the database,
+ *    so this needs a dangling link or a blank token name)
  * - apiTokenId null                        → null  (cookie auth)
  */
 export function formatTokenAttribution(

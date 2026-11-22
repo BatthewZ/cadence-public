@@ -323,7 +323,7 @@ Current toggles:
 | `id`         | `text`                        | **Primary key**                                | Unique activity entry identifier             |
 | `taskId`     | `text`                        | `NOT NULL`, **FK** -> `task.id` (cascade)      | References the parent task                   |
 | `actorId`    | `text`                        | **FK** -> `user.id` (set null)                 | References the user who performed the action |
-| `apiTokenId` | `text`                        | **FK** -> `api_token.id` (set null)            | The PAT used to perform the action (null for cookie-authed mutations). Set null on token delete so historical attribution survives — the UI renders `"(via deleted token)"` |
+| `apiTokenId` | `text`                        | **FK** -> `api_token.id` (set null)            | The PAT used to perform the action (null for cookie-authed mutations). Set null on token delete, so the activity row survives without its token link |
 | `action`     | `text`                        | `NOT NULL`                                     | Action type (e.g. `"completed"`, `"moved"`, `"reopened"`, `"comment_added"`, `"comment_updated"`, `"comment_deleted"`, `"label_added"`, `"label_removed"`, `"attachment_added"`, `"attachment_removed"`, `"recurrence_changed"`, `"recurrence_removed"`) |
 | `field`      | `text`                        |                                                | Field that was changed (e.g. `"taskGroupId"`, `"priority"`) |
 | `oldValue`   | `text`                        |                                                | Previous value of the changed field          |
@@ -619,7 +619,7 @@ The credential behind per-user ICS calendar subscription URLs — a deliberately
 - `apiToken.userId` -> `user.id` (foreign key, cascade delete)
 - `apiToken.workspaceId` -> `workspace.id` (foreign key, cascade delete)
 - `apiToken.rotatedToId` -> `apiToken.id` (foreign key, self-reference)
-- `taskActivity.apiTokenId` -> `apiToken.id` (foreign key, set null on delete — so historical attribution survives token deletion)
+- `taskActivity.apiTokenId` -> `apiToken.id` (foreign key, set null on delete — so the activity row survives token deletion)
 - `calendarFeedToken.userId` -> `user.id` (foreign key, cascade delete)
 - `calendarFeedToken.workspaceId` -> `workspace.id` (foreign key, cascade delete)
 - `auditLog.workspaceId` -> `workspace.id` (foreign key, cascade delete)

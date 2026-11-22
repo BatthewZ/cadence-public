@@ -67,18 +67,6 @@ export function createAuth(env: AppBindings) {
       deleteUser: {
         enabled: true,
         beforeDelete: async (deletedUser) => {
-          // task_activity.apiTokenId is "SET NULL" by ORM intent but NO ACTION
-          // on disk (added via SQLite ALTER TABLE ADD COLUMN), so the chain
-          // user → api_token → task_activity must be broken by hand first.
-          const userTokenIds = db
-            .select({ id: schema.apiToken.id })
-            .from(schema.apiToken)
-            .where(eq(schema.apiToken.userId, deletedUser.id));
-          await db
-            .update(schema.taskActivity)
-            .set({ apiTokenId: null })
-            .where(inArray(schema.taskActivity.apiTokenId, userTokenIds));
-
           // Must delete tasks before the user cascade reaches task_group,
           // because task.taskGroupId has onDelete:"restrict" which blocks
           // the cascade path: user → workspace → project → task_group.
@@ -132,7 +120,7 @@ export function createAuth(env: AppBindings) {
 | `emailVerification.autoSignInAfterVerification` | `true` | Following the verification link signs the user in and lands them on the `callbackURL` recorded at sign-up. This is what lets the invite journey complete in one pass — register → verify → back at `/invite/:token` with a session — instead of requiring a separate sign-in first. |
 | `emailVerification.sendVerificationEmail` | Email service (Resend or console fallback) | Sends an email verification link after sign-up and on every refused sign-in. Failures are caught and logged so they do not crash the auth flow. See [Email Service](../api/email.md). |
 | `user.deleteUser.enabled` | `true` | Enables the account deletion endpoint. |
-| `user.deleteUser.beforeDelete` | async hook | Runs two pre-cascade cleanups. It nulls `task_activity.apiTokenId` for activity rows pointing at the user's API tokens (the column's on-disk behaviour is `NO ACTION`, not the ORM's declared `SET NULL`, because it was added with SQLite `ALTER TABLE ADD COLUMN`), then pre-deletes all tasks belonging to the user's workspaces to avoid a foreign-key restrict violation on `task.taskGroupId`. Both use subqueries to resolve ownership. |
+| `user.deleteUser.beforeDelete` | async hook | Pre-deletes all tasks belonging to the user's workspaces to avoid a foreign-key restrict violation on `task.taskGroupId`, using subqueries to resolve ownership. Nothing else needs clearing by hand: the `user → api_token → task_activity` chain cascades and sets `apiTokenId` null in the database (fixed by migration `0038`). |
 | `basePath` | `/api/auth` | All Better Auth endpoints are mounted under this path. |
 | `secret` | `env.BETTER_AUTH_SECRET` | Secret key for signing session tokens. |
 | `baseURL` | `env.BETTER_AUTH_URL` | The application's base URL (used for CORS, redirects, etc.). |

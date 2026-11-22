@@ -1,24 +1,13 @@
 /// <reference types="@cloudflare/workers-types" />
 /**
  * Integration tests for API-token attribution on the dashboard activity
- * feeds (project + workspace) and for the user-delete cascade fix.
+ * feeds (project + workspace) and for what token deletion does to them.
  *
- * Why these tests are load-bearing:
- *
- * 1. The activity feed UI renders "<User> (via <TokenName>)" purely from
- *    the `tokenName` field returned by these handlers' JOINs. A regression
- *    that drops the JOIN or selects the wrong column breaks the
- *    integration-attribution affordance silently — the UI just shows the
- *    plain user name with no error.
- *
- * 2. SQLite cannot encode `ON DELETE SET NULL` on a column added via
- *    `ALTER TABLE ADD COLUMN`, so the in-DB cascade for
- *    `task_activity.apiTokenId → api_token.id` is actually NO ACTION at
- *    the SQL layer despite the ORM intent. Without the explicit pre-step
- *    in `user.deleteUser.beforeDelete` that nulls the column, the cascade
- *    chain `user → api_token (cascade) → task_activity (NO ACTION)`
- *    would raise a foreign-key violation and abort user deletion in
- *    production. This test exercises that pre-step directly.
+ * The activity feed UI renders "<User> (via <TokenName>)" purely from the
+ * `tokenName` field returned by these handlers' JOINs. A regression that
+ * drops the JOIN or selects the wrong column breaks the integration-
+ * attribution affordance silently — the UI just shows the plain user name
+ * with no error.
  *
  * The "(via deleted token)" branch — where `apiTokenId` is set but the
  * token row is gone — is covered by the pure UI-helper test in
@@ -26,7 +15,7 @@
  * insert and won't let us seed an orphan row from the integration layer.
  */
 
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -45,7 +34,9 @@ import {
   seedTaskGroup,
   seedUser,
   seedWorkspace,
+  seedWorkspaceMember,
   TEST_USER,
+  TEST_USER_2,
 } from "../../../test-utils";
 import { projectActivity, workspaceActivity } from "../dashboard.handlers";
 
@@ -201,31 +192,57 @@ describe("workspaceActivity returns tokenName from the JOIN", () => {
   });
 });
 
-describe("beforeDelete user hook NULLs apiTokenId on user-owned tokens", () => {
-  it("clears apiTokenId on activities owned by the user's tokens", async () => {
-    // Re-confirm the row is currently token-attributed.
-    const [before] = await db
+describe("deleting a user whose token authored activity", () => {
+  it("cascades through api_token and keeps the activity row", async () => {
+    await seedUser(d1, TEST_USER_2);
+    await seedWorkspaceMember(d1, WORKSPACE_ID, TEST_USER_2.id);
+    await db.insert(apiToken).values({
+      id: "tok-member",
+      userId: TEST_USER_2.id,
+      workspaceId: WORKSPACE_ID,
+      name: "Member Bot",
+      tokenHash: `hash_${crypto.randomUUID()}`,
+      tokenPrefix: "cdn_pat_mem1",
+      scopes: JSON.stringify(["task:write"]),
+      projectScope: "all",
+      projectIds: null,
+      expiresAt: null,
+      revokeAt: null,
+      revokedAt: null,
+      createdAt: new Date(),
+    });
+    await db.insert(taskActivity).values({
+      id: "act-via-member-token",
+      taskId: TASK_ID,
+      actorId: TEST_USER_2.id,
+      action: "moved",
+      field: null,
+      oldValue: null,
+      newValue: null,
+      apiTokenId: "tok-member",
+      createdAt: new Date(),
+    });
+
+    await d1.prepare("DELETE FROM user WHERE id = ?").bind(TEST_USER_2.id).run();
+
+    const [after] = await db
       .select()
       .from(taskActivity)
-      .where(eq(taskActivity.id, "act-via-token"));
-    expect(before.apiTokenId).toBe(TOKEN_ID);
+      .where(eq(taskActivity.id, "act-via-member-token"));
+    expect(after.apiTokenId).toBeNull();
+    expect(after.actorId).toBeNull();
+  });
+});
 
-    // Run the exact SQL the beforeDelete hook runs. If this fails or
-    // misses the row, a real user delete would FK-violate in prod.
-    const userTokenIds = db
-      .select({ id: apiToken.id })
-      .from(apiToken)
-      .where(eq(apiToken.userId, TEST_USER.id));
-
-    await db
-      .update(taskActivity)
-      .set({ apiTokenId: null })
-      .where(inArray(taskActivity.apiTokenId, userTokenIds));
+describe("deleting a token keeps its activity rows", () => {
+  it("clears apiTokenId instead of blocking the delete", async () => {
+    await db.delete(apiToken).where(eq(apiToken.id, TOKEN_ID));
 
     const [after] = await db
       .select()
       .from(taskActivity)
       .where(eq(taskActivity.id, "act-via-token"));
     expect(after.apiTokenId).toBeNull();
+    expect(after.actorId).toBe(TEST_USER.id);
   });
 });

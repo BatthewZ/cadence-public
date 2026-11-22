@@ -4,6 +4,12 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.35.1] - 2026-11-22
+
+### Fixed
+
+- **The database now clears a task activity's token link when the token is deleted, as the schema always declared.** Migration `0028` added `task_activity.apiTokenId` without its `ON DELETE SET NULL` clause, so the database blocked deleting any token that activity still pointed at. Account deletion worked only because of a special step that cleared those links first. Migration `0038` rebuilds `task_activity` with the correct foreign key, and that step is gone. A new test compares every foreign key in the schema against the database the migrations build, so this kind of drift now fails CI.
+
 ## [1.35.0] - 2026-10-25
 
 ### Changed

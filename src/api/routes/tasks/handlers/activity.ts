@@ -24,10 +24,9 @@ export async function getTaskActivity(c: Context<AppEnv>) {
     conditions.push(compoundCursorCondition(compound, taskActivity.createdAt, taskActivity.id, "desc"));
   }
 
-  // LEFT JOIN api_token so revoked-and-cleaned-up tokens still render
-  // with a null tokenName (UI shows "via deleted token") instead of
-  // dropping the row entirely. Token rows are kept soft-revoked, but
-  // a future hard cleanup is foreseeable.
+  // LEFT JOIN api_token so activity without a token (cookie auth, or a
+  // token deleted and its apiTokenId set null) still returns a row,
+  // with a null tokenName. Revoked tokens keep their row and name.
   const activities = await db
     .select({
       id: taskActivity.id,

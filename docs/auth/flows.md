@@ -87,6 +87,6 @@ The final parser cross-check is deliberately redundant with the character checks
 ### Account Deletion
 
 - `deleteUser()` permanently deletes the user's account and all associated data (sessions, accounts, workspaces, projects, etc.).
-- A `beforeDelete` hook clears `task_activity.apiTokenId` for every activity row that points at one of the user's API tokens. The ORM intent for that column is `ON DELETE SET NULL`, but it was added via SQLite `ALTER TABLE ADD COLUMN`, which cannot encode that behaviour, so the on-disk cascade is `NO ACTION` and the chain `user → api_token → task_activity` would otherwise abort the delete.
-- The same hook pre-deletes tasks owned by the user's workspaces to avoid a foreign-key restrict violation on `task.taskGroupId` (which uses `onDelete: "restrict"`, blocking the cascade path `user → workspace → project → task_group`).
+- The user's API tokens cascade away with the account. Activity rows those tokens authored are kept: `task_activity.apiTokenId` is `ON DELETE SET NULL`, so the database clears the link itself.
+- A `beforeDelete` hook pre-deletes tasks owned by the user's workspaces to avoid a foreign-key restrict violation on `task.taskGroupId` (which uses `onDelete: "restrict"`, blocking the cascade path `user → workspace → project → task_group`).
 - Uploads are preserved after account deletion — `upload.userId` is set to `null` instead of cascading.

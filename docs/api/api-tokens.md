@@ -398,7 +398,7 @@ Task mutations made via a PAT are attributed in the task activity feed as:
 Jane Smith (via Slackbot prod) created task "Fix login bug"
 ```
 
-`task_activity.apiTokenId` is a `set null` FK to the token, so the attribution survives revocation. If the token is later hard-deleted, the activity record still shows `(via deleted token)`. PATs do **not** generate synthetic bot users — the owning human remains the actor on every record, with the token name as a parenthetical. This keeps `assigneeId`, mention notifications, and existing `createdBy` logic working without special cases.
+`task_activity.apiTokenId` is a `set null` FK to the token. Revocation keeps the token row, so the attribution survives it. A hard delete (which happens only when the token's owner deletes their account) clears the link, and the activity record stays without a token suffix. PATs do **not** generate synthetic bot users — the owning human remains the actor on every record, with the token name as a parenthetical. This keeps `assigneeId`, mention notifications, and existing `createdBy` logic working without special cases.
 
 ### 2. Data egress & cross-resource audit ledger (`audit_log`)
 

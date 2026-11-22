@@ -128,8 +128,8 @@ export async function workspaceActivity(c: Context<AppEnv>) {
   };
 
   // LEFT JOIN api_token to surface the token display name for
-  // PAT-authored activity rows. NULL apiTokenId (cookie-auth) and
-  // hard-deleted tokens both produce a null tokenName.
+  // PAT-authored activity rows. NULL apiTokenId (cookie auth, or a
+  // deleted token, which the FK sets null) produces a null tokenName.
   const activitiesQuery = isElevated
     ? db
         .select(activityFields)
