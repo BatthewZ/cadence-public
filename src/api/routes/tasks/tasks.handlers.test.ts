@@ -13,6 +13,7 @@ import { Hono } from "hono";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createDb } from "../../../db";
+import { WRITE_ERROR_CODES } from "../../../shared/constants/offline-sync";
 import { createCommentSchema, listCommentsQuerySchema, updateCommentSchema } from "../../../shared/schemas/comment";
 import { createSubtaskSchema, updateSubtaskSchema } from "../../../shared/schemas/subtask";
 import {
@@ -1414,6 +1415,33 @@ describe("moveTask", () => {
 
     expect(res.status).toBe(404);
   });
+
+  it("two moves to the same stale position both land, at distinct positions after it", async () => {
+    const target = await seedTaskGroup(d1, projectId, { name: "Move collisions" });
+    await seedTask(d1, projectId, target, { position: "a0" });
+    await seedTask(d1, projectId, target, { position: "a1" });
+    const movers = [
+      await seedTask(d1, projectId, taskGroupId, { title: "Mover 1" }),
+      await seedTask(d1, projectId, taskGroupId, { title: "Mover 2" }),
+    ];
+
+    const app = new Hono<AppEnv>();
+    app.patch("/tasks/:taskId/move", auth(), validateBody(moveTaskSchema), moveTask);
+
+    const positions: string[] = [];
+    for (const id of movers) {
+      const res = await app.request(jsonRequest("PATCH", `/tasks/${id}/move`, { taskGroupId: target, position: "a0" }));
+      expect(res.status).toBe(200);
+      const body = await res.json<{ task: { taskGroupId: string; position: string } }>();
+      expect(body.task.taskGroupId).toBe(target);
+      positions.push(body.task.position);
+    }
+
+    expect(new Set(positions).size).toBe(2);
+    for (const position of positions) {
+      expect(position > "a0" && position < "a1").toBe(true);
+    }
+  });
 });
 
 // =========================================================================
@@ -2098,6 +2126,31 @@ describe("updateSubtask", () => {
     );
 
     expect(res.status).toBe(404);
+  });
+
+  it("lands a stale reorder position that collides just after it instead of failing", async () => {
+    const parent = await seedTask(d1, projectId, taskGroupId, { title: "Subtask reorder collisions" });
+    await seedSubtask(d1, parent, { position: "a0" });
+    await seedSubtask(d1, parent, { position: "a1" });
+    const movers = [
+      await seedSubtask(d1, parent, { position: "a2" }),
+      await seedSubtask(d1, parent, { position: "a3" }),
+    ];
+
+    const app = new Hono<AppEnv>();
+    app.patch("/subtasks/:subtaskId", auth(), validateBody(updateSubtaskSchema), updateSubtask);
+
+    const positions: string[] = [];
+    for (const id of movers) {
+      const res = await app.request(jsonRequest("PATCH", `/subtasks/${id}`, { position: "a0" }));
+      expect(res.status).toBe(200);
+      positions.push((await res.json<{ subtask: { position: string } }>()).subtask.position);
+    }
+
+    expect(new Set(positions).size).toBe(2);
+    for (const position of positions) {
+      expect(position > "a0" && position < "a1").toBe(true);
+    }
   });
 });
 
@@ -3532,5 +3585,124 @@ describe("completeTask (recurring spawn startDate)", () => {
     expect(body.nextRecurringTask).not.toBeNull();
     expect(body.nextRecurringTask!.dueDate).not.toBeNull();
     expect(body.nextRecurringTask!.startDate).toBeNull();
+  });
+});
+
+// =========================================================================
+// updateTask: description compare-and-set
+// =========================================================================
+
+describe("updateTask descriptionBase", () => {
+  function patchApp() {
+    const app = new Hono<AppEnv>();
+    app.patch("/tasks/:taskId", auth(), validateBody(updateTaskSchema), updateTask);
+    return app;
+  }
+
+  async function storedTask(taskId: string) {
+    return d1
+      .prepare("SELECT title, description FROM task WHERE id = ?")
+      .bind(taskId)
+      .first<{ title: string; description: string | null }>();
+  }
+
+  it("applies the patch when the base matches the stored description", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, { description: "v1" });
+
+    const res = await patchApp().request(
+      jsonRequest("PATCH", `/tasks/${taskId}`, { description: "v2", descriptionBase: "v1" }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json<{ task: Record<string, unknown> }>();
+    expect(body.task.description).toBe("v2");
+    expect(body.task).not.toHaveProperty("descriptionBase");
+  });
+
+  it("treats a null stored description and an empty base as equal", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId);
+
+    const res = await patchApp().request(
+      jsonRequest("PATCH", `/tasks/${taskId}`, { description: "first", descriptionBase: "" }),
+    );
+
+    expect(res.status).toBe(200);
+    expect((await storedTask(taskId))?.description).toBe("first");
+  });
+
+  it("answers 409 description_conflict with the current task and applies nothing on mismatch", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, { title: "Before", description: "theirs" });
+    await seedSubtask(d1, taskId, { title: "Kept" });
+
+    const res = await patchApp().request(
+      jsonRequest("PATCH", `/tasks/${taskId}`, { title: "After", description: "mine", descriptionBase: "original" }),
+    );
+
+    expect(res.status).toBe(409);
+    const body = await res.json<{
+      code: string;
+      task: { id: string; description: string; subtasks: { title: string }[]; labels: unknown[]; commentCount: number };
+    }>();
+    expect(body.code).toBe(WRITE_ERROR_CODES.descriptionConflict);
+    expect(body.task.id).toBe(taskId);
+    expect(body.task.description).toBe("theirs");
+    expect(body.task.subtasks.map((s) => s.title)).toEqual(["Kept"]);
+    expect(body.task.labels).toEqual([]);
+    expect(body.task.commentCount).toBe(0);
+    expect(await storedTask(taskId)).toEqual({ title: "Before", description: "theirs" });
+  });
+
+  it("ignores descriptionBase when the patch does not touch description", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, { title: "Before", description: "theirs" });
+
+    const res = await patchApp().request(
+      jsonRequest("PATCH", `/tasks/${taskId}`, { title: "After", descriptionBase: "stale" }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await storedTask(taskId)).toEqual({ title: "After", description: "theirs" });
+  });
+
+  it("keeps descriptionBase out of the task.updated webhook changes", async () => {
+    const taskId = await seedTask(d1, projectId, taskGroupId, { description: "v1" });
+    await seedWebhook(d1, workspaceId, {
+      url: "https://hooks.example.com/description-base",
+      events: JSON.stringify(["task.updated"]),
+    });
+
+    const fetchSpy = installFetchSpy();
+    try {
+      const { ctx, flush } = createAwaitableExecutionCtx();
+      const app = new Hono<AppEnv>();
+      app.patch(
+        "/tasks/:taskId",
+        fakeAuth(d1, TEST_USER, {
+          workspaceMembership: { id: "wm-1", role: "owner" },
+          currentProject: { id: projectId, workspaceId },
+        }),
+        validateBody(updateTaskSchema),
+        updateTask,
+      );
+
+      const res = await app.request(
+        `/tasks/${taskId}`,
+        jsonRequest("PATCH", `/tasks/${taskId}`, { description: "v2", descriptionBase: "v1" }),
+        {},
+        ctx,
+      );
+      expect(res.status).toBe(200);
+      await flush();
+
+      const deliveryCall = fetchSpy.calls.find(([url]) => url === "https://hooks.example.com/description-base");
+      expect(deliveryCall).toBeDefined();
+      const payload = JSON.parse((deliveryCall![1] as RequestInit).body as string) as {
+        data: Record<string, unknown>;
+        changes?: Record<string, unknown>;
+      };
+      expect(Object.keys(payload.changes ?? {})).toEqual(["description"]);
+      expect(payload.data).not.toHaveProperty("descriptionBase");
+    } finally {
+      fetchSpy.restore();
+    }
   });
 });

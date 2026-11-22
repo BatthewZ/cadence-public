@@ -4,8 +4,8 @@ import { useState } from "react";
 import type { TaskPriority } from "@/shared/types/roles";
 import { useToast } from "@/web/components/ui/ToastContext";
 import type { Task, TaskCompletionResponse, TaskGroup } from "@/web/contexts/ProjectContext";
-import { api } from "@/web/lib/api/client";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 
 /* ------------------------------------------------------------------ */
@@ -22,6 +22,7 @@ interface UseTaskActionsOptions {
   task: Pick<
     Task,
     | "id"
+    | "title"
     | "priority"
     | "assigneeId"
     | "assigneeName"
@@ -34,8 +35,8 @@ interface UseTaskActionsOptions {
   };
   /** Optimistic context updater (from ProjectContext). */
   updateTask: (taskId: string, updates: Partial<Task>) => void;
-  /** Optimistic context remover (from ProjectContext). */
-  removeTask: (taskId: string) => void;
+  /** Optimistic context remover (from ProjectContext); returns its undo. */
+  removeTask: (taskId: string) => () => void;
   /** Available task groups for move-to-group logic. */
   taskGroups: TaskGroup[];
   /** Workspace ID — needed to invalidate dashboard queries on delete. */
@@ -74,8 +75,13 @@ export function useTaskActions({
     updateTask(task.id, { priority });
     freshnessTracker.recordMutation("tasks");
     try {
-      await api.patch(`/api/tasks/${task.id}`, { priority });
-      invalidateTask();
+      const result = await sendWrite({
+        method: "PATCH",
+        path: `/api/tasks/${task.id}`,
+        body: { priority },
+        label: `Set priority of “${task.title}”`,
+      });
+      if (result.status === "sent") invalidateTask();
     } catch {
       updateTask(task.id, { priority: oldPriority });
       toast("Failed to update priority", { variant: "error" });
@@ -88,8 +94,13 @@ export function useTaskActions({
     updateTask(task.id, { assigneeId, assigneeName: assigneeName ?? undefined });
     freshnessTracker.recordMutation("tasks");
     try {
-      await api.patch(`/api/tasks/${task.id}`, { assigneeId });
-      invalidateTask();
+      const result = await sendWrite({
+        method: "PATCH",
+        path: `/api/tasks/${task.id}`,
+        body: { assigneeId },
+        label: `Assign “${task.title}”`,
+      });
+      if (result.status === "sent") invalidateTask();
     } catch {
       updateTask(task.id, { assigneeId: oldAssigneeId, assigneeName: oldAssigneeName });
       toast("Failed to update assignee", { variant: "error" });
@@ -110,12 +121,19 @@ export function useTaskActions({
       if (oldPosition != null) {
         movePayload.position = oldPosition;
       }
-      const res = await api.patch<TaskCompletionResponse>(`/api/tasks/${task.id}/move`, movePayload);
-      updateTask(task.id, res.task);
-      if (res.removedRecurringTaskId) {
-        removeTask(res.removedRecurringTaskId);
+      const result = await sendWrite<TaskCompletionResponse>({
+        method: "PATCH",
+        path: `/api/tasks/${task.id}/move`,
+        body: movePayload,
+        label: `Move “${task.title}”`,
+      });
+      if (result.status === "sent") {
+        updateTask(task.id, result.data.task);
+        if (result.data.removedRecurringTaskId) {
+          removeTask(result.data.removedRecurringTaskId);
+        }
+        invalidateTask();
       }
-      invalidateTask();
     } catch {
       const revert: Partial<Task> = {
         taskGroupId: oldGroupId,
@@ -134,8 +152,13 @@ export function useTaskActions({
     updateTask(task.id, { dueDate: date });
     freshnessTracker.recordMutation("tasks");
     try {
-      await api.patch(`/api/tasks/${task.id}`, { dueDate: date });
-      invalidateTask();
+      const result = await sendWrite({
+        method: "PATCH",
+        path: `/api/tasks/${task.id}`,
+        body: { dueDate: date },
+        label: `Set due date of “${task.title}”`,
+      });
+      if (result.status === "sent") invalidateTask();
     } catch {
       updateTask(task.id, { dueDate: oldDueDate });
       toast("Failed to update due date", { variant: "error" });
@@ -144,14 +167,21 @@ export function useTaskActions({
 
   const handleDeleteConfirm = async () => {
     setDeleting(true);
+    const restore = removeTask(task.id);
+    freshnessTracker.recordMutation("tasks");
+    setShowDeleteDialog(false);
     try {
-      await api.delete(`/api/tasks/${task.id}`);
-      removeTask(task.id);
-      freshnessTracker.recordMutation("tasks");
-      void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(task.id) });
-      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspaceId) });
-      setShowDeleteDialog(false);
+      const result = await sendWrite({
+        method: "DELETE",
+        path: `/api/tasks/${task.id}`,
+        label: `Delete “${task.title}”`,
+      });
+      if (result.status === "sent") {
+        void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(task.id) });
+        void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspaceId) });
+      }
     } catch {
+      restore();
       toast("Failed to delete task", { variant: "error" });
     } finally {
       setDeleting(false);

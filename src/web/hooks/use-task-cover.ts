@@ -4,6 +4,7 @@ import type {
   StoredUnsplashCoverPayload,
   UnsplashCoverPayload,
 } from "@/shared/schemas/unsplash";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import type { Task } from "@/web/contexts/ProjectContext";
 import { useFileUpload } from "@/web/hooks/use-file-upload";
 import { resolveCoverDisplay } from "@/web/hooks/use-project-cover";
@@ -70,6 +71,8 @@ export function useTaskCover({
     coverImageKey: string;
   }>();
   const coverUploading = coverUploadState === "uploading";
+  const coverOnlineOnly = useOnlineOnly();
+  const { online } = coverOnlineOnly;
 
   const { coverUrl, coverSrcSet, coverAttribution } = resolveCoverDisplay(
     coverImageKey,
@@ -101,8 +104,13 @@ export function useTaskCover({
     [taskId, uploadFile, setLocalTask, updateTaskInContext, invalidateTaskQueries],
   );
 
+  // Offline the optimistic change could never be confirmed or rolled back (the refetch is paused).
   const handleCoverApplyUnsplash = useCallback(
     async (payload: UnsplashCoverPayload) => {
+      if (!online) {
+        toast("Changing the cover needs a connection.", { variant: "error" });
+        return;
+      }
       freshnessTracker.recordMutation("tasks");
       // XOR: applying Unsplash clears any uploaded image key.
       setLocalTask((prev) =>
@@ -123,10 +131,14 @@ export function useTaskCover({
         void refetch();
       }
     },
-    [taskId, setLocalTask, updateTaskInContext, invalidateTaskQueries, toast, refetch],
+    [online, taskId, setLocalTask, updateTaskInContext, invalidateTaskQueries, toast, refetch],
   );
 
   const handleCoverRemove = useCallback(async () => {
+    if (!online) {
+      toast("Removing the cover needs a connection.", { variant: "error" });
+      return;
+    }
     freshnessTracker.recordMutation("tasks");
     // XOR: clear both columns optimistically — the backend clears both too.
     setLocalTask((prev) =>
@@ -140,7 +152,7 @@ export function useTaskCover({
       toast("Failed to remove cover image", { variant: "error" });
       void refetch();
     }
-  }, [taskId, setLocalTask, updateTaskInContext, invalidateTaskQueries, toast, refetch]);
+  }, [online, taskId, setLocalTask, updateTaskInContext, invalidateTaskQueries, toast, refetch]);
 
   const handleCoverPositionChange = useCallback(
     async (pos: number) => {
@@ -166,6 +178,8 @@ export function useTaskCover({
     coverSrcSet,
     coverAttribution,
     coverUploading,
+    /** Disable the cover picker's trigger with this: covers can't change offline. */
+    coverOnlineOnly,
     handleCoverUpload,
     handleCoverApplyUnsplash,
     handleCoverRemove,

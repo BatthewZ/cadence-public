@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SavedView } from "@/shared/schemas/saved-view";
+import { sendWrite, type WriteResult } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 
 import type { SavedViewsData } from "./use-saved-views";
@@ -31,7 +32,17 @@ vi.mock("@/web/lib/api/client", async () => {
   };
 });
 
+vi.mock("@/web/lib/offline/send-write", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/web/lib/offline/send-write")>();
+  return { ...actual, sendWrite: vi.fn(actual.sendWrite) };
+});
+
+vi.mock("@/web/lib/auth/auth-client", () => ({
+  useSession: () => ({ data: { user: { id: "user-1" } } }),
+}));
+
 import { api } from "@/web/lib/api/client";
+const mockSendWrite = vi.mocked(sendWrite);
 const mockGet = api.get as ReturnType<typeof vi.fn>;
 const mockPost = api.post as ReturnType<typeof vi.fn>;
 const mockPatch = api.patch as ReturnType<typeof vi.fn>;
@@ -44,11 +55,12 @@ const mockDelete = api.delete as ReturnType<typeof vi.fn>;
  *
  * - the cache key/URL pairing (a mismatch would strand data where no
  *   invalidation can reach it),
- * - that create is NON-optimistic (callers need the server-assigned id for
- *   `?view=<id>` URLs, so no temp-id row may ever appear in the cache),
+ * - that create inserts optimistically under the caller's client id (the id
+ *   callers write into `?view=<id>` URLs), and undoes that only on refusal,
  * - the optimistic update/delete + rollback + settled-invalidation shape
  *   (mirroring use-labels.ts, minus task fan-out and freshness tracking —
- *   saved views are private per-user data touching no task caches).
+ *   saved views are private per-user data touching no task caches), and that
+ *   a queued write keeps its optimistic state without a refetch.
  */
 
 const PROJECT_ID = "proj-1";
@@ -138,8 +150,15 @@ describe("useCreateSavedView", () => {
     vi.restoreAllMocks();
   });
 
-  it("posts the input body to the views endpoint and resolves with the created view", async () => {
-    const created = makeView({ id: "view-new", name: "New view" });
+  const NEW_ID = "00000000-0000-4000-8000-000000000001";
+  const input = {
+    id: NEW_ID,
+    name: "New view",
+    state: { tab: "board", params: { assignee: "me" } },
+  };
+
+  it("posts the input body, client id included, and resolves with the sent result", async () => {
+    const created = makeView({ id: NEW_ID, name: "New view" });
     mockPost.mockResolvedValueOnce({ view: created });
     const { Wrapper } = createClientAndWrapper();
 
@@ -147,23 +166,16 @@ describe("useCreateSavedView", () => {
       wrapper: Wrapper,
     });
 
-    const input = {
-      name: "New view",
-      state: { tab: "board", params: { assignee: "me" } },
-    };
-
-    let response: { view: SavedView } | undefined;
+    let response: WriteResult<{ view: SavedView }> | undefined;
     await act(async () => {
       response = await result.current.mutateAsync(input);
     });
 
     expect(mockPost).toHaveBeenCalledWith(`/api/projects/${PROJECT_ID}/views`, input);
-    // mutateAsync must surface the server row: the caller reads `view.id` to
-    // set `?view=<id>` in the URL right after creation.
-    expect(response?.view.id).toBe("view-new");
+    expect(response).toEqual({ status: "sent", data: { view: created } });
   });
 
-  it("does NOT optimistically insert into the cache while the request is in flight", async () => {
+  it("appends the view under its client id while the request is in flight, then takes the server copy", async () => {
     const existing: SavedViewsData = { views: [makeView()] };
     let resolvePost!: (value: { view: SavedView }) => void;
     mockPost.mockReturnValueOnce(
@@ -179,30 +191,50 @@ describe("useCreateSavedView", () => {
     });
 
     act(() => {
-      result.current.mutate({
-        name: "New view",
-        state: { tab: "board", params: {} },
-      });
+      result.current.mutate(input);
     });
 
     await waitFor(() => {
-      expect(mockPost).toHaveBeenCalled();
+      expect(getCachedViews(queryClient)?.views.map((v) => v.id)).toEqual(["view-1", NEW_ID]);
     });
-    // While pending, the cache must be untouched — there is no temp-id row.
-    expect(getCachedViews(queryClient)).toEqual(existing);
+    const optimistic = getCachedViews(queryClient)?.views[1];
+    expect(optimistic).toMatchObject({ name: "New view", creatorId: "user-1", state: input.state });
+    // Appended after the last view, as the server does.
+    expect(optimistic && optimistic.position > "a0").toBe(true);
 
+    const serverRow = makeView({ id: NEW_ID, name: "New view", position: "a1" });
     await act(async () => {
-      resolvePost({ view: makeView({ id: "view-new", name: "New view" }) });
-      // Yield so the promise's resolution handlers run inside act.
+      resolvePost({ view: serverRow });
       await Promise.resolve();
     });
     await waitFor(() => {
       expect(result.current.isSuccess).toBe(true);
     });
+    expect(getCachedViews(queryClient)?.views[1]).toEqual(serverRow);
+  });
+
+  it("removes the optimistic view when the server refuses", async () => {
+    const existing: SavedViewsData = { views: [makeView()] };
+    mockPost.mockRejectedValueOnce(new Error("409 duplicate name"));
+    const { queryClient, Wrapper } = createClientAndWrapper();
+    queryClient.setQueryData(LIST_KEY, existing);
+
+    const { result } = renderHook(() => useCreateSavedView(PROJECT_ID), {
+      wrapper: Wrapper,
+    });
+
+    act(() => {
+      result.current.mutate(input);
+    });
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+    expect(getCachedViews(queryClient)).toEqual(existing);
   });
 
   it("invalidates the saved-views list on success", async () => {
-    mockPost.mockResolvedValueOnce({ view: makeView({ id: "view-new" }) });
+    mockPost.mockResolvedValueOnce({ view: makeView({ id: NEW_ID }) });
     const { queryClient, Wrapper } = createClientAndWrapper();
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
 
@@ -211,13 +243,28 @@ describe("useCreateSavedView", () => {
     });
 
     await act(async () => {
-      await result.current.mutateAsync({
-        name: "New view",
-        state: { tab: "board", params: {} },
-      });
+      await result.current.mutateAsync(input);
     });
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: LIST_KEY });
+  });
+
+  it("keeps the optimistic view and skips the refetch when the write is queued", async () => {
+    mockSendWrite.mockResolvedValueOnce({ status: "queued" });
+    const { queryClient, Wrapper } = createClientAndWrapper();
+    queryClient.setQueryData(LIST_KEY, { views: [makeView()] });
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useCreateSavedView(PROJECT_ID), {
+      wrapper: Wrapper,
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync(input);
+    });
+
+    expect(getCachedViews(queryClient)?.views.map((v) => v.id)).toEqual(["view-1", NEW_ID]);
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 });
 
@@ -438,5 +485,52 @@ describe("useDeleteSavedView", () => {
     });
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: LIST_KEY });
+  });
+});
+
+describe("queued update and delete", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const viewA = makeView({ id: "view-a", name: "Alpha" });
+  const viewB = makeView({ id: "view-b", name: "Beta" });
+  const seeded: SavedViewsData = { views: [viewA, viewB] };
+
+  it("keeps a queued rename in the cache without refetching", async () => {
+    mockSendWrite.mockResolvedValueOnce({ status: "queued" });
+    const { queryClient, Wrapper } = createClientAndWrapper();
+    queryClient.setQueryData(LIST_KEY, seeded);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useUpdateSavedView(PROJECT_ID), { wrapper: Wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ viewId: "view-a", name: "Renamed" });
+    });
+
+    expect(getCachedViews(queryClient)?.views.map((v) => v.name)).toEqual(["Renamed", "Beta"]);
+    expect(invalidateSpy).not.toHaveBeenCalled();
+  });
+
+  it("names a delete by the view before it leaves the cache, and keeps it removed when queued", async () => {
+    mockSendWrite.mockResolvedValueOnce({ status: "queued" });
+    const { queryClient, Wrapper } = createClientAndWrapper();
+    queryClient.setQueryData(LIST_KEY, seeded);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useDeleteSavedView(PROJECT_ID), { wrapper: Wrapper });
+    await act(async () => {
+      await result.current.mutateAsync("view-a");
+    });
+
+    expect(mockSendWrite).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "DELETE", label: "Delete view “Alpha”" }),
+    );
+    expect(getCachedViews(queryClient)?.views).toEqual([viewB]);
+    expect(invalidateSpy).not.toHaveBeenCalled();
   });
 });

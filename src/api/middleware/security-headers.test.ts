@@ -148,6 +148,69 @@ describe("withSpaSecurityHeaders", () => {
     expect(wrapped.headers.get("Cache-Control")).toBe("no-cache");
   });
 
+  it("SPA CSP lets the app register its service worker and manifest", () => {
+    const csp = withSpaSecurityHeaders(new Response("<html></html>"), "/").headers.get("Content-Security-Policy");
+
+    expect(csp).toContain("worker-src 'self'");
+    expect(csp).toContain("manifest-src 'self'");
+  });
+
+  /** The service worker's own fetches of cover images are governed by connect-src, not img-src. */
+  it("SPA CSP connect-src allows https://images.unsplash.com for the service worker's image cache", () => {
+    const csp = withSpaSecurityHeaders(new Response("<html></html>"), "/").headers.get("Content-Security-Policy") ?? "";
+    const connectSrc = csp.split("; ").find((d) => d.startsWith("connect-src "));
+
+    expect(connectSrc).toContain("https://images.unsplash.com");
+  });
+
+  it.each(["/sw.js", "/registerSW.js", "/workbox-9a1b2c3d.js", "/manifest.webmanifest"])(
+    "serves %s with no-cache so a new deploy's service worker is picked up",
+    (path) => {
+      const wrapped = withSpaSecurityHeaders(
+        new Response("x", { headers: { "Content-Type": "application/octet-stream" } }),
+        path,
+      );
+      expect(wrapped.headers.get("Cache-Control")).toBe("no-cache");
+    },
+  );
+
+  it.each([
+    ["/sw.js", "text/javascript; charset=utf-8"],
+    ["/registerSW.js", "text/javascript; charset=utf-8"],
+    ["/workbox-9a1b2c3d.js", "text/javascript; charset=utf-8"],
+    ["/manifest.webmanifest", "application/manifest+json"],
+  ])("serves %s as %s", (path, contentType) => {
+    const wrapped = withSpaSecurityHeaders(
+      new Response("x", { headers: { "Content-Type": "application/octet-stream" } }),
+      path,
+    );
+    expect(wrapped.headers.get("Content-Type")).toBe(contentType);
+  });
+
+  it("leaves the SPA fallback for a missing service worker as HTML so registration fails cleanly", () => {
+    const wrapped = withSpaSecurityHeaders(
+      new Response("<html></html>", { headers: { "Content-Type": "text/html" } }),
+      "/sw.js",
+    );
+    expect(wrapped.headers.get("Content-Type")).toBe("text/html");
+  });
+
+  it("turns HTML served for a missing hashed asset into a no-store 404", async () => {
+    const wrapped = withSpaSecurityHeaders(
+      new Response("<!doctype html><html></html>", {
+        status: 200,
+        headers: { "Content-Type": "text/html; charset=utf-8" },
+      }),
+      "/assets/index-Gone1234.js",
+    );
+
+    expect(wrapped.status).toBe(404);
+    expect(wrapped.headers.get("Cache-Control")).toBe("no-store");
+    expect(wrapped.headers.get("Content-Type")).not.toContain("text/html");
+    expect(wrapped.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(await wrapped.text()).not.toContain("<html");
+  });
+
   it("sets no-cache for root path", () => {
     const original = new Response("<html></html>", {
       headers: { "Content-Type": "text/html" },

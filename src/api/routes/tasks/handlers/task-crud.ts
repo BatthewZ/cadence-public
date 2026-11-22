@@ -1,17 +1,20 @@
 import { and, asc, count, desc, eq, exists, getTableColumns, inArray, sql } from "drizzle-orm";
 import type { Context } from "hono";
 
+import type { Database } from "../../../../db";
 import { user as userTable } from "../../../../db/schema/auth";
 import { label, taskLabel } from "../../../../db/schema/label";
 import { project } from "../../../../db/schema/project";
 import { comment, subtask, task, taskGroup } from "../../../../db/schema/task";
 import { taskAttachment } from "../../../../db/schema/task-attachment";
+import { WRITE_ERROR_CODES } from "../../../../shared/constants/offline-sync";
 import { generateKeyBetween } from "../../../../shared/lib/fractional-index";
 import { parseRecurrenceRule } from "../../../../shared/lib/recurrence";
 import type { TaskLabelInfo } from "../../../../shared/schemas/label";
 import { createTaskSchema, dateRangeError, updateTaskSchema } from "../../../../shared/schemas/task";
 import type { AppEnv } from "../../../env";
 import { ASSIGNEE_NOT_ASSIGNABLE_MESSAGE, canUserBeAssigned } from "../../../lib/assignee-validation";
+import { clientIdConflict } from "../../../lib/client-id";
 import { deferWork } from "../../../lib/defer";
 import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
@@ -64,7 +67,10 @@ export async function createTask(c: Context<AppEnv>) {
     return errorResponse(c, "Task group not found in this project", 404);
   }
 
-  const id = crypto.randomUUID();
+  const idConflict = await clientIdConflict(c, task, body.id);
+  if (idConflict) return idConflict;
+
+  const id = body.id ?? crypto.randomUUID();
   const now = new Date();
 
   const isCompleted = group.isCompletionGroup;
@@ -324,10 +330,8 @@ export async function listTasks(c: Context<AppEnv>) {
   return c.json({ tasks: tasksWithLabels });
 }
 
-export async function getTask(c: Context<AppEnv>) {
-  const db = c.get("db");
-  const taskId = requireParam(c, "taskId");
-
+/** A task in the shape `GET /tasks/:taskId` returns, or null when it does not exist. */
+async function loadTaskDetail(db: Database, taskId: string) {
   const [taskResult, subtasks, [{ value: commentCount }], taskLabels] = await db.batch([
     db.select().from(task).where(eq(task.id, taskId)).limit(1),
     db.select().from(subtask).where(eq(subtask.taskId, taskId)).orderBy(asc(subtask.position), asc(subtask.id)),
@@ -343,20 +347,35 @@ export async function getTask(c: Context<AppEnv>) {
   ] as const);
 
   const foundTask = taskResult[0];
-  if (!foundTask) {
-    return errorResponse(c, "Task not found", 404);
-  }
+  if (!foundTask) return null;
 
   const { recurrenceRule: recurrenceRuleJson, ...taskFields } = foundTask;
+  return {
+    ...taskFields,
+    recurrenceRule: parseRecurrenceRule(recurrenceRuleJson),
+    subtasks,
+    commentCount,
+    labels: taskLabels,
+  };
+}
 
-  return c.json({
-    task: {
-      ...taskFields,
-      recurrenceRule: parseRecurrenceRule(recurrenceRuleJson),
-      subtasks,
-      commentCount,
-      labels: taskLabels,
-    },
+export async function getTask(c: Context<AppEnv>) {
+  const detail = await loadTaskDetail(c.get("db"), requireParam(c, "taskId"));
+  if (!detail) {
+    return errorResponse(c, "Task not found", 404);
+  }
+  return c.json({ task: detail });
+}
+
+/** 409 `description_conflict` carrying the current task, so the client can merge and retry. */
+async function descriptionConflict(c: Context<AppEnv>, taskId: string) {
+  const current = await loadTaskDetail(c.get("db"), taskId);
+  if (!current) {
+    return errorResponse(c, "Task not found", 404);
+  }
+  return errorResponse(c, "The description changed since this edit was made", 409, {
+    code: WRITE_ERROR_CODES.descriptionConflict,
+    task: current,
   });
 }
 
@@ -463,11 +482,21 @@ export async function updateTask(c: Context<AppEnv>) {
     }),
   };
 
+  const descriptionBase = body.descriptionBase !== undefined && body.description !== undefined
+    ? body.descriptionBase ?? ""
+    : null;
   const [updated] = await db
     .update(task)
     .set(updateData)
-    .where(eq(task.id, taskId))
+    .where(descriptionBase === null
+      ? eq(task.id, taskId)
+      : and(eq(task.id, taskId), sql`COALESCE(${task.description}, '') = ${descriptionBase}`))
     .returning();
+
+  // No row: the stored description no longer equals `descriptionBase`, or the task is gone (404).
+  if (!updated) {
+    return descriptionConflict(c, taskId);
+  }
 
   // Defer activity logging + notifications — runs after response is sent
   {

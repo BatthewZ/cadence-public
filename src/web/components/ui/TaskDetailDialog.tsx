@@ -1,10 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy, SmilePlus, Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 
 import { Input } from "@/web/components/form/Input";
 import { Divider, Stack } from "@/web/components/layout";
 import { EditableMarkdown } from "@/web/components/markdown/EditableMarkdown";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
+import { isUnavailableOffline } from "@/web/components/sync/use-online-only";
 import { useAppShell } from "@/web/components/ui/AppShell";
 import { Button } from "@/web/components/ui/Button";
 import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
@@ -17,20 +19,21 @@ import { Popover } from "@/web/components/ui/Popover";
 import { Skeleton } from "@/web/components/ui/Skeleton";
 import { Text } from "@/web/components/ui/Text";
 import { useToast } from "@/web/components/ui/ToastContext";
-import type { Subtask, Task, TaskGroup } from "@/web/contexts/ProjectContext";
+import type { Task, TaskGroup } from "@/web/contexts/ProjectContext";
 import type { WorkspaceMember } from "@/web/contexts/WorkspaceContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
+import { useLocalTask } from "@/web/hooks/use-local-task";
 import { useProjectPermissions } from "@/web/hooks/use-permissions";
 import { useTaskCommentActions } from "@/web/hooks/use-task-comment-actions";
 import { useTaskComments } from "@/web/hooks/use-task-comments";
 import { useTaskCover } from "@/web/hooks/use-task-cover";
 import { useTaskDetailActions } from "@/web/hooks/use-task-detail-actions";
-import { useTaskEditing } from "@/web/hooks/use-task-editing";
-import { useTaskServerSync } from "@/web/hooks/use-task-server-sync";
+import { type TaskPatch, taskPatchLabel, useTaskEditing } from "@/web/hooks/use-task-editing";
 import { useTaskSubtasks } from "@/web/hooks/use-task-subtasks";
 import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
+import { sendWrite, type WriteResult } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 import { TaskCommentSection } from "@/web/pages/TaskDetail/components/TaskCommentSection";
 import { TaskDetailProperties } from "@/web/pages/TaskDetail/components/TaskDetailProperties";
@@ -72,16 +75,13 @@ export function TaskDetailDialog({
   const currentUserId = session?.user?.id;
 
   // Fetch task detail
-  const {
-    data: taskData,
-    isLoading: loading,
-    error: queryError,
-    refetch,
-  } = useQuery({
+  const taskQuery = useQuery({
     queryKey: queryKeys.tasks.detail(taskId),
     queryFn: () => api.get<{ task: TaskDetail }>(`/api/tasks/${taskId}`),
     enabled: open && !!taskId,
   });
+  const { data: taskData, isLoading: loading, error: queryError, refetch } = taskQuery;
+  const unavailableOffline = isUnavailableOffline(taskQuery);
 
   const taskFromServer = taskData?.task ?? null;
   const projectId = taskFromServer?.projectId;
@@ -98,10 +98,8 @@ export function TaskDetailDialog({
   }, [qc, taskId, projectId, workspace.id]);
 
   // Local optimistic copy of the task
-  const [localTask, setLocalTask] = useState<TaskDetail | null>(null);
+  const { localTask, setLocalTask, resetLocalTask } = useLocalTask(taskId, taskFromServer);
   const task = localTask;
-
-  useTaskServerSync(taskFromServer, setLocalTask);
 
   // Fetch task groups for the project
   const { data: taskGroupsData } = useQuery({
@@ -155,6 +153,8 @@ export function TaskDetailDialog({
     currentUserName: session?.user?.name,
     invalidateTaskQueries,
     toast,
+    setLocalTask,
+    projectId: localTask?.projectId,
   });
 
   // Task-level actions (complete, duplicate, delete)
@@ -164,7 +164,6 @@ export function TaskDetailDialog({
     handleToggleComplete,
     handleDuplicateTask,
     handleDeleteTask,
-    isDeleting,
   } = useTaskDetailActions({
     taskId,
     localTask,
@@ -179,26 +178,26 @@ export function TaskDetailDialog({
   useEffect(() => {
     if (!open) {
       queueMicrotask(() => {
-        setLocalTask(null);
+        resetLocalTask(null);
         resetCommentState();
         setShowDeleteDialog(false);
       });
     }
-  }, [open, resetCommentState, setShowDeleteDialog]);
+  }, [open, resetLocalTask, resetCommentState, setShowDeleteDialog]);
 
   // Mutations (non-comment/non-task-action — those live in extracted hooks)
   const patchTask = useMutation({
-    mutationFn: (updates: Partial<TaskDetail>) =>
-      api.patch<{ task: TaskDetail }>(`/api/tasks/${taskId}`, updates),
+    mutationFn: (updates: TaskPatch): Promise<WriteResult<{ task: TaskDetail }>> =>
+      sendWrite({
+        method: "PATCH",
+        path: `/api/tasks/${taskId}`,
+        body: updates,
+        label: taskPatchLabel(localTask?.title, updates),
+      }),
     onMutate: () => freshnessTracker.recordMutation("tasks"),
-    onSuccess: invalidateTaskQueries,
-  });
-
-  const createSubtask = useMutation({
-    mutationFn: (input: { title: string }) =>
-      api.post<{ subtask: Subtask }>(`/api/tasks/${taskId}/subtasks`, input),
-    onMutate: () => freshnessTracker.recordMutation("tasks"),
-    onSettled: invalidateTaskQueries,
+    onSuccess: (result) => {
+      if (result.status === "sent") invalidateTaskQueries();
+    },
   });
 
   // --- Extracted hooks (shared with TaskDetailPanelInner) ---
@@ -214,6 +213,8 @@ export function TaskDetailDialog({
     handlePatch,
     handleTitleSave,
     handleCostBlur,
+    handleDescriptionSave,
+    handleDescriptionEditStart,
   } = useTaskEditing({
     taskId,
     localTask,
@@ -245,7 +246,6 @@ export function TaskDetailDialog({
     updateTaskInContext: noopUpdateContext,
     invalidateTaskQueries,
     toast,
-    createSubtask,
   });
 
   const {
@@ -273,12 +273,18 @@ export function TaskDetailDialog({
     if (!task || newGroupId === task.taskGroupId) return;
     const oldGroupId = task.taskGroupId;
     setLocalTask((prev) => (prev ? { ...prev, taskGroupId: newGroupId } : prev));
+    freshnessTracker.recordMutation("tasks");
     try {
-      await api.patch(`/api/tasks/${taskId}/move`, {
-        taskGroupId: newGroupId,
-        position: task.position,
+      const result = await sendWrite({
+        method: "PATCH",
+        path: `/api/tasks/${taskId}/move`,
+        body: {
+          taskGroupId: newGroupId,
+          position: task.position,
+        },
+        label: `Move “${task.title}”`,
       });
-      invalidateTaskQueries();
+      if (result.status === "sent") invalidateTaskQueries();
     } catch {
       setLocalTask((prev) => (prev ? { ...prev, taskGroupId: oldGroupId } : prev));
       toast("Failed to move task", { variant: "error" });
@@ -301,7 +307,9 @@ export function TaskDetailDialog({
             </Stack>
           )}
 
-          {queryError && (
+          {unavailableOffline && <OfflineUnavailable what="This task" />}
+
+          {queryError && !unavailableOffline && (
             <div className="p-r3">
               <Text color="muted" variant="body-2">
                 Error loading task: {queryError.message}
@@ -451,9 +459,8 @@ export function TaskDetailDialog({
                   </Text>
                   <EditableMarkdown
                     value={task.description ?? ""}
-                    onSave={async (next) => {
-                      await handlePatch({ description: next || null });
-                    }}
+                    onSave={handleDescriptionSave}
+                    onEditStart={handleDescriptionEditStart}
                     members={members}
                     readOnly={!canEditTasks}
                     density="compact"
@@ -573,7 +580,6 @@ export function TaskDetailDialog({
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={() => void handleDeleteTask()}
         title="Delete Task"
-        confirming={isDeleting}
       >
         Are you sure? This cannot be undone.
       </ConfirmDialog>

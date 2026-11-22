@@ -6,6 +6,7 @@ import { project, projectMember } from "../../../db/schema/project";
 import { createLabelSchema, updateLabelSchema } from "../../../shared/schemas/label";
 import { MAX_LABELS_PER_PROJECT } from "../../../shared/schemas/label";
 import type { AppEnv } from "../../env";
+import { clientIdConflict } from "../../lib/client-id";
 import { errorResponse } from "../../lib/error-response";
 import { requireParam, requireParams } from "../../lib/params";
 import { validJson } from "../../lib/validated";
@@ -40,7 +41,10 @@ export async function createLabel(c: Context<AppEnv>) {
     return errorResponse(c, "A label with this name already exists in the project", 409);
   }
 
-  const id = crypto.randomUUID();
+  const idConflict = await clientIdConflict(c, label, body.id);
+  if (idConflict) return idConflict;
+
+  const id = body.id ?? crypto.randomUUID();
   const now = new Date();
 
   const newLabel = {

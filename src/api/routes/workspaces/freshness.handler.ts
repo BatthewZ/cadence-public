@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 
 import { project } from "../../../db/schema/project";
@@ -15,6 +15,9 @@ import { requireParam } from "../../lib/params";
  * The `tasks` timestamp is a workspace-wide MAX(task.updatedAt) across all
  * projects. It is not user-specific, which allows edge caching but may produce
  * occasional false-positive invalidations for users who can't see every project.
+ *
+ * `projectCount` / `taskCount` let a poller notice a hard delete, which leaves
+ * no row behind to move MAX(updatedAt).
  */
 export async function getWorkspaceFreshness(c: Context<AppEnv>) {
   const workspaceId = requireParam(c, "workspaceId");
@@ -37,10 +40,10 @@ export async function getWorkspaceFreshness(c: Context<AppEnv>) {
       .from(workspace)
       .where(eq(workspace.id, workspaceId))
       .limit(1),
-    db.select({ max: sql<number>`MAX(${project.updatedAt})` })
+    db.select({ max: sql<number>`MAX(${project.updatedAt})`, count: count() })
       .from(project)
       .where(eq(project.workspaceId, workspaceId)),
-    db.select({ max: sql<number>`MAX(${task.updatedAt})` })
+    db.select({ max: sql<number>`MAX(${task.updatedAt})`, count: count() })
       .from(task)
       .innerJoin(project, eq(task.projectId, project.id))
       .where(eq(project.workspaceId, workspaceId)),
@@ -50,6 +53,8 @@ export async function getWorkspaceFreshness(c: Context<AppEnv>) {
     workspace: wsResult[0]?.updatedAt?.getTime() ?? null,
     projects: projectsResult[0]?.max ?? null,
     tasks: tasksResult[0]?.max ?? null,
+    projectCount: projectsResult[0]?.count ?? 0,
+    taskCount: tasksResult[0]?.count ?? 0,
   };
 
   const body = JSON.stringify({ freshness });

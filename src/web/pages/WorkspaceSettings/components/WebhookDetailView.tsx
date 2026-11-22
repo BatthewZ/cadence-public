@@ -1,6 +1,7 @@
 import { ChevronLeft, Play, Trash2 } from "lucide-react";
 
 import { Container, Divider, Row, Stack } from "@/web/components/layout";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
 import {
   Alert,
   Badge,
@@ -59,6 +60,8 @@ export function WebhookDetailView({ hook }: { hook: UseWorkspaceWebhooksReturn }
     handleRegenerateSecret,
     handleTest,
     handleCopiedSecret,
+    detailUnavailableOffline,
+    onlineOnly,
   } = hook;
 
   return (
@@ -87,7 +90,9 @@ export function WebhookDetailView({ hook }: { hook: UseWorkspaceWebhooksReturn }
           Back to Webhooks
         </Button>
 
-        {detailLoading && !wh ? (
+        {detailUnavailableOffline ? (
+          <OfflineUnavailable what="This webhook" className="min-h-0 py-r1" />
+        ) : detailLoading && !wh ? (
           <Row justify="center" className="py-r1">
             <Spinner size="lg" />
           </Row>
@@ -156,6 +161,8 @@ export function WebhookDetailView({ hook }: { hook: UseWorkspaceWebhooksReturn }
                         variant="secondary"
                         size="sm"
                         onClick={() => handleOpenEdit(wh)}
+                        disabled={onlineOnly.disabled}
+                        title={onlineOnly.title}
                       >
                         Edit
                       </Button>
@@ -163,7 +170,8 @@ export function WebhookDetailView({ hook }: { hook: UseWorkspaceWebhooksReturn }
                         variant="secondary"
                         size="sm"
                         onClick={() => handleTest(wh.id)}
-                        disabled={testingId === wh.id}
+                        disabled={testingId === wh.id || onlineOnly.disabled}
+                        title={onlineOnly.title}
                       >
                         {testingId === wh.id ? (
                           <Spinner size="sm" className="mr-r6" />
@@ -176,6 +184,8 @@ export function WebhookDetailView({ hook }: { hook: UseWorkspaceWebhooksReturn }
                         variant="danger"
                         size="sm"
                         onClick={() => setDeleteTarget(wh)}
+                        disabled={onlineOnly.disabled}
+                        title={onlineOnly.title}
                       >
                         <Trash2 size={14} className="mr-r6" />
                         Delete

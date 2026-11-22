@@ -4,6 +4,7 @@ import type { TaskLabelInfo } from "@/shared/schemas/label";
 import type { Task } from "@/web/contexts/ProjectContext";
 import { api } from "@/web/lib/api/client";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
+import { sendWrite, type WriteResult } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 
 export interface Label {
@@ -23,21 +24,103 @@ export function useLabels(projectId: string, options?: { enabled?: boolean }) {
   });
 }
 
+type LabelsData = { labels: Label[] };
+
+/** A queued write's reply comes with the refresh after the queue drains, so it skips this one. */
+function invalidateLabelQueries(qc: QueryClient, projectId: string, result: WriteResult<unknown> | undefined) {
+  if (result?.status === "queued") return;
+  void qc.invalidateQueries({ queryKey: queryKeys.projects.labels(projectId) });
+  void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(projectId) });
+}
+
+function labelName(qc: QueryClient, projectId: string, labelId: string): string {
+  const label = qc
+    .getQueryData<LabelsData>(queryKeys.projects.labels(projectId))
+    ?.labels.find((l) => l.id === labelId);
+  return label ? `“${label.name}”` : "a label";
+}
+
+type CacheEntry = [readonly unknown[], unknown];
+
+/** Tasks embed their labels: the cached task list and task details that carry `labelId`, for rollback. */
+function taskCachesWithLabel(qc: QueryClient, projectId: string, labelId: string): CacheEntry[] {
+  const entries: CacheEntry[] = [];
+  const tasksKey = queryKeys.projects.tasks(projectId);
+  const tasks = qc.getQueryData<{ tasks: Task[] }>(tasksKey);
+  if (tasks?.tasks.some((t) => t.labels?.some((l) => l.id === labelId))) entries.push([tasksKey, tasks]);
+  for (const [key, data] of qc.getQueriesData<TaskDetailData>({ queryKey: ["tasks"] })) {
+    if (data?.task?.labels?.some((l) => l.id === labelId)) entries.push([key, data]);
+  }
+  return entries;
+}
+
+function rewriteLabelInTaskCaches(
+  qc: QueryClient,
+  projectId: string,
+  labelId: string,
+  rewrite: (labels: TaskLabelInfo[]) => TaskLabelInfo[]
+): void {
+  qc.setQueryData<{ tasks: Task[] }>(queryKeys.projects.tasks(projectId), (old) => {
+    if (!old) return old;
+    return {
+      tasks: old.tasks.map((t) =>
+        t.labels?.some((l) => l.id === labelId) ? { ...t, labels: rewrite(t.labels) } : t
+      ),
+    };
+  });
+  for (const [key, data] of qc.getQueriesData<TaskDetailData>({ queryKey: ["tasks"] })) {
+    const labels = data?.task?.labels;
+    if (!data || !labels?.some((l) => l.id === labelId)) continue;
+    qc.setQueryData<TaskDetailData>(key, { ...data, task: { ...data.task, labels: rewrite(labels) } });
+  }
+}
+
+function restoreCaches(qc: QueryClient, entries: CacheEntry[] | undefined) {
+  for (const [key, data] of entries ?? []) qc.setQueryData(key, data);
+}
+
 export function useCreateLabel(projectId: string) {
   const qc = useQueryClient();
+  const labelsKey = queryKeys.projects.labels(projectId);
 
   return useMutation({
-    mutationFn: (input: { name: string; color: string }) =>
-      api.post<{ label: Label }>(`/api/projects/${projectId}/labels`, input),
-    onSuccess: () => {
-      freshnessTracker.recordMutation("project");
-      void qc.invalidateQueries({
-        queryKey: queryKeys.projects.labels(projectId),
-      });
-      void qc.invalidateQueries({
-        queryKey: queryKeys.projects.tasks(projectId),
+    networkMode: "always",
+    // The insert lives here, not in onMutate, because this is where the client id is minted.
+    mutationFn: (input: { name: string; color: string }) => {
+      const id = crypto.randomUUID();
+      const optimistic: Label = {
+        id,
+        projectId,
+        ...input,
+        taskCount: 0,
+        createdAt: new Date().toISOString(),
+      };
+      qc.setQueryData<LabelsData>(labelsKey, (old) =>
+        old ? { labels: [...old.labels, optimistic] } : old
+      );
+      return sendWrite<{ label: Label }>({
+        method: "POST",
+        path: `/api/projects/${projectId}/labels`,
+        body: { id, ...input },
+        label: `Add label “${input.name}”`,
       });
     },
+    onMutate: async () => {
+      freshnessTracker.recordMutation("project");
+      await qc.cancelQueries({ queryKey: labelsKey });
+      return { prevLabels: qc.getQueryData<LabelsData>(labelsKey) };
+    },
+    onSuccess: (result) => {
+      if (result.status !== "sent") return;
+      const { label } = result.data;
+      qc.setQueryData<LabelsData>(labelsKey, (old) =>
+        old ? { labels: old.labels.map((l) => (l.id === label.id ? { ...l, ...label } : l)) } : old
+      );
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prevLabels) qc.setQueryData(labelsKey, ctx.prevLabels);
+    },
+    onSettled: (result) => invalidateLabelQueries(qc, projectId, result),
   });
 }
 
@@ -45,8 +128,17 @@ export function useUpdateLabel(projectId: string) {
   const qc = useQueryClient();
 
   return useMutation({
+    networkMode: "always",
     mutationFn: ({ labelId, ...input }: { labelId: string; name?: string; color?: string }) =>
-      api.patch<{ label: Label }>(`/api/projects/${projectId}/labels/${labelId}`, input),
+      sendWrite<{ label: Label }>({
+        method: "PATCH",
+        path: `/api/projects/${projectId}/labels/${labelId}`,
+        body: input,
+        // Runs after onMutate has applied the new name, so a rename is named by it.
+        label: input.name
+          ? `Rename label to “${input.name}”`
+          : `Recolor label ${labelName(qc, projectId, labelId)}`,
+      }),
     onMutate: async ({ labelId, ...input }) => {
       freshnessTracker.recordMutation("project");
       await Promise.all([
@@ -54,109 +146,66 @@ export function useUpdateLabel(projectId: string) {
         qc.cancelQueries({ queryKey: queryKeys.projects.tasks(projectId) }),
       ]);
 
-      const prevLabels = qc.getQueryData<{ labels: Label[] }>(
-        queryKeys.projects.labels(projectId)
-      );
-      const prevTasks = qc.getQueryData<{ tasks: Task[] }>(
-        queryKeys.projects.tasks(projectId)
-      );
-
-      // Update labels cache
-      qc.setQueryData<{ labels: Label[] }>(queryKeys.projects.labels(projectId), (old) => {
+      const prevLabels = qc.getQueryData<LabelsData>(queryKeys.projects.labels(projectId));
+      qc.setQueryData<LabelsData>(queryKeys.projects.labels(projectId), (old) => {
         if (!old) return old;
         return {
           labels: old.labels.map((l) => (l.id === labelId ? { ...l, ...input } : l)),
         };
       });
 
-      // Update embedded label data in all tasks
-      qc.setQueryData<{ tasks: Task[] }>(queryKeys.projects.tasks(projectId), (old) => {
-        if (!old) return old;
-        return {
-          tasks: old.tasks.map((t) => ({
-            ...t,
-            labels: t.labels?.map((l) => (l.id === labelId ? { ...l, ...input } : l)),
-          })),
-        };
-      });
+      const prevTaskCaches = taskCachesWithLabel(qc, projectId, labelId);
+      rewriteLabelInTaskCaches(qc, projectId, labelId, (labels) =>
+        labels.map((l) => (l.id === labelId ? { ...l, ...input } : l))
+      );
 
-      // Update any active task detail queries that contain this label
-      const prevTaskDetails: Array<[readonly unknown[], TaskDetailData | undefined]> = [];
-      const taskDetailQueries = qc.getQueriesData<TaskDetailData>({ queryKey: ["tasks"] });
-      for (const [key, data] of taskDetailQueries) {
-        if (data?.task?.labels?.some((l: TaskLabelInfo) => l.id === labelId)) {
-          prevTaskDetails.push([key, data]);
-          qc.setQueryData<TaskDetailData>(key, (old) => {
-            if (!old) return old;
-            return {
-              ...old,
-              task: {
-                ...old.task,
-                labels: old.task.labels?.map((l: TaskLabelInfo) =>
-                  l.id === labelId ? { ...l, ...input } : l
-                ),
-              },
-            };
-          });
-        }
-      }
-
-      return { prevLabels, prevTasks, prevTaskDetails };
+      return { prevLabels, prevTaskCaches };
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.prevLabels) {
         qc.setQueryData(queryKeys.projects.labels(projectId), ctx.prevLabels);
       }
-      if (ctx?.prevTasks) {
-        qc.setQueryData(queryKeys.projects.tasks(projectId), ctx.prevTasks);
-      }
-      if (ctx?.prevTaskDetails) {
-        for (const [key, data] of ctx.prevTaskDetails) {
-          qc.setQueryData(key, data);
-        }
-      }
+      restoreCaches(qc, ctx?.prevTaskCaches);
     },
-    onSettled: () => {
-      void qc.invalidateQueries({
-        queryKey: queryKeys.projects.labels(projectId),
-      });
-      void qc.invalidateQueries({
-        queryKey: queryKeys.projects.tasks(projectId),
-      });
-    },
+    onSettled: (result) => invalidateLabelQueries(qc, projectId, result),
   });
 }
 
 export function useDeleteLabel(projectId: string) {
   const qc = useQueryClient();
+  const labelsKey = queryKeys.projects.labels(projectId);
 
   return useMutation({
-    mutationFn: (labelId: string) => api.delete(`/api/projects/${projectId}/labels/${labelId}`),
+    networkMode: "always",
+    // The removal lives here, not in onMutate, so the write is named before the label leaves the cache.
+    mutationFn: (labelId: string) => {
+      const label = `Delete label ${labelName(qc, projectId, labelId)}`;
+      qc.setQueryData<LabelsData>(labelsKey, (old) =>
+        old ? { labels: old.labels.filter((l) => l.id !== labelId) } : old
+      );
+      rewriteLabelInTaskCaches(qc, projectId, labelId, (labels) => removeLabelFromTask(labels, labelId));
+      return sendWrite({
+        method: "DELETE",
+        path: `/api/projects/${projectId}/labels/${labelId}`,
+        label,
+      });
+    },
     onMutate: async (labelId) => {
       freshnessTracker.recordMutation("project");
-      await qc.cancelQueries({
-        queryKey: queryKeys.projects.labels(projectId),
-      });
-      const prev = qc.getQueryData<{ labels: Label[] }>(queryKeys.projects.labels(projectId));
-      qc.setQueryData<{ labels: Label[] }>(queryKeys.projects.labels(projectId), (old) => {
-        if (!old) return old;
-        return { labels: old.labels.filter((l) => l.id !== labelId) };
-      });
-      return { prev };
+      await Promise.all([
+        qc.cancelQueries({ queryKey: labelsKey }),
+        qc.cancelQueries({ queryKey: queryKeys.projects.tasks(projectId) }),
+      ]);
+      return {
+        prevLabels: qc.getQueryData<LabelsData>(labelsKey),
+        prevTaskCaches: taskCachesWithLabel(qc, projectId, labelId),
+      };
     },
     onError: (_err, _vars, ctx) => {
-      if (ctx?.prev) {
-        qc.setQueryData(queryKeys.projects.labels(projectId), ctx.prev);
-      }
+      if (ctx?.prevLabels) qc.setQueryData(labelsKey, ctx.prevLabels);
+      restoreCaches(qc, ctx?.prevTaskCaches);
     },
-    onSettled: () => {
-      void qc.invalidateQueries({
-        queryKey: queryKeys.projects.labels(projectId),
-      });
-      void qc.invalidateQueries({
-        queryKey: queryKeys.projects.tasks(projectId),
-      });
-    },
+    onSettled: (result) => invalidateLabelQueries(qc, projectId, result),
   });
 }
 
@@ -206,21 +255,59 @@ async function cancelAndSnapshot(
   };
 }
 
+/**
+ * Puts back only what the assignment changed: this task's labels and the label's task count.
+ * Restoring the whole snapshots would also undo every edit made since (the detail view's
+ * optimistic edits live in the detail query, and the task list holds every card).
+ */
 function rollbackSnapshot(
   qc: QueryClient,
   taskId: string,
   projectId: string,
+  labelId: string,
   ctx: AssignSnapshot | undefined
 ) {
-  if (ctx?.prevTaskDetail) qc.setQueryData(queryKeys.tasks.detail(taskId), ctx.prevTaskDetail);
-  if (ctx?.prevTasks) qc.setQueryData(queryKeys.projects.tasks(projectId), ctx.prevTasks);
-  if (ctx?.prevLabels) qc.setQueryData(queryKeys.projects.labels(projectId), ctx.prevLabels);
+  if (ctx?.prevTaskDetail) {
+    const labels = ctx.prevTaskDetail.task.labels;
+    qc.setQueryData<TaskDetailData>(queryKeys.tasks.detail(taskId), (old) =>
+      old ? { ...old, task: { ...old.task, labels } } : old
+    );
+  }
+  if (ctx?.prevTasks) {
+    const labels = ctx.prevTasks.tasks.find((t) => t.id === taskId)?.labels;
+    qc.setQueryData<{ tasks: Task[] }>(queryKeys.projects.tasks(projectId), (old) =>
+      old ? { tasks: old.tasks.map((t) => (t.id === taskId ? { ...t, labels } : t)) } : old
+    );
+  }
+  if (ctx?.prevLabels) {
+    const taskCount = ctx.prevLabels.labels.find((l) => l.id === labelId)?.taskCount;
+    if (taskCount !== undefined) {
+      qc.setQueryData<{ labels: Label[] }>(queryKeys.projects.labels(projectId), (old) =>
+        old ? { labels: old.labels.map((l) => (l.id === labelId ? { ...l, taskCount } : l)) } : old
+      );
+    }
+  }
 }
 
-function invalidateAssignmentQueries(qc: QueryClient, taskId: string, projectId: string) {
+function invalidateAssignmentQueries(
+  qc: QueryClient,
+  taskId: string,
+  projectId: string,
+  result: WriteResult<unknown> | undefined
+) {
+  if (result?.status === "queued") return;
   void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(projectId) });
   void qc.invalidateQueries({ queryKey: queryKeys.projects.labels(projectId) });
   void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
+}
+
+function taskTitle(qc: QueryClient, taskId: string, projectId: string): string {
+  const title =
+    qc.getQueryData<TaskDetailData>(queryKeys.tasks.detail(taskId))?.task.title ??
+    qc
+      .getQueryData<{ tasks: Task[] }>(queryKeys.projects.tasks(projectId))
+      ?.tasks.find((t) => t.id === taskId)?.title;
+  return title ? `“${title}”` : "a task";
 }
 
 // ---------------------------------------------------------------------------
@@ -229,7 +316,14 @@ export function useAssignLabel(taskId: string, projectId: string) {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (labelId: string) => api.post(`/api/tasks/${taskId}/labels`, { labelId }),
+    networkMode: "always",
+    mutationFn: (labelId: string) =>
+      sendWrite({
+        method: "POST",
+        path: `/api/tasks/${taskId}/labels`,
+        body: { labelId },
+        label: `Add label ${labelName(qc, projectId, labelId)} to ${taskTitle(qc, taskId, projectId)}`,
+      }),
     onMutate: async (labelId): Promise<AssignSnapshot> => {
       freshnessTracker.recordMutation("tasks");
       const labelsData = qc.getQueryData<{ labels: Label[] }>(queryKeys.projects.labels(projectId));
@@ -269,8 +363,8 @@ export function useAssignLabel(taskId: string, projectId: string) {
 
       return snapshot;
     },
-    onError: (_err, _labelId, ctx) => rollbackSnapshot(qc, taskId, projectId, ctx),
-    onSettled: () => invalidateAssignmentQueries(qc, taskId, projectId),
+    onError: (_err, labelId, ctx) => rollbackSnapshot(qc, taskId, projectId, labelId, ctx),
+    onSettled: (result) => invalidateAssignmentQueries(qc, taskId, projectId, result),
   });
 }
 
@@ -278,7 +372,13 @@ export function useUnassignLabel(taskId: string, projectId: string) {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (labelId: string) => api.delete(`/api/tasks/${taskId}/labels/${labelId}`),
+    networkMode: "always",
+    mutationFn: (labelId: string) =>
+      sendWrite({
+        method: "DELETE",
+        path: `/api/tasks/${taskId}/labels/${labelId}`,
+        label: `Remove label ${labelName(qc, projectId, labelId)} from ${taskTitle(qc, taskId, projectId)}`,
+      }),
     onMutate: async (labelId): Promise<AssignSnapshot> => {
       freshnessTracker.recordMutation("tasks");
       const snapshot = await cancelAndSnapshot(qc, taskId, projectId);
@@ -308,7 +408,7 @@ export function useUnassignLabel(taskId: string, projectId: string) {
 
       return snapshot;
     },
-    onError: (_err, _labelId, ctx) => rollbackSnapshot(qc, taskId, projectId, ctx),
-    onSettled: () => invalidateAssignmentQueries(qc, taskId, projectId),
+    onError: (_err, labelId, ctx) => rollbackSnapshot(qc, taskId, projectId, labelId, ctx),
+    onSettled: (result) => invalidateAssignmentQueries(qc, taskId, projectId, result),
   });
 }

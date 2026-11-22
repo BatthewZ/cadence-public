@@ -7,6 +7,7 @@ export * from "./api-token";
 export * from "./audit-log";
 export * from "./auth";
 export * from "./calendar-feed-token";
+export * from "./idempotency-key";
 export * from "./invitation";
 export * from "./label";
 export * from "./legal-acceptance";
@@ -571,6 +572,25 @@ The credential behind per-user ICS calendar subscription URLs — a deliberately
 - **Single-purpose by construction.** Feed tokens use the distinct `cdn_cal_` prefix and `verifyToken` cheap-rejects anything that is not `cdn_pat_`-prefixed, so a leaked feed URL can only ever unlock the read-only ICS feed endpoint — never a bearer-auth API call.
 - **Revocable without collateral damage.** Rotating a feed token never breaks the user's PAT-driven automations, and vice versa. The plaintext is minted via the shared `mintToken(prefix, pepper)` primitive in `src/api/lib/api-tokens.ts` (the single source of truth for token generation across credential classes), so its entropy and storage-hash properties are identical to a PAT's.
 
+#### `idempotencyKey`
+
+**File:** `src/db/schema/idempotency-key.ts`
+
+One row per `Idempotency-Key` a user has sent on a mutation, owned by `src/api/middleware/idempotency.ts`. Request semantics: [API § Idempotency-Key](../api/api.md#idempotency-key).
+
+| Column         | Type                          | Constraints                               | Description                                                                                         |
+| -------------- | ----------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `userId`       | `text`                        | `NOT NULL`, **FK** -> `user.id` (cascade) | Key scope: one user's keys never collide with another's                                              |
+| `key`          | `text`                        | `NOT NULL`                                | The header value                                                                                    |
+| `method`       | `text`                        | `NOT NULL`                                | Method of the first request with this key                                                           |
+| `path`         | `text`                        | `NOT NULL`                                | Path and query string of the first request                                                          |
+| `fingerprint`  | `text`                        | `NOT NULL`                                | Hex SHA-256 of method, path and raw body; a repeat with a different fingerprint is refused (422)    |
+| `status`       | `integer`                     |                                           | Stored response status. `NULL` while the first request is pending                                   |
+| `responseBody` | `text`                        |                                           | Stored JSON response body (at most 1 MB), replayed verbatim                                         |
+| `createdAt`    | `integer` (mode: `timestamp`) | `NOT NULL`                                | When the key was claimed (or taken over from a crashed attempt). Drives the 60 s pending window and 30-day retention |
+
+**Primary key:** (`userId`, `key`) — the claim is an `INSERT … ON CONFLICT DO NOTHING` against it, so two concurrent requests with one key cannot both run. **Index:** (`createdAt`), for the scheduled cleanup in `src/api/scheduled/idempotency-key-cleanup.ts`.
+
 ### Relationships
 
 - `session.userId` -> `user.id` (foreign key, cascade delete)
@@ -625,8 +645,9 @@ The credential behind per-user ICS calendar subscription URLs — a deliberately
 - `auditLog.workspaceId` -> `workspace.id` (foreign key, cascade delete)
 - `auditLog.actorUserId` -> `user.id` (foreign key, cascade delete)
 - `auditLog.apiTokenId` -> `apiToken.id` (foreign key, set null on delete — so a deleted token cannot erase its own audit trail)
+- `idempotencyKey.userId` -> `user.id` (foreign key, cascade delete)
 
-The `user`, `session`, `account`, and `verification` tables are managed by **Better Auth** and follow its expected schema conventions. The `upload` table is application-managed. The `workspace`, `workspaceMember`, `team`, `teamMember`, `project`, `projectMember`, `taskGroup`, `task`, `subtask`, `comment`, `taskActivity`, `taskAttachment`, `label`, `taskLabel`, `savedView`, `notification`, `invitation`, `webhook`, `webhookDelivery`, `legalAcceptance`, `apiToken`, and `auditLog` tables are application-managed.
+The `user`, `session`, `account`, and `verification` tables are managed by **Better Auth** and follow its expected schema conventions. The `upload` table is application-managed. The `workspace`, `workspaceMember`, `team`, `teamMember`, `project`, `projectMember`, `taskGroup`, `task`, `subtask`, `comment`, `taskActivity`, `taskAttachment`, `label`, `taskLabel`, `savedView`, `notification`, `invitation`, `webhook`, `webhookDelivery`, `legalAcceptance`, `apiToken`, `auditLog`, `calendarFeedToken`, and `idempotencyKey` tables are application-managed.
 
 #### What the foreign keys do *not* cover: member removal
 

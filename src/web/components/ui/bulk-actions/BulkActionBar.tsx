@@ -10,7 +10,8 @@ import type { TaskPriority } from "@/shared/types/roles";
 import type { Task, TaskCompletionResponse } from "@/web/contexts/ProjectContext";
 import { useProject } from "@/web/contexts/ProjectContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
-import { api } from "@/web/lib/api/client";
+import { api, apiErrorMessage } from "@/web/lib/api/client";
+import { sendWrites } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 
 import { Button } from "../Button";
@@ -78,12 +79,13 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
   /**
    * Optimistic bulk PATCH: applies `optimisticFields` immediately via context,
    * sends `apiPayload` to the server, and rolls back on failure using fields
-   * extracted by `getRollback`.
+   * extracted by `getRollback`. A queued write counts as done: it replays later.
    */
   async function optimisticBulkPatch(
     optimisticFields: Record<string, unknown>,
     apiPayload: Record<string, unknown>,
     getRollback: (t: Task) => Record<string, unknown>,
+    labelFor: (t: Task) => string,
   ) {
     const rollbacks = selectedTasks.map((t) => ({ id: t.id, ...getRollback(t) }));
     for (const t of selectedTasks) {
@@ -91,10 +93,17 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
     }
 
     try {
-      await Promise.all(
-        selectedTasks.map((t) => api.patch(`/api/tasks/${t.id}`, apiPayload))
+      const results = await Promise.all(
+        sendWrites(
+          selectedTasks.map((t) => ({
+            method: "PATCH" as const,
+            path: `/api/tasks/${t.id}`,
+            body: apiPayload,
+            label: labelFor(t),
+          }))
+        )
       );
-      invalidateSelectedTasks();
+      if (results.some((r) => r.status === "sent")) invalidateSelectedTasks();
       toast(pluralTasks("Updated"), { variant: "success" });
       onClearSelection();
     } catch {
@@ -113,6 +122,7 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
       { priority },
       { priority },
       (t) => ({ priority: t.priority }),
+      (t) => `Set priority of “${t.title}”`,
     );
   }
 
@@ -121,6 +131,7 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
       { assigneeId, assigneeName: assigneeName ?? undefined },
       { assigneeId },
       (t) => ({ assigneeId: t.assigneeId, assigneeName: t.assigneeName }),
+      (t) => `Assign “${t.title}”`,
     );
   }
 
@@ -129,6 +140,7 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
       { dueDate },
       { dueDate },
       (t) => ({ dueDate: t.dueDate }),
+      (t) => `Set due date of “${t.title}”`,
     );
   }
 
@@ -145,21 +157,30 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
     }
 
     try {
-      await Promise.all(
-        selectedTasks.map((t) =>
-          api.patch<TaskCompletionResponse>(`/api/tasks/${t.id}/move`, {
-            taskGroupId: targetGroupId,
-            position: t.position,
-          }).then((res) => {
-            ctxUpdateTask(t.id, res.task);
-            if (res.removedRecurringTaskId) {
-              ctxRemoveTask(res.removedRecurringTaskId);
+      const moves = sendWrites<TaskCompletionResponse>(
+        selectedTasks.map((t) => ({
+          method: "PATCH" as const,
+          path: `/api/tasks/${t.id}/move`,
+          body: { taskGroupId: targetGroupId, position: t.position },
+          label: `Move “${t.title}”`,
+        }))
+      );
+      const results = await Promise.all(
+        moves.map((move, i) =>
+          move.then((result) => {
+            if (result.status === "queued") return result;
+            ctxUpdateTask(selectedTasks[i].id, result.data.task);
+            if (result.data.removedRecurringTaskId) {
+              ctxRemoveTask(result.data.removedRecurringTaskId);
             }
+            return result;
           })
         )
       );
-      invalidateSelectedTasks();
-      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id) });
+      if (results.some((r) => r.status === "sent")) {
+        invalidateSelectedTasks();
+        void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id) });
+      }
       toast(pluralTasks("Moved"), { variant: "success" });
       onClearSelection();
     } catch {
@@ -185,28 +206,40 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
       toast(pluralTasks("Duplicated"), { variant: "success" });
       onClearSelection();
-    } catch {
-      toast("Failed to duplicate tasks", { variant: "error" });
+    } catch (err) {
+      toast(apiErrorMessage(err, "Failed to duplicate tasks"), { variant: "error" });
     }
   }
 
   async function handleBulkDelete() {
     setDeleting(true);
-    try {
-      await Promise.all(
-        selectedTasks.map((t) => api.delete(`/api/tasks/${t.id}`))
-      );
-      for (const t of selectedTasks) {
-        ctxRemoveTask(t.id);
-      }
+    const deleted = selectedTasks.map((t) => ({ task: t, restore: ctxRemoveTask(t.id) }));
+    onClearSelection();
+    setShowDeleteDialog(false);
+    const outcomes = await Promise.allSettled(
+      sendWrites(
+        deleted.map(({ task }) => ({
+          method: "DELETE" as const,
+          path: `/api/tasks/${task.id}`,
+          label: `Delete “${task.title}”`,
+        }))
+      )
+    );
+    setDeleting(false);
+    const failed = deleted.filter((_, i) => outcomes[i].status === "rejected");
+    for (const { restore } of failed) restore();
+    if (outcomes.some((o) => o.status === "fulfilled" && o.value.status === "sent")) {
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspace.id) });
+    }
+    if (failed.length > 0) {
+      toast(
+        failed.length === deleted.length
+          ? "Failed to delete tasks"
+          : `Failed to delete ${failed.length} of ${deleted.length} tasks`,
+        { variant: "error" },
+      );
+    } else {
       toast(pluralTasks("Deleted"), { variant: "success" });
-      onClearSelection();
-      setShowDeleteDialog(false);
-    } catch {
-      toast("Failed to delete tasks", { variant: "error" });
-    } finally {
-      setDeleting(false);
     }
   }
 

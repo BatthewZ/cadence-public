@@ -3,6 +3,9 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
 
+// Vite's `define` replaces this at build time; vitest doesn't apply it here.
+(globalThis as { __APP_VERSION__?: string }).__APP_VERSION__ = "test";
+
 // ---------------------------------------------------------------------------
 // Polyfill browser APIs missing in jsdom
 // ---------------------------------------------------------------------------

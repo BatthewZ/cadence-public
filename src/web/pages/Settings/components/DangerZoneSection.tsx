@@ -1,10 +1,13 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { Field, Input, Label } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
+import { forgetThisDevice } from "@/web/components/sync/use-sign-out";
 import { Alert, Button, Card, Dialog, Text } from "@/web/components/ui";
-import { deleteUser } from "@/web/lib/auth/auth-client";
+import { deleteUser, useSession } from "@/web/lib/auth/auth-client";
 
 export function DangerZoneSection() {
   const navigate = useNavigate();
@@ -12,6 +15,9 @@ export function DangerZoneSection() {
   const [confirmText, setConfirmText] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const queryClient = useQueryClient();
+  const { data: session } = useSession();
+  const onlineOnly = useOnlineOnly();
 
   async function handleDelete() {
     if (confirmText !== "DELETE") return;
@@ -24,6 +30,7 @@ export function DangerZoneSection() {
         setError(deleteError.message ?? "Failed to delete account");
         return;
       }
+      if (session) await forgetThisDevice(session.user.id, queryClient);
       void navigate("/login");
     } catch {
       setError("Network error. Please try again.");
@@ -49,7 +56,13 @@ export function DangerZoneSection() {
             Permanently delete your account and all associated data. This action cannot be undone.
           </Text>
           <div>
-            <Button variant="danger" size="md" onClick={() => setDialogOpen(true)}>
+            <Button
+              variant="danger"
+              size="md"
+              onClick={() => setDialogOpen(true)}
+              disabled={onlineOnly.disabled}
+              title={onlineOnly.title}
+            >
               Delete Account
             </Button>
           </div>
@@ -84,7 +97,8 @@ export function DangerZoneSection() {
               variant="danger"
               size="md"
               onClick={() => void handleDelete()}
-              disabled={confirmText !== "DELETE" || loading}
+              disabled={confirmText !== "DELETE" || loading || onlineOnly.disabled}
+              title={onlineOnly.title}
             >
               {loading ? "Deleting..." : "Delete Account"}
             </Button>

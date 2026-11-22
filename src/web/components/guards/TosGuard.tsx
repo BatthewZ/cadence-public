@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
 
 import { Center } from "@/web/components/layout/Center";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
+import { isUnavailableOffline } from "@/web/components/sync/use-online-only";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { Spinner } from "@/web/components/ui/Spinner";
 import { api } from "@/web/lib/api/client";
@@ -13,11 +15,16 @@ type TosStatusResponse = {
 };
 
 export function TosGuard({ children }: { children: React.ReactNode }) {
-  const { data, isPending, isError, refetch } = useQuery({
+  const query = useQuery({
     queryKey: queryKeys.legal.tosStatus,
     queryFn: () => api.get<TosStatusResponse>("/api/legal/tos-status"),
     staleTime: 5 * 60 * 1000,
   });
+  const { data, isPending, isError, refetch } = query;
+
+  if (isUnavailableOffline(query)) {
+    return <OfflineUnavailable what="Cadence" className="min-h-screen" />;
+  }
 
   if (isPending) {
     return (

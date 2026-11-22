@@ -12,6 +12,8 @@ import { type SyntheticEvent, useState } from "react";
 import { type CreateWebhookInput, createWebhookSchema, type UpdateWebhookInput } from "@/shared/schemas/webhook";
 import type { WebhookEventType } from "@/shared/types/webhook";
 import { Divider, Row, Stack } from "@/web/components/layout";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
+import { isUnavailableOffline, useOnlineOnly } from "@/web/components/sync/use-online-only";
 import {
   Alert,
   Badge,
@@ -115,20 +117,18 @@ export function WebhooksTab({
   //  Queries
   // ==================================================================
 
-  const {
-    data: listData,
-    isLoading: listLoading,
-    error: listError,
-  } = useQuery({
+  const onlineOnly = useOnlineOnly();
+  const listQuery = useQuery({
     queryKey: queryKeys.projects.webhooks(projectId),
     queryFn: () =>
       api.get<{ webhooks: WebhookRow[] }>(`/api/projects/${projectId}/webhooks`),
     enabled: !!projectId,
     staleTime: 30_000,
   });
+  const { data: listData, isLoading: listLoading, error: listError } = listQuery;
   const webhooks = listData?.webhooks ?? [];
 
-  const { data: detailData, isLoading: detailLoading } = useQuery({
+  const detailQuery = useQuery({
     queryKey: queryKeys.projects.webhookDetail(projectId, selectedWebhookId ?? ""),
     queryFn: () =>
       api.get<{ webhook: WebhookRow; deliveries: DeliveryRow[] }>(
@@ -137,6 +137,7 @@ export function WebhooksTab({
     enabled: !!projectId && !!selectedWebhookId,
     staleTime: 15_000,
   });
+  const { data: detailData, isLoading: detailLoading } = detailQuery;
   const detailWebhook = detailData?.webhook ?? null;
   const deliveries = detailData?.deliveries ?? [];
 
@@ -328,7 +329,9 @@ export function WebhooksTab({
           Back to Webhooks
         </Button>
 
-        {detailLoading && !wh ? (
+        {isUnavailableOffline(detailQuery) ? (
+          <OfflineUnavailable what="This webhook" className="min-h-0 py-r1" />
+        ) : detailLoading && !wh ? (
           <Row justify="center" className="py-r1">
             <Spinner size="lg" />
           </Row>
@@ -378,14 +381,21 @@ export function WebhooksTab({
                 <Divider />
 
                 <Row gap="r5" className="flex-wrap">
-                  <Button variant="secondary" size="sm" onClick={() => handleOpenEdit(wh)}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => handleOpenEdit(wh)}
+                    disabled={onlineOnly.disabled}
+                    title={onlineOnly.title}
+                  >
                     Edit
                   </Button>
                   <Button
                     variant="secondary"
                     size="sm"
                     onClick={() => handleTest(wh.id)}
-                    disabled={testingId === wh.id}
+                    disabled={testingId === wh.id || onlineOnly.disabled}
+                    title={onlineOnly.title}
                   >
                     {testingId === wh.id ? (
                       <Spinner size="sm" className="mr-r6" />
@@ -394,7 +404,13 @@ export function WebhooksTab({
                     )}
                     Send Test
                   </Button>
-                  <Button variant="danger" size="sm" onClick={() => setDeleteTarget(wh)}>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => setDeleteTarget(wh)}
+                    disabled={onlineOnly.disabled}
+                    title={onlineOnly.title}
+                  >
                     <Trash2 size={14} className="mr-r6" />
                     Delete
                   </Button>
@@ -489,19 +505,27 @@ export function WebhooksTab({
             </a>
           </Text>
         </Stack>
-        <Button variant="primary" size="md" onClick={handleOpenCreate}>
+        <Button
+          variant="primary"
+          size="md"
+          onClick={handleOpenCreate}
+          disabled={onlineOnly.disabled}
+          title={onlineOnly.title}
+        >
           <Webhook size={16} className="mr-r6" />
           Create Webhook
         </Button>
       </Row>
 
-      {listError && (
+      {listError && !isUnavailableOffline(listQuery) && (
         <Alert variant="error">
           {(listError).message || "Failed to load webhooks."}
         </Alert>
       )}
 
-      {listLoading ? (
+      {isUnavailableOffline(listQuery) ? (
+        <OfflineUnavailable what="This webhook list" className="min-h-0 py-r1" />
+      ) : listLoading ? (
         <Row justify="center" className="py-r1">
           <Spinner size="lg" />
         </Row>

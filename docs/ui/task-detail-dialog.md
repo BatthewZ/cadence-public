@@ -95,9 +95,9 @@ Tracked fields: `"title"`, `"description"`, `"cost"`.
 The dialog maintains a local optimistic copy of the task (`localTask`) seeded from the server response. Mutations update the local state immediately and roll back on failure:
 
 - **Property patches** — local state updated before API call; reverted on error.
-- **Subtask creation** — an optimistic subtask (with an `optimistic-` prefixed ID) is appended to `localTask.subtasks` immediately. The optimistic subtask is not draggable. On success, the query is invalidated and the server-assigned subtask replaces the placeholder.
+- **Subtask creation** — the new subtask is appended to `localTask.subtasks` immediately under a client-generated id the server keeps, so it can be toggled, renamed, dragged or deleted at once; those writes are sent after the create (see [Offline mode](../architecture/offline.md#a-write-start-to-finish)).
 - **Subtask toggle/delete/rename/reorder** — reflected locally, then confirmed via API.
-- **Comment creation** — an optimistic comment (with an `optimistic-` prefixed ID and reduced opacity) is appended to the React Query cache immediately. Edit and delete actions are hidden on optimistic comments. On success, the comments query is invalidated.
+- **Comment creation** — the new comment is appended to the React Query cache immediately under a client-generated id, and can be edited or deleted at once; those writes are sent after the create.
 - **Comment editing** — the comment body is optimistically updated in the React Query cache; rolled back on error.
 - **Comment deletion** — mutations invalidate the comments query.
 

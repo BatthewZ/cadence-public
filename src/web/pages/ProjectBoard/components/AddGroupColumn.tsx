@@ -5,18 +5,20 @@ import {
   useState,
 } from "react";
 
+import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import { Input } from "@/web/components/form/Input";
 import { Text } from "@/web/components/ui/Text";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { type TaskGroup, useProject } from "@/web/contexts/ProjectContext";
-import { api } from "@/web/lib/api/client";
+import { apiErrorMessage } from "@/web/lib/api/client";
+import { sendWrite } from "@/web/lib/offline/send-write";
 
 // ---------------------------------------------------------------------------
 // AddGroupColumn
 // ---------------------------------------------------------------------------
 
 export function AddGroupColumn() {
-  const { project, addTaskGroup } = useProject();
+  const { project, taskGroups, addTaskGroup, removeTaskGroup } = useProject();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState("");
@@ -36,16 +38,34 @@ export function AddGroupColumn() {
     const name = value.trim();
     if (!name || !project) return;
 
+    const lastPosition = taskGroups.reduce<string | null>(
+      (max, g) => (max === null || g.position > max ? g.position : max),
+      null,
+    );
+    const group: TaskGroup = {
+      id: crypto.randomUUID(),
+      name,
+      isCompletionGroup: false,
+      position: generateKeyBetween(lastPosition, null),
+      taskCount: 0,
+    };
+    addTaskGroup(group);
+    setValue("");
+    setIsEditing(false);
+
     try {
-      const res = await api.post<{ taskGroup: TaskGroup }>(
-        `/api/projects/${project.id}/task-groups`,
-        { name },
-      );
-      addTaskGroup(res.taskGroup);
-      setValue("");
-      setIsEditing(false);
-    } catch {
-      toast("Failed to create section", { variant: "error" });
+      const result = await sendWrite<{ taskGroup: TaskGroup }>({
+        method: "POST",
+        path: `/api/projects/${project.id}/task-groups`,
+        body: { id: group.id, name },
+        label: `Create section “${name}”`,
+      });
+      if (result.status === "sent") addTaskGroup(result.data.taskGroup);
+    } catch (err) {
+      removeTaskGroup(group.id);
+      setValue((current) => current || name);
+      setIsEditing(true);
+      toast(apiErrorMessage(err, "Failed to create section"), { variant: "error" });
     }
   };
 

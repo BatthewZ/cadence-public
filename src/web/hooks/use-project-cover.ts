@@ -8,6 +8,7 @@ import type {
   StoredUnsplashCoverPayload,
   UnsplashCoverPayload,
 } from "@/shared/schemas/unsplash";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { useFileUpload } from "@/web/hooks/use-file-upload";
 import { api } from "@/web/lib/api/client";
 
@@ -104,6 +105,8 @@ export function useProjectCover(
   onApplyError?: () => void,
 ) {
   const { state: uploadState, upload } = useFileUpload<{ coverImageKey: string }>();
+  const coverOnlineOnly = useOnlineOnly();
+  const { online } = coverOnlineOnly;
 
   const { coverUrl, coverSrcSet, coverAttribution } = resolveCoverDisplay(
     coverImageKey,
@@ -131,7 +134,9 @@ export function useProjectCover(
     [upload, projectId, updateProject],
   );
 
+  // Offline the optimistic change could never be confirmed or rolled back (the refetch is paused).
   const handleRemove = useCallback(async () => {
+    if (!online) return;
     // XOR: clear both columns optimistically — the backend clears both too.
     updateProject({ coverImageKey: null, coverUnsplash: null });
     try {
@@ -139,10 +144,11 @@ export function useProjectCover(
     } catch {
       onRemoveError?.();
     }
-  }, [projectId, updateProject, onRemoveError]);
+  }, [online, projectId, updateProject, onRemoveError]);
 
   const handleApplyUnsplash = useCallback(
     async (payload: UnsplashCoverPayload) => {
+      if (!online) return;
       // XOR: applying Unsplash clears any uploaded image key.
       updateProject({ coverImageKey: null, coverUnsplash: payload });
       try {
@@ -154,7 +160,7 @@ export function useProjectCover(
         onApplyError?.();
       }
     },
-    [projectId, updateProject, onApplyError],
+    [online, projectId, updateProject, onApplyError],
   );
 
   return {
@@ -162,6 +168,8 @@ export function useProjectCover(
     coverSrcSet,
     coverAttribution,
     uploading,
+    /** Disable the cover picker's trigger with this: covers can't change offline. */
+    coverOnlineOnly,
     handleUpload,
     handleRemove,
     handleApplyUnsplash,

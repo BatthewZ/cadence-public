@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -73,13 +74,17 @@ vi.mock("@/web/components/ui/AppShell", () => {
 
 import { AuthenticatedLayout } from "./AuthenticatedLayout";
 
+function render(ui: React.ReactElement) {
+  return rtlRender(<QueryClientProvider client={new QueryClient()}>{ui}</QueryClientProvider>);
+}
+
 describe("AuthenticatedLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseSession.mockReturnValue({
       data: { user: { name: "Test User", email: "test@example.com" } },
     });
-    mockSignOut.mockResolvedValue(undefined);
+    mockSignOut.mockResolvedValue({ data: { success: true }, error: null });
   });
 
   it("renders the app name", () => {

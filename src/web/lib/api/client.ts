@@ -1,11 +1,33 @@
+import { awaitReadBarrier } from "../offline/read-barrier";
+
 export class ApiError extends Error {
   constructor(
     public status: number,
-    message: string
+    message: string,
+    /** The error body's machine-readable `code`, when the server sent one. */
+    public code?: string,
+    /** The parsed error body, for refusals that carry data (e.g. a description conflict's current task). */
+    public body?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
   }
+}
+
+export const OFFLINE_MESSAGE = "You're offline — this needs a connection.";
+
+/** The request never reached the server: no network, DNS failure, or the connection dropped. */
+export class OfflineError extends ApiError {
+  constructor() {
+    super(0, OFFLINE_MESSAGE);
+    this.name = "OfflineError";
+  }
+}
+
+export interface ErrorBody {
+  error?: string;
+  code?: string;
+  retryAfter?: number;
 }
 
 /**
@@ -34,25 +56,35 @@ export function setOnUnauthorized(handler: (() => void) | null) {
   onUnauthorized = handler;
 }
 
+export function notifyUnauthorized(): void {
+  onUnauthorized?.();
+}
+
 export async function api<T>(path: string, options?: RequestInit): Promise<T> {
   const isFormData = options?.body instanceof FormData;
-  const res = await fetch(path, {
-    ...options,
-    credentials: "include",
-    headers: {
-      ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...options?.headers,
-    },
-  });
+  const method = options?.method ?? "GET";
+  if (method === "GET") await awaitReadBarrier();
+  let res: Response;
+  try {
+    res = await fetch(path, {
+      ...options,
+      credentials: "include",
+      headers: {
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
+        ...options?.headers,
+      },
+    });
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw new OfflineError();
+  }
 
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as {
-      error?: string;
-    };
-    if (res.status === 401 && onUnauthorized) {
-      onUnauthorized();
+    const body = (await res.json().catch(() => ({}))) as ErrorBody;
+    if (res.status === 401) {
+      notifyUnauthorized();
     }
-    throw new ApiError(res.status, body.error ?? res.statusText);
+    throw new ApiError(res.status, body.error ?? res.statusText, body.code, body);
   }
 
   // 204 No Content has no body — return undefined instead of parsing

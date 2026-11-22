@@ -6,12 +6,14 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { Input } from "@/web/components/form/Input";
 import { Divider, Stack } from "@/web/components/layout";
 import { EditableMarkdown } from "@/web/components/markdown/EditableMarkdown";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
+import { isUnavailableOffline } from "@/web/components/sync/use-online-only";
 import { useAppShell } from "@/web/components/ui/AppShell";
 import { Button } from "@/web/components/ui/Button";
 import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
@@ -23,21 +25,22 @@ import { Popover } from "@/web/components/ui/Popover";
 import { Skeleton } from "@/web/components/ui/Skeleton";
 import { Text } from "@/web/components/ui/Text";
 import type { ToastAction } from "@/web/components/ui/Toast";
-import type { Subtask, TaskCompletionResponse } from "@/web/contexts/ProjectContext";
+import type { TaskCompletionResponse } from "@/web/contexts/ProjectContext";
 import { useProject } from "@/web/contexts/ProjectContext";
 import type { WorkspaceMember } from "@/web/contexts/WorkspaceContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
+import { useLocalTask } from "@/web/hooks/use-local-task";
 import { useProjectPermissions } from "@/web/hooks/use-permissions";
 import { useTaskCommentActions } from "@/web/hooks/use-task-comment-actions";
 import { useTaskComments } from "@/web/hooks/use-task-comments";
 import { useTaskCover } from "@/web/hooks/use-task-cover";
 import { useTaskDetailActions } from "@/web/hooks/use-task-detail-actions";
-import { useTaskEditing } from "@/web/hooks/use-task-editing";
-import { useTaskServerSync } from "@/web/hooks/use-task-server-sync";
+import { type TaskPatch, taskPatchLabel, useTaskEditing } from "@/web/hooks/use-task-editing";
 import { useTaskSubtasks } from "@/web/hooks/use-task-subtasks";
 import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
+import { sendWrite, type WriteResult } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 import { TaskCommentSection } from "@/web/pages/TaskDetail/components/TaskCommentSection";
 import { TaskActivityFeed } from "@/web/pages/TaskDetail/TaskActivityFeed";
@@ -63,6 +66,7 @@ export function TaskDetailPanelInner({
     message: string,
     options?: {
       variant?: "info" | "success" | "warning" | "error";
+      title?: string;
       duration?: number;
       action?: ToastAction;
     }
@@ -83,16 +87,13 @@ export function TaskDetailPanelInner({
   const { workspace } = useWorkspace();
   const { canEditTasks } = useProjectPermissions(projectMembers);
   const qc = useQueryClient();
-  const {
-    data: taskData,
-    isLoading: loading,
-    error: queryError,
-    refetch,
-  } = useQuery({
+  const taskQuery = useQuery({
     queryKey: queryKeys.tasks.detail(taskId),
     queryFn: () => api.get<{ task: TaskDetail }>(`/api/tasks/${taskId}`),
   });
-  const error = queryError?.message ?? null;
+  const { data: taskData, isLoading: loading, error: queryError, refetch } = taskQuery;
+  const unavailableOffline = isUnavailableOffline(taskQuery);
+  const error = unavailableOffline ? null : (queryError?.message ?? null);
 
   const {
     comments: paginatedComments,
@@ -103,11 +104,9 @@ export function TaskDetailPanelInner({
     isFetchingNextPage: isFetchingMoreComments,
   } = useTaskComments(taskId);
 
-  // Local optimistic copy of the task — seeded from API, updated optimistically
-  const [localTask, setLocalTask] = useState<TaskDetail | null>(null);
+  // Working copy of the task: seeded from the detail query, edits written back to it (see useLocalTask)
+  const { localTask, setLocalTask, resetLocalTask } = useLocalTask(taskId, taskData?.task);
   const task = localTask;
-
-  useTaskServerSync(taskData?.task, setLocalTask);
 
   const invalidateTaskQueries = useCallback(() => {
     void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
@@ -118,16 +117,17 @@ export function TaskDetailPanelInner({
 
   // Mutations
   const patchTask = useMutation({
-    mutationFn: (updates: Partial<TaskDetail>) =>
-      api.patch<{ task: TaskDetail }>(`/api/tasks/${taskId}`, updates),
+    mutationFn: (updates: TaskPatch): Promise<WriteResult<{ task: TaskDetail }>> =>
+      sendWrite({
+        method: "PATCH",
+        path: `/api/tasks/${taskId}`,
+        body: updates,
+        label: taskPatchLabel(localTask?.title, updates),
+      }),
     onMutate: () => freshnessTracker.recordMutation("tasks"),
-    onSuccess: invalidateTaskQueries,
-  });
-  const createSubtask = useMutation({
-    mutationFn: (input: { title: string }) =>
-      api.post<{ subtask: Subtask }>(`/api/tasks/${taskId}/subtasks`, input),
-    onMutate: () => freshnessTracker.recordMutation("tasks"),
-    onSettled: invalidateTaskQueries,
+    onSuccess: (result) => {
+      if (result.status === "sent") invalidateTaskQueries();
+    },
   });
 
   // Subtask DnD, CRUD, and optimistic updates
@@ -151,7 +151,6 @@ export function TaskDetailPanelInner({
     updateTaskInContext,
     invalidateTaskQueries,
     toast,
-    createSubtask,
   });
 
   // Cover image upload, removal, and position changes
@@ -189,6 +188,8 @@ export function TaskDetailPanelInner({
     handlePatch,
     handleTitleSave,
     handleCostBlur,
+    handleDescriptionSave,
+    handleDescriptionEditStart,
   } = useTaskEditing({
     taskId,
     localTask,
@@ -223,8 +224,8 @@ export function TaskDetailPanelInner({
     currentUserName: session?.user?.name,
     invalidateTaskQueries,
     toast,
-    updateTaskInContext,
-    commentCount: localTask?.commentCount,
+    setLocalTask,
+    projectId: project.id,
   });
 
   const [, setSearchParams] = useSearchParams();
@@ -236,7 +237,6 @@ export function TaskDetailPanelInner({
     handleToggleComplete,
     handleDuplicateTask,
     handleDeleteTask,
-    isDeleting,
   } = useTaskDetailActions({
     taskId,
     localTask,
@@ -265,7 +265,7 @@ export function TaskDetailPanelInner({
     dirtyFields.current.clear();
     // Defer to avoid synchronous setState in effect body
     queueMicrotask(() => {
-      setLocalTask(cached?.task ?? null);
+      resetLocalTask(cached?.task ?? null);
       setEditingTitle(false);
       setTitleValue(cached?.task?.title ?? "");
       setCostDisplay(cached?.task?.cost != null ? (cached.task.cost / 100).toFixed(2) : "");
@@ -273,7 +273,7 @@ export function TaskDetailPanelInner({
       resetCommentState();
       setShowDeleteDialog(false);
     });
-  }, [taskId, qc, dirtyFields, setEditingTitle, setTitleValue, setCostDisplay, setNewSubtaskTitle, resetCommentState, setShowDeleteDialog]);
+  }, [taskId, qc, dirtyFields, resetLocalTask, setEditingTitle, setTitleValue, setCostDisplay, setNewSubtaskTitle, resetCommentState, setShowDeleteDialog]);
 
   // Keyboard escape to close
   useEffect(() => {
@@ -393,6 +393,8 @@ export function TaskDetailPanelInner({
             </div>
           )}
 
+          {unavailableOffline && <OfflineUnavailable what="This task" />}
+
           {error && (
             <div className="px-r3 py-r4">
               <Text color="muted" variant="body-2">
@@ -453,13 +455,17 @@ export function TaskDetailPanelInner({
                     updateTaskInContext(taskId, { taskGroupId: newGroupId });
                     void (async () => {
                       try {
-                        const res = await api.patch<TaskCompletionResponse>(
-                          `/api/tasks/${taskId}/move`,
-                          {
+                        const result = await sendWrite<TaskCompletionResponse>({
+                          method: "PATCH",
+                          path: `/api/tasks/${taskId}/move`,
+                          body: {
                             taskGroupId: newGroupId,
                             position: task.position,
-                          }
-                        );
+                          },
+                          label: `Move “${task.title}”`,
+                        });
+                        if (result.status === "queued") return;
+                        const res = result.data;
                         setLocalTask((prev) => (prev ? { ...prev, ...res.task } : prev));
                         updateTaskInContext(taskId, res.task);
                         if (res.removedRecurringTaskId) {
@@ -487,9 +493,8 @@ export function TaskDetailPanelInner({
                 </Text>
                 <EditableMarkdown
                   value={task.description ?? ""}
-                  onSave={async (next) => {
-                    await handlePatch({ description: next || null });
-                  }}
+                  onSave={handleDescriptionSave}
+                  onEditStart={handleDescriptionEditStart}
                   members={members}
                   readOnly={!canEditTasks}
                   density="compact"
@@ -610,7 +615,6 @@ export function TaskDetailPanelInner({
         onClose={() => setShowDeleteDialog(false)}
         onConfirm={() => void handleDeleteTask()}
         title="Delete Task"
-        confirming={isDeleting}
       >
         Are you sure? This cannot be undone.
       </ConfirmDialog>

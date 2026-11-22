@@ -10,6 +10,7 @@ import {
   updateSavedViewSchema,
 } from "../../../shared/schemas/saved-view";
 import type { AppEnv } from "../../env";
+import { clientIdConflict } from "../../lib/client-id";
 import { errorResponse } from "../../lib/error-response";
 import { requireParam, requireParams } from "../../lib/params";
 import { validJson } from "../../lib/validated";
@@ -128,11 +129,14 @@ export async function createSavedView(c: Context<AppEnv>) {
     return errorResponse(c, "A saved view with this name already exists", 409);
   }
 
+  const idConflict = await clientIdConflict(c, savedView, body.id);
+  if (idConflict) return idConflict;
+
   const now = new Date();
   const [created] = await db
     .insert(savedView)
     .values({
-      id: crypto.randomUUID(),
+      id: body.id ?? crypto.randomUUID(),
       projectId,
       creatorId: userId,
       name: body.name,

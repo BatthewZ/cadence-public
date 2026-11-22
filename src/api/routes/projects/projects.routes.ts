@@ -312,7 +312,7 @@ const createLabelRoute = createRoute({
   tags: ["Labels"],
   summary: "Create a label",
   description:
-    "Create a label inside a project. Name uniqueness is enforced case-insensitively. Hard cap of 50 labels per project.",
+    "Create a label inside a project. Name uniqueness is enforced case-insensitively. Hard cap of 50 labels per project. An optional client-generated `id` (UUID) is used as the label's id.",
   security,
   middleware: [requireAuth, requireProjectRole("admin", "member")],
   request: {
@@ -332,7 +332,7 @@ const createLabelRoute = createRoute({
     403: forbiddenResponse,
     409: {
       content: { "application/json": { schema: apiErrorResponseSchema } },
-      description: "A label with this name already exists in the project",
+      description: "A label with this name already exists in the project, or the client-supplied `id` is taken (`code: id_conflict`)",
     },
   },
 });

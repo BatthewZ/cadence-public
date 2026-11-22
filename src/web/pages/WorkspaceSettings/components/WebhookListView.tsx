@@ -1,6 +1,7 @@
 import { AlertTriangle, ExternalLink, Webhook } from "lucide-react";
 
 import { Container, Row, Stack } from "@/web/components/layout";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
 import {
   Alert,
   Badge,
@@ -49,6 +50,8 @@ export function WebhookListView({ hook }: { hook: UseWorkspaceWebhooksReturn }) 
     createFieldErrors,
     createMutation,
     handleCopiedSecret,
+    listUnavailableOffline,
+    onlineOnly,
   } = hook;
 
   // The role comes from the workspace roster. If that request failed the role
@@ -88,7 +91,13 @@ export function WebhookListView({ hook }: { hook: UseWorkspaceWebhooksReturn }) 
             </Text>
           </Stack>
           {canManageWorkspace && (
-            <Button variant="primary" size="md" onClick={handleOpenCreate}>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleOpenCreate}
+              disabled={onlineOnly.disabled}
+              title={onlineOnly.title}
+            >
               <Webhook size={16} className="mr-r6" />
               Create Webhook
             </Button>
@@ -106,7 +115,7 @@ export function WebhookListView({ hook }: { hook: UseWorkspaceWebhooksReturn }) 
           </Alert>
         )}
 
-        {canManageWorkspace && listError && (
+        {canManageWorkspace && listError && !listUnavailableOffline && (
           <Alert variant="error">
             {listError.message || "Failed to load webhooks."}
           </Alert>
@@ -117,7 +126,9 @@ export function WebhookListView({ hook }: { hook: UseWorkspaceWebhooksReturn }) 
             server, and could be flatly untrue. The notice above is the whole
             page for them. */}
         {!listWithheld &&
-          (listPending ? (
+          (listUnavailableOffline ? (
+            <OfflineUnavailable what="This webhook list" className="min-h-0 py-r1" />
+          ) : listPending ? (
             <Row justify="center" className="py-r1">
               <Spinner size="lg" />
             </Row>

@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 import type { Context } from "hono";
 
 import { project } from "../../../db/schema/project";
@@ -10,6 +10,9 @@ import { requireParam } from "../../lib/params";
  * Returns lightweight timestamps indicating when each entity type in a project
  * was last modified. Clients poll this endpoint at short intervals (1-2s) and
  * selectively refetch only the data that changed.
+ *
+ * `taskCount` / `taskGroupCount` let a poller notice a hard delete, which
+ * leaves no row behind to move MAX(updatedAt).
  *
  * The response is user-independent (the max updatedAt for a project is the same
  * for every viewer), so we cache it at the edge via the Cloudflare Cache API
@@ -40,10 +43,10 @@ export async function getProjectFreshness(c: Context<AppEnv>) {
       .from(project)
       .where(eq(project.id, projectId))
       .limit(1),
-    db.select({ max: sql<number>`MAX(${task.updatedAt})` })
+    db.select({ max: sql<number>`MAX(${task.updatedAt})`, count: count() })
       .from(task)
       .where(eq(task.projectId, projectId)),
-    db.select({ max: sql<number>`MAX(${taskGroup.updatedAt})` })
+    db.select({ max: sql<number>`MAX(${taskGroup.updatedAt})`, count: count() })
       .from(taskGroup)
       .where(eq(taskGroup.projectId, projectId)),
   ] as const);
@@ -52,6 +55,8 @@ export async function getProjectFreshness(c: Context<AppEnv>) {
     project: projectResult[0]?.updatedAt?.getTime() ?? null,
     tasks: tasksResult[0]?.max ?? null,
     taskGroups: taskGroupsResult[0]?.max ?? null,
+    taskCount: tasksResult[0]?.count ?? 0,
+    taskGroupCount: taskGroupsResult[0]?.count ?? 0,
   };
 
   const body = JSON.stringify({ freshness });

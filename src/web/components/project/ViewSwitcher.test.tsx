@@ -142,8 +142,8 @@ function installDbBackedApi() {
   mockGet.mockImplementation(() => Promise.resolve({ views: [...viewsDb] }));
 
   mockPost.mockImplementation((_path: string, body: unknown) => {
-    const input = body as { name: string; state: SavedView["state"] };
-    const view = makeView({ id: `v-new-${viewsDb.length + 1}`, name: input.name, state: input.state });
+    const input = body as { id: string; name: string; state: SavedView["state"] };
+    const view = makeView({ id: input.id, name: input.name, state: input.state });
     viewsDb = [...viewsDb, view];
     return Promise.resolve({ view });
   });
@@ -232,6 +232,8 @@ describe("ViewSwitcher", () => {
   });
 
   it("saves the first view inline: POSTs captured state and navigates to the new view URL", async () => {
+    const viewId = "00000000-0000-4000-8000-000000000001";
+    vi.spyOn(crypto, "randomUUID").mockReturnValueOnce(viewId);
     const user = userEvent.setup();
     renderSwitcher("/w/test/projects/proj-1/board?assignee=u1,none&priority=high");
 
@@ -248,6 +250,7 @@ describe("ViewSwitcher", () => {
 
     await waitFor(() => {
       expect(mockPost).toHaveBeenCalledWith("/api/projects/proj-1/views", {
+        id: viewId,
         name: "Mine",
         state: {
           tab: "board",
@@ -256,11 +259,11 @@ describe("ViewSwitcher", () => {
       });
     });
 
-    // ONE navigation to the serialized state with the SERVER-assigned id
+    // ONE navigation to the serialized state with the view's client id
     // last ("?view=" identifies the active view across refreshes).
     await waitFor(() => {
       expect(screen.getByTestId("location")).toHaveTextContent(
-        "/w/test/projects/proj-1/board?assignee=u1%2Cnone&priority=high&view=v-new-1",
+        `/w/test/projects/proj-1/board?assignee=u1%2Cnone&priority=high&view=${viewId}`,
       );
     });
   });

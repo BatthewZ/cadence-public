@@ -1337,7 +1337,7 @@ Same XOR rule as [`useProjectCover`](#useprojectcover). On upload we clear `cove
 | `updateTaskInContext` | `(taskId: string, updates: Partial<Task>) => void` | Board/list context updater. |
 | `invalidateTaskQueries` | `() => void` | Cache invalidation callback. |
 | `patchTaskMutateAsync` | `(updates: Partial<TaskDetail>) => Promise<unknown>` | Mutation function for position changes. |
-| `toast` | `(message: string, options?) => string` | Toast notification function. |
+| `toast` | `(message: string, options?: { variant?, title?, duration?, action? }) => string` | Toast notification function. `title`, `duration` and `action` are used by the description-conflict toast. |
 | `refetch` | `() => Promise<unknown>` | Refetch task data on failure (rollback). |
 
 ### Return Value
@@ -1503,7 +1503,9 @@ function UnsplashPicker({ open, onApply }) {
 
 ## useTaskEditing
 
-Manages the editable fields (title, description, cost) of a task detail panel, including dirty-field tracking to prevent server refetches from clobbering in-progress user input. While a field is dirty (focused), incoming server data for that field is ignored, preserving unsaved edits.
+Manages the editable fields (title, description, cost) of a task detail panel. Title and cost use dirty-field tracking so server refetches don't clobber in-progress input: while a field is dirty (focused), incoming server data for that field is ignored. The description draft is owned by `EditableMarkdown`, and its save is compare-and-set (see `handleDescriptionSave` below).
+
+The module also exports `TaskPatch` (a `PATCH /api/tasks/:id` body: `Partial<TaskDetail>` plus `descriptionBase`) and `taskPatchLabel(title, updates)`, the sync-status label for a task patch, e.g. `Set priority of “Fix login”` (`Edit “…”` when several fields change).
 
 **Source:** `src/web/hooks/use-task-editing.ts`
 
@@ -1515,8 +1517,8 @@ Manages the editable fields (title, description, cost) of a task detail panel, i
 | `localTask` | `TaskDetail \| null` | Current local task state. |
 | `setLocalTask` | `Dispatch<SetStateAction<TaskDetail \| null>>` | Local state setter. |
 | `updateTaskInContext` | `(taskId: string, updates: Partial<Task>) => void` | Board/list context updater. |
-| `patchTaskMutateAsync` | `(updates: Partial<TaskDetail>) => Promise<unknown>` | Mutation function. |
-| `toast` | `(message: string, options?) => string` | Toast notification function. |
+| `patchTaskMutateAsync` | `(updates: TaskPatch) => Promise<unknown>` | Mutation function. |
+| `toast` | `(message: string, options?: { variant?, title?, duration?, action? }) => string` | Toast notification function. `title`, `duration` and `action` are used by the description-conflict toast. |
 | `refetch` | `() => Promise<unknown>` | Refetch on failure. |
 | `taskData` | `{ task: TaskDetail } \| undefined` | Server query data for syncing editable fields. |
 
@@ -1529,14 +1531,13 @@ Manages the editable fields (title, description, cost) of a task detail panel, i
 | `setEditingTitle` | `(editing: boolean) => void` | Toggle title editing. |
 | `titleValue` | `string` | Current title input value. |
 | `setTitleValue` | `(value: string) => void` | Update title input. |
-| `descriptionValue` | `string` | Current description input value. |
-| `setDescriptionValue` | `(value: string) => void` | Update description input. |
 | `costDisplay` | `string` | Current cost display string (dollars, e.g. "12.50"). |
 | `setCostDisplay` | `(value: string) => void` | Update cost display. |
 | `handlePatch` | `(updates: Partial<TaskDetail>) => Promise<void>` | Generic optimistic patch with rollback. |
 | `handleTitleSave` | `() => Promise<void>` | Save title on blur/enter, clears dirty flag. |
-| `handleDescriptionBlur` | `() => Promise<void>` | Save description on blur, clears dirty flag. |
 | `handleCostBlur` | `() => Promise<void>` | Parse and save cost on blur (cents conversion), clears dirty flag. |
+| `handleDescriptionEditStart` | `(seed: string) => void` | `EditableMarkdown`'s `onEditStart`: records the description the open editor was seeded from. |
+| `handleDescriptionSave` | `(next: string) => Promise<void>` | `EditableMarkdown`'s `onSave`. Applies optimistically and patches `{ description, descriptionBase }` (the recorded seed). On `409 description_conflict` it takes the server's current task, shows a "Description not saved" toast with **Copy my version**, and makes that current description the new base, so saving the same draft again replaces it. Any failure refetches and rejects, so the editor keeps the draft open. |
 
 ### Dirty-Field Pattern
 
@@ -1544,7 +1545,6 @@ Fields are marked dirty on focus and cleared on blur/save. While dirty, incoming
 
 ```tsx
 if (!dirtyFields.current.has("title")) setTitleValue(t.title);
-if (!dirtyFields.current.has("description")) setDescriptionValue(t.description ?? "");
 if (!dirtyFields.current.has("cost")) setCostDisplay(...);
 ```
 
@@ -1618,10 +1618,10 @@ Encapsulates all subtask state and handlers for the task detail panel: DnD senso
 | --- | --- | --- |
 | `taskId` | `string` | Parent task ID. |
 | `localTask` | `TaskDetail \| null` | Current local task state. |
-| `setLocalTask` | `Dispatch<SetStateAction<TaskDetail \| null>>` | Local state setter. |
-| `updateTaskInContext` | `(taskId: string, updates: Partial<Task>) => void` | Board/list context updater (subtask counts). |
+| `setLocalTask` | `Dispatch<SetStateAction<TaskDetail \| null>>` | From [`useLocalTask`](#uselocaltask). It writes each edit to the detail query, and the card counts are read back from there. |
+| `updateTaskInContext` | `(taskId: string, updates: Partial<Task>) => void` | Board/list context updater. After each add, delete or toggle (and their rollbacks) it gets `subtaskCount` and `subtaskCompletedCount` copied from the subtasks as they stand, never worked out from a captured list. |
 | `invalidateTaskQueries` | `() => void` | Cache invalidation callback. |
-| `toast` | `(message: string, options?) => string` | Toast notification function. |
+| `toast` | `(message: string, options?: { variant?, title?, duration?, action? }) => string` | Toast notification function. `title`, `duration` and `action` are used by the description-conflict toast. |
 | `createSubtask` | `UseMutationResult<{ subtask: Subtask }, Error, { title: string }>` | React Query mutation for creating subtasks. |
 
 ### Return Value
@@ -1726,9 +1726,11 @@ Encapsulates comment CRUD mutations, local editing state, and optimistic update/
 | `currentUserId` | `string \| undefined` | Current user's ID (for optimistic comment authorship). |
 | `currentUserName` | `string \| undefined` | Current user's name (for optimistic comment display). |
 | `invalidateTaskQueries` | `() => void` | Callback to invalidate relevant React Query caches after mutations settle. |
-| `toast` | `(message: string, options?) => string` | Toast notification function. |
-| `updateTaskInContext` | `(taskId: string, updates: Partial<Task>) => void` | Optional context updater for comment count on board task cards. The Panel passes `updateTaskInContext`; the Dialog omits it. |
-| `commentCount` | `number` | Current comment count from `localTask`, used for optimistic count updates. |
+| `toast` | `(message: string, options?: { variant?, title?, duration?, action? }) => string` | Toast notification function. `title`, `duration` and `action` are used by the description-conflict toast. |
+| `setLocalTask` | `Dispatch<SetStateAction<TaskDetail \| null>>` | Setter for the view's `localTask`, whose `commentCount` heads the comments list. |
+| `projectId` | `string \| undefined` | The task's project. Its cached task list (the board cards) gets the same count change; `undefined` skips it. |
+
+Adding or deleting a comment changes the count by one in both places, relative to the current value and before the server answers. A rollback undoes exactly that change. So two comments queued offline count two, and the heading and the card agree.
 
 ### Return Value
 
@@ -1759,7 +1761,7 @@ Encapsulates task-level actions (complete/uncomplete, duplicate, delete) and the
 | `taskId` | `string` | The task to act on. |
 | `localTask` | `TaskDetail \| null` | Local optimistic task state. |
 | `setLocalTask` | `Dispatch<SetStateAction<TaskDetail \| null>>` | Setter for `localTask`. |
-| `toast` | `(message: string, options?) => string` | Toast notification function. |
+| `toast` | `(message: string, options?: { variant?, title?, duration?, action? }) => string` | Toast notification function. `title`, `duration` and `action` are used by the description-conflict toast. |
 | `workspaceId` | `string` | Workspace ID for dashboard cache invalidation. |
 | `projectId` | `string \| undefined` | Project ID for project-scoped cache invalidation (Dialog may not have one). |
 | `onDeleteSuccess` | `() => void` | Called after successful deletion (Dialog closes; Panel clears URL param). |
@@ -1778,6 +1780,23 @@ Encapsulates task-level actions (complete/uncomplete, duplicate, delete) and the
 | `handleDuplicateTask` | `() => Promise<void>` | Duplicate the task and add to context/refetch. |
 | `handleDeleteTask` | `() => Promise<void>` | Delete the task, cancel in-flight queries, remove from context. |
 | `isDeleting` | `boolean` | Whether a delete request is in flight. |
+
+## useLocalTask
+
+A detail view's working copy of a task, shared between `TaskDetailDialog` and `TaskDetailPanelInner`. It replaces a plain `useState` plus [`useTaskServerSync`](#usetaskserversync).
+
+`setLocalTask` applies each optimistic edit to the copy *and* to the task's detail query (`queryKeys.tasks.detail`), which is the record the view is seeded from. Kept only in component state, an edit was rolled back whenever that record was read again: the panel reopened, the page reloaded (the query is saved for offline use), or another writer of the query (a label change) handed it back through `useTaskServerSync`. Online, the refetch after each write hid this. Offline, edits vanished from the panel until the queue synced.
+
+- Updaters run on both copies, so they must be pure.
+- A no-op, `null`, or an uncached query leaves the query untouched. Its `dataUpdatedAt` doesn't move, so a stale query still refetches.
+- `resetLocalTask` replaces the copy without writing the query. Use it to reseed the view from the query, or to clear it.
+
+**Source:** `src/web/hooks/use-local-task.ts`
+
+```tsx
+const { data: taskData } = useQuery({ queryKey: queryKeys.tasks.detail(taskId), ... });
+const { localTask, setLocalTask, resetLocalTask } = useLocalTask(taskId, taskData?.task);
+```
 
 ## useTaskServerSync
 
@@ -1803,14 +1822,7 @@ Returns `void`.
 
 ### Usage
 
-```tsx
-import { useTaskServerSync } from "@/web/hooks/use-task-server-sync";
-
-const { data: taskData } = useQuery({ queryKey: queryKeys.tasks.detail(taskId), ... });
-const [localTask, setLocalTask] = useState<TaskDetail | null>(null);
-
-useTaskServerSync(taskData?.task, setLocalTask);
-```
+The detail views get it through [`useLocalTask`](#uselocaltask), which passes its raw state setter here.
 
 ## useWorkspaceWebhooks
 

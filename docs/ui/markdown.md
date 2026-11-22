@@ -117,7 +117,8 @@ import { EditableMarkdown } from "@/web/components/markdown/EditableMarkdown";
   density="compact"
   members={members}
   readOnly={!canEditTasks}
-  onSave={(next) => handlePatch({ description: next || null })}
+  onSave={handleDescriptionSave}
+  onEditStart={handleDescriptionEditStart}
 />
 ```
 
@@ -129,6 +130,7 @@ import { EditableMarkdown } from "@/web/components/markdown/EditableMarkdown";
 | `readOnly` | `boolean` *(optional)* | Renders plain prose with no edit affordance. |
 | `density` | `"comfortable" \| "compact"` *(optional)* | Prose scale. |
 | `placeholder` | `string` *(optional)* | Muted prompt shown when `value` is empty/whitespace (default `"Add a description…"`). |
+| `onEditStart` | `(seed: string) => void` *(optional)* | Called on entering edit mode with the `value` the draft is seeded from. The task description passes it to `useTaskEditing`, which sends that seed as `descriptionBase` on save. |
 
 **Click-to-edit Save/Cancel UX (decision locked).** View mode renders `<Markdown>` inside a `role="button"` surface — click, Enter, or Space enters edit mode (when not `readOnly`). Edit mode shows `<MarkdownEditor>` plus an explicit Save / Cancel footer. **Clicking away keeps editing.** Long-form authoring routinely loses focus — clicking the toolbar, opening the mention dropdown, tabbing to a button, or an IME commit all blur the textarea — so a blur-to-save or click-outside-to-close handler would silently end the edit mid-thought (a classic data-loss footgun). The component has **neither**; the only ways out of edit mode are **Save**, **Cancel**, **⌘/Ctrl+Enter** (save), or **Esc** (cancel).
 
@@ -166,7 +168,7 @@ The parser captures the link `href` **raw** — protocol safety is the renderer'
 
 ## Integrations
 
-- **Task description** — `TaskDetailPanelInner.tsx` and `TaskDetailDialog.tsx` render the description via `<EditableMarkdown density="compact" members={members} readOnly={!canEditTasks}>`, saving through `handlePatch({ description: next || null })`. Blur-to-save was removed in favour of the explicit Save/Cancel flow.
+- **Task description** — `TaskDetailPanelInner.tsx` and `TaskDetailDialog.tsx` render the description via `<EditableMarkdown density="compact" members={members} readOnly={!canEditTasks}>`, with `onSave={handleDescriptionSave}` and `onEditStart={handleDescriptionEditStart}` from `useTaskEditing`. The save is compare-and-set: it sends the description the edit started from as `descriptionBase`, so a collaborator's change in the meantime comes back as `409 description_conflict` instead of being overwritten. On that conflict the editor stays open with the draft, the view takes the server's current task, and a toast offers **Copy my version**; saving again from the same draft then knowingly replaces their version. Blur-to-save was removed in favour of the explicit Save/Cancel flow.
 - **Comments** — comment **display** uses `<Markdown density="compact" members={members}>` (`TaskCommentSection.tsx`); both comment **authoring** surfaces use `<MarkdownEditor density="compact" members={members}>` — the new-comment composer passes `collapsible` (progressive disclosure: it reads as a single quiet input until focused, then reveals the toolbar / Preview chrome with the same textarea still mounted, so there is no focus loss or caret jump), while the in-place edit form uses the full editor with `autoFocus`. Comments thus get the exact same toolbar, shortcuts, and `@mention` autocomplete as task descriptions, and still round-trip through the same canonical markdown string they were already rendered from — no DB, webhook, or export change.
 - **Mention rendering** — the deleted `MentionText` component is replaced entirely by the `Markdown` renderer's `mention` node.
 

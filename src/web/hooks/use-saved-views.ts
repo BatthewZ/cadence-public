@@ -9,7 +9,8 @@
  * in this wave.
  *
  * The mutation shapes mirror `use-labels.ts` (the established optimistic
- * template) with two deliberate divergences — these are not omissions:
+ * template, written through `sendWrite` so they also work offline) with two
+ * deliberate divergences — these are not omissions:
  *
  * - NO task-cache fan-out. Label data is embedded in task payloads, so label
  *   mutations must also patch the project task list and task detail caches.
@@ -22,14 +23,17 @@
  *   meaningless for them — recording these mutations would only produce
  *   spurious "data changed" prompts for data nobody else can see.
  */
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import type {
   CreateSavedViewInput,
   SavedView,
   UpdateSavedViewInput,
 } from "@/shared/schemas/saved-view";
 import { api } from "@/web/lib/api/client";
+import { useSession } from "@/web/lib/auth/auth-client";
+import { sendWrite, type WriteResult } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 
 /** Response envelope of `GET /api/projects/:projectId/views` (position-ordered). */
@@ -51,25 +55,70 @@ export function useSavedViews(projectId: string, options?: { enabled?: boolean }
   });
 }
 
+function viewName(qc: QueryClient, projectId: string, viewId: string): string {
+  const view = qc
+    .getQueryData<SavedViewsData>(queryKeys.projects.savedViews(projectId))
+    ?.views.find((v) => v.id === viewId);
+  return view ? `“${view.name}”` : "a view";
+}
+
+/** A queued write's reply comes with the refresh after the queue drains, so it skips this one. */
+function invalidateViews(qc: QueryClient, projectId: string, result: WriteResult<unknown> | undefined) {
+  if (result?.status === "queued") return;
+  void qc.invalidateQueries({ queryKey: queryKeys.projects.savedViews(projectId) });
+}
+
 /**
- * Creates a saved view. Deliberately NON-optimistic: the caller does
- * `await mutateAsync(input)` and needs the SERVER-assigned view id to write
- * `?view=<id>` into the URL immediately after creation. An optimistic insert
- * would have to invent a temporary id, and that bogus id would leak into the
- * URL (and into anything that copies it) before the server responds — so we
- * wait for the real row and just invalidate the list on success.
+ * Creates a saved view under the caller's client `id`, so the caller can write
+ * `?view=<id>` into the URL at once — online or offline. Optimistic: the row
+ * is appended (the server also appends), replaced by the server's copy when
+ * sent, and removed again if the server refuses (e.g. 409 duplicate name).
  */
 export function useCreateSavedView(projectId: string) {
   const qc = useQueryClient();
+  const { data: session } = useSession();
+  const listKey = queryKeys.projects.savedViews(projectId);
 
   return useMutation({
-    mutationFn: (input: CreateSavedViewInput) =>
-      api.post<{ view: SavedView }>(`/api/projects/${projectId}/views`, input),
-    onSuccess: () => {
-      void qc.invalidateQueries({
-        queryKey: queryKeys.projects.savedViews(projectId),
+    networkMode: "always",
+    mutationFn: (input: CreateSavedViewInput & { id: string }) =>
+      sendWrite<{ view: SavedView }>({
+        method: "POST",
+        path: `/api/projects/${projectId}/views`,
+        body: input,
+        label: `Save view “${input.name}”`,
+      }),
+    onMutate: async (input) => {
+      await qc.cancelQueries({ queryKey: listKey });
+      const prev = qc.getQueryData<SavedViewsData>(listKey);
+      qc.setQueryData<SavedViewsData>(listKey, (old) => {
+        if (!old) return old;
+        const now = new Date().toISOString();
+        const optimistic: SavedView = {
+          id: input.id,
+          projectId,
+          creatorId: session?.user.id ?? "",
+          name: input.name.trim(),
+          state: input.state,
+          position: generateKeyBetween(old.views.at(-1)?.position ?? null, null),
+          createdAt: now,
+          updatedAt: now,
+        };
+        return { views: [...old.views, optimistic] };
       });
+      return { prev };
     },
+    onSuccess: (result) => {
+      if (result.status !== "sent") return;
+      const { view } = result.data;
+      qc.setQueryData<SavedViewsData>(listKey, (old) =>
+        old ? { views: old.views.map((v) => (v.id === view.id ? view : v)) } : old,
+      );
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) qc.setQueryData(listKey, ctx.prev);
+    },
+    onSettled: (result) => invalidateViews(qc, projectId, result),
   });
 }
 
@@ -78,16 +127,24 @@ export function useCreateSavedView(projectId: string) {
  *
  * Optimistic (mirrors `useUpdateLabel`): the list cache is patched in
  * `onMutate` so the ViewSwitcher reflects the edit instantly, the snapshot is
- * restored in `onError` (e.g. 409 duplicate name), and `onSettled` always
- * re-syncs with the server — including after the success path, where the
- * server may have normalized fields (trimmed name, bumped `updatedAt`).
+ * restored in `onError` (e.g. 409 duplicate name), and `onSettled` re-syncs
+ * with the server unless the write was queued — including after the success
+ * path, where the server may have normalized fields (trimmed name, bumped
+ * `updatedAt`).
  */
 export function useUpdateSavedView(projectId: string) {
   const qc = useQueryClient();
 
   return useMutation({
+    networkMode: "always",
     mutationFn: ({ viewId, ...input }: UpdateSavedViewInput & { viewId: string }) =>
-      api.patch<{ view: SavedView }>(`/api/projects/${projectId}/views/${viewId}`, input),
+      sendWrite<{ view: SavedView }>({
+        method: "PATCH",
+        path: `/api/projects/${projectId}/views/${viewId}`,
+        body: input,
+        // Runs after onMutate has applied the new name, so a rename is named by it.
+        label: input.name ? `Rename view to “${input.name}”` : `Update view ${viewName(qc, projectId, viewId)}`,
+      }),
     onMutate: async ({ viewId, ...input }) => {
       await qc.cancelQueries({ queryKey: queryKeys.projects.savedViews(projectId) });
 
@@ -107,11 +164,7 @@ export function useUpdateSavedView(projectId: string) {
         qc.setQueryData(queryKeys.projects.savedViews(projectId), ctx.prev);
       }
     },
-    onSettled: () => {
-      void qc.invalidateQueries({
-        queryKey: queryKeys.projects.savedViews(projectId),
-      });
-    },
+    onSettled: (result) => invalidateViews(qc, projectId, result),
   });
 }
 
@@ -120,35 +173,35 @@ export function useUpdateSavedView(projectId: string) {
  *
  * Optimistic (mirrors `useDeleteLabel`): the view disappears from the list
  * cache immediately, reappears via the `onError` rollback if the server
- * rejects, and `onSettled` re-syncs either way.
+ * rejects, and `onSettled` re-syncs unless the write was queued.
  */
 export function useDeleteSavedView(projectId: string) {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (viewId: string) =>
-      api.delete<{ ok: true; deletedId: string }>(`/api/projects/${projectId}/views/${viewId}`),
-    onMutate: async (viewId) => {
-      await qc.cancelQueries({ queryKey: queryKeys.projects.savedViews(projectId) });
-
-      const prev = qc.getQueryData<SavedViewsData>(queryKeys.projects.savedViews(projectId));
-
+    networkMode: "always",
+    // The removal lives here, not in onMutate, so the write is named before the view leaves the cache.
+    mutationFn: (viewId: string) => {
+      const label = `Delete view ${viewName(qc, projectId, viewId)}`;
       qc.setQueryData<SavedViewsData>(queryKeys.projects.savedViews(projectId), (old) => {
         if (!old) return old;
         return { views: old.views.filter((v) => v.id !== viewId) };
       });
-
-      return { prev };
+      return sendWrite<{ ok: true; deletedId: string }>({
+        method: "DELETE",
+        path: `/api/projects/${projectId}/views/${viewId}`,
+        label,
+      });
+    },
+    onMutate: async () => {
+      await qc.cancelQueries({ queryKey: queryKeys.projects.savedViews(projectId) });
+      return { prev: qc.getQueryData<SavedViewsData>(queryKeys.projects.savedViews(projectId)) };
     },
     onError: (_err, _vars, ctx) => {
       if (ctx?.prev) {
         qc.setQueryData(queryKeys.projects.savedViews(projectId), ctx.prev);
       }
     },
-    onSettled: () => {
-      void qc.invalidateQueries({
-        queryKey: queryKeys.projects.savedViews(projectId),
-      });
-    },
+    onSettled: (result) => invalidateViews(qc, projectId, result),
   });
 }

@@ -10,6 +10,8 @@ import type { Invitation } from "@/shared/types/invitations";
 import { Container, Row } from "@/web/components/layout";
 import { NotificationItem } from "@/web/components/layout/NotificationItem";
 import { type Notification } from "@/web/components/layout/NotificationPanel";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
+import { isUnavailableOffline, useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Avatar, Button, EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle, Spinner, Text } from "@/web/components/ui";
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
@@ -56,15 +58,7 @@ export default function Notifications() {
     [wsData],
   );
 
-  const {
-    data,
-    isLoading,
-    isError,
-    refetch,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery<NotificationsPage>({
+  const listQuery = useInfiniteQuery<NotificationsPage>({
     queryKey: queryKeys.notifications.list({ unreadOnly }),
     queryFn: ({ pageParam }) => {
       const params = new URLSearchParams({ limit: "30" });
@@ -77,6 +71,8 @@ export default function Notifications() {
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
   });
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = listQuery;
+  const onlineOnly = useOnlineOnly();
 
   const { markReadMutation, markAllReadMutation } = useNotificationMutations({
     infiniteListFilter: { unreadOnly },
@@ -119,6 +115,7 @@ export default function Notifications() {
     slugMap,
     markReadMutation,
     navigate,
+    onlineOnly,
   };
 
   const handleNavigate = useCallback(
@@ -145,7 +142,7 @@ export default function Notifications() {
   );
 
   function handleClick(n: Notification) {
-    if (!n.read) markReadMutation.mutate(n.id);
+    if (!n.read && onlineOnly.online) markReadMutation.mutate(n.id);
     handleNavigate(n);
   }
 
@@ -169,7 +166,8 @@ export default function Notifications() {
             size="sm"
             variant="ghost"
             onClick={() => markAllReadMutation.mutate()}
-            disabled={unreadCount === 0 || markAllReadMutation.isPending}
+            disabled={unreadCount === 0 || markAllReadMutation.isPending || onlineOnly.disabled}
+            title={onlineOnly.title}
           >
             Mark all read
           </Button>
@@ -184,7 +182,9 @@ export default function Notifications() {
 
         {/* Notification list */}
         <div className="bg-surface-0 rounded-xl border border-border-default overflow-hidden">
-          {isLoading ? (
+          {isUnavailableOffline(listQuery) ? (
+            <OfflineUnavailable what="Your notifications" className="min-h-0 py-r1" />
+          ) : isLoading ? (
             <div className="flex justify-center py-r1">
               <Spinner size="lg" />
             </div>
@@ -232,7 +232,8 @@ export default function Notifications() {
             <Button
               variant="ghost"
               onClick={() => void fetchNextPage()}
-              disabled={isFetchingNextPage}
+              disabled={isFetchingNextPage || onlineOnly.disabled}
+              title={onlineOnly.title}
             >
               {isFetchingNextPage ? "Loading..." : "Load more"}
             </Button>

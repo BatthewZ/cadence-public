@@ -5,11 +5,13 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { createDb } from "../db";
+import { IDEMPOTENCY_KEY_HEADER, IDEMPOTENT_REPLAYED_HEADER } from "../shared/constants/offline-sync";
 import type { AppBindings, AppEnv } from "./env";
 import { resolveAllowedOrigin } from "./lib/auth";
 import { errorResponse } from "./lib/error-response";
 import { auditPatMutations } from "./middleware/audit-pat";
 import { authSessionMiddleware } from "./middleware/auth";
+import { idempotency } from "./middleware/idempotency";
 import { requestLogger } from "./middleware/logger";
 import { requestIdMiddleware } from "./middleware/request-id";
 import { securityHeadersMiddleware, withSpaSecurityHeaders } from "./middleware/security-headers";
@@ -55,8 +57,9 @@ app.use(
       const env = c.env as AppBindings;
       return resolveAllowedOrigin(origin, env.BETTER_AUTH_URL, env.TRUSTED_ORIGINS);
     },
-    allowHeaders: ["Content-Type", "Authorization"],
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowHeaders: ["Content-Type", "Authorization", IDEMPOTENCY_KEY_HEADER],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    exposeHeaders: [IDEMPOTENT_REPLAYED_HEADER],
     credentials: true,
   })
 );
@@ -133,6 +136,9 @@ app.get("/api/health", async (c) => {
 });
 
 app.use("/api/*", authSessionMiddleware);
+
+// Before `auditPatMutations`, so a replayed response is not audited a second time.
+app.use("/api/*", idempotency);
 
 // PAT audit ledger — runs after the handler resolves so we can attribute
 // every successful 2xx mutation that arrived with a Bearer cdn_pat_ token.

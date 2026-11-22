@@ -3,6 +3,7 @@ import { type SyntheticEvent, useCallback, useState } from "react";
 
 import { type CreateWebhookInput, createWebhookSchema, type UpdateWebhookInput } from "@/shared/schemas/webhook";
 import type { WebhookEventType } from "@/shared/types/webhook";
+import { isUnavailableOffline, useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useFieldErrors } from "@/web/hooks/use-field-errors";
@@ -103,6 +104,7 @@ export function useWorkspaceWebhooks() {
   const { canManageWorkspace, isResolved: roleResolved } = useWorkspacePermissions();
   const qc = useQueryClient();
   const workspaceId = workspace?.id ?? "";
+  const onlineOnly = useOnlineOnly();
 
   // Only show active projects in webhook selectors -- archived/completed
   // projects shouldn't receive new webhooks.
@@ -128,11 +130,7 @@ export function useWorkspaceWebhooks() {
   //  Queries
   // ==================================================================
 
-  const {
-    data: listData,
-    isLoading: listLoading,
-    error: listError,
-  } = useQuery({
+  const listQuery = useQuery({
     queryKey: queryKeys.workspaces.webhooks(workspaceId),
     queryFn: () => api.get<{ webhooks: WebhookRow[] }>(`/api/workspaces/${workspaceId}/webhooks`),
     // Reading webhooks is owner/admin-only server-side, so firing this as a
@@ -144,12 +142,10 @@ export function useWorkspaceWebhooks() {
     enabled: !!workspaceId && roleResolved && canManageWorkspace,
     staleTime: 30_000,
   });
+  const { data: listData, isLoading: listLoading, error: listError } = listQuery;
   const webhooks = listData?.webhooks ?? [];
 
-  const {
-    data: detailData,
-    isLoading: detailLoading,
-  } = useQuery({
+  const detailQuery = useQuery({
     queryKey: queryKeys.workspaces.webhookDetail(workspaceId, selectedWebhookId ?? ""),
     queryFn: () =>
       api.get<{ webhook: WebhookRow; deliveries: DeliveryRow[] }>(
@@ -158,6 +154,7 @@ export function useWorkspaceWebhooks() {
     enabled: !!workspaceId && !!selectedWebhookId,
     staleTime: 15_000,
   });
+  const { data: detailData, isLoading: detailLoading } = detailQuery;
   const detailWebhook = detailData?.webhook ?? null;
   const deliveries = detailData?.deliveries ?? [];
 
@@ -373,6 +370,11 @@ export function useWorkspaceWebhooks() {
     detailWebhook,
     deliveries,
     detailLoading,
+    listUnavailableOffline: isUnavailableOffline(listQuery),
+    detailUnavailableOffline: isUnavailableOffline(detailQuery),
+
+    // Webhook writes and test deliveries are online-only
+    onlineOnly,
 
     // Mutations
     createMutation,

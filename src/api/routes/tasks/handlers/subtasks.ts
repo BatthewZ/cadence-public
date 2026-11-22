@@ -6,9 +6,10 @@ import { generateKeyBetween } from "../../../../shared/lib/fractional-index";
 import { createSubtaskSchema, updateSubtaskSchema } from "../../../../shared/schemas/subtask";
 import type { AppEnv } from "../../../env";
 import { resolveProjectAccess } from "../../../lib/access";
+import { clientIdConflict } from "../../../lib/client-id";
 import { errorResponse } from "../../../lib/error-response";
 import { requireParam } from "../../../lib/params";
-import { retryOnPositionConflict } from "../../../lib/position-conflict";
+import { nextSiblingPosition, retryOnPositionConflict, writeClientPosition } from "../../../lib/position-conflict";
 import { validJson } from "../../../lib/validated";
 import { enforceTokenProjectBinding } from "../../../middleware/authorize";
 
@@ -21,7 +22,10 @@ export async function createSubtask(c: Context<AppEnv>) {
   const taskId = requireParam(c, "taskId");
   const body = validJson(c, createSubtaskSchema);
 
-  const id = crypto.randomUUID();
+  const idConflict = await clientIdConflict(c, subtask, body.id);
+  if (idConflict) return idConflict;
+
+  const id = body.id ?? crypto.randomUUID();
   const now = new Date();
 
   // Read last position + insert inside a retry loop — concurrent subtask
@@ -112,14 +116,24 @@ export async function updateSubtask(c: Context<AppEnv>) {
   const updateData = {
     ...(body.title !== undefined && { title: body.title }),
     ...(body.completed !== undefined && { completed: body.completed }),
-    ...(body.position !== undefined && { position: body.position }),
   };
 
   const now = new Date();
-  const [[updated]] = await db.batch([
-    db.update(subtask).set(updateData).where(eq(subtask.id, subtaskId)).returning(),
+  const write = (position: string | undefined) => db.batch([
+    db.update(subtask)
+      .set({ ...updateData, ...(position !== undefined && { position }) })
+      .where(eq(subtask.id, subtaskId))
+      .returning(),
     db.update(task).set({ updatedAt: now }).where(eq(task.id, found.taskId)),
   ] as const);
+
+  const [[updated]] = body.position === undefined
+    ? await write(undefined)
+    : await writeClientPosition(
+      body.position,
+      nextSiblingPosition(db, subtask, eq(subtask.taskId, found.taskId), subtaskId),
+      write,
+    );
 
   return c.json({ subtask: updated });
 }

@@ -2,6 +2,7 @@ import { useState } from "react";
 
 import { Checkbox, Label } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import {
   Button,
   Dialog,
@@ -23,6 +24,7 @@ export function DuplicateProjectDialog({
   const { toast } = useToast();
   const [includeMembers, setIncludeMembers] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const onlineOnly = useOnlineOnly();
 
   async function handleDuplicate() {
     if (!duplicateTarget) return;
@@ -84,7 +86,8 @@ export function DuplicateProjectDialog({
             variant="primary"
             type="button"
             onClick={() => void handleDuplicate()}
-            disabled={duplicating}
+            disabled={duplicating || onlineOnly.disabled}
+            title={onlineOnly.title}
           >
             {duplicating ? "Duplicating..." : "Duplicate"}
           </Button>

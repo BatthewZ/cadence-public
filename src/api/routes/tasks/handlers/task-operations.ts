@@ -10,7 +10,7 @@ import { deferWork } from "../../../lib/defer";
 import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
 import { requireParam } from "../../../lib/params";
-import { retryOnPositionConflict } from "../../../lib/position-conflict";
+import { nextSiblingPosition, retryOnPositionConflict, writeClientPosition } from "../../../lib/position-conflict";
 import { validJson } from "../../../lib/validated";
 import { buildTaskEventData, dispatchWebhook, resolveRecurringTaskEnrichment, resolveTaskEnrichment, resolveTaskGroup } from "../../../lib/webhook-payloads";
 import { copyTaskRelations } from "../helpers/copy-task-relations";
@@ -47,7 +47,6 @@ export async function moveTask(c: Context<AppEnv>) {
 
   const updateData: Record<string, unknown> = {
     taskGroupId: body.taskGroupId,
-    position: body.position,
     updatedAt: now,
   };
 
@@ -61,11 +60,11 @@ export async function moveTask(c: Context<AppEnv>) {
     updateData.completedBy = null;
   }
 
-  const [updated] = await db
-    .update(task)
-    .set(updateData)
-    .where(eq(task.id, taskId))
-    .returning();
+  const [updated] = await writeClientPosition(
+    body.position,
+    nextSiblingPosition(db, task, eq(task.taskGroupId, body.taskGroupId), taskId),
+    (position) => db.update(task).set({ ...updateData, position }).where(eq(task.id, taskId)).returning(),
+  );
 
   // Spawn next recurring instance when auto-completing via move to done column.
   // Uses pre-completion taskGroupId so the new instance goes to the original group.

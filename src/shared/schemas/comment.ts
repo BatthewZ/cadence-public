@@ -1,6 +1,9 @@
 import { z } from "zod";
 
+import { clientIdSchema } from "./client-id";
+
 export const createCommentSchema = z.object({
+  id: clientIdSchema,
   body: z.string().min(1, "Comment body is required").max(5000),
 });
 

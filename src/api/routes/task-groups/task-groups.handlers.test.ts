@@ -892,4 +892,30 @@ describe("reorderTaskGroup", () => {
     const body = await res.json<{ error: string }>();
     expect(body.error).toMatch(/forbidden/i);
   });
+
+  it("lands a stale position that collides just after it instead of failing", async () => {
+    const ownProject = await seedProject(d1, workspaceId, { name: "Reorder collisions" });
+    await seedProjectMember(d1, ownProject, TEST_USER.id, "admin");
+    await seedTaskGroup(d1, ownProject, { position: "a0" });
+    await seedTaskGroup(d1, ownProject, { position: "a1" });
+    const movers = [
+      await seedTaskGroup(d1, ownProject, { position: "a2" }),
+      await seedTaskGroup(d1, ownProject, { position: "a3" }),
+    ];
+
+    const app = new Hono<AppEnv>();
+    app.patch("/task-groups/:taskGroupId/reorder", adminAuth(), validateBody(reorderTaskGroupSchema), reorderTaskGroup);
+
+    const positions: string[] = [];
+    for (const id of movers) {
+      const res = await app.request(jsonRequest("PATCH", `/task-groups/${id}/reorder`, { position: "a0" }));
+      expect(res.status).toBe(200);
+      positions.push((await res.json<{ taskGroup: { position: string } }>()).taskGroup.position);
+    }
+
+    expect(new Set(positions).size).toBe(2);
+    for (const position of positions) {
+      expect(position > "a0" && position < "a1").toBe(true);
+    }
+  });
 });

@@ -4,6 +4,8 @@ import { useState } from "react";
 
 import { Toggle } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
+import { isUnavailableOffline, useOnlineOnly } from "@/web/components/sync/use-online-only";
 import {
   Alert,
   Button,
@@ -80,6 +82,7 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
   // the caller they may not mint has to wait for the role, or an admin whose
   // roster is still in flight reads an accusation we then retract.
   const issuanceDenied = isResolved && !canManageWorkspace;
+  const onlineOnly = useOnlineOnly();
 
   /* ------- Dialog state -------------------------------------------- */
   const [createOpen, setCreateOpen] = useState(false);
@@ -287,7 +290,13 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
             between renders. */}
         <Row align="center" className="flex-wrap gap-r4">
           {!showEmpty && canManageWorkspace && (
-            <Button variant="primary" size="md" onClick={handleOpenCreate}>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={handleOpenCreate}
+              disabled={onlineOnly.disabled}
+              title={onlineOnly.title}
+            >
               <KeyRound size={16} className="mr-r6" />
               New Token
             </Button>
@@ -308,14 +317,16 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
           </label>
         </Row>
 
-        {tokensQuery.error && (
+        {tokensQuery.error && !isUnavailableOffline(tokensQuery) && (
           <QueryErrorRetry
             message={tokensQuery.error.message || "Failed to load API tokens."}
             onRetry={() => tokensQuery.refetch()}
           />
         )}
 
-        {tokensQuery.isLoading ? (
+        {isUnavailableOffline(tokensQuery) ? (
+          <OfflineUnavailable what="This token list" className="min-h-0 py-r1" />
+        ) : tokensQuery.isLoading ? (
           <Row justify="center" className="py-r1">
             <Spinner size="lg" />
           </Row>
@@ -332,7 +343,13 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
             </EmptyStateDescription>
             {canManageWorkspace && (
               <EmptyStateActions>
-                <Button variant="primary" size="md" onClick={handleOpenCreate}>
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={handleOpenCreate}
+                  disabled={onlineOnly.disabled}
+                  title={onlineOnly.title}
+                >
                   <KeyRound size={16} className="mr-r6" />
                   New Token
                 </Button>
@@ -346,6 +363,7 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
             canRotate={canManageWorkspace}
             onRotate={handleOpenRotate}
             onRevoke={handleOpenRevoke}
+            onlineOnly={onlineOnly}
           />
         )}
 

@@ -7,7 +7,9 @@ vi.mock("./lib/password", () => ({
   createMigratingVerify: vi.fn(() => vi.fn()),
 }));
 
+import { IDEMPOTENCY_KEY_HEADER, IDEMPOTENT_REPLAYED_HEADER } from "../shared/constants/offline-sync";
 import type { AppBindings } from "./env";
+import worker from "./index";
 import { resetAllowedOriginCache, resolveAllowedOrigin } from "./lib/auth";
 
 const BASE_URL = "http://localhost:8787";
@@ -119,5 +121,43 @@ describe("CORS middleware", () => {
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe(BASE_URL);
+  });
+});
+
+describe("the worker's CORS configuration", () => {
+  beforeEach(() => {
+    resetAllowedOriginCache();
+  });
+
+  const env = { BETTER_AUTH_URL: BASE_URL } as unknown as AppBindings;
+  const executionCtx = { waitUntil: () => {}, passThroughOnException: () => {} } as unknown as ExecutionContext;
+
+  it("lets an offline replay send PATCH with an Idempotency-Key", async () => {
+    const res = await worker.fetch(
+      new Request(`${BASE_URL}/api/tasks/t1`, {
+        method: "OPTIONS",
+        headers: {
+          Origin: BASE_URL,
+          "Access-Control-Request-Method": "PATCH",
+          "Access-Control-Request-Headers": `content-type,${IDEMPOTENCY_KEY_HEADER.toLowerCase()}`,
+        },
+      }),
+      env,
+      executionCtx,
+    );
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get("Access-Control-Allow-Methods")).toContain("PATCH");
+    expect(res.headers.get("Access-Control-Allow-Headers")).toContain(IDEMPOTENCY_KEY_HEADER);
+  });
+
+  it("exposes Idempotent-Replayed to the browser", async () => {
+    const res = await worker.fetch(
+      new Request(`${BASE_URL}/api/health`, { headers: { Origin: BASE_URL } }),
+      env,
+      executionCtx,
+    );
+
+    expect(res.headers.get("Access-Control-Expose-Headers")).toContain(IDEMPOTENT_REPLAYED_HEADER);
   });
 });

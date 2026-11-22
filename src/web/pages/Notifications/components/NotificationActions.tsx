@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { type NavigateFunction } from "react-router-dom";
 
 import { type Notification } from "@/web/components/layout/NotificationPanel";
+import { type OnlineOnly } from "@/web/components/sync/use-online-only";
 import { type useNotificationMutations } from "@/web/hooks/use-notification-mutations";
 
 export interface NotificationActionsContext {
@@ -19,6 +20,7 @@ export interface NotificationActionsContext {
   slugMap: Map<string, string>;
   markReadMutation: ReturnType<typeof useNotificationMutations>["markReadMutation"];
   navigate: NavigateFunction;
+  onlineOnly: OnlineOnly;
 }
 
 export function renderNotificationActions(
@@ -33,7 +35,11 @@ export function renderNotificationActions(
     slugMap,
     markReadMutation,
     navigate,
+    onlineOnly,
   } = ctx;
+  const markRead = (notification: Notification) => {
+    if (!notification.read && onlineOnly.online) markReadMutation.mutate(notification.id);
+  };
 
   // Invitation notifications — show Accept/Dismiss if invitation is still pending
   if (n.type === "invitation_received" && n.invitationId) {
@@ -45,7 +51,8 @@ export function renderNotificationActions(
             type="button"
             className="notification-action-btn"
             data-variant="primary"
-            disabled={isAccepting}
+            disabled={isAccepting || onlineOnly.disabled}
+            title={onlineOnly.title}
             onClick={() => acceptInvitation(invitationId)}
           >
             <Check size={12} />
@@ -80,7 +87,7 @@ export function renderNotificationActions(
           type="button"
           className="notification-action-btn"
           onClick={() => {
-            if (!n.read) markReadMutation.mutate(n.id);
+            markRead(n);
             void navigate(
               `/w/${slug}/projects/${n.projectId}/board?task=${n.taskId}`,
             );
@@ -106,7 +113,7 @@ export function renderNotificationActions(
           type="button"
           className="notification-action-btn"
           onClick={() => {
-            if (!n.read) markReadMutation.mutate(n.id);
+            markRead(n);
             void navigate(`/w/${slug}/projects/${n.projectId}/board`);
           }}
         >

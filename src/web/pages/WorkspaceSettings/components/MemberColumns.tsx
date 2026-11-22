@@ -2,6 +2,7 @@ import { UserCog, UserMinus } from "lucide-react";
 
 import { ROLE_LABELS } from "@/shared/types/roles";
 import { Row } from "@/web/components/layout";
+import type { OnlineOnly } from "@/web/components/sync/use-online-only";
 import {
   Avatar,
   Badge,
@@ -50,11 +51,13 @@ export function getMemberColumns({
   isWorkspaceOwner,
   onChangeRole,
   onRemoveMember,
+  onlineOnly,
 }: {
   canManageWorkspace: boolean;
   isWorkspaceOwner: boolean;
   onChangeRole: (member: WorkspaceMember) => void;
   onRemoveMember: (member: WorkspaceMember) => void;
+  onlineOnly: OnlineOnly;
 }): ColumnDef<WorkspaceMember>[] {
   return [
     {
@@ -120,7 +123,13 @@ export function getMemberColumns({
               return (
                 <DropdownMenu>
                   <DropdownMenu.Trigger asChild>
-                    <Button variant="ghost" size="sm" aria-label={`Actions for ${row.user.name}`}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Actions for ${row.user.name}`}
+                      disabled={onlineOnly.disabled}
+                      title={onlineOnly.title}
+                    >
                       ...
                     </Button>
                   </DropdownMenu.Trigger>

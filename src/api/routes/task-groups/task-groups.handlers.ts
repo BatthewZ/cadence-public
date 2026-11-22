@@ -13,9 +13,10 @@ import {
 } from "../../../shared/schemas/task-group";
 import type { AppEnv } from "../../env";
 import { resolveProjectAccess } from "../../lib/access";
+import { clientIdConflict } from "../../lib/client-id";
 import { errorResponse } from "../../lib/error-response";
 import { requireParam } from "../../lib/params";
-import { retryOnPositionConflict } from "../../lib/position-conflict";
+import { nextSiblingPosition, retryOnPositionConflict, writeClientPosition } from "../../lib/position-conflict";
 import { validJson, validQuery } from "../../lib/validated";
 import {
   enforceTokenProjectBinding,
@@ -71,7 +72,10 @@ export async function createTaskGroup(c: Context<AppEnv>) {
   const projectId = requireParam(c, "projectId");
   const body = validJson(c, createTaskGroupSchema);
 
-  const id = crypto.randomUUID();
+  const idConflict = await clientIdConflict(c, taskGroup, body.id);
+  if (idConflict) return idConflict;
+
+  const id = body.id ?? crypto.randomUUID();
   const now = new Date();
 
   // Read last position + insert inside a retry loop because the two steps
@@ -346,11 +350,15 @@ export async function reorderTaskGroup(c: Context<AppEnv>) {
 
   const now = new Date();
 
-  const [updated] = await db
-    .update(taskGroup)
-    .set({ position: body.position, updatedAt: now })
-    .where(eq(taskGroup.id, taskGroupId))
-    .returning();
+  const [updated] = await writeClientPosition(
+    body.position,
+    nextSiblingPosition(db, taskGroup, eq(taskGroup.projectId, result.group.projectId), taskGroupId),
+    (position) => db
+      .update(taskGroup)
+      .set({ position, updatedAt: now })
+      .where(eq(taskGroup.id, taskGroupId))
+      .returning(),
+  );
 
   return c.json({ taskGroup: updated });
 }

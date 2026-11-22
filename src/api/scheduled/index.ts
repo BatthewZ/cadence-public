@@ -5,6 +5,7 @@ import type { TelemetrySink } from "../lib/telemetry/types";
 import { processWebhookRetries } from "../lib/webhooks";
 import { processScheduledTokenRevocations } from "./api-token-revocation";
 import { cleanupAuthTables } from "./auth-cleanup";
+import { cleanupIdempotencyKeys } from "./idempotency-key-cleanup";
 import { cleanupInvitations } from "./invitation-cleanup";
 import { cleanupNotifications } from "./notification-cleanup";
 import { cleanupTaskActivity } from "./task-activity-cleanup";
@@ -33,6 +34,8 @@ import { cleanupWebhookDeliveries } from "./webhook-cleanup";
  * 7. **API token revocation** -- Finalises scheduled token revocations
  *    queued by the rotation flow (sets `revokedAt = now` for any token
  *    whose 7-day grace window has elapsed).
+ * 8. **Idempotency key cleanup** -- Removes `Idempotency-Key` records past
+ *    their retention window.
  */
 /** Run a cleanup task, logging results. Catches so one failure doesn't block the rest. */
 async function runTask(name: string, fn: () => Promise<number>, sink?: TelemetrySink): Promise<{ success: boolean }> {
@@ -86,6 +89,7 @@ export async function handleScheduled(
   await track("Cleaned up old task activity records", () => cleanupTaskActivity(db));
   await track("Cleaned up expired invitations", () => cleanupInvitations(db));
   await track("api-token-revocation", () => processScheduledTokenRevocations(db));
+  await track("Cleaned up expired idempotency keys", () => cleanupIdempotencyKeys(db));
 
   sink.track({
     type: "cron_run",

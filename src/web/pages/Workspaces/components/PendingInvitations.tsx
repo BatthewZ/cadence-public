@@ -3,6 +3,7 @@ import { Mail } from "lucide-react";
 
 import type { Invitation } from "@/shared/types/invitations";
 import { Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import {
   Badge,
   Button,
@@ -21,6 +22,7 @@ export function PendingInvitations() {
   });
 
   const { accept, dismiss, isAccepting } = useInvitationActions();
+  const onlineOnly = useOnlineOnly();
 
   const invitations = data?.invitations ?? [];
   if (invitations.length === 0) return null;
@@ -65,7 +67,8 @@ export function PendingInvitations() {
                   variant="primary"
                   className="flex-1"
                   onClick={() => accept(inv.id)}
-                  disabled={isAccepting}
+                  disabled={isAccepting || onlineOnly.disabled}
+                  title={onlineOnly.title}
                 >
                   {isAccepting ? "Accepting..." : "Accept"}
                 </Button>

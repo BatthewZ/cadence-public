@@ -1,6 +1,9 @@
 import { z } from "zod";
 
+import { clientIdSchema } from "./client-id";
+
 export const createTaskGroupSchema = z.object({
+  id: clientIdSchema,
   name: z.string().min(1, "Name is required").max(100),
   color: z
     .string()

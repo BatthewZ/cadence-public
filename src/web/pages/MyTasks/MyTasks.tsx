@@ -7,6 +7,8 @@ import type { TaskPriority } from "@/shared/types/roles";
 import { TaskCheckbox } from "@/web/components/form/TaskCheckbox";
 import { Container, Row, Stack } from "@/web/components/layout";
 import type { DueDateFilterValue } from "@/web/components/project/filters/DueDateFilter";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
+import { isUnavailableOffline } from "@/web/components/sync/use-online-only";
 import {
   Badge,
   Button,
@@ -34,7 +36,9 @@ import { useWorkspaceLabels } from "@/web/hooks/use-workspace-labels";
 import { useWorkspaceProjects } from "@/web/hooks/use-workspace-projects";
 import { useWorkspaceTaskGroups } from "@/web/hooks/use-workspace-task-groups";
 import { api } from "@/web/lib/api/client";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
+import { taskCompletionWrite } from "@/web/lib/task-writes";
 import { formatDueDate, isDueToday, isOverdue } from "@/web/util/date";
 import { getPriorityBadgeVariant, getPriorityLabel, PRIORITY_SORT_ORDER } from "@/web/util/task-display";
 
@@ -412,15 +416,7 @@ export default function MyTasks() {
     ],
   );
 
-  const {
-    data,
-    isLoading: loading,
-    isError,
-    refetch,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery<MyTasksResponse>({
+  const myTasksQuery = useInfiniteQuery<MyTasksResponse>({
     queryKey: myTasksQueryKey,
     queryFn: ({ pageParam }) => {
       const params = new URLSearchParams({ limit: "50" });
@@ -452,6 +448,16 @@ export default function MyTasks() {
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
   });
+  const {
+    data,
+    isLoading: loading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = myTasksQuery;
+  const unavailableOffline = isUnavailableOffline(myTasksQuery);
 
   const allTasks = useMemo(
     () => (data?.pages.flatMap((p) => p.tasks) ?? []).map(normalizeMyTask),
@@ -512,7 +518,7 @@ export default function MyTasks() {
   );
 
   const handleCompleteTask = useCallback(
-    async (taskId: string) => {
+    async (taskId: string, title: string) => {
       if (completingIds.has(taskId)) return;
 
       // Start fade-out animation + checkbox check
@@ -549,11 +555,13 @@ export default function MyTasks() {
       });
 
       try {
-        await api.post(`/api/tasks/${taskId}/complete`, {});
-        void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
-        void qc.invalidateQueries({
-          queryKey: queryKeys.workspaces.dashboard(workspace.id),
-        });
+        const result = await sendWrite(taskCompletionWrite({ id: taskId, title }, true));
+        if (result.status === "sent") {
+          void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
+          void qc.invalidateQueries({
+            queryKey: queryKeys.workspaces.dashboard(workspace.id),
+          });
+        }
       } catch {
         qc.setQueryData(myTasksQueryKey, previousData);
         toast("Failed to complete task", { variant: "error" });
@@ -578,7 +586,7 @@ export default function MyTasks() {
               size="sm"
               checked={completingIds.has(row.id)}
               disabled={completingIds.has(row.id)}
-              onChange={() => void handleCompleteTask(row.id)}
+              onChange={() => void handleCompleteTask(row.id, row.title)}
               aria-label={`Complete task: ${row.title}`}
             />
           </div>
@@ -644,7 +652,7 @@ export default function MyTasks() {
         </Breadcrumbs>
         <Row justify="between" align="center">
           <Text variant="h3">My Tasks</Text>
-          {!loading && (
+          {!loading && !unavailableOffline && (
             <Text variant="body-2" color="muted">
               {filteredTasks.length} {filteredTasks.length === 1 ? "task" : "tasks"}
             </Text>
@@ -695,7 +703,7 @@ export default function MyTasks() {
                     <AlertTriangle size={14} className={isActive ? "" : "text-status-error"} />
                   )}
                   {tab.label}
-                  {count != null && !loading && (
+                  {count != null && !loading && !unavailableOffline && (
                     <span
                       className={[
                         "ml-1 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full text-xs font-semibold",
@@ -713,32 +721,36 @@ export default function MyTasks() {
           </Tabs.List>
         </Tabs>
 
-        {isError && (
+        {isError && !unavailableOffline && (
           <QueryErrorRetry message="Failed to load tasks." onRetry={refetch} />
         )}
 
-        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <DataTable<MyTask>
-            data={filteredTasks}
-            columns={columns}
-            rowKey={(row) => row.id}
-            loading={loading}
-            sortComparator={sortComparator}
-            rowClassName={(row) =>
-              completingIds.has(row.id)
-                ? "opacity-0 transition-all duration-200 ease-out"
-                : "transition-all duration-200"
-            }
-            emptyContent={
-              <EmptyState size="md">
-                <EmptyStateTitle>No tasks assigned to you</EmptyStateTitle>
-                <EmptyStateDescription>
-                  Tasks assigned to you will appear here
-                </EmptyStateDescription>
-              </EmptyState>
-            }
-          />
-        </div>
+        {unavailableOffline ? (
+          <OfflineUnavailable what="This view of your tasks" />
+        ) : (
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <DataTable<MyTask>
+              data={filteredTasks}
+              columns={columns}
+              rowKey={(row) => row.id}
+              loading={loading}
+              sortComparator={sortComparator}
+              rowClassName={(row) =>
+                completingIds.has(row.id)
+                  ? "opacity-0 transition-all duration-200 ease-out"
+                  : "transition-all duration-200"
+              }
+              emptyContent={
+                <EmptyState size="md">
+                  <EmptyStateTitle>No tasks assigned to you</EmptyStateTitle>
+                  <EmptyStateDescription>
+                    Tasks assigned to you will appear here
+                  </EmptyStateDescription>
+                </EmptyState>
+              }
+            />
+          </div>
+        )}
 
         {hasNextPage && (
           <div className="flex justify-center">

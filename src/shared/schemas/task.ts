@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { RECURRENCE_FREQUENCIES } from "../types/recurrence";
 import { TASK_PRIORITIES } from "../types/roles";
+import { clientIdSchema } from "./client-id";
 
 /**
  * Calendar-validated task date (used for both `startDate` and `dueDate`):
@@ -100,6 +101,7 @@ export const recurrenceRuleSchema = z.object({
 
 export const createTaskSchema = z
   .object({
+    id: clientIdSchema,
     title: z.string().min(1, "Title is required").max(200),
     description: z.string().max(5000).optional(),
     taskGroupId: z.uuid(),
@@ -148,6 +150,12 @@ export const updateTaskSchema = z
     icon: z.string().max(50).optional().nullable(),
     coverImagePosition: z.number().int().min(0).max(100).optional().nullable(),
     recurrenceRule: recurrenceRuleSchema.nullable().optional(),
+    /**
+     * The description the client edited from. When sent with `description`,
+     * the update applies only if the stored description still equals it
+     * (null and "" are equal); otherwise 409 `description_conflict`. Never stored.
+     */
+    descriptionBase: z.string().max(5000).nullable().optional(),
   })
   // A partial PATCH can't see stored values, so the schema can only enforce
   // the range invariant when BOTH fields appear in the payload. Patches that

@@ -36,7 +36,8 @@ import { Popover } from "@/web/components/ui/Popover";
 import { Text } from "@/web/components/ui/Text";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { type Task, type TaskGroup, useProject } from "@/web/contexts/ProjectContext";
-import { api } from "@/web/lib/api/client";
+import { freshnessTracker } from "@/web/lib/freshness-tracker";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 import { TASK_GROUP_COLORS } from "@/web/util/task-display";
 
@@ -72,8 +73,10 @@ export function SortableColumn({
   const {
     project,
     taskGroups,
+    tasks: allTasks,
     updateTaskGroup,
     removeTaskGroup,
+    addTaskGroup,
     updateTask: updateTaskInCtx,
   } = useProject();
   const { toast } = useToast();
@@ -122,7 +125,12 @@ export function SortableColumn({
     }
     updateTaskGroup(group.id, { name });
     try {
-      await api.patch(`/api/task-groups/${group.id}`, { name });
+      await sendWrite({
+        method: "PATCH",
+        path: `/api/task-groups/${group.id}`,
+        body: { name },
+        label: `Rename section “${group.name}”`,
+      });
     } catch {
       updateTaskGroup(group.id, { name: group.name });
       toast("Failed to rename section", { variant: "error" });
@@ -139,17 +147,28 @@ export function SortableColumn({
   const handleDeleteConfirm = async () => {
     if (!project || !targetGroupId) return;
     setDeleting(true);
+    const movedTasks = allTasks.filter((t) => t.taskGroupId === group.id);
+    for (const t of movedTasks) {
+      updateTaskInCtx(t.id, { taskGroupId: targetGroupId });
+    }
+    removeTaskGroup(group.id);
+    freshnessTracker.recordMutation("tasks");
+    setShowDeleteDialog(false);
     try {
-      await api.delete(`/api/task-groups/${group.id}?targetGroupId=${targetGroupId}`);
-      // Move tasks to target group optimistically, then remove column
-      for (const t of tasks) {
-        updateTaskInCtx(t.id, { taskGroupId: targetGroupId });
+      const result = await sendWrite({
+        method: "DELETE",
+        path: `/api/task-groups/${group.id}?targetGroupId=${targetGroupId}`,
+        label: `Delete section “${group.name}”`,
+      });
+      if (result.status === "sent") {
+        void qc.invalidateQueries({ queryKey: queryKeys.projects.taskGroups(project.id) });
+        void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(project.id) });
       }
-      removeTaskGroup(group.id);
-      void qc.invalidateQueries({ queryKey: queryKeys.projects.taskGroups(project.id) });
-      void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(project.id) });
-      setShowDeleteDialog(false);
     } catch {
+      addTaskGroup(group);
+      for (const t of movedTasks) {
+        updateTaskInCtx(t.id, { taskGroupId: group.id });
+      }
       toast("Failed to delete section", { variant: "error" });
     } finally {
       setDeleting(false);
@@ -180,7 +199,12 @@ export function SortableColumn({
     if (color === (group.color ?? null) || !project) return;
     updateTaskGroup(group.id, { color: color ?? undefined });
     try {
-      await api.patch(`/api/task-groups/${group.id}`, { color });
+      await sendWrite({
+        method: "PATCH",
+        path: `/api/task-groups/${group.id}`,
+        body: { color },
+        label: `Recolor section “${group.name}”`,
+      });
     } catch {
       updateTaskGroup(group.id, { color: group.color ?? undefined });
       toast("Failed to update color", { variant: "error" });
@@ -191,7 +215,12 @@ export function SortableColumn({
     const newValue = !group.isCompletionGroup;
     updateTaskGroup(group.id, { isCompletionGroup: newValue });
     try {
-      await api.patch(`/api/task-groups/${group.id}`, { isCompletionGroup: newValue });
+      await sendWrite({
+        method: "PATCH",
+        path: `/api/task-groups/${group.id}`,
+        body: { isCompletionGroup: newValue },
+        label: `${newValue ? "Mark" : "Unmark"} “${group.name}” as the done section`,
+      });
     } catch {
       updateTaskGroup(group.id, { isCompletionGroup: !newValue });
       toast("Failed to update section", { variant: "error" });
@@ -232,13 +261,20 @@ export function SortableColumn({
     const oldPosition = target.position;
     updateTaskInCtx(taskId, { position: newPosition });
     try {
-      const res = await api.patch<{ task: Task }>(`/api/tasks/${taskId}/move`, {
-        taskGroupId: group.id,
-        position: newPosition,
+      const result = await sendWrite<{ task: Task }>({
+        method: "PATCH",
+        path: `/api/tasks/${taskId}/move`,
+        body: {
+          taskGroupId: group.id,
+          position: newPosition,
+        },
+        label: `Move “${target.title}”`,
       });
-      updateTaskInCtx(taskId, res.task);
-      void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
-      void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
+      if (result.status === "sent") {
+        updateTaskInCtx(taskId, result.data.task);
+        void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
+        void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
+      }
     } catch {
       updateTaskInCtx(taskId, { position: oldPosition });
       toast("Failed to move task", { variant: "error" });

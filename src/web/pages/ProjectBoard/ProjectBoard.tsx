@@ -29,7 +29,7 @@ import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useMultiSelect } from "@/web/hooks/use-multi-select";
 import { useProjectPermissions } from "@/web/hooks/use-permissions";
 import { useTaskFilters } from "@/web/hooks/use-task-filters";
-import { api } from "@/web/lib/api/client";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 
 import { AddGroupColumn } from "./components/AddGroupColumn";
@@ -199,8 +199,11 @@ export default function ProjectBoard() {
         ctxUpdateTaskGroup(activeParsed.id, { position: newPosition });
 
         try {
-          await api.patch(`/api/task-groups/${activeParsed.id}/reorder`, {
-            position: newPosition,
+          await sendWrite({
+            method: "PATCH",
+            path: `/api/task-groups/${activeParsed.id}/reorder`,
+            body: { position: newPosition },
+            label: `Reorder section “${sortedGroups[oldIndex].name}”`,
           });
         } catch {
           // Revert on failure — refetch from server
@@ -268,10 +271,17 @@ export default function ProjectBoard() {
         });
 
         try {
-          const res = await api.patch<TaskCompletionResponse>(`/api/tasks/${activeParsed.id}/move`, {
-            taskGroupId: targetGroupId,
-            position: newPosition,
+          const result = await sendWrite<TaskCompletionResponse>({
+            method: "PATCH",
+            path: `/api/tasks/${activeParsed.id}/move`,
+            body: {
+              taskGroupId: targetGroupId,
+              position: newPosition,
+            },
+            label: `Move “${task.title}”`,
           });
+          if (result.status === "queued") return;
+          const res = result.data;
           // Apply full server state (includes completedAt, completedBy)
           ctxUpdateTask(activeParsed.id, res.task);
           if (res.removedRecurringTaskId) {

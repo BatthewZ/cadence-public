@@ -166,6 +166,21 @@ Domain-specific widgets shared between Dashboard and ProjectDashboard pages. The
 | PriorityBreakdownSection | Horizontal bar chart showing task count per priority level (urgent, high, medium, low, none) with proportional colored bars |
 | TeamWorkloadSection | Sorted list of team members with avatar, task count, and progress bar showing relative workload |
 
+## Offline and PWA Components
+
+Sync status and app-update pieces. Sync components live in `src/web/components/sync/`, PWA ones in `src/web/components/pwa/`. The design is in [Offline mode](../architecture/offline.md).
+
+| Component | Description |
+| --- | --- |
+| SyncStatusBadge | Navbar badge for the write queue: hidden when online with nothing pending, otherwise "Offline · N to sync", "Syncing N…", "Retrying soon · N" or "Can't sync" (icon + count on narrow screens). Opens a popover listing queued writes, with **Retry now** and, for a stuck write, **Discard** (confirmed). `role="status"`, named "Sync status". |
+| SyncNotices | Headless, mounted once in `App.tsx`. Toasts each queued write the server refused (several within 1 s share one toast). A refused description edit gets its own toast with **Copy my version**. |
+| OfflineUnavailable | Empty state for a screen whose data was never loaded on this device while offline (instead of a spinner or a misleading error). |
+| useOnlineOnly | `{ online, disabled, title }` for controls that need a connection; `title` is "Needs a connection" offline. `isUnavailableOffline(query)` tells a never-loaded query from a real error. |
+| useSignOut / UnsyncedSignOutDialog | The sign-out flow (user menu, ToS screen): disabled offline ("Sign out needs a connection"), asks to confirm when writes are still queued, and after the server ends the session deletes this device's data (`forgetThisDevice`, also called after account deletion). |
+| copyMyVersion | The **Copy my version** toast action for a refused description edit, online (`useTaskEditing`) and replayed (`SyncNotices`): puts the unsaved text on the clipboard, with a toast saying whether it worked. |
+| UpdatePrompt | "A new version of Cadence is available" card with **Reload** / **Not now**, mounted once in `App.tsx`; never reloads by itself. |
+| InstallAppMenuItem / InstallHelpDialog | "Install app" in the user menu: the browser's install dialog where it exists, otherwise per-browser steps (iOS Safari: Share → Add to Home Screen). |
+
 ## Shared Utilities
 
 Pure functions and constants shared across multiple page components. These live in `src/web/util/` and contain no React dependencies.
@@ -220,6 +235,7 @@ Hooks shared across multiple UI components.
 | [useTaskSubtasks](hooks.md#usetasksubtasks)                | Subtask CRUD, DnD reorder, and optimistic updates with rollback for the task detail panel |
 | [useTaskCommentActions](hooks.md#usetaskcommentactions)    | Comment CRUD mutations + optimistic cache updates, shared between TaskDetailDialog and TaskDetailPanelInner |
 | [useTaskDetailActions](hooks.md#usetaskdetailactions)      | Task complete/duplicate/delete actions with delete dialog state, shared between TaskDetailDialog and TaskDetailPanelInner |
+| [useLocalTask](hooks.md#uselocaltask)                      | A detail view's working copy of a task; each optimistic edit is also written to the task's detail query, so reopening, reloading or a label change keeps it |
 | [useTaskServerSync](hooks.md#usetaskserversync)            | Adopts the fetched task row wholesale into a detail view's local copy, keeping an open Dialog/Panel live as collaborators edit |
 | [useWorkspaceWebhooks](hooks.md#useworkspacewebhooks)      | Centralised state, queries, mutations, and handlers for the workspace webhooks settings page |
 | [useWorkspaceProjects](hooks.md#useworkspaceprojects)      | Fetches the projects in a workspace the current user can see (visibility-scoped) |

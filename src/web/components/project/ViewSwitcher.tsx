@@ -76,8 +76,7 @@ export interface ViewSwitcherProps {
 /**
  * Shared per-mount-point plumbing: where we are (tab + captured URL state),
  * where views live (the deduped list query), and the one navigation-coupled
- * mutation (create must navigate to the SERVER-assigned id, which is why
- * `useCreateSavedView` is non-optimistic — see use-saved-views.ts).
+ * mutation (create navigates to the new view's id).
  */
 function useViewSwitcherState(projectId: string) {
   const { workspace } = useWorkspace();
@@ -109,13 +108,14 @@ function useViewSwitcherState(projectId: string) {
   const createView = useCreateSavedView(projectId);
 
   /**
-   * Create-then-apply: awaits the server-assigned id, then writes the FULL
-   * new URL (params + `view=<id>`) in one navigate call. The `view` param is
-   * what survives refresh and drives the dirty check.
+   * Create-then-apply: the view is created under a client id, then the FULL
+   * new URL (params + `view=<id>`) is written in one navigate call. The
+   * `view` param is what survives refresh and drives the dirty check.
    */
   async function createAndApply(name: string) {
-    const { view } = await createView.mutateAsync({ name, state: currentState });
-    void navigate(`${basePath}/${tab}?${viewStateToSearch(currentState, view.id)}`);
+    const id = crypto.randomUUID();
+    await createView.mutateAsync({ id, name, state: currentState });
+    void navigate(`${basePath}/${tab}?${viewStateToSearch(currentState, id)}`);
   }
 
   return { views, currentState, capturable, basePath, tab, navigate, searchParams, createAndApply };

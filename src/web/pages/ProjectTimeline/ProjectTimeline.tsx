@@ -25,8 +25,9 @@ import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useMultiSelect } from "@/web/hooks/use-multi-select";
 import { useProjectPermissions } from "@/web/hooks/use-permissions";
 import { useTaskFilters } from "@/web/hooks/use-task-filters";
-import { api } from "@/web/lib/api/client";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
+import { taskCompletionWrite } from "@/web/lib/task-writes";
 import { getPriorityBadgeVariant } from "@/web/util/task-display";
 
 import { GroupByDropdown } from "./components/GroupByDropdown";
@@ -107,11 +108,13 @@ export default function ProjectTimeline() {
     async (taskId: string, currentlyCompleted: boolean) => {
       // Optimistic update
       updateTask(taskId, { completed: !currentlyCompleted });
-      const endpoint = currentlyCompleted
-        ? `/api/tasks/${taskId}/uncomplete`
-        : `/api/tasks/${taskId}/complete`;
+      const title = tasks.find((t) => t.id === taskId)?.title ?? "task";
       try {
-        const res = await api.post<TaskCompletionResponse>(endpoint, {});
+        const result = await sendWrite<TaskCompletionResponse>(
+          taskCompletionWrite({ id: taskId, title }, !currentlyCompleted),
+        );
+        if (result.status === "queued") return;
+        const res = result.data;
         updateTask(taskId, res.task);
         if (res.removedRecurringTaskId) {
           removeTask(res.removedRecurringTaskId);
@@ -126,7 +129,7 @@ export default function ProjectTimeline() {
         toast("Failed to update task", { variant: "error" });
       }
     },
-    [updateTask, removeTask, toast, qc, project],
+    [tasks, updateTask, removeTask, toast, qc, project],
   );
 
   if (!project) {

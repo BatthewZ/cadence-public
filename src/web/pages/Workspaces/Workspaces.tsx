@@ -5,6 +5,8 @@ import { useNavigate } from "react-router-dom";
 
 import { Center, Container, Row } from "@/web/components/layout";
 import { UserMenu } from "@/web/components/layout/UserMenu";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
+import { isUnavailableOffline, useOnlineOnly } from "@/web/components/sync/use-online-only";
 import {
   Alert,
   Button,
@@ -35,11 +37,13 @@ export default function Workspaces() {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const { data: session } = useSession();
-  const { data, isLoading: loading, error } = useQuery({
+  const workspacesQuery = useQuery({
     queryKey: queryKeys.workspaces.all,
     queryFn: () => api.get<WorkspacesResponse>("/api/workspaces"),
   });
+  const { data, isLoading: loading, error } = workspacesQuery;
   const [dialogOpen, setDialogOpen] = useState(false);
+  const onlineOnly = useOnlineOnly();
 
   const workspaces = data?.workspaces ?? [];
   const firstName = session?.user?.name?.split(" ")[0] ?? "";
@@ -47,6 +51,10 @@ export default function Workspaces() {
   function handleSelectWorkspace(slug: string) {
     localStorage.setItem("lastWorkspaceSlug", slug);
     void navigate(`/w/${slug}/dashboard`);
+  }
+
+  if (isUnavailableOffline(workspacesQuery)) {
+    return <OfflineUnavailable what="Your workspace list" className="min-h-screen" />;
   }
 
   if (loading) {
@@ -103,7 +111,12 @@ export default function Workspaces() {
               Start by creating one for your team or personal use.
             </EmptyStateDescription>
             <EmptyStateActions>
-              <Button size="lg" onClick={() => setDialogOpen(true)}>
+              <Button
+                size="lg"
+                onClick={() => setDialogOpen(true)}
+                disabled={onlineOnly.disabled}
+                title={onlineOnly.title}
+              >
                 <Plus size={18} />
                 Create Workspace
               </Button>
@@ -154,8 +167,10 @@ export default function Workspaces() {
             {/* Create new workspace card */}
             <button
               type="button"
-              className="text-left rounded-xl border-2 border-dashed border-border-default p-5 transition-all duration-fast hover:border-accent/40 hover:bg-accent-subtle focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2"
+              className="text-left rounded-xl border-2 border-dashed border-border-default p-5 transition-all duration-fast hover:border-accent/40 hover:bg-accent-subtle focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border-default disabled:hover:bg-transparent"
               onClick={() => setDialogOpen(true)}
+              disabled={onlineOnly.disabled}
+              title={onlineOnly.title}
             >
               <div className="w-11 h-11 rounded-lg bg-surface-2 flex items-center justify-center">
                 <Plus size={20} className="text-fg-muted" />

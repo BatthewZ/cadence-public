@@ -3,6 +3,7 @@ import { useState } from "react";
 import { updateProfileSchema } from "@/shared/schemas/user";
 import { Field, FieldError, Input, Label } from "@/web/components/form";
 import { Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Alert, AvatarUpload, Button, Card, Text } from "@/web/components/ui";
 import { useFieldErrors } from "@/web/hooks/use-field-errors";
 import { updateUser, useSession } from "@/web/lib/auth/auth-client";
@@ -14,6 +15,7 @@ export function ProfileSection() {
   const { fieldErrors, clearFieldError, setFromZodError, resetFieldErrors } = useFieldErrors();
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const onlineOnly = useOnlineOnly();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -87,7 +89,13 @@ export function ProfileSection() {
             {error && <Alert variant="error">{error}</Alert>}
             {success && <Alert variant="success">{success}</Alert>}
 
-            <Button type="submit" variant="primary" size="md" disabled={loading}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              disabled={loading || onlineOnly.disabled}
+              title={onlineOnly.title}
+            >
               {loading ? "Saving..." : "Save Changes"}
             </Button>
           </Stack>

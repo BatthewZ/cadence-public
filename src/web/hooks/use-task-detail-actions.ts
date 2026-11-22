@@ -1,10 +1,12 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 
 import type { Task, TaskCompletionResponse } from "@/web/contexts/ProjectContext";
-import { api } from "@/web/lib/api/client";
+import { api, apiErrorMessage } from "@/web/lib/api/client";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
+import { taskCompletionWrite } from "@/web/lib/task-writes";
 import type { TaskDetail } from "@/web/pages/TaskDetail/types";
 
 interface UseTaskDetailActionsOptions {
@@ -17,14 +19,14 @@ interface UseTaskDetailActionsOptions {
   ) => string;
   workspaceId: string;
   projectId?: string;
-  /** Called after successful task deletion (Dialog: close dialog; Panel: clear URL param) */
+  /** Called as soon as the delete is confirmed, before the server answers (Dialog: close dialog; Panel: clear URL param) */
   onDeleteSuccess: () => void;
   /** Optional: update task in board context (Panel has ProjectContext, Dialog doesn't) */
   updateTaskInContext?: (taskId: string, updates: Partial<Task>) => void;
   /** Optional: add task to board context (for duplicate result or recurring task) */
   addTaskToContext?: (task: Task) => void;
-  /** Optional: remove task from board context on delete */
-  removeTaskFromContext?: (taskId: string) => void;
+  /** Optional: remove task from board context on delete; returns its undo */
+  removeTaskFromContext?: (taskId: string) => () => void;
   /** Optional: refetch the project task list after duplication */
   refetchTasks?: () => void;
 }
@@ -54,10 +56,6 @@ export function useTaskDetailActions({
 
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  const deleteTaskMutation = useMutation({
-    mutationFn: () => api.delete<{ ok: boolean }>(`/api/tasks/${taskId}`),
-  });
-
   const handleToggleComplete = useCallback(async () => {
     if (!localTask) return;
     const wasCompleted = localTask.completed;
@@ -65,11 +63,12 @@ export function useTaskDetailActions({
     updateTaskInContext?.(taskId, { completed: !wasCompleted });
     freshnessTracker.recordMutation("tasks");
 
-    const endpoint = wasCompleted
-      ? `/api/tasks/${taskId}/uncomplete`
-      : `/api/tasks/${taskId}/complete`;
     try {
-      const res = await api.post<TaskCompletionResponse>(endpoint, {});
+      const result = await sendWrite<TaskCompletionResponse>(
+        taskCompletionWrite({ id: taskId, title: localTask.title }, !wasCompleted),
+      );
+      if (result.status === "queued") return;
+      const res = result.data;
       setLocalTask((prev) => (prev ? { ...prev, ...res.task } : prev));
       updateTaskInContext?.(taskId, res.task);
       if (res.nextRecurringTask) {
@@ -121,29 +120,38 @@ export function useTaskDetailActions({
         void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(projectId) });
       }
       toast("Task duplicated", { variant: "success" });
-    } catch {
-      toast("Failed to duplicate task", { variant: "error" });
+    } catch (err) {
+      toast(apiErrorMessage(err, "Failed to duplicate task"), { variant: "error" });
     }
   }, [taskId, addTaskToContext, refetchTasks, qc, workspaceId, projectId, toast]);
 
+  const taskTitle = localTask?.title ?? "task";
   const handleDeleteTask = useCallback(async () => {
+    setShowDeleteDialog(false);
+    // Cancel task queries to prevent 404 refetches while the view unmounts
+    await qc.cancelQueries({ queryKey: ["tasks", taskId] });
+    const restore = removeTaskFromContext?.(taskId);
+    freshnessTracker.recordMutation("tasks");
+    onDeleteSuccess();
     try {
-      await deleteTaskMutation.mutateAsync();
-      setShowDeleteDialog(false);
-      // Cancel task queries to prevent 404 refetches while the view unmounts
-      await qc.cancelQueries({ queryKey: ["tasks", taskId] });
-      removeTaskFromContext?.(taskId);
-      void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
-      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspaceId) });
-      if (projectId) {
-        void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(projectId) });
+      const result = await sendWrite({
+        method: "DELETE",
+        path: `/api/tasks/${taskId}`,
+        label: `Delete “${taskTitle}”`,
+      });
+      if (result.status === "sent") {
+        void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(taskId) });
+        void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspaceId) });
+        if (projectId) {
+          void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(projectId) });
+        }
       }
-      onDeleteSuccess();
       toast("Task deleted", { variant: "success" });
     } catch {
+      restore?.();
       toast("Failed to delete task", { variant: "error" });
     }
-  }, [deleteTaskMutation, qc, taskId, removeTaskFromContext, workspaceId, projectId, onDeleteSuccess, toast]);
+  }, [qc, taskId, taskTitle, removeTaskFromContext, workspaceId, projectId, onDeleteSuccess, toast]);
 
   return {
     showDeleteDialog,
@@ -151,6 +159,5 @@ export function useTaskDetailActions({
     handleToggleComplete,
     handleDuplicateTask,
     handleDeleteTask,
-    isDeleting: deleteTaskMutation.isPending,
   };
 }

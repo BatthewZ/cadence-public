@@ -66,6 +66,8 @@ type Payload = {
   workspace: number | null;
   projects: number | null;
   tasks: number | null;
+  projectCount?: number;
+  taskCount?: number;
 };
 
 /** See use-project-freshness.test.tsx for why this flush is required. */
@@ -182,6 +184,14 @@ describe("useWorkspaceFreshness", () => {
 
     await nextPoll({ workspace: 999, projects: 999, tasks: 999 });
     expect(invalidatedKeys()).toEqual([]);
+  });
+
+  it("invalidates the dashboard lists when the last task is deleted", async () => {
+    mockGet.mockResolvedValue({ freshness: { workspace: 100, projects: 200, tasks: 300, projectCount: 2, taskCount: 1 } });
+    await mountWithBaseline();
+
+    await nextPoll({ workspace: 100, projects: 200, tasks: null, projectCount: 2, taskCount: 0 });
+    expect(invalidatedKeys()).toContain(JSON.stringify(queryKeys.workspaces.dashboard(WORKSPACE_ID)));
   });
 
   it("treats null timestamps as no-change", async () => {

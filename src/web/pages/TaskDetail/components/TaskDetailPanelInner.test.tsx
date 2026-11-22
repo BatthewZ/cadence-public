@@ -24,13 +24,15 @@
  *
  * Delete either half and the other becomes a regression waiting to happen.
  */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
+import { WRITE_ERROR_CODES } from "@/shared/constants/offline-sync";
+import type { ToastAction } from "@/web/components/ui/Toast";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
 import { queryKeys } from "@/web/lib/query-keys";
 import type { TaskDetail } from "@/web/pages/TaskDetail/types";
@@ -131,7 +133,7 @@ vi.mock("@/web/pages/TaskDetail/components/TaskDetailProperties", () => ({
   ),
 }));
 
-import { api } from "@/web/lib/api/client";
+import { api, ApiError } from "@/web/lib/api/client";
 
 import { TaskDetailPanelInner } from "./TaskDetailPanelInner";
 
@@ -163,6 +165,7 @@ function makeTask(overrides: Partial<TaskDetail> = {}): TaskDetail {
 }
 
 let qc: QueryClient;
+let toast: Mock<(message: string, options?: { action?: ToastAction }) => string>;
 
 function renderPanel() {
   return render(
@@ -172,7 +175,7 @@ function renderPanel() {
           taskId={TASK_ID}
           panelRef={createRef<HTMLDivElement>()}
           members={[]}
-          toast={vi.fn()}
+          toast={toast}
           onClose={vi.fn()}
           visible
         />
@@ -202,6 +205,7 @@ async function remoteEdit(task: TaskDetail) {
 }
 
 beforeEach(() => {
+  toast = vi.fn(() => "toast-id");
   qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -213,6 +217,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  onlineManager.setOnline(true);
   vi.clearAllMocks();
   qc.clear();
 });
@@ -389,5 +394,104 @@ describe("TaskDetailPanelInner — adopting server data", () => {
       );
       expect(screen.getByText("Locally renamed")).toBeTruthy();
     });
+  });
+});
+
+describe("TaskDetailPanelInner — description compare-and-set", () => {
+  async function editDescription(text: string) {
+    const user = userEvent.setup();
+    renderPanel();
+    await waitFor(() => expect(screen.getByText("Original description")).toBeTruthy());
+    await user.click(screen.getByText("Original description"));
+    const textarea = await screen.findByRole<HTMLTextAreaElement>("textbox");
+    await user.clear(textarea);
+    await user.type(textarea, text);
+    return { user, textarea };
+  }
+
+  it("sends the description the edit started from, even after a collaborator's change lands", async () => {
+    mockPatch.mockResolvedValue({ task: makeTask({ description: "mine" }) });
+    const { user } = await editDescription("mine");
+
+    await remoteEdit(makeTask({ description: "Alice rewrote this" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(mockPatch).toHaveBeenCalledWith(`/api/tasks/${TASK_ID}`, {
+        description: "mine",
+        descriptionBase: "Original description",
+      }),
+    );
+  });
+
+  it("keeps the base when saving from the Preview tab after a collaborator's change lands", async () => {
+    mockPatch.mockResolvedValue({ task: makeTask({ description: "mine" }) });
+    const { user } = await editDescription("mine");
+
+    await remoteEdit(makeTask({ description: "Alice rewrote this" }));
+    await user.click(screen.getByRole("button", { name: "Preview" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(mockPatch).toHaveBeenCalledWith(`/api/tasks/${TASK_ID}`, {
+        description: "mine",
+        descriptionBase: "Original description",
+      }),
+    );
+  });
+
+  it("keeps the user's text and offers to copy it when someone else changed the description", async () => {
+    mockPatch.mockRejectedValue(
+      new ApiError(409, "The description changed since this edit was made", WRITE_ERROR_CODES.descriptionConflict, {
+        code: WRITE_ERROR_CODES.descriptionConflict,
+        task: makeTask({ description: "Alice's version" }),
+      }),
+    );
+    const { user, textarea } = await editDescription("my careful wording");
+    // After userEvent.setup(), which installs its own clipboard stub.
+    const writeText = vi.spyOn(navigator.clipboard, "writeText");
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(toast).toHaveBeenCalled());
+    expect(screen.getByRole("textbox")).toBe(textarea);
+    expect(textarea.value).toBe("my careful wording");
+    const [message, options] = toast.mock.calls[0];
+    expect(message).toMatch(/Someone else changed this description/);
+    expect(options?.action?.label).toBe("Copy my version");
+
+    options?.action?.onClick();
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("my careful wording"));
+  });
+
+  it("lets a second save replace the other version once the conflict was shown", async () => {
+    mockPatch.mockRejectedValueOnce(
+      new ApiError(409, "The description changed since this edit was made", WRITE_ERROR_CODES.descriptionConflict, {
+        task: makeTask({ description: "Alice's version" }),
+      }),
+    );
+    mockPatch.mockResolvedValueOnce({ task: makeTask({ description: "mine" }) });
+    const { user } = await editDescription("mine");
+
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(toast).toHaveBeenCalled());
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(mockPatch).toHaveBeenLastCalledWith(`/api/tasks/${TASK_ID}`, {
+        description: "mine",
+        descriptionBase: "Alice's version",
+      }),
+    );
+  });
+});
+
+describe("TaskDetailPanelInner — offline", () => {
+  it("says the task isn't on this device instead of loading forever", async () => {
+    onlineManager.setOnline(false);
+    renderPanel();
+
+    expect(await screen.findByText("You’re offline")).toBeTruthy();
+    expect(screen.getByText(/This task hasn’t been opened on this device yet/)).toBeTruthy();
   });
 });

@@ -51,6 +51,8 @@ interface EditableMarkdownProps {
   density?: "comfortable" | "compact";
   /** Muted prompt shown when `value` is empty/whitespace. */
   placeholder?: string;
+  /** Called on entering edit mode with the `value` the draft is seeded from. */
+  onEditStart?: (seed: string) => void;
 }
 
 const DEFAULT_PLACEHOLDER = "Add a description…";
@@ -65,6 +67,7 @@ export function EditableMarkdown(
     readOnly = false,
     density = "comfortable",
     placeholder,
+    onEditStart,
   } = props;
 
   const [editing, setEditing] = useState(false);
@@ -80,6 +83,7 @@ export function EditableMarkdown(
     if (readOnly || editing) return;
     setDraft(value);
     setEditing(true);
+    onEditStart?.(value);
   };
 
   const cancel = (): void => {

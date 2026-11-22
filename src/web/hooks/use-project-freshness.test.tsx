@@ -78,6 +78,8 @@ function poll(freshness: {
   project: number | null;
   tasks: number | null;
   taskGroups: number | null;
+  taskCount?: number;
+  taskGroupCount?: number;
 }) {
   mockGet.mockResolvedValue({ freshness });
 }
@@ -99,6 +101,8 @@ async function nextPoll(freshness: {
   project: number | null;
   tasks: number | null;
   taskGroups: number | null;
+  taskCount?: number;
+  taskGroupCount?: number;
 }) {
   poll(freshness);
   await act(async () => {
@@ -285,6 +289,23 @@ describe("useProjectFreshness", () => {
       await mountWithBaseline();
       await nextPoll({ project: 100, tasks: null, taskGroups: null });
       expect(invalidatedKeys()).toEqual([]);
+    });
+
+    it("invalidates the board when a task is deleted (count drops, timestamps don't move)", async () => {
+      poll({ project: 100, tasks: 500, taskGroups: 300, taskCount: 4, taskGroupCount: 3 });
+      await mountWithBaseline();
+
+      await nextPoll({ project: 100, tasks: 500, taskGroups: 300, taskCount: 3, taskGroupCount: 3 });
+      expect(invalidatedKeys()).toContain(JSON.stringify(queryKeys.projects.tasks(PROJECT_ID)));
+      expect(invalidatedKeys()).not.toContain(JSON.stringify(queryKeys.projects.taskGroups(PROJECT_ID)));
+    });
+
+    it("invalidates task groups when the last-updated group is deleted", async () => {
+      poll({ project: 100, tasks: 500, taskGroups: 300, taskCount: 4, taskGroupCount: 3 });
+      await mountWithBaseline();
+
+      await nextPoll({ project: 100, tasks: 500, taskGroups: 200, taskCount: 4, taskGroupCount: 2 });
+      expect(invalidatedKeys()).toContain(JSON.stringify(queryKeys.projects.taskGroups(PROJECT_ID)));
     });
 
     it("invalidates once a null becomes a real timestamp", async () => {

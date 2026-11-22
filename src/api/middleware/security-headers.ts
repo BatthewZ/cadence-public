@@ -31,11 +31,24 @@ const SPA_CSP = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://images.unsplash.com",
   "font-src 'self'",
-  "connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com",
+  // images.unsplash.com: the service worker fetches cover images itself, under connect-src.
+  "connect-src 'self' https://cloudflareinsights.com https://static.cloudflareinsights.com https://images.unsplash.com",
+  "worker-src 'self'",
+  "manifest-src 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
 ].join("; ");
+
+/** Content types for the PWA's root-level files, which are not under /assets/. */
+const PWA_CONTENT_TYPES: ReadonlyArray<readonly [RegExp, string]> = [
+  [/^\/manifest\.webmanifest$/, "application/manifest+json"],
+  [/^\/(?:sw|registerSW|workbox-[\w-]+)\.js$/, "text/javascript; charset=utf-8"],
+];
+
+function isHtml(response: Response): boolean {
+  return response.headers.get("Content-Type")?.toLowerCase().startsWith("text/html") ?? false;
+}
 
 /** Returns true for paths that serve the interactive API documentation UI (Scalar). */
 function isDocsPath(path: string): boolean {
@@ -74,8 +87,11 @@ export const securityHeadersMiddleware = createMiddleware(async (c, next) => {
  *
  * Cache strategy:
  * - Hashed assets (`/assets/*`) are immutable and cached for 1 year.
- * - HTML pages (index.html, SPA routes) use `no-cache` so the browser always
- *   revalidates, preventing stale index.html from referencing outdated asset hashes.
+ * - An `/assets/*` path answered with HTML (the SPA fallback for a hash that no
+ *   longer exists) becomes a `no-store` 404, so no cache keeps HTML as a script.
+ * - Everything else, including the service worker and manifest, uses `no-cache`
+ *   so the browser always revalidates, preventing stale index.html from
+ *   referencing outdated asset hashes.
  *
  * The SPA CSP differs from the API CSP: it allows the inline FOUC prevention
  * script via 'unsafe-inline' in script-src.
@@ -84,16 +100,25 @@ export function withSpaSecurityHeaders(
   response: Response,
   requestPath: string
 ): Response {
-  const headers = new Headers(response.headers);
+  const isAsset = requestPath.startsWith("/assets/");
+  const missingAsset = isAsset && isHtml(response);
+  const headers = new Headers(missingAsset ? { "Content-Type": "text/plain; charset=utf-8" } : response.headers);
   for (const [key, value] of Object.entries(SHARED_HEADERS)) {
     headers.set(key, value);
   }
   headers.set("Content-Security-Policy", SPA_CSP);
 
-  if (requestPath.startsWith("/assets/")) {
-    headers.set("Cache-Control", "public, max-age=31536000, immutable");
-  } else {
-    headers.set("Cache-Control", "no-cache");
+  if (missingAsset) {
+    void response.body?.cancel();
+    headers.set("Cache-Control", "no-store");
+    return new Response("Not Found", { status: 404, headers });
+  }
+
+  headers.set("Cache-Control", isAsset ? "public, max-age=31536000, immutable" : "no-cache");
+
+  const pwaContentType = PWA_CONTENT_TYPES.find(([pattern]) => pattern.test(requestPath))?.[1];
+  if (pwaContentType && response.ok && !isHtml(response)) {
+    headers.set("Content-Type", pwaContentType);
   }
 
   return new Response(response.body, {

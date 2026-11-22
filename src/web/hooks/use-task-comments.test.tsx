@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CommentsPage } from "./use-task-comments";
-import { useTaskComments } from "./use-task-comments";
+import { optimisticAddComment, useTaskComments } from "./use-task-comments";
 
 // Mock the api client module following the use-file-upload.test.tsx pattern
 vi.mock("@/web/lib/api/client", async () => {
@@ -164,5 +164,31 @@ describe("useTaskComments", () => {
     expect(result.current.comments[0].id).toBe("c1");
     expect(result.current.comments[1].id).toBe("c2");
     expect(result.current.hasNextPage).toBe(false);
+  });
+});
+
+describe("optimisticAddComment", () => {
+  const key = ["tasks", "t1", "comments"];
+  const comment = { id: "c-new", body: "Hello", authorId: "u1", authorName: "Ann" };
+
+  it("shows a comment on a task whose comments were never loaded, and leaves the list stale", () => {
+    const qc = new QueryClient();
+    optimisticAddComment(qc, "t1", comment);
+
+    const data = qc.getQueryData<{ pages: CommentsPage[] }>(key);
+    expect(data?.pages.flatMap((p) => p.comments).map((c) => c.id)).toEqual(["c-new"]);
+    // Stale, so the real list (other people's comments) is fetched once the connection allows.
+    expect(qc.getQueryState(key)?.dataUpdatedAt).toBe(0);
+  });
+
+  it("appends to the last loaded page otherwise", () => {
+    const qc = new QueryClient();
+    const existing = { id: "c1", body: "First", authorId: "u2", authorName: "Bo", createdAt: "2026-01-01T00:00:00.000Z" };
+    qc.setQueryData(key, { pages: [{ comments: [existing], nextCursor: null }], pageParams: [undefined] });
+    optimisticAddComment(qc, "t1", comment);
+
+    const data = qc.getQueryData<{ pages: CommentsPage[] }>(key);
+    expect(data?.pages.flatMap((p) => p.comments).map((c) => c.id)).toEqual(["c1", "c-new"]);
+    expect(qc.getQueryState(key)?.dataUpdatedAt).toBeGreaterThan(0);
   });
 });

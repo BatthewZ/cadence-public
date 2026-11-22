@@ -2,6 +2,7 @@ export * from "./api-token";
 export * from "./audit-log";
 export * from "./auth";
 export * from "./calendar-feed-token";
+export * from "./idempotency-key";
 export * from "./invitation";
 export * from "./label";
 export * from "./legal-acceptance";

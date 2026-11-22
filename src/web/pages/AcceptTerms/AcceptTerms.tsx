@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { CURRENT_TOS_VERSION } from "@/shared/constants/legal";
@@ -7,10 +7,12 @@ import { Label } from "@/web/components/form";
 import { Checkbox } from "@/web/components/form/Checkbox";
 import { Stack } from "@/web/components/layout";
 import { AuthLayout } from "@/web/components/layout/AuthLayout";
+import { UnsyncedSignOutDialog } from "@/web/components/sync/UnsyncedSignOutDialog";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
+import { useSignOut } from "@/web/components/sync/use-sign-out";
 import { Alert, Button, Card, Text } from "@/web/components/ui";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { api } from "@/web/lib/api/client";
-import { signOut } from "@/web/lib/auth/auth-client";
 import { queryKeys } from "@/web/lib/query-keys";
 
 export function AcceptTerms() {
@@ -22,6 +24,9 @@ export function AcceptTerms() {
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const onlineOnly = useOnlineOnly();
+  const toLogin = useCallback(() => void navigate("/login"), [navigate]);
+  const signOutFlow = useSignOut(toLogin);
 
   async function handleAccept() {
     setError("");
@@ -40,11 +45,6 @@ export function AcceptTerms() {
     } finally {
       setLoading(false);
     }
-  }
-
-  async function handleSignOut() {
-    await signOut();
-    void navigate("/login");
   }
 
   return (
@@ -102,7 +102,8 @@ export function AcceptTerms() {
               variant="primary"
               size="md"
               className="w-full"
-              disabled={!agreed || loading}
+              disabled={!agreed || loading || onlineOnly.disabled}
+              title={onlineOnly.title}
               onClick={() => void handleAccept()}
             >
               {loading ? "Accepting..." : "Accept and Continue"}
@@ -112,14 +113,17 @@ export function AcceptTerms() {
           <Text variant="body-2" color="secondary" className="text-center">
             <button
               type="button"
-              className="link"
-              onClick={() => void handleSignOut()}
+              className="link disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={signOutFlow.request}
+              disabled={signOutFlow.disabled}
+              title={signOutFlow.title}
             >
-              Sign Out
+              {signOutFlow.signingOut ? "Signing out…" : "Sign Out"}
             </button>
           </Text>
         </Stack>
       </Card>
+      <UnsyncedSignOutDialog flow={signOutFlow} />
     </AuthLayout>
   );
 }

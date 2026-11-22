@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { clientIdSchema } from "./client-id";
+
 /**
  * Hard cap on saved views per user per project. Saved views are private
  * per-user-per-project bookmarks, so the cap bounds both the list UI and the
@@ -92,6 +94,7 @@ export const savedViewStateSchema = z.object({
 const savedViewNameSchema = z.string().trim().min(1).max(50);
 
 export const createSavedViewSchema = z.object({
+  id: clientIdSchema,
   name: savedViewNameSchema,
   state: savedViewStateSchema,
 });

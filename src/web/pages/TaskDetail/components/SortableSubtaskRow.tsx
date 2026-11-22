@@ -22,10 +22,8 @@ export function SortableSubtaskRow({
   onRename: (id: string, title: string) => void;
   readOnly?: boolean;
 }) {
-  const isOptimistic = subtask.id.startsWith("optimistic-");
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: subtask.id,
-    disabled: isOptimistic,
   });
 
   const [editing, setEditing] = useState(false);

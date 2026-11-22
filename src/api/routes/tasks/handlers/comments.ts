@@ -6,6 +6,7 @@ import { comment, task } from "../../../../db/schema/task";
 import { createCommentSchema, updateCommentSchema } from "../../../../shared/schemas/comment";
 import type { AppEnv } from "../../../env";
 import { resolveProjectAccess } from "../../../lib/access";
+import { clientIdConflict } from "../../../lib/client-id";
 import { errorResponse } from "../../../lib/error-response";
 import { parseMentions } from "../../../lib/mentions";
 import { createNotifications } from "../../../lib/notifications";
@@ -26,7 +27,10 @@ export async function createComment(c: Context<AppEnv>) {
   const taskId = requireParam(c, "taskId");
   const body = validJson(c, createCommentSchema);
 
-  const id = crypto.randomUUID();
+  const idConflict = await clientIdConflict(c, comment, body.id);
+  if (idConflict) return idConflict;
+
+  const id = body.id ?? crypto.randomUUID();
   const now = new Date();
 
   const newComment = {

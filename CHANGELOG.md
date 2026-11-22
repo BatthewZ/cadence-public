@@ -4,6 +4,27 @@ All notable changes to Cadence are documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/).
 
+## [1.36.0] - 2026-11-22
+
+### Added
+
+- **Cadence works offline.** It installs as an app (Chrome and Edge offer **Install app** in the account menu, and iPhone and iPad get the Share → Add to Home Screen steps) and starts without a connection. Every workspace, project, board, list, timeline, calendar, task and dashboard you have opened on this device is still there. A page you have never opened says so ("You're offline") instead of spinning.
+- **Board edits made offline are kept and sent later.** Creating, editing, moving, completing and deleting tasks, along with subtasks, comments, labels, sections, saved views and project settings, all take effect on screen at once while you're offline. They are stored on the device, survive closing the tab, and are sent in the order you made them as soon as the connection returns. A badge in the header shows **Offline · N to sync** and lists what's waiting. If the server can't accept a change (someone deleted the task meanwhile, or your access changed), a notice names the change and the reason.
+- **An offline description edit never silently overwrites someone else's.** If another person changed a task's description while you were editing it, your version isn't applied: you're told so, and **Copy my version** puts your text on the clipboard. The same check now protects descriptions edited online at the same moment.
+- **A new version of Cadence asks before reloading.** When a deploy lands, a card offers **Reload** or **Not now**, so an update never interrupts an edit.
+- **API: `Idempotency-Key` on writes.** Send the header on any `POST`/`PUT`/`PATCH`/`DELETE` and a retry with the same key returns the first successful answer (marked `Idempotent-Replayed: true`) instead of doing the work twice. Keys are per user and kept for 30 days. Reusing a key for a different request is a `422`. Creates of tasks, subtasks, comments, sections, labels and saved views also accept your own `id` (a UUID); an id that already exists is a `409` with `code: "id_conflict"`. `PATCH /api/tasks/:taskId` accepts `descriptionBase` for compare-and-set (`409` `description_conflict`). See [the API docs](docs/api/api.md).
+
+### Changed
+
+- **Signing out deletes this device's saved Cadence data.** That includes saved pages and unsent offline changes; if any changes haven't synced you're asked first. Signing out needs a connection, and so do uploads, search, invitations, members, webhooks, API tokens, import/export and account settings. Those controls say "Needs a connection" while you're offline instead of failing.
+- **Changes are always sent in the order you make them, online too.** A new subtask or comment can be edited, dragged or deleted straight away instead of waiting for the server, and that edit is never sent before the item exists. Bulk actions still send their changes together.
+- **Other people's deletions show up without a reload.** The live-refresh check used to notice edits and creations but not deletions; it now counts rows as well.
+
+### Fixed
+
+- **Moving a task to a position another move just took no longer fails with a server error.** It lands right next to it. The same applies to reordering sections and subtasks.
+- **A request for a missing app file no longer caches the page in its place for a year.**
+
 ## [1.35.1] - 2026-11-22
 
 ### Fixed

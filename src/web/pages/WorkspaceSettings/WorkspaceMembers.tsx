@@ -6,6 +6,7 @@ import type { Invitation } from "@/shared/types/invitations";
 import { parseWorkspaceRole, ROLE_LABELS, type WorkspaceRole } from "@/shared/types/roles";
 import { Input } from "@/web/components/form";
 import { Container, Divider, Row, Stack } from "@/web/components/layout";
+import { isUnavailableOffline, useOnlineOnly } from "@/web/components/sync/use-online-only";
 import {
   Badge,
   Button,
@@ -74,14 +75,13 @@ export default function WorkspaceMembers() {
   const workspaceId = workspace.id;
   const qc = useQueryClient();
 
-  const {
-    data: invitationsData,
-    isLoading: invitationsLoading,
-  } = useQuery({
+  const invitationsQuery = useQuery({
     queryKey: queryKeys.workspaces.invitations(workspaceId),
     queryFn: () => api.get<{ invitations: Invitation[] }>(`/api/workspaces/${workspaceId}/invitations`),
     staleTime: 5 * 60_000,
   });
+  const { data: invitationsData, isLoading: invitationsLoading } = invitationsQuery;
+  const onlineOnly = useOnlineOnly();
   const invitations = invitationsData?.invitations ?? [];
 
   const { mutateAsync: sendInvitation, isPending: inviting, error: inviteErrorObj } = useMutation({
@@ -107,6 +107,7 @@ export default function WorkspaceMembers() {
     onRemoveMember: (row) => {
       setMemberPendingRemoval(row);
     },
+    onlineOnly,
   });
 
   async function handleInvite(e: FormEvent) {
@@ -264,7 +265,13 @@ export default function WorkspaceMembers() {
             {members.length} {members.length === 1 ? "member" : "members"}
           </Text>
           {canManageWorkspace && (
-            <Button variant="primary" size="md" onClick={() => setInviteDialogOpen(true)}>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => setInviteDialogOpen(true)}
+              disabled={onlineOnly.disabled}
+              title={onlineOnly.title}
+            >
               Invite Member
             </Button>
           )}
@@ -287,7 +294,9 @@ export default function WorkspaceMembers() {
 
         <Text variant="h4">Pending Invitations</Text>
 
-        {invitationsLoading ? (
+        {isUnavailableOffline(invitationsQuery) ? (
+          <Text variant="body-2" color="muted">Pending invitations will load when you&rsquo;re back online.</Text>
+        ) : invitationsLoading ? (
           <Text variant="body-2" color="muted">Loading invitations...</Text>
         ) : !invitations || invitations.length === 0 ? (
           <EmptyState size="sm">
@@ -315,7 +324,8 @@ export default function WorkspaceMembers() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        disabled={copyingLinkId === invitation.id}
+                        disabled={copyingLinkId === invitation.id || onlineOnly.disabled}
+                        title={onlineOnly.title}
                         onClick={() => void handleCopyInviteLink(invitation.id)}
                         aria-label={`Copy invite link for ${invitation.email ?? "invitation"}`}
                       >
@@ -335,6 +345,8 @@ export default function WorkspaceMembers() {
                         variant="ghost"
                         size="sm"
                         onClick={() => void handleRevokeInvitation(invitation.id)}
+                        disabled={onlineOnly.disabled}
+                        title={onlineOnly.title}
                       >
                         Revoke
                       </Button>

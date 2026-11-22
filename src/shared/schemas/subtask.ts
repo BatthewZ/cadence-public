@@ -1,6 +1,9 @@
 import { z } from "zod";
 
+import { clientIdSchema } from "./client-id";
+
 export const createSubtaskSchema = z.object({
+  id: clientIdSchema,
   title: z.string().min(1, "Title is required").max(200),
 });
 

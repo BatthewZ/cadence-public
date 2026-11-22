@@ -12,6 +12,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Dialog } from "@/web/components/ui/Dialog";
 import { Spinner } from "@/web/components/ui/Spinner";
 import { Text } from "@/web/components/ui/Text";
@@ -68,6 +69,7 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
   const navigate = useNavigate();
   const { workspace, projects } = useWorkspace();
   const { canCreateProject } = useWorkspacePermissions();
+  const { online } = useOnlineOnly();
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -87,12 +89,13 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
       api.get<SearchResponse>(
         `/api/workspaces/${workspace.id}/search?q=${encodeURIComponent(debouncedQuery)}&limit=20`,
       ),
-    enabled: open && debouncedQuery.length >= 1,
+    enabled: open && online && debouncedQuery.length >= 1,
   });
+  const searchOffline = !online && debouncedQuery.length >= 1;
 
   // Flatten search results into a single ordered list
   const searchResults = useMemo<SearchResult[]>(() => {
-    if (!data) return [];
+    if (!data || !online) return [];
     const items: SearchResult[] = [];
 
     for (const p of data.projects) {
@@ -120,7 +123,7 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
     }
 
     return items;
-  }, [data]);
+  }, [data, online]);
 
   // Filter nav/action items by query
   const filteredNavItems = useMemo(() => {
@@ -138,13 +141,14 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
     // stays put because it occupies a place in the layout that would look
     // broken empty. Nothing is hidden by this: the Projects page and dashboard
     // still explain the policy in words.
-    const available = canCreateProject
+    // Offline counts as refused for the same reason: creating a project needs a connection.
+    const available = canCreateProject && online
       ? QUICK_ACTIONS
       : QUICK_ACTIONS.filter((item) => item.action !== "create-project");
     if (!query.trim()) return available;
     const q = query.toLowerCase();
     return available.filter((item) => item.label.toLowerCase().includes(q));
-  }, [query, canCreateProject]);
+  }, [query, canCreateProject, online]);
 
   // Build unified items list with section markers
   const allItems = useMemo<UnifiedEntry[]>(() => {
@@ -317,7 +321,7 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
 
         {/* Results */}
         <div ref={listRef} className="command-palette__results" role="listbox">
-          {isSearchError && debouncedQuery.length >= 1 && (
+          {!searchOffline && isSearchError && debouncedQuery.length >= 1 && (
             <div className="command-palette__empty">
               <Text variant="body-3" color="muted">
                 Search failed. Please try again.
@@ -325,7 +329,7 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
             </div>
           )}
 
-          {!isSearchError && debouncedQuery.length >= 1 && !isFetching && allItems.length === 0 && (
+          {!searchOffline && !isSearchError && debouncedQuery.length >= 1 && !isFetching && allItems.length === 0 && (
             <div className="command-palette__empty">
               <Text variant="body-3" color="muted">
                 No results for &ldquo;{debouncedQuery}&rdquo;
@@ -380,6 +384,14 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
               </div>
             );
           })}
+
+          {searchOffline && (
+            <div className="command-palette__empty" role="status">
+              <Text variant="body-3" color="muted">
+                Search needs a connection
+              </Text>
+            </div>
+          )}
         </div>
 
         {/* Footer with keyboard hints */}

@@ -91,11 +91,10 @@ export function TaskCommentSection({
           const author = members.find((m) => m.userId === comment.authorId);
           const isOwn = currentUserId === comment.authorId;
           const isEditing = editingCommentId === comment.id;
-          const isOptimistic = comment.id.startsWith("optimistic-");
           return (
             <div
               key={comment.id}
-              className={`group rounded-md border border-border-default p-r4${isOptimistic ? " opacity-70" : ""}`}
+              className="group rounded-md border border-border-default p-r4"
             >
               <Row gap="r5" align="center" className="mb-r6">
                 <Avatar size="xs" name={comment.authorName} src={author?.user.image} />
@@ -115,7 +114,7 @@ export function TaskCommentSection({
                       </span>
                     )}
                 </Text>
-                {isOwn && !isEditing && !isOptimistic && (
+                {isOwn && !isEditing && (
                   <Row
                     gap="r6"
                     className="opacity-0 group-hover:opacity-100 transition-opacity"

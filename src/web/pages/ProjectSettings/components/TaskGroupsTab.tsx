@@ -19,8 +19,9 @@ import {
   Text,
 } from "@/web/components/ui";
 import type { useToast } from "@/web/components/ui/ToastContext";
-import { type TaskGroup, useProject } from "@/web/contexts/ProjectContext";
-import { api } from "@/web/lib/api/client";
+import { type Task, type TaskGroup, useProject } from "@/web/contexts/ProjectContext";
+import { apiErrorMessage } from "@/web/lib/api/client";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 import { sortByPosition } from "@/web/lib/sort-by-position";
 import { TASK_GROUP_COLORS } from "@/web/util/task-display";
@@ -34,7 +35,14 @@ export function TaskGroupsTab({
   projectId: string;
   toast: ReturnType<typeof useToast>["toast"];
 }) {
-  const { taskGroups: contextTaskGroups, refetchTaskGroups, refetchTasks } = useProject();
+  const {
+    taskGroups: contextTaskGroups,
+    refetchTaskGroups,
+    refetchTasks,
+    addTaskGroup,
+    updateTaskGroup,
+    removeTaskGroup,
+  } = useProject();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -46,44 +54,63 @@ export function TaskGroupsTab({
   const [groupIsCompletion, setGroupIsCompletion] = useState(false);
 
   const qc = useQueryClient();
+  const taskGroups = sortByPosition(contextTaskGroups);
 
   const {
     mutateAsync: createGroup,
     isPending: creating,
     error: createErrorObj,
   } = useMutation({
-    mutationFn: (input: CreateTaskGroupInput) =>
-      api.post<unknown>(`/api/projects/${projectId}/task-groups`, input),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.projects.taskGroups(projectId) });
+    networkMode: "always",
+    mutationFn: (input: CreateTaskGroupInput & { id: string }) =>
+      sendWrite<{ taskGroup: TaskGroup }>({
+        method: "POST",
+        path: `/api/projects/${projectId}/task-groups`,
+        body: input,
+        label: `Add task group “${input.name}”`,
+      }),
+    onMutate: (input) => {
+      addTaskGroup({
+        ...input,
+        isCompletionGroup: false,
+        position: generateKeyBetween(taskGroups.at(-1)?.position ?? null, null),
+        taskCount: 0,
+      });
     },
+    onSuccess: (result) => {
+      if (result.status !== "sent") return;
+      updateTaskGroup(result.data.taskGroup.id, result.data.taskGroup);
+      refetchTaskGroups();
+    },
+    onError: (_err, input) => removeTaskGroup(input.id),
   });
   const createError = createErrorObj?.message ?? null;
 
-  const { updateTaskGroup } = useProject();
   const {
     mutateAsync: updateGroup,
     isPending: updating,
     error: updateErrorObj,
   } = useMutation({
-    mutationFn: (input: UpdateTaskGroupInput) =>
-      api.patch<unknown>(`/api/task-groups/${selectedGroup?.id ?? ""}`, input),
-    onMutate: (input) => {
-      if (selectedGroup) {
-        updateTaskGroup(selectedGroup.id, {
-          name: input.name,
-          color: input.color,
-          isCompletionGroup: input.isCompletionGroup,
-        });
-      }
+    networkMode: "always",
+    mutationFn: ({ group, ...input }: UpdateTaskGroupInput & { group: TaskGroup }) =>
+      sendWrite({
+        method: "PATCH",
+        path: `/api/task-groups/${group.id}`,
+        body: input,
+        label: `Edit task group “${group.name}”`,
+      }),
+    onMutate: ({ group, ...input }) => updateTaskGroup(group.id, input),
+    onSuccess: (result) => {
+      if (result.status === "sent") refetchTaskGroups();
     },
-    onSettled: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.projects.taskGroups(projectId) });
-    },
+    onError: (_err, { group }) =>
+      updateTaskGroup(group.id, {
+        name: group.name,
+        color: group.color,
+        isCompletionGroup: group.isCompletionGroup,
+      }),
   });
   const updateError = updateErrorObj?.message ?? null;
-
-  const taskGroups = sortByPosition(contextTaskGroups);
 
   function openCreateDialog() {
     setGroupName("");
@@ -104,10 +131,9 @@ export function TaskGroupsTab({
     if (!groupName.trim()) return;
 
     try {
-      await createGroup({ name: groupName.trim(), color: groupColor });
+      await createGroup({ id: crypto.randomUUID(), name: groupName.trim(), color: groupColor });
       toast("Task group created.", { variant: "success" });
       setCreateDialogOpen(false);
-      refetchTaskGroups();
     } catch {
       // error is captured by the mutation state
     }
@@ -119,6 +145,7 @@ export function TaskGroupsTab({
 
     try {
       await updateGroup({
+        group: selectedGroup,
         name: groupName.trim(),
         color: groupColor,
         isCompletionGroup: groupIsCompletion,
@@ -126,7 +153,6 @@ export function TaskGroupsTab({
       toast("Task group updated.", { variant: "success" });
       setEditDialogOpen(false);
       setSelectedGroup(null);
-      refetchTaskGroups();
     } catch {
       // error is captured by the mutation state
     }
@@ -140,19 +166,43 @@ export function TaskGroupsTab({
   }
 
   async function handleDelete() {
-    if (!deleteGroupId || !targetGroupId) return;
+    const group = taskGroups.find((g) => g.id === deleteGroupId);
+    if (!group || !targetGroupId) return;
+    const target = targetGroupId;
+    const tasksKey = queryKeys.projects.tasks(projectId);
+    const previousTasks = qc.getQueryData<{ tasks: Task[] }>(tasksKey);
+    const movedCount = previousTasks?.tasks.filter((t) => t.taskGroupId === group.id).length ?? 0;
+    const previousTargetCount = taskGroups.find((g) => g.id === target)?.taskCount;
+
+    removeTaskGroup(group.id);
+    if (previousTargetCount !== undefined) {
+      updateTaskGroup(target, { taskCount: previousTargetCount + (group.taskCount ?? movedCount) });
+    }
+    qc.setQueryData<{ tasks: Task[] }>(tasksKey, (old) =>
+      old
+        ? { tasks: old.tasks.map((t) => (t.taskGroupId === group.id ? { ...t, taskGroupId: target } : t)) }
+        : old
+    );
+    setDeleteDialogOpen(false);
+    setDeleteGroupId(null);
+    setTargetGroupId("");
+
     try {
-      await api.delete(
-        `/api/task-groups/${deleteGroupId}?targetGroupId=${encodeURIComponent(targetGroupId)}`
-      );
+      const result = await sendWrite({
+        method: "DELETE",
+        path: `/api/task-groups/${group.id}?targetGroupId=${encodeURIComponent(target)}`,
+        label: `Delete task group “${group.name}”`,
+      });
       toast("Task group deleted.", { variant: "success" });
-      setDeleteDialogOpen(false);
-      setDeleteGroupId(null);
-      setTargetGroupId("");
-      refetchTaskGroups();
-      refetchTasks();
-    } catch {
-      toast("Failed to delete task group.", { variant: "error" });
+      if (result.status === "sent") {
+        refetchTaskGroups();
+        refetchTasks();
+      }
+    } catch (err) {
+      addTaskGroup(group);
+      if (previousTargetCount !== undefined) updateTaskGroup(target, { taskCount: previousTargetCount });
+      if (previousTasks) qc.setQueryData(tasksKey, previousTasks);
+      toast(apiErrorMessage(err, "Failed to delete task group."), { variant: "error" });
     }
   }
 
@@ -176,13 +226,19 @@ export function TaskGroupsTab({
         ? generateKeyBetween(before, neighbor)
         : generateKeyBetween(neighbor, after);
 
+    const group = taskGroups[idx];
+    updateTaskGroup(groupId, { position: newPosition });
     try {
-      await api.patch<unknown>(`/api/task-groups/${groupId}/reorder`, {
-        position: newPosition,
-      } satisfies ReorderTaskGroupInput);
-      refetchTaskGroups();
-    } catch {
-      toast("Failed to reorder task group.", { variant: "error" });
+      const result = await sendWrite({
+        method: "PATCH",
+        path: `/api/task-groups/${groupId}/reorder`,
+        body: { position: newPosition } satisfies ReorderTaskGroupInput,
+        label: `Reorder task group “${group.name}”`,
+      });
+      if (result.status === "sent") refetchTaskGroups();
+    } catch (err) {
+      updateTaskGroup(groupId, { position: group.position });
+      toast(apiErrorMessage(err, "Failed to reorder task group."), { variant: "error" });
     }
   }
 

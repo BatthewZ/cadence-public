@@ -6,6 +6,8 @@ import type { StoredUnsplashCoverPayload } from "@/shared/schemas/unsplash";
 import type { RecurrenceRule } from "@/shared/types/recurrence";
 import type { ProjectStatus, TaskPriority } from "@/shared/types/roles";
 import { Center } from "@/web/components/layout";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
+import { isUnavailableOffline } from "@/web/components/sync/use-online-only";
 import { Spinner, Text } from "@/web/components/ui";
 import { useProjectFreshness } from "@/web/hooks/use-project-freshness";
 import { api } from "@/web/lib/api/client";
@@ -142,10 +144,13 @@ export interface ProjectContextValue {
   // Optimistic update helpers — write directly to the React Query cache
   updateProject: (updates: Partial<Project>) => void;
   updateTask: (taskId: string, updates: Partial<Task>) => void;
-  removeTask: (taskId: string) => void;
+  /** Returns a function that puts the removed task back, for reverting an optimistic delete. */
+  removeTask: (taskId: string) => () => void;
+  /** Adds the task, or replaces the one with the same id (an optimistic create's server row). */
   addTask: (task: Task) => void;
   updateTaskGroup: (groupId: string, updates: Partial<TaskGroup>) => void;
   removeTaskGroup: (groupId: string) => void;
+  /** Adds the group, or replaces the one with the same id (an optimistic create's server row). */
   addTaskGroup: (group: TaskGroup) => void;
 }
 
@@ -193,15 +198,12 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
   // member nobody else can modify data, so polling would be wasted requests.
   useProjectFreshness(projectId, isMultiUser);
 
-  const {
-    data: projectData,
-    error: projectError,
-    isLoading: projectLoading,
-  } = useQuery({
+  const projectQuery = useQuery({
     queryKey: queryKeys.projects.detail(projectId),
     queryFn: () => api.get<{ project: Project }>(`/api/projects/${projectId}`),
     staleTime: 5 * 60_000,
   });
+  const { data: projectData, error: projectError, isLoading: projectLoading } = projectQuery;
 
   const { data: membersData } = useQuery({
     queryKey: queryKeys.projects.members(projectId),
@@ -239,16 +241,6 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
     );
   }, [qc, projectId]);
 
-  const removeTask = useCallback((taskId: string) => {
-    qc.setQueryData(
-      queryKeys.projects.tasks(projectId),
-      (old: { tasks: Task[] } | undefined) => {
-        if (!old) return old;
-        return { tasks: old.tasks.filter((t) => t.id !== taskId) };
-      },
-    );
-  }, [qc, projectId]);
-
   const addTask = useCallback((task: Task) => {
     qc.setQueryData(
       queryKeys.projects.tasks(projectId),
@@ -261,6 +253,22 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
       },
     );
   }, [qc, projectId]);
+
+  const removeTask = useCallback((taskId: string) => {
+    const removed = qc
+      .getQueryData<{ tasks: Task[] }>(queryKeys.projects.tasks(projectId))
+      ?.tasks.find((t) => t.id === taskId);
+    qc.setQueryData(
+      queryKeys.projects.tasks(projectId),
+      (old: { tasks: Task[] } | undefined) => {
+        if (!old) return old;
+        return { tasks: old.tasks.filter((t) => t.id !== taskId) };
+      },
+    );
+    return () => {
+      if (removed) addTask(removed);
+    };
+  }, [qc, projectId, addTask]);
 
   const updateTaskGroup = useCallback((groupId: string, updates: Partial<TaskGroup>) => {
     qc.setQueryData(
@@ -287,6 +295,9 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
       queryKeys.projects.taskGroups(projectId),
       (old: { taskGroups: TaskGroup[] } | undefined) => {
         if (!old) return { taskGroups: [group] };
+        if (old.taskGroups.some((g) => g.id === group.id)) {
+          return { taskGroups: old.taskGroups.map((g) => (g.id === group.id ? group : g)) };
+        }
         return { taskGroups: [...old.taskGroups, group] };
       },
     );
@@ -320,6 +331,10 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
       })),
     [rawMembers],
   );
+
+  if (isUnavailableOffline(projectQuery)) {
+    return <OfflineUnavailable what="This project" />;
+  }
 
   // Only gate on the essential project query — task groups and tasks load
   // in the background and degrade gracefully to empty arrays if they fail

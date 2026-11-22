@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 
 import { Input } from "@/web/components/form/Input";
@@ -8,8 +9,10 @@ import {
   Text,
 } from "@/web/components/ui";
 import { useToast } from "@/web/components/ui/ToastContext";
-import type { WorkspaceProject } from "@/web/contexts/WorkspaceContext";
-import { api } from "@/web/lib/api/client";
+import { useWorkspace, type WorkspaceProject } from "@/web/contexts/WorkspaceContext";
+import { apiErrorMessage } from "@/web/lib/api/client";
+import { sendWrite } from "@/web/lib/offline/send-write";
+import { queryKeys } from "@/web/lib/query-keys";
 
 export function RenameProjectDialog({
   renameTarget,
@@ -21,6 +24,8 @@ export function RenameProjectDialog({
   onRenamed: () => void;
 }) {
   const { toast } = useToast();
+  const qc = useQueryClient();
+  const { workspace } = useWorkspace();
   const [renameName, setRenameName] = useState("");
   const [renaming, setRenaming] = useState(false);
 
@@ -38,13 +43,31 @@ export function RenameProjectDialog({
       return;
     }
     setRenaming(true);
+    const projectId = renameTarget.id;
+    const listKey = queryKeys.workspaces.projects(workspace.id);
+    const detailKey = queryKeys.projects.detail(projectId);
+    const previousList = qc.getQueryData(listKey);
+    const previousDetail = qc.getQueryData(detailKey);
+    qc.setQueryData(listKey, (old: { projects: WorkspaceProject[] } | undefined) =>
+      old ? { projects: old.projects.map((p) => (p.id === projectId ? { ...p, name: trimmed } : p)) } : old,
+    );
+    qc.setQueryData(detailKey, (old: { project: { name: string } } | undefined) =>
+      old ? { ...old, project: { ...old.project, name: trimmed } } : old,
+    );
     try {
-      await api.patch(`/api/projects/${renameTarget.id}`, { name: trimmed });
+      const result = await sendWrite({
+        method: "PATCH",
+        path: `/api/projects/${projectId}`,
+        body: { name: trimmed },
+        label: `Rename project “${renameTarget.name}”`,
+      });
       toast("Project renamed", { variant: "success" });
       onClose();
-      onRenamed();
-    } catch {
-      toast("Failed to rename project", { variant: "error" });
+      if (result.status === "sent") onRenamed();
+    } catch (err) {
+      qc.setQueryData(listKey, previousList);
+      qc.setQueryData(detailKey, previousDetail);
+      toast(apiErrorMessage(err, "Failed to rename project"), { variant: "error" });
     } finally {
       setRenaming(false);
     }

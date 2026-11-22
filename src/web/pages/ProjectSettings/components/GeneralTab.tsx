@@ -6,6 +6,7 @@ import type { useNavigate } from "react-router-dom";
 import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_SIZE } from "@/shared/schemas/upload";
 import { Checkbox, Field, Input, Label, Select, Textarea } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import {
   Alert,
   Button,
@@ -19,7 +20,8 @@ import { IconPicker } from "@/web/components/ui/IconPicker";
 import type { useToast } from "@/web/components/ui/ToastContext";
 import type { useProject } from "@/web/contexts/ProjectContext";
 import { useProjectCover } from "@/web/hooks/use-project-cover";
-import { api } from "@/web/lib/api/client";
+import { api, apiErrorMessage } from "@/web/lib/api/client";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 import { formatBytes } from "@/web/util/format";
 
@@ -72,14 +74,21 @@ export function GeneralTab({
   );
 
   const qc = useQueryClient();
+  const onlineOnly = useOnlineOnly();
 
   const {
     mutateAsync: patchProject,
     isPending: saving,
     error: saveErrorObj,
   } = useMutation({
+    networkMode: "always",
     mutationFn: (input: UpdateProjectInput) =>
-      api.patch<unknown>(`/api/projects/${projectId}`, input),
+      sendWrite({
+        method: "PATCH",
+        path: `/api/projects/${projectId}`,
+        body: input,
+        label: `Update project “${project.name}”`,
+      }),
     onMutate: async (input) => {
       const key = queryKeys.projects.detail(projectId);
       const wpKey = queryKeys.workspaces.projects(project.workspaceId);
@@ -89,13 +98,19 @@ export function GeneralTab({
       const previousWorkspaceProjects = qc.getQueryData(wpKey);
       updateProject(input);
       // Optimistically update sidebar project list
-      if (input.name) {
-        qc.setQueryData(wpKey, (old: { projects: Array<{ id: string; name: string }> } | undefined) =>
+      qc.setQueryData(
+        wpKey,
+        (old: { projects: Array<{ id: string; name: string; description?: string; status: string }> } | undefined) =>
           old
-            ? { projects: old.projects.map((p) => (p.id === projectId ? { ...p, name: input.name } : p)) }
+            ? {
+                projects: old.projects.map((p) =>
+                  p.id === projectId
+                    ? { ...p, name: input.name, description: input.description, status: input.status }
+                    : p,
+                ),
+              }
             : old,
-        );
-      }
+      );
       return { previousData, previousWorkspaceProjects };
     },
     onError: (_err, _input, context) => {
@@ -106,7 +121,9 @@ export function GeneralTab({
         qc.setQueryData(queryKeys.workspaces.projects(project.workspaceId), context.previousWorkspaceProjects);
       }
     },
-    onSettled: () => {
+    onSettled: (result) => {
+      // A queued write's reply comes with the refresh after the queue drains.
+      if (result?.status === "queued") return;
       void qc.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.projects(project.workspaceId) });
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(project.workspaceId) });
@@ -151,7 +168,6 @@ export function GeneralTab({
         autoAssignCreator,
       });
       toast("Project settings updated.", { variant: "success" });
-      refetch();
     } catch {
       // error is captured by the mutation state
     }
@@ -170,15 +186,20 @@ export function GeneralTab({
           : old,
       );
       try {
-        await api.patch(`/api/projects/${projectId}`, { icon: newIcon });
-      } catch {
+        await sendWrite({
+          method: "PATCH",
+          path: `/api/projects/${projectId}`,
+          body: { icon: newIcon },
+          label: `Change icon of “${project.name}”`,
+        });
+      } catch (err) {
         // Revert on failure by re-syncing with server
-        toast("Failed to update icon.", { variant: "error" });
+        toast(apiErrorMessage(err, "Failed to update icon."), { variant: "error" });
         refetch();
         void qc.invalidateQueries({ queryKey: wpKey });
       }
     },
-    [projectId, project.workspaceId, updateProject, qc, toast, refetch]
+    [projectId, project.workspaceId, project.name, updateProject, qc, toast, refetch]
   );
 
   const handleCoverFileChange = useCallback(
@@ -341,7 +362,8 @@ export function GeneralTab({
                       variant="ghost"
                       size="sm"
                       onClick={() => coverInputRef.current?.click()}
-                      disabled={coverUploading}
+                      disabled={coverUploading || onlineOnly.disabled}
+                      title={onlineOnly.title}
                     >
                       {coverUploading ? "Uploading..." : "Change"}
                     </Button>
@@ -350,6 +372,8 @@ export function GeneralTab({
                       variant="ghost"
                       size="sm"
                       onClick={() => { void handleCoverRemove(); }}
+                      disabled={onlineOnly.disabled}
+                      title={onlineOnly.title}
                     >
                       Remove
                     </Button>
@@ -360,7 +384,8 @@ export function GeneralTab({
                     variant="ghost"
                     size="sm"
                     onClick={() => coverInputRef.current?.click()}
-                    disabled={coverUploading}
+                    disabled={coverUploading || onlineOnly.disabled}
+                    title={onlineOnly.title}
                   >
                     <ImagePlus size={16} className="mr-1" />
                     {coverUploading ? "Uploading..." : "Add cover image"}
@@ -401,15 +426,22 @@ export function GeneralTab({
             cost.
           </Text>
           <div>
-            <Button
-              as="a"
-              variant="secondary"
-              size="md"
-              href={`/api/projects/${projectId}/export/csv`}
-            >
-              <Download size={16} className="mr-1" />
-              Export tasks (CSV)
-            </Button>
+            {onlineOnly.online ? (
+              <Button
+                as="a"
+                variant="secondary"
+                size="md"
+                href={`/api/projects/${projectId}/export/csv`}
+              >
+                <Download size={16} className="mr-1" />
+                Export tasks (CSV)
+              </Button>
+            ) : (
+              <Button variant="secondary" size="md" disabled title={onlineOnly.title}>
+                <Download size={16} className="mr-1" />
+                Export tasks (CSV)
+              </Button>
+            )}
           </div>
         </Stack>
       </Card>
@@ -423,7 +455,13 @@ export function GeneralTab({
             Permanently delete this project and all its tasks. This action cannot be undone.
           </Text>
           <div>
-            <Button variant="danger" size="md" onClick={() => setDeleteDialogOpen(true)}>
+            <Button
+              variant="danger"
+              size="md"
+              onClick={() => setDeleteDialogOpen(true)}
+              disabled={onlineOnly.disabled}
+              title={onlineOnly.title}
+            >
               Delete Project
             </Button>
           </div>
@@ -472,7 +510,8 @@ export function GeneralTab({
               variant="danger"
               size="md"
               onClick={() => void handleDelete()}
-              disabled={confirmText !== "DELETE" || deleting}
+              disabled={confirmText !== "DELETE" || deleting || onlineOnly.disabled}
+              title={onlineOnly.title}
             >
               {deleting ? "Deleting..." : "Delete Project"}
             </Button>

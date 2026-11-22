@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import {
   Accordion,
   Avatar,
@@ -35,6 +36,7 @@ export function TeamCard({
   });
 
   const teamMembers = teamDetail?.members ?? [];
+  const onlineOnly = useOnlineOnly();
 
   return (
     <Card className="mb-r5">
@@ -52,13 +54,13 @@ export function TeamCard({
             </Text>
           </Stack>
           <Row gap="r5">
-            <Button variant="ghost" size="sm" onClick={onAddMember}>
+            <Button variant="ghost" size="sm" onClick={onAddMember} disabled={onlineOnly.disabled} title={onlineOnly.title}>
               Add Member
             </Button>
-            <Button variant="ghost" size="sm" onClick={onEdit}>
+            <Button variant="ghost" size="sm" onClick={onEdit} disabled={onlineOnly.disabled} title={onlineOnly.title}>
               Edit
             </Button>
-            <Button variant="ghost" size="sm" onClick={onDelete}>
+            <Button variant="ghost" size="sm" onClick={onDelete} disabled={onlineOnly.disabled} title={onlineOnly.title}>
               Delete
             </Button>
           </Row>

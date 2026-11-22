@@ -23,6 +23,7 @@ import { Link } from "react-router-dom";
 
 import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import { UserMenu } from "@/web/components/layout/UserMenu";
+import { NEEDS_CONNECTION_HINT } from "@/web/components/sync/use-online-only";
 import { AppShell } from "@/web/components/ui/AppShell";
 import { Text } from "@/web/components/ui/Text";
 import { Tooltip } from "@/web/components/ui/Tooltip";
@@ -32,8 +33,9 @@ import {
   PROJECT_CREATION_DENIED_HINT,
   useWorkspacePermissions,
 } from "@/web/hooks/use-permissions";
-import { api } from "@/web/lib/api/client";
 import { getIconComponent } from "@/web/lib/icon-map";
+import { useOnline } from "@/web/lib/offline/hooks";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 
 import { SortableProjectItem } from "./SortableProjectItem";
@@ -67,6 +69,13 @@ export function SidebarNav({
 }: SidebarNavProps) {
   const qc = useQueryClient();
   const { canCreateProject } = useWorkspacePermissions();
+  const online = useOnline();
+  const createDisabled = !canCreateProject || !online;
+  const createHint = !canCreateProject
+    ? PROJECT_CREATION_DENIED_HINT
+    : online
+      ? "Create project"
+      : NEEDS_CONNECTION_HINT;
 
   const sensors = useDndSensors();
 
@@ -122,8 +131,11 @@ export function SidebarNav({
       );
 
       try {
-        await api.patch(`/api/projects/${movedProject.id}/reorder`, {
-          position: newPosition,
+        await sendWrite({
+          method: "PATCH",
+          path: `/api/projects/${movedProject.id}/reorder`,
+          body: { position: newPosition },
+          label: `Reorder project “${movedProject.name}”`,
         });
       } catch {
         qc.setQueryData(queryKey, previousData);
@@ -184,7 +196,7 @@ export function SidebarNav({
             gives them nothing to hover for an explanation. Kept mounted, it
             still answers the question it raises.
           */}
-          <Tooltip content={canCreateProject ? "Create project" : PROJECT_CREATION_DENIED_HINT}>
+          <Tooltip content={createHint}>
             {/*
               A disabled <button> fires no pointer events, so hovering it opens
               nothing — the refusal would be silent, which is the one thing this
@@ -193,12 +205,12 @@ export function SidebarNav({
               `NewProjectButton`.
             */}
             <span
-              className={`inline-flex ${canCreateProject ? "" : "cursor-not-allowed"}`}
+              className={`inline-flex ${createDisabled ? "cursor-not-allowed" : ""}`}
             >
               <button
                 type="button"
                 onClick={() => setCreateDialogOpen(true)}
-                disabled={!canCreateProject}
+                disabled={createDisabled}
                 className="inline-flex items-center justify-center size-5 rounded hover:bg-surface-2 text-fg-muted hover:text-fg-primary transition-colors disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-fg-muted"
                 aria-label="Create project"
               >

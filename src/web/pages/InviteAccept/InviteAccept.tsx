@@ -3,6 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import type { Invitation } from "@/shared/types/invitations";
 import { Center, Container, Stack } from "@/web/components/layout";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
+import { isUnavailableOffline, useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Alert, Badge, Button, Card, Spinner, Text } from "@/web/components/ui";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { api } from "@/web/lib/api/client";
@@ -21,15 +23,14 @@ export default function InviteAccept() {
   const session = useSession();
   const isAuthenticated = !!session.data?.session;
 
-  const {
-    data: invitationData,
-    isLoading: loading,
-    error,
-  } = useQuery({
+  const invitationQuery = useQuery({
     queryKey: queryKeys.invitations.byToken(token ?? ""),
     queryFn: () => api.get<{ invitation: Invitation }>(`/api/invitations/${token}`),
     enabled: !!token,
   });
+  const { data: invitationData, isLoading: loading, error } = invitationQuery;
+  const unavailableOffline = isUnavailableOffline(invitationQuery);
+  const onlineOnly = useOnlineOnly();
   const invitation = invitationData?.invitation ?? null;
 
   const qc = useQueryClient();
@@ -78,7 +79,9 @@ export default function InviteAccept() {
               </Center>
             )}
 
-            {error && (
+            {unavailableOffline && <OfflineUnavailable what="This invitation" className="min-h-0" />}
+
+            {error && !unavailableOffline && (
               <Alert variant="error">{error.message}</Alert>
             )}
 
@@ -104,7 +107,8 @@ export default function InviteAccept() {
                       variant="primary"
                       className="w-full"
                       onClick={() => void handleAccept()}
-                      disabled={accepting}
+                      disabled={accepting || onlineOnly.disabled}
+                      title={onlineOnly.title}
                     >
                       {accepting ? "Accepting..." : "Accept Invitation"}
                     </Button>

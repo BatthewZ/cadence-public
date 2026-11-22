@@ -9,6 +9,7 @@ import type { Theme } from "@/shared/types/theme";
 import { NotificationBell } from "@/web/components/layout/NotificationBell";
 import { SIDEBAR_PROJECT_LIMIT, SidebarNav } from "@/web/components/layout/workspace/SidebarNav";
 import { WorkspaceSwitcher } from "@/web/components/layout/workspace/WorkspaceSwitcher";
+import { SyncStatusBadge } from "@/web/components/sync/SyncStatusBadge";
 import { AppShell } from "@/web/components/ui/AppShell";
 import { CommandPalette } from "@/web/components/ui/CommandPalette";
 import { CreateProjectDialog } from "@/web/components/ui/CreateProjectDialog";
@@ -29,6 +30,7 @@ import { useThemeApplication } from "@/web/hooks/use-theme";
 import { useWorkspaceFreshness } from "@/web/hooks/use-workspace-freshness";
 import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 
 export function WorkspaceLayout() {
@@ -96,7 +98,13 @@ export function WorkspaceLayout() {
   // Workspace theme mutation with optimistic update for instant visual feedback
   const { mutate: updateTheme, isPending: themePending } = useMutation({
     mutationFn: (theme: Theme | null) =>
-      api.patch(`/api/workspaces/${workspace.id}`, { theme }),
+      sendWrite({
+        method: "PATCH",
+        path: `/api/workspaces/${workspace.id}`,
+        body: { theme },
+        label: "Change workspace theme",
+      }),
+    networkMode: "always",
     onMutate: async (newTheme) => {
       await qc.cancelQueries({ queryKey: queryKeys.workspaces.detail(workspace.id) });
       const previousData = qc.getQueryData(queryKeys.workspaces.detail(workspace.id));
@@ -113,7 +121,8 @@ export function WorkspaceLayout() {
       }
       toast("Failed to update theme.", { variant: "error" });
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result.status === "queued") return;
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.detail(workspace.id) });
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.all });
       refetch();
@@ -191,6 +200,7 @@ export function WorkspaceLayout() {
                   <span className="text-fg-muted text-body-3">...</span>
                 </span>
               )}
+              <SyncStatusBadge />
               <NotificationBell />
               <ThemeSwitcher />
             </AppShell.NavbarActions>

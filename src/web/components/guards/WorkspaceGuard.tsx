@@ -3,6 +3,8 @@ import { type ReactNode } from "react";
 import { Navigate, useParams } from "react-router-dom";
 
 import { Center } from "@/web/components/layout";
+import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
+import { isUnavailableOffline } from "@/web/components/sync/use-online-only";
 import { Spinner, Text } from "@/web/components/ui";
 import { findWorkspaceBySlug, type Workspace, type WorkspacesResponse } from "@/web/contexts/WorkspaceContext";
 import { api } from "@/web/lib/api/client";
@@ -18,21 +20,27 @@ import { queryKeys } from "@/web/lib/query-keys";
 export function WorkspaceGuard({ children }: { children: ReactNode }) {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
 
-  const { data, error, isLoading: loading } = useQuery({
+  const listQuery = useQuery({
     queryKey: queryKeys.workspaces.all,
     queryFn: () => api.get<WorkspacesResponse>("/api/workspaces"),
   });
+  const { data, error, isLoading: loading } = listQuery;
 
   const workspaces = data?.workspaces ?? [];
   const workspace = workspaceSlug ? findWorkspaceBySlug(workspaces, workspaceSlug) : undefined;
 
   // Prefetch workspace detail so useWorkspace() reads from warm cache
-  const { isLoading: detailLoading, error: detailError } = useQuery({
+  const detailQuery = useQuery({
     queryKey: queryKeys.workspaces.detail(workspace?.id ?? ""),
     queryFn: () => api.get<{ workspace: Workspace }>(`/api/workspaces/${workspace!.id}`),
     staleTime: 5 * 60_000,
     enabled: !!workspace?.id,
   });
+  const { isLoading: detailLoading, error: detailError } = detailQuery;
+
+  if (isUnavailableOffline(listQuery) || (workspace && isUnavailableOffline(detailQuery))) {
+    return <OfflineUnavailable what="This workspace" className="min-h-screen" />;
+  }
 
   if (loading || detailLoading) {
     return (

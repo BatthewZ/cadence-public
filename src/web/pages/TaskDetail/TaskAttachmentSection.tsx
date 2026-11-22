@@ -8,6 +8,7 @@ import {
   MAX_ATTACHMENTS_PER_TASK,
 } from "@/shared/schemas/attachment";
 import { Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
 import { Text } from "@/web/components/ui/Text";
 import { useToast } from "@/web/components/ui/ToastContext";
@@ -71,6 +72,7 @@ export function TaskAttachmentSection({ taskId, projectId, readOnly = false }: T
   const [deleteTarget, setDeleteTarget] = useState<Attachment | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const onlineOnly = useOnlineOnly();
 
   const imageAttachments = useMemo(
     () => attachments.filter((a) => isImageType(a.mimeType) && !a.id.startsWith("optimistic-")),
@@ -205,12 +207,21 @@ export function TaskAttachmentSection({ taskId, projectId, readOnly = false }: T
               />
             ))}
 
-            {!readOnly && (
+            {!readOnly && onlineOnly.online && (
               <CompactDropZone
                 onFilesSelected={(files) => void handleFilesSelected(files)}
                 disabled={false}
                 isEmpty={attachments.filter((a) => !a.id.startsWith("optimistic-")).length === 0}
               />
+            )}
+            {!readOnly && !onlineOnly.online && (
+              <Text
+                variant="body-3"
+                color="muted"
+                className="rounded-md border border-dashed border-border-default py-r5 text-center"
+              >
+                Uploading files needs a connection.
+              </Text>
             )}
           </Stack>
         )}

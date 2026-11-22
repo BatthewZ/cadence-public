@@ -218,12 +218,14 @@ A `tasks` change also invalidates the per-task cache prefix, so a task detail di
   "freshness": {
     "workspace": 1711900000000,
     "projects": 1711900000000,
-    "tasks": 1711900000000
+    "tasks": 1711900000000,
+    "projectCount": 4,
+    "taskCount": 132
   }
 }
 ```
 
-Each value is a Unix timestamp in milliseconds (`updatedAt` epoch) or `null` if no data exists. `workspace` tracks workspace-level changes (name, settings, members). `projects` is `MAX(project.updatedAt)` across all workspace projects. `tasks` is `MAX(task.updatedAt)` across all tasks in all workspace projects.
+Each timestamp is a Unix timestamp in milliseconds (`updatedAt` epoch) or `null` if no data exists. `workspace` tracks workspace-level changes (name, settings, members). `projects` is `MAX(project.updatedAt)` across all workspace projects. `tasks` is `MAX(task.updatedAt)` across all tasks in all workspace projects. `projectCount` and `taskCount` are row counts over the same sets: a hard delete leaves no row to move a `MAX(updatedAt)`, so a changed count is how a poller notices one.
 
 **Headers:** `Cache-Control: public, s-maxage=2`
 
@@ -560,12 +562,14 @@ Because the payload is a single `MAX(updatedAt)` per entity type, it cannot say 
   "freshness": {
     "project": 1711900000000,
     "tasks": 1711900000000,
-    "taskGroups": 1711900000000
+    "taskGroups": 1711900000000,
+    "taskCount": 37,
+    "taskGroupCount": 4
   }
 }
 ```
 
-Each value is a Unix timestamp in milliseconds (`updatedAt` epoch) or `null` if no data exists. `project` tracks project-level changes (name, labels, members). `tasks` is `MAX(task.updatedAt)` across all tasks in the project. `taskGroups` is `MAX(taskGroup.updatedAt)` across all task groups.
+Each timestamp is a Unix timestamp in milliseconds (`updatedAt` epoch) or `null` if no data exists. `project` tracks project-level changes (name, labels, members). `tasks` is `MAX(task.updatedAt)` across all tasks in the project. `taskGroups` is `MAX(taskGroup.updatedAt)` across all task groups. `taskCount` and `taskGroupCount` are row counts: deleting a task or group bumps no `updatedAt`, so a changed count is how a poller notices the delete. Clients should compare the whole payload, not just the timestamps.
 
 **Headers:** `Cache-Control: public, s-maxage=2`
 
@@ -957,6 +961,7 @@ Creates a new label within a project. Maximum 50 labels per project. Label names
 
 | Field | Type | Constraints | Required |
 |-------|------|-------------|----------|
+| `id` | `string` | UUID. Optional client-generated id for the new row; 409 `id_conflict` if any row already has it (see [Offline-safe writes](./api.md#offline-safe-writes)) | No |
 | `name` | `string` | 1--30 characters, trimmed | Yes |
 | `color` | `string` | Hex color (`#rrggbb`) | Yes |
 
@@ -1165,6 +1170,7 @@ Creates a saved view for the caller. Maximum **20 views per (project, user)**. N
 
 | Field | Type | Constraints | Required |
 |-------|------|-------------|----------|
+| `id` | `string` | UUID. Optional client-generated id for the new row; 409 `id_conflict` if any row already has it (see [Offline-safe writes](./api.md#offline-safe-writes)) | No |
 | `name` | `string` | 1--50 characters, trimmed (whitespace-only rejected) | Yes |
 | `state` | `object` | `{ tab, params }` — see above | Yes |
 | `state.tab` | `string` | 1--20 characters | Yes |
@@ -1222,6 +1228,7 @@ Creates a new task group within a project. Position is automatically assigned at
 
 | Field | Type | Constraints | Required |
 |-------|------|-------------|----------|
+| `id` | `string` | UUID. Optional client-generated id for the new row; 409 `id_conflict` if any row already has it (see [Offline-safe writes](./api.md#offline-safe-writes)) | No |
 | `name` | `string` | 1--100 characters | Yes |
 | `color` | `string` | Valid hex color (`^#[0-9a-fA-F]{6}$`) | No |
 
@@ -1358,6 +1365,8 @@ Updates the position of a task group for drag-and-drop reordering.
 |-------|------|-------------|----------|
 | `position` | `string` | non-empty fractional index | Yes |
 
+If another row already holds `position` (the client computed it from a stale view), the row lands immediately after it — between it and the next position — instead of failing; the response carries the position actually written.
+
 **Response** (200):
 
 ```json
@@ -1379,6 +1388,7 @@ Creates a new task within a project. The task is placed at the end of the specif
 
 | Field | Type | Constraints | Required |
 |-------|------|-------------|----------|
+| `id` | `string` | UUID. Optional client-generated id for the new row; 409 `id_conflict` if any row already has it (see [Offline-safe writes](./api.md#offline-safe-writes)) | No |
 | `title` | `string` | 1--200 characters | Yes |
 | `description` | `string` | max 5000 characters | No |
 | `taskGroupId` | `string` | UUID, must belong to the project | Yes |
@@ -1549,6 +1559,7 @@ Updates task fields.
 | `icon` | `string \| null` | max 50 characters |
 | `coverImagePosition` | `integer \| null` | 0--100, vertical position of cover image (applies to either cover source) |
 | `recurrenceRule` | `object \| null` | See [Recurrence Rule](#recurrence-rule-object) below |
+| `descriptionBase` | `string \| null` | max 5000 characters. The description this edit started from. With `description` in the same body, the whole patch applies only if the stored description still equals it (`null` and `""` are equal); otherwise `409` with `code: "description_conflict"`, nothing applied, and the current task (in the `GET /api/tasks/:taskId` shape) under `task`. Ignored without `description`; never stored |
 
 `coverImageKey` and `coverUnsplash` are **not** accepted here — use the dedicated cover endpoints below, which enforce the XOR invariant between the two cover sources. This matters most for `coverImageKey`: because [`GET /api/uploads/...`](./storage.md#get-apiuploadspurposeuseridfilename) authorizes a `task-cover` download by matching the requested key against `task.cover_image_key`, a client-writable key would be a forgeable read capability. Nothing in the API writes a non-null `coverImageKey` except the cover upload endpoint, using a key the server just minted for the caller's own upload. (Workspace import also restores a `coverUnsplash` payload from an uploaded export; that column holds absolute Unsplash URLs rather than a key into storage, and import nulls `coverImageKey` alongside it.) Unknown fields are stripped, so sending one is ignored rather than rejected.
 
@@ -1591,6 +1602,8 @@ Moves a task to a different task group and/or position (drag-and-drop). The targ
 |-------|------|-------------|----------|
 | `taskGroupId` | `string` | UUID, must be in the same project | Yes |
 | `position` | `string` | non-empty fractional index | Yes |
+
+If another row already holds `position` (the client computed it from a stale view), the row lands immediately after it — between it and the next position — instead of failing; the response carries the position actually written.
 
 **Recurring task behavior:** If the target group is a completion group and the task was not already completed and has a `recurrenceRule`, a new task instance is spawned (same logic as the `/complete` endpoint). A `task.created` webhook is dispatched for the spawned instance. Moving a completed task out of a completion group reopens it and undoes the spawn (same logic as the `/uncomplete` endpoint).
 
@@ -1769,6 +1782,7 @@ Creates a subtask on a task. Position is automatically assigned at the end.
 
 | Field | Type | Constraints | Required |
 |-------|------|-------------|----------|
+| `id` | `string` | UUID. Optional client-generated id for the new row; 409 `id_conflict` if any row already has it (see [Offline-safe writes](./api.md#offline-safe-writes)) | No |
 | `title` | `string` | 1--200 characters | Yes |
 
 **Response** (201):
@@ -1801,6 +1815,7 @@ Updates a subtask's title or completion status. Access is verified by looking up
 |-------|------|-------------|
 | `title` | `string` | 1--200 characters |
 | `completed` | `boolean` | |
+| `position` | `string` | 1--100 characters, fractional index. If another row already holds `position` (the client computed it from a stale view), the row lands immediately after it — between it and the next position — instead of failing; the response carries the position actually written. |
 
 **Response** (200):
 
@@ -1915,6 +1930,7 @@ Adds a comment to a task. The authenticated user is recorded as the author. Crea
 
 | Field | Type | Constraints | Required |
 |-------|------|-------------|----------|
+| `id` | `string` | UUID. Optional client-generated id for the new row; 409 `id_conflict` if any row already has it (see [Offline-safe writes](./api.md#offline-safe-writes)) | No |
 | `body` | `string` | 1--5000 characters | Yes |
 
 **Response** (201):

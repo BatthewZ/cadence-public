@@ -1,3 +1,4 @@
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Button } from "@/web/components/ui/Button";
 import { Tooltip } from "@/web/components/ui/Tooltip";
 import {
@@ -41,9 +42,11 @@ export function NewProjectButton({
   disabled = false,
 }: NewProjectButtonProps) {
   const { canCreateProject } = useWorkspacePermissions();
+  const onlineOnly = useOnlineOnly();
+  const refusal = canCreateProject ? onlineOnly.title : PROJECT_CREATION_DENIED_HINT;
 
   const button = (
-    <Button onClick={onClick} disabled={disabled || !canCreateProject}>
+    <Button onClick={onClick} disabled={disabled || refusal !== undefined}>
       {label}
     </Button>
   );
@@ -51,10 +54,10 @@ export function NewProjectButton({
   // Only wrapped when there is something to explain. An always-on tooltip
   // repeating the button's own label is noise that trains people to ignore
   // tooltips on this page, including this one when it finally matters.
-  if (canCreateProject) return button;
+  if (refusal === undefined) return button;
 
   return (
-    <Tooltip content={PROJECT_CREATION_DENIED_HINT}>
+    <Tooltip content={refusal}>
       {/*
         A disabled <button> fires no pointer events, so the tooltip would never
         open on the element itself. The span is the hover target that keeps the

@@ -10,10 +10,15 @@ app.use(
       const env = c.env as AppBindings;
       return resolveAllowedOrigin(origin, env.BETTER_AUTH_URL, env.TRUSTED_ORIGINS);
     },
+    allowHeaders: ["Content-Type", "Authorization", IDEMPOTENCY_KEY_HEADER],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    exposeHeaders: [IDEMPOTENT_REPLAYED_HEADER],
     credentials: true,
   })
 );
 ```
+
+`Idempotency-Key` is allowed and `Idempotent-Replayed` exposed so a cross-origin client can make and recognise safe retries (see [API § Idempotency-Key](./api.md#idempotency-key)). `cors.test.ts` exercises this configuration through the real worker.
 
 The `resolveAllowedOrigin` function (from `src/api/lib/auth.ts`) builds an allow-list from:
 1. `BETTER_AUTH_URL` (always allowed)

@@ -8,6 +8,7 @@ import { Input } from "@/web/components/form/Input";
 import { Row, Stack } from "@/web/components/layout";
 import { ImportIcsDialog } from "@/web/components/project/ImportIcsDialog";
 import { TaskFilterBar } from "@/web/components/project/TaskFilterBar";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { Button } from "@/web/components/ui/Button";
 import { CoverImage } from "@/web/components/ui/CoverImage";
@@ -26,9 +27,10 @@ import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useProjectPermissions } from "@/web/hooks/use-permissions";
 import { useProjectCover } from "@/web/hooks/use-project-cover";
 import { useRecents } from "@/web/hooks/use-recents";
-import { api } from "@/web/lib/api/client";
+import { api, apiErrorMessage } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
 import { downloadProjectICS } from "@/web/lib/export-ics";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 import { TaskDetailPanel } from "@/web/pages/TaskDetail/TaskDetailPanel";
 
@@ -42,6 +44,7 @@ function ProjectLayoutInner() {
   const { addRecent } = useRecents(workspace.id);
   const { project, members, tasks, updateProject, refetch } = useProject();
   const { isProjectAdmin, canEditTasks } = useProjectPermissions(members);
+  const onlineOnly = useOnlineOnly();
   const {
     coverUrl,
     coverSrcSet,
@@ -76,23 +79,28 @@ function ProjectLayoutInner() {
 
   // Project theme mutation with optimistic update for instant visual feedback
   const { mutate: updateTheme, isPending: themePending } = useMutation({
+    networkMode: "always",
     mutationFn: (theme: Theme | null) =>
-      api.patch(`/api/projects/${project.id}`, { theme }),
+      sendWrite({
+        method: "PATCH",
+        path: `/api/projects/${project.id}`,
+        body: { theme },
+        label: `Change theme of “${project.name}”`,
+      }),
     onMutate: async (newTheme) => {
       await qc.cancelQueries({ queryKey: queryKeys.projects.detail(project.id) });
       const previousTheme = project.theme;
       updateProject({ theme: newTheme });
       return { previousTheme };
     },
-    onError: (_err, _newTheme, context) => {
+    onError: (err, _newTheme, context) => {
       if (context) {
         updateProject({ theme: context.previousTheme });
       }
-      toast("Failed to update theme.", { variant: "error" });
+      toast(apiErrorMessage(err, "Failed to update theme."), { variant: "error" });
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.projects.detail(project.id) });
-      refetch();
+    onSuccess: (result) => {
+      if (result.status === "sent") refetch();
     },
   });
 
@@ -132,9 +140,17 @@ function ProjectLayoutInner() {
   const handleCoverPositionChange = useCallback(
     (pos: number) => {
       updateProject({ coverImagePosition: pos });
-      void api.patch(`/api/projects/${project.id}`, { coverImagePosition: pos });
+      sendWrite({
+        method: "PATCH",
+        path: `/api/projects/${project.id}`,
+        body: { coverImagePosition: pos },
+        label: `Reposition cover of “${project.name}”`,
+      }).catch((err: unknown) => {
+        toast(apiErrorMessage(err, "Failed to reposition cover."), { variant: "error" });
+        refetch();
+      });
     },
-    [project.id, updateProject]
+    [project.id, project.name, updateProject, toast, refetch]
   );
 
   // --- Inline title editing ---
@@ -157,9 +173,14 @@ function ProjectLayoutInner() {
           : old,
       );
       try {
-        await api.patch(`/api/projects/${project.id}`, { name: trimmed });
-      } catch {
-        toast("Failed to update project name.", { variant: "error" });
+        await sendWrite({
+          method: "PATCH",
+          path: `/api/projects/${project.id}`,
+          body: { name: trimmed },
+          label: `Rename project “${project.name}”`,
+        });
+      } catch (err) {
+        toast(apiErrorMessage(err, "Failed to update project name."), { variant: "error" });
         refetch();
         void qc.invalidateQueries({ queryKey: wpKey });
       }
@@ -181,14 +202,19 @@ function ProjectLayoutInner() {
           : old,
       );
       try {
-        await api.patch(`/api/projects/${project.id}`, { icon: newIcon });
-      } catch {
-        toast("Failed to update icon.", { variant: "error" });
+        await sendWrite({
+          method: "PATCH",
+          path: `/api/projects/${project.id}`,
+          body: { icon: newIcon },
+          label: `Change icon of “${project.name}”`,
+        });
+      } catch (err) {
+        toast(apiErrorMessage(err, "Failed to update icon."), { variant: "error" });
         refetch();
         void qc.invalidateQueries({ queryKey: wpKey });
       }
     },
-    [project.id, project.workspaceId, updateProject, qc, toast, refetch]
+    [project.id, project.name, project.workspaceId, updateProject, qc, toast, refetch]
   );
 
   // --- Calendar export / import (.ics) ---
@@ -244,7 +270,7 @@ function ProjectLayoutInner() {
         onApplyUnsplash={(payload) => { void handleCoverApplyUnsplash(payload); }}
         onRemove={() => { void handleCoverRemove(); }}
         uploading={uploading}
-        editable={isProjectAdmin}
+        editable={isProjectAdmin && onlineOnly.online}
         position={project.coverImagePosition}
         onPositionChange={handleCoverPositionChange}
       />
@@ -401,6 +427,8 @@ function ProjectLayoutInner() {
                   index={1}
                   icon={<Upload size={14} />}
                   onSelect={() => setImportIcsOpen(true)}
+                  disabled={onlineOnly.disabled}
+                  title={onlineOnly.title}
                 >
                   Import calendar (.ics)…
                 </DropdownMenu.Item>

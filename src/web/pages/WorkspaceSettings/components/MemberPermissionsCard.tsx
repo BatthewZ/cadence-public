@@ -5,6 +5,7 @@ import type { WorkspacePolicyPatch } from "@/shared/schemas/workspace";
 import { Label } from "@/web/components/form";
 import { Toggle } from "@/web/components/form/Toggle";
 import { Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Card } from "@/web/components/ui/Card";
 import { Text } from "@/web/components/ui/Text";
 import { useToast } from "@/web/components/ui/ToastContext";
@@ -41,6 +42,7 @@ export function MemberPermissionsCard({ workspace }: MemberPermissionsCardProps)
   const { toast } = useToast();
   const qc = useQueryClient();
   const detailKey = queryKeys.workspaces.detail(workspace.id);
+  const onlineOnly = useOnlineOnly();
 
   const { mutate: updatePolicy, isPending } = useMutation({
     mutationFn: (policy: WorkspacePolicyPatch) =>
@@ -97,13 +99,15 @@ export function MemberPermissionsCard({ workspace }: MemberPermissionsCardProps)
               When off, only owners and admins can create new projects or duplicate existing ones.
             </Text>
           </Stack>
-          <Toggle
-            id="policy-member-project-creation"
-            checked={workspace.policy.allowMemberProjectCreation}
-            disabled={isPending}
-            onCheckedChange={(next) => updatePolicy({ allowMemberProjectCreation: next })}
-            aria-label="Members can create projects"
-          />
+          <span title={onlineOnly.title} className="inline-flex">
+            <Toggle
+              id="policy-member-project-creation"
+              checked={workspace.policy.allowMemberProjectCreation}
+              disabled={isPending || onlineOnly.disabled}
+              onCheckedChange={(next) => updatePolicy({ allowMemberProjectCreation: next })}
+              aria-label="Members can create projects"
+            />
+          </span>
         </Row>
       </Stack>
     </Card>

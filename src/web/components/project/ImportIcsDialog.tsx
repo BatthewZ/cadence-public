@@ -33,6 +33,7 @@ import { type ParsedEvent, parseICS, type ParseICSResult } from "@/shared/lib/ic
 import type { ImportTaskItem } from "@/shared/schemas/task";
 import { FormActions, Label, Select } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Alert } from "@/web/components/ui/Alert";
 import { Button } from "@/web/components/ui/Button";
 import { Dialog } from "@/web/components/ui/Dialog";
@@ -138,6 +139,7 @@ export function ImportIcsDialog({ open, onClose }: ImportIcsDialogProps) {
   const [emptyFile, setEmptyFile] = useState(false);
   const [groupChoice, setGroupChoice] = useState("");
   const [importing, setImporting] = useState(false);
+  const onlineOnly = useOnlineOnly();
 
   // Same source + ordering as the board's GroupPicker: context task groups
   // sorted by fractional-index position, so "first group" here is the
@@ -340,7 +342,8 @@ export function ImportIcsDialog({ open, onClose }: ImportIcsDialogProps) {
               onClick={() => {
                 void handleImport();
               }}
-              disabled={importing || selectedGroupId === ""}
+              disabled={importing || selectedGroupId === "" || onlineOnly.disabled}
+              title={onlineOnly.title}
             >
               {importing
                 ? "Importing…"

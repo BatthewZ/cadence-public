@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Alert, Badge, Button, Card, Skeleton, Text } from "@/web/components/ui";
 import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
 import {
@@ -60,6 +61,7 @@ export function SessionsSection() {
   const [revokingAll, setRevokingAll] = useState(false);
   const [showAll, setShowAll] = useState(false);
   const [revokeAllDialogOpen, setRevokeAllDialogOpen] = useState(false);
+  const onlineOnly = useOnlineOnly();
 
   const currentSessionId = sessionData?.session?.id;
 
@@ -139,7 +141,8 @@ export function SessionsSection() {
                 variant="danger"
                 size="sm"
                 onClick={() => setRevokeAllDialogOpen(true)}
-                disabled={revokingAll}
+                disabled={revokingAll || onlineOnly.disabled}
+                title={onlineOnly.title}
               >
                 Revoke All Other Sessions
               </Button>
@@ -196,7 +199,8 @@ export function SessionsSection() {
                             variant="ghost"
                             size="sm"
                             onClick={() => void handleRevoke(session.token)}
-                            disabled={revokingToken === session.token}
+                            disabled={revokingToken === session.token || onlineOnly.disabled}
+                            title={onlineOnly.title}
                           >
                             {revokingToken === session.token ? "Revoking..." : "Revoke"}
                           </Button>

@@ -1,3 +1,9 @@
+import { and, asc, gt, ne, type SQL } from "drizzle-orm";
+import type { AnySQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
+
+import type { Database } from "../../db";
+import { generateKeyBetween } from "../../shared/lib/fractional-index";
+
 /**
  * Helpers for fractional-index position writes that race against concurrent
  * writers.
@@ -72,4 +78,45 @@ export async function retryOnPositionConflict<T>(
     `Position conflict persisted after ${maxAttempts} attempts`,
     { cause: lastError },
   );
+}
+
+/**
+ * Write a client-computed position. When another row already holds
+ * `requested` (a stale client view), land immediately after it instead:
+ * between `requested` and `nextAfter(requested)`, the next position among the
+ * row's siblings. `nextAfter` must exclude the row being written.
+ */
+export async function writeClientPosition<T>(
+  requested: string,
+  nextAfter: (position: string) => Promise<string | null>,
+  write: (position: string) => Promise<T>,
+): Promise<T> {
+  let attempt = 0;
+  return retryOnPositionConflict(async () => {
+    const position = attempt++ === 0
+      ? requested
+      : generateKeyBetween(requested, await nextAfter(requested));
+    return write(position);
+  });
+}
+
+/**
+ * A `nextAfter` for `writeClientPosition`: the lowest position above `after`
+ * among the rows matching `siblings`, excluding the row `selfId` being written.
+ */
+export function nextSiblingPosition(
+  db: Database,
+  table: SQLiteTable & { id: AnySQLiteColumn; position: AnySQLiteColumn<{ data: string }> },
+  siblings: SQL,
+  selfId: string,
+): (after: string) => Promise<string | null> {
+  return async (after) => {
+    const [next] = await db
+      .select({ position: table.position })
+      .from(table)
+      .where(and(siblings, gt(table.position, after), ne(table.id, selfId)))
+      .orderBy(asc(table.position))
+      .limit(1);
+    return next?.position ?? null;
+  };
 }

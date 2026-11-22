@@ -1,14 +1,16 @@
 import { ChevronsUpDown, LogOut, Settings, User } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+import { InstallAppMenuItem, InstallHelpDialog } from "@/web/components/pwa";
+import { UnsyncedSignOutDialog } from "@/web/components/sync/UnsyncedSignOutDialog";
+import { useSignOut } from "@/web/components/sync/use-sign-out";
 import { useOptionalAppShell } from "@/web/components/ui/AppShell";
 import { Avatar } from "@/web/components/ui/Avatar";
 import { DropdownMenu } from "@/web/components/ui/DropdownMenu";
 import { useOptionalWorkspace } from "@/web/contexts/WorkspaceContext";
-import { STORAGE_KEY } from "@/web/hooks/use-theme";
-import { signOut, useSession } from "@/web/lib/auth/auth-client";
-import { queryClient } from "@/web/lib/query-client";
+import { useSession } from "@/web/lib/auth/auth-client";
+import { useInstall } from "@/web/lib/pwa";
 
 /**
  * Compact user account menu rendered at the bottom of the sidebar.
@@ -17,7 +19,10 @@ import { queryClient } from "@/web/lib/query-client";
 export function UserMenu() {
   const navigate = useNavigate();
   const { data: session } = useSession();
-  const [signingOut, setSigningOut] = useState(false);
+  const toLogin = useCallback(() => void navigate("/login"), [navigate]);
+  const signOutFlow = useSignOut(toLogin);
+  const { installed } = useInstall();
+  const [installHelpOpen, setInstallHelpOpen] = useState(false);
   const appShell = useOptionalAppShell();
   const isMobile = appShell?.isMobile ?? false;
   const workspaceCtx = useOptionalWorkspace();
@@ -39,76 +44,71 @@ export function UserMenu() {
   const workspaceSettingsPath = workspaceCtx
     ? `/w/${workspaceCtx.workspace.slug}/settings`
     : null;
-
-  async function handleSignOut() {
-    setSigningOut(true);
-    try {
-      await signOut();
-      queryClient.clear();
-      document.documentElement.removeAttribute("data-theme");
-      try { localStorage.removeItem(STORAGE_KEY); } catch { /* private browsing */ }
-      void navigate("/login");
-    } catch {
-      setSigningOut(false);
-    }
-  }
+  const settingsItemCount = [accountSettingsPath, workspaceSettingsPath].filter(Boolean).length;
 
   return (
-    <DropdownMenu placement={placement}>
-      <DropdownMenu.Trigger asChild>
-        <button className="user-menu-trigger" aria-label="Account menu">
-          <Avatar size="sm" name={name} src={image} />
-          <div className="user-menu-trigger-info">
-            <span className="user-menu-trigger-name">{name}</span>
-            <span className="user-menu-trigger-email">{email}</span>
+    <>
+      <DropdownMenu placement={placement}>
+        <DropdownMenu.Trigger asChild>
+          <button className="user-menu-trigger" aria-label="Account menu">
+            <Avatar size="sm" name={name} src={image} />
+            <div className="user-menu-trigger-info">
+              <span className="user-menu-trigger-name">{name}</span>
+              <span className="user-menu-trigger-email">{email}</span>
+            </div>
+            <ChevronsUpDown size={14} className="user-menu-trigger-chevron" />
+          </button>
+        </DropdownMenu.Trigger>
+
+        <DropdownMenu.Content>
+          {/* User info header */}
+          <div className="user-menu-header">
+            <Avatar size="sm" name={name} src={image} />
+            <div className="user-menu-header-info">
+              <div className="user-menu-header-name">{name}</div>
+              <div className="user-menu-header-email">{email}</div>
+            </div>
           </div>
-          <ChevronsUpDown size={14} className="user-menu-trigger-chevron" />
-        </button>
-      </DropdownMenu.Trigger>
 
-      <DropdownMenu.Content>
-        {/* User info header */}
-        <div className="user-menu-header">
-          <Avatar size="sm" name={name} src={image} />
-          <div className="user-menu-header-info">
-            <div className="user-menu-header-name">{name}</div>
-            <div className="user-menu-header-email">{email}</div>
-          </div>
-        </div>
+          <DropdownMenu.Divider />
 
-        <DropdownMenu.Divider />
+          {accountSettingsPath && (
+            <DropdownMenu.Item
+              index={0}
+              icon={<User size={16} />}
+              onSelect={() => void navigate(accountSettingsPath)}
+            >
+              Account Settings
+            </DropdownMenu.Item>
+          )}
 
-        {accountSettingsPath && (
+          {workspaceSettingsPath && (
+            <DropdownMenu.Item
+              index={accountSettingsPath ? 1 : 0}
+              icon={<Settings size={16} />}
+              onSelect={() => void navigate(workspaceSettingsPath)}
+            >
+              Workspace Settings
+            </DropdownMenu.Item>
+          )}
+
+          {(accountSettingsPath || workspaceSettingsPath) && <DropdownMenu.Divider />}
+
+          <InstallAppMenuItem index={settingsItemCount} onShowHelp={() => setInstallHelpOpen(true)} />
+
           <DropdownMenu.Item
-            index={0}
-            icon={<User size={16} />}
-            onSelect={() => void navigate(accountSettingsPath)}
+            index={settingsItemCount + (installed ? 0 : 1)}
+            icon={<LogOut size={16} />}
+            onSelect={signOutFlow.request}
+            disabled={signOutFlow.disabled}
+            title={signOutFlow.title}
           >
-            Account Settings
+            {signOutFlow.signingOut ? "Signing out…" : "Sign Out"}
           </DropdownMenu.Item>
-        )}
-
-        {workspaceSettingsPath && (
-          <DropdownMenu.Item
-            index={accountSettingsPath ? 1 : 0}
-            icon={<Settings size={16} />}
-            onSelect={() => void navigate(workspaceSettingsPath)}
-          >
-            Workspace Settings
-          </DropdownMenu.Item>
-        )}
-
-        {(accountSettingsPath || workspaceSettingsPath) && <DropdownMenu.Divider />}
-
-        <DropdownMenu.Item
-          index={[accountSettingsPath, workspaceSettingsPath].filter(Boolean).length}
-          icon={<LogOut size={16} />}
-          onSelect={() => void handleSignOut()}
-          disabled={signingOut}
-        >
-          {signingOut ? "Signing out…" : "Sign Out"}
-        </DropdownMenu.Item>
-      </DropdownMenu.Content>
-    </DropdownMenu>
+        </DropdownMenu.Content>
+      </DropdownMenu>
+      <UnsyncedSignOutDialog flow={signOutFlow} />
+      <InstallHelpDialog open={installHelpOpen} onClose={() => setInstallHelpOpen(false)} />
+    </>
   );
 }

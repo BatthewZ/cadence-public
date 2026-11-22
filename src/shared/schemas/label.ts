@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { clientIdSchema } from "./client-id";
+
 export const LABEL_COLORS = [
   "#ef4444", // red
   "#f97316", // orange
@@ -17,6 +19,7 @@ export const MAX_LABELS_PER_PROJECT = 50;
 export const MAX_LABELS_PER_TASK = 10;
 
 export const createLabelSchema = z.object({
+  id: clientIdSchema,
   name: z.string().min(1).max(30).trim(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/),
 });

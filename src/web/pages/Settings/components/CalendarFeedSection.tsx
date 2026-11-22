@@ -3,6 +3,7 @@ import { AlertTriangle, Check, ClipboardCopy } from "lucide-react";
 import { useState } from "react";
 
 import { Row, Stack } from "@/web/components/layout";
+import { isUnavailableOffline, useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Alert, Badge, Button, Card, Skeleton, Text } from "@/web/components/ui";
 import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
@@ -64,6 +65,7 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
   const [mintedUrl, setMintedUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+  const onlineOnly = useOnlineOnly();
 
   /* ------- Status query --------------------------------------------- */
   const statusQuery = useQuery({
@@ -256,6 +258,10 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
                 </Button>
               </Row>
             </Stack>
+          ) : isUnavailableOffline(statusQuery) ? (
+            <Text variant="body-2" color="secondary">
+              Your calendar feed can be managed when you&rsquo;re back online.
+            </Text>
           ) : statusQuery.isLoading ? (
             <Row className="items-center rounded-md border border-border-default px-r4 py-r4">
               <Stack gap="r6" className="min-w-0 flex-1">
@@ -292,7 +298,8 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
                   variant="secondary"
                   size="sm"
                   onClick={() => openConfirm("regenerate")}
-                  disabled={generateMutation.isPending}
+                  disabled={generateMutation.isPending || onlineOnly.disabled}
+                  title={onlineOnly.title}
                 >
                   Regenerate
                 </Button>
@@ -300,7 +307,8 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
                   variant="ghost"
                   size="sm"
                   onClick={() => openConfirm("revoke")}
-                  disabled={revokeMutation.isPending}
+                  disabled={revokeMutation.isPending || onlineOnly.disabled}
+                  title={onlineOnly.title}
                 >
                   Revoke
                 </Button>
@@ -317,7 +325,8 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
                   variant="primary"
                   size="md"
                   onClick={handleGenerate}
-                  disabled={generateMutation.isPending}
+                  disabled={generateMutation.isPending || onlineOnly.disabled}
+                  title={onlineOnly.title}
                 >
                   {generateMutation.isPending
                     ? "Generating..."

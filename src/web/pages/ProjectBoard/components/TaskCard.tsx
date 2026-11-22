@@ -31,8 +31,9 @@ import { useToast } from "@/web/components/ui/ToastContext";
 import { type Task, type TaskCompletionResponse, useProject } from "@/web/contexts/ProjectContext";
 import { useTaskActions } from "@/web/hooks/use-task-actions";
 import { useTaskFilterControls } from "@/web/hooks/use-task-filters";
-import { api } from "@/web/lib/api/client";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
+import { taskCompletionWrite } from "@/web/lib/task-writes";
 import { toggleArrayValue } from "@/web/util/array";
 import { isDueToday, isOverdue } from "@/web/util/date";
 import {
@@ -221,10 +222,9 @@ export function SortableTaskCard({
     ctxUpdateTask(task.id, { completed: checked });
 
     try {
-      const endpoint = checked
-        ? `/api/tasks/${task.id}/complete`
-        : `/api/tasks/${task.id}/uncomplete`;
-      const res = await api.post<TaskCompletionResponse>(endpoint, {});
+      const result = await sendWrite<TaskCompletionResponse>(taskCompletionWrite(task, checked));
+      if (result.status === "queued") return;
+      const res = result.data;
       // Apply the full server response (includes new taskGroupId, position)
       ctxUpdateTask(task.id, res.task);
       if (res.nextRecurringTask) {

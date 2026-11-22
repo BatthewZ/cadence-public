@@ -14,6 +14,9 @@ interface ProjectFreshness {
     project: number | null;
     tasks: number | null;
     taskGroups: number | null;
+    /** Row counts: a hard delete leaves no row behind to move the MAX timestamps. */
+    taskCount: number;
+    taskGroupCount: number;
   };
 }
 
@@ -62,7 +65,7 @@ export function useProjectFreshness(projectId: string, multiUser = true): void {
 
     // Board list, plus the `tasks` prefix for any open detail view — the payload
     // is one MAX(updatedAt) and names no task id.
-    if (freshness.tasks !== null && freshness.tasks !== prev.tasks) {
+    if ((freshness.tasks !== null && freshness.tasks !== prev.tasks) || freshness.taskCount !== prev.taskCount) {
       if (freshnessTracker.shouldInvalidate("tasks")) {
         void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(projectId) });
         void qc.invalidateQueries({ queryKey: queryKeys.tasks.all });
@@ -70,7 +73,7 @@ export function useProjectFreshness(projectId: string, multiUser = true): void {
     }
 
     // Task groups
-    if (freshness.taskGroups !== null && freshness.taskGroups !== prev.taskGroups) {
+    if ((freshness.taskGroups !== null && freshness.taskGroups !== prev.taskGroups) || freshness.taskGroupCount !== prev.taskGroupCount) {
       if (freshnessTracker.shouldInvalidate("taskGroups")) {
         void qc.invalidateQueries({ queryKey: queryKeys.projects.taskGroups(projectId) });
       }

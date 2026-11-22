@@ -29,7 +29,10 @@ Request
 7. authSessionMiddleware   -- resolves PAT (Bearer) OR cookie session, sets user/session/apiToken
   |
   v
-8. auditPatMutations       -- writes one audit_log row per successful PAT-attributed mutation
+8. idempotency             -- replays a stored response for a repeated Idempotency-Key
+  |
+  v
+9. auditPatMutations       -- writes one audit_log row per successful PAT-attributed mutation
   |
   v
 Route-level middleware + Route Handler (or 404 catch-all)
@@ -48,6 +51,7 @@ app.use("/api/*", securityHeadersMiddleware);
 app.use("/api/*", async (c, next) => { c.set("db", createDb(c.env.DB)); await next(); });
 app.use("/api/*", cors({ ... }));
 app.use("/api/*", authSessionMiddleware);
+app.use("/api/*", idempotency);
 app.use("/api/*", auditPatMutations);
 app.route("/api", routes);
 ```
@@ -215,7 +219,11 @@ Each of these is detailed under [Authorization Middleware](#authorization-middle
 
 For the full PAT model — format, scopes, project scoping, expiry, rotation, revocation, and security best practices — see [API Tokens](./api-tokens.md).
 
-### 8. PAT Audit Ledger (`src/api/middleware/audit-pat.ts`)
+### 8. Idempotency (`src/api/middleware/idempotency.ts`)
+
+Applies only to `POST`/`PUT`/`PATCH`/`DELETE` requests that carry an `Idempotency-Key` header and an authenticated user, outside `/api/auth/*`; everything else passes through untouched. It claims the `(user, key)` row in `idempotency_key` before the handler runs and, for a repeat of a completed request, returns the stored response without calling `next()`. Mounted after `authSessionMiddleware` (it needs `user`) and before `auditPatMutations`, so a replay writes no second audit row. The fingerprint reads a clone of the raw request, so handlers' own `c.req.json()` / `c.req.parseBody()` (multipart included) are unaffected. Semantics and status codes: [API § Idempotency-Key](./api.md#idempotency-key).
+
+### 9. PAT Audit Ledger (`src/api/middleware/audit-pat.ts`)
 
 Writes one `audit_log` row per **successful, PAT-attributed mutation**, so a workspace owner can answer "what did this integration change?" without trawling request logs. It runs `await next()` first and inspects the finished response, which is why it is mounted after `authSessionMiddleware` (it needs `c.get("apiToken")`) and before `app.route("/api", routes)` (it must wrap every route handler).
 

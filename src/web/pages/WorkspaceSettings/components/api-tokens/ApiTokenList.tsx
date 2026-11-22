@@ -1,6 +1,7 @@
 import { AlertTriangle, KeyRound, MoreVertical, RefreshCw, Trash2 } from "lucide-react";
 
 import { Row, Stack } from "@/web/components/layout";
+import type { OnlineOnly } from "@/web/components/sync/use-online-only";
 import { Badge, Text, Tooltip } from "@/web/components/ui";
 import { DropdownMenu } from "@/web/components/ui/DropdownMenu";
 import { IconButton } from "@/web/components/ui/IconButton";
@@ -44,6 +45,7 @@ interface ApiTokenListProps {
   canRotate: boolean;
   onRotate: (token: ApiTokenRow) => void;
   onRevoke: (token: ApiTokenRow) => void;
+  onlineOnly: OnlineOnly;
 }
 
 export function ApiTokenList({
@@ -52,6 +54,7 @@ export function ApiTokenList({
   canRotate,
   onRotate,
   onRevoke,
+  onlineOnly,
 }: ApiTokenListProps) {
   const projectsById = new Map(projects.map((p) => [p.id, p]));
 
@@ -65,6 +68,7 @@ export function ApiTokenList({
           canRotate={canRotate}
           onRotate={() => onRotate(token)}
           onRevoke={() => onRevoke(token)}
+          onlineOnly={onlineOnly}
         />
       ))}
     </Stack>
@@ -81,6 +85,7 @@ interface ApiTokenCardProps {
   canRotate: boolean;
   onRotate: () => void;
   onRevoke: () => void;
+  onlineOnly: OnlineOnly;
 }
 
 /**
@@ -111,6 +116,7 @@ function ApiTokenCard({
   canRotate,
   onRotate,
   onRevoke,
+  onlineOnly,
 }: ApiTokenCardProps) {
   const status = deriveStatus(token);
   const scopes = token.scopes;
@@ -161,7 +167,11 @@ function ApiTokenCard({
 
             <DropdownMenu placement="bottom-end">
               <DropdownMenu.Trigger asChild>
-                <IconButton aria-label={`Actions for ${token.name}`}>
+                <IconButton
+                  aria-label={`Actions for ${token.name}`}
+                  disabled={onlineOnly.disabled}
+                  title={onlineOnly.title}
+                >
                   <MoreVertical size={16} />
                 </IconButton>
               </DropdownMenu.Trigger>

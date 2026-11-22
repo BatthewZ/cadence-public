@@ -5,6 +5,7 @@ import { createProjectSchema } from "@/shared/schemas/project";
 import type { Theme } from "@/shared/types/theme";
 import { Field, FieldError, FormActions, Input, Label, Textarea } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Accordion, Alert, Button, Dialog, Text } from "@/web/components/ui";
 import { IconPicker } from "@/web/components/ui/IconPicker";
 import { ThemeGrid } from "@/web/components/ui/ThemeGrid";
@@ -44,6 +45,7 @@ export function CreateProjectDialog({
   const [budget, setBudget] = useState("");
   const [theme, setTheme] = useState<Theme | null>(null);
   const { fieldErrors, clearFieldError, setFromZodError, resetFieldErrors } = useFieldErrors();
+  const onlineOnly = useOnlineOnly();
 
   const { workspace } = useWorkspace();
   const workspaceTheme = (workspace.theme ?? "default") as Theme;
@@ -194,7 +196,7 @@ export function CreateProjectDialog({
             <Button type="button" variant="ghost" onClick={handleClose} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || onlineOnly.disabled} title={onlineOnly.title}>
               {loading ? "Creating..." : "Create"}
             </Button>
           </FormActions>

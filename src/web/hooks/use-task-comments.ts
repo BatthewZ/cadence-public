@@ -21,24 +21,37 @@ type InfiniteCommentsData = { pages: CommentsPage[]; pageParams: unknown[] };
 
 /**
  * Optimistically appends a comment to the last page of the infinite comments
- * cache. Returns the optimistic `Comment` object so the caller can reference
- * its id for later rollback.
+ * cache. `id` is the client id the create request sends, so the row needs no
+ * swap when the server answers.
  */
 export function optimisticAddComment(
   qc: QueryClient,
   taskId: string,
-  opts: { body: string; authorId: string; authorName: string },
-): Comment {
+  opts: { id: string; body: string; authorId: string; authorName: string },
+): void {
   freshnessTracker.recordMutation("tasks");
   const optimisticComment: Comment = {
-    id: `optimistic-${crypto.randomUUID()}`,
+    id: opts.id,
     body: opts.body,
     authorId: opts.authorId,
     authorName: opts.authorName,
     createdAt: new Date().toISOString(),
   };
+  const key = queryKeys.tasks.comments(taskId);
+  const current = qc.getQueryData<InfiniteCommentsData>(key);
+  if (!current || current.pages.length === 0) {
+    // Nothing loaded for this task yet (created offline, or never opened before the connection
+    // dropped): start the list with this comment, or it wouldn't show until the device is back
+    // online. Seeded stale (`updatedAt: 0`) so the real list still loads as soon as it can.
+    qc.setQueryData<InfiniteCommentsData>(
+      key,
+      { pages: [{ comments: [optimisticComment], nextCursor: null }], pageParams: [undefined] },
+      { updatedAt: 0 },
+    );
+    return;
+  }
   qc.setQueryData<InfiniteCommentsData>(
-    queryKeys.tasks.comments(taskId),
+    key,
     (old) => {
       if (!old || old.pages.length === 0) return old;
       const pages = [...old.pages];
@@ -50,14 +63,30 @@ export function optimisticAddComment(
       return { ...old, pages };
     },
   );
-  return optimisticComment;
+}
+
+/** Replaces a cached comment with the server's copy of the same row. */
+export function mergeServerComment(qc: QueryClient, taskId: string, comment: Comment): void {
+  qc.setQueryData<InfiniteCommentsData>(
+    queryKeys.tasks.comments(taskId),
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          comments: page.comments.map((c) => (c.id === comment.id ? { ...c, ...comment } : c)),
+        })),
+      };
+    },
+  );
 }
 
 /** Removes a previously-added optimistic comment from the cache (rollback). */
 export function rollbackAddComment(
   qc: QueryClient,
   taskId: string,
-  optimisticId: string,
+  commentId: string,
 ): void {
   qc.setQueryData<InfiniteCommentsData>(
     queryKeys.tasks.comments(taskId),
@@ -67,7 +96,7 @@ export function rollbackAddComment(
         ...old,
         pages: old.pages.map((page) => ({
           ...page,
-          comments: page.comments.filter((c) => c.id !== optimisticId),
+          comments: page.comments.filter((c) => c.id !== commentId),
         })),
       };
     },

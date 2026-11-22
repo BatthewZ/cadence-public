@@ -44,6 +44,7 @@ import {
 } from "@/shared/schemas/workspace-import";
 import { Checkbox, Label } from "@/web/components/form";
 import { Container, Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Alert, Badge, Button, Card, Text } from "@/web/components/ui";
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { FileUpload } from "@/web/components/ui/FileUpload";
@@ -212,6 +213,7 @@ function ExportCard({
   canManage: boolean;
 }) {
   const [includeActivity, setIncludeActivity] = useState(false);
+  const onlineOnly = useOnlineOnly();
 
   // Plain anchor target — see module JSDoc for why this is not a fetch.
   const exportHref = `/api/workspaces/${workspaceId}/export${
@@ -243,12 +245,12 @@ function ExportCard({
         </Text>
 
         <div>
-          {canManage ? (
+          {canManage && onlineOnly.online ? (
             <Button as="a" href={exportHref} download>
               Download workspace (JSON)
             </Button>
           ) : (
-            <Button type="button" disabled>
+            <Button type="button" disabled title={onlineOnly.title}>
               Download workspace (JSON)
             </Button>
           )}
@@ -287,6 +289,7 @@ function ImportCard({
   const [file, setFile] = useState<File | null>(null);
   /** Client-side gate failures (extension / size) shown inline on the dropzone. */
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const onlineOnly = useOnlineOnly();
   /** Dry-run response — component state, deliberately NOT the query cache. */
   const [preview, setPreview] = useState<ImportPreview | null>(null);
   /** Commit response; once set, the report pane replaces upload + preview. */
@@ -507,10 +510,10 @@ function ImportCard({
           <Stack gap="r5">
             <FileUpload
               onFilesSelected={handleFilesSelected}
-              disabled={!canManage}
+              disabled={!canManage || onlineOnly.disabled}
+              hint={onlineOnly.online ? `.json export file, up to ${formatBytes(MAX_IMPORT_FILE_BYTES)}` : "Importing needs a connection."}
               uploading={previewMutation.isPending}
               error={uploadError}
-              hint={`.json export file, up to ${formatBytes(MAX_IMPORT_FILE_BYTES)}`}
             />
             {previewMutation.isError && (
               <Alert variant="error">{importErrorMessage(previewMutation.error)}</Alert>
@@ -525,7 +528,8 @@ function ImportCard({
               onClick={() => {
                 if (file !== null) commitMutation.mutate(file);
               }}
-              disabled={!canManage || preview === null || commitMutation.isPending}
+              disabled={!canManage || preview === null || commitMutation.isPending || onlineOnly.disabled}
+              title={onlineOnly.title}
             >
               {commitMutation.isPending
                 ? "Importing…"

@@ -12,6 +12,8 @@ Common use cases:
 - **AI agents** -- Feed task and project activity into LLM-based assistants for summarization or triage.
 - **Data warehouses** -- Stream workspace activity into analytics systems for reporting.
 
+Writes made in the web app while offline fire their webhooks when they reach the server, timestamped then — not when the user made them. A replayed request (same `Idempotency-Key`) fires nothing a second time.
+
 ---
 
 ## Event Types

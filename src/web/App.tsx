@@ -10,6 +10,8 @@ import { HomeRedirect } from "./components/HomeRedirect";
 import { Center } from "./components/layout";
 import { ProjectLayout } from "./components/layout/ProjectLayout";
 import { WorkspaceLayout } from "./components/layout/WorkspaceLayout";
+import { UpdatePrompt } from "./components/pwa";
+import { SyncNotices } from "./components/sync/SyncNotices";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { Spinner } from "./components/ui/Spinner";
 import { ToastProvider, useToast } from "./components/ui/ToastContext";
@@ -95,6 +97,8 @@ export function App() {
       <QueryClientProvider client={queryClient}>
       <ToastProvider>
         <UnauthorizedRedirect />
+        <UpdatePrompt />
+        <SyncNotices />
         <ErrorBoundary>
           <Suspense
               fallback={

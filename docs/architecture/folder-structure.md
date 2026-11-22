@@ -23,6 +23,7 @@ src/
 │   │   ├── auth.ts               # Auth session middleware (PAT bearer token or cookie session)
 │   │   ├── authorize.ts          # Workspace/project/task role guards + PAT binding & scope guards
 │   │   ├── cache-control.ts      # Per-route Cache-Control (opt-in TTL, and no-store lockdown)
+│   │   ├── idempotency.ts        # Idempotency-Key: stores the first 2xx JSON response per (user, key) and replays it
 │   │   ├── logger.ts             # Request logging
 │   │   ├── rate-limit.ts         # Rate limiting
 │   │   ├── request-id.ts         # Request ID generation
@@ -36,6 +37,7 @@ src/
 │   │   ├── assignee-validation.ts # Assignee reachability (canUserBeAssigned, retainAssignableAssignee)
 │   │   ├── audit-log.ts          # Audit-ledger writer (recordPatAuditLog)
 │   │   ├── auth.ts               # Better Auth factory
+│   │   ├── client-id.ts          # clientIdConflict — 409 id_conflict when a create's client-supplied id is taken
 │   │   ├── cover-image.ts        # Shared project/task cover-image upload, apply, delete
 │   │   ├── csv.ts                # RFC 4180 CSV serialization with formula-injection hardening
 │   │   ├── defer.ts              # Fire-and-forget work via the Workers waitUntil() API
@@ -62,7 +64,7 @@ src/
 │   │   ├── params.ts             # requireParam route-parameter accessor
 │   │   ├── password-reset-cooldown.ts # Per-email cooldown for password reset requests
 │   │   ├── password.ts           # PBKDF2 password hashing (+ legacy scrypt verification)
-│   │   ├── position-conflict.ts  # Retry helpers for racing fractional-index position writes
+│   │   ├── position-conflict.ts  # Retry helpers for racing fractional-index position writes; writeClientPosition + nextSiblingPosition land a taken client position next to its holder
 │   │   ├── storage.ts            # R2 storage helpers (put, get, delete)
 │   │   ├── telemetry/            # Telemetry sinks
 │   │   │   ├── index.ts          # createTelemetrySink factory (sink selection)
@@ -83,6 +85,7 @@ src/
 │   ├── scheduled/                # Cron-triggered background tasks
 │   │   ├── index.ts              # handleScheduled entry point (runs every 5 min)
 │   │   ├── auth-cleanup.ts       # Expired session + verification token pruning
+│   │   ├── idempotency-key-cleanup.ts # Idempotency-Key record pruning (30-day TTL)
 │   │   ├── invitation-cleanup.ts # Expired invitation pruning (status + grace period)
 │   │   ├── notification-cleanup.ts # Old notification pruning (30d read, 90d unread)
 │   │   ├── task-activity-cleanup.ts # Activity record pruning (90d TTL + 500/task cap)
@@ -176,6 +179,7 @@ src/
 │   └── schema/                   # Drizzle schemas grouped by domain
 │       ├── index.ts              # Re-exports all schemas
 │       ├── auth.ts               # user, session, account, verification
+│       ├── idempotency-key.ts    # Idempotency-Key records (per user, 30-day retention)
 │       ├── invitation.ts         # workspace invitations
 │       ├── label.ts              # labels, task-label assignments
 │       ├── notification.ts       # notifications
@@ -194,9 +198,12 @@ src/
 │   │   ├── unsplash-display.ts   # Unsplash cover attribution/display helpers
 │   │   ├── ics.ts                # RFC 5545 iCalendar generator (calendar export / subscription feed; all-day floating VALUE=DATE events)
 │   │   └── ics-parse.ts          # RFC 5545 iCalendar parser (lenient .ics import; date-only, UTC-safe, bad VEVENTs skipped via warnings)
+│   ├── constants/                # Shared constants
+│   │   └── offline-sync.ts       # Idempotency-Key header names, key format, TTL, write error codes (queue ↔ API wire contract)
 │   ├── schemas/                  # Zod schemas grouped by domain
 │   │   ├── index.ts              # Re-exports all schemas
 │   │   ├── auth.ts               # Auth validation schemas (login, register, etc.)
+│   │   ├── client-id.ts          # clientIdSchema — optional client-generated uuid on create bodies
 │   │   ├── comment.ts            # Comment validation schemas
 │   │   ├── invitation.ts         # Invitation validation schemas
 │   │   ├── project.ts            # Project validation schemas
@@ -223,14 +230,18 @@ src/
     │   ├── auth/                 # Auth client & auth-flow helpers
     │   │   ├── auth-client.ts    # Better Auth React client
     │   │   ├── safe-redirect.ts  # safeRedirectPath — normalises `?redirect=` to a same-origin path
+    │   │   ├── session-cache.ts  # Last server-confirmed session (token stripped), the offline fallback for useSession
     │   │   └── use-guest-session.ts # Session state for guest surfaces (first-resolve loader only)
     │   ├── export-ics.ts         # Client-side project calendar export (.ics download)
     │   ├── freshness-tracker.ts  # Suppresses freshness invalidations caused by the user's own mutations
     │   ├── icon-map.ts           # Icon-name → Lucide component lookup (ICON_MAP, getIconComponent)
+    │   ├── offline/              # Offline mode: write queue (sendWrite, outbox), saved reads, read barrier, runtime — see offline.md
+    │   ├── pwa/                  # Service worker registration, update prompt state, install, persistent storage
     │   ├── poll-interval.ts      # jitteredInterval — randomised refetchInterval, desynchronises pollers
     │   ├── query-client.ts       # React Query client configuration
     │   ├── query-keys.ts         # Canonical React Query key factory
     │   ├── sort-by-position.ts   # Stable fractional-index sort (position, id tiebreaker)
+    │   ├── task-writes.ts        # Shared sendWrite requests (taskCompletionWrite: complete/reopen with its sync label)
     │   ├── theme-constants.ts    # Theme labels & metadata shared by theme UI
     │   └── view-state.ts         # Pure view-state utilities for Saved Views
     ├── util/                     # Shared pure utilities
@@ -269,6 +280,8 @@ src/
     │   ├── ui/                   # Generic UI primitives
     │   │   ├── bulk-actions/     # BulkActionBar sub-components (PriorityDropdown, AssignDropdown, MoveToGroupDropdown)
     │   │   ├── command-palette/  # CommandPalette sub-components (constants, item-renderers)
+    │   ├── sync/                 # Offline sync UI: SyncStatusBadge, SyncNotices, OfflineUnavailable, useOnlineOnly, sign-out with unsynced writes, copyMyVersion
+    │   ├── pwa/                  # UpdatePrompt, InstallAppMenuItem / InstallHelpDialog
     │   ├── auth/                 # Auth page wrappers
     │   │   ├── index.ts
     │   │   └── AuthForm.tsx      # Shared auth form scaffold (validation, error handling, success view)
@@ -392,9 +405,9 @@ src/
 |---|---|---|
 | `routes/{domain}/` | Domain route module | Contains `{domain}.routes.ts` and `{domain}.handlers.ts`. Large handler files may be split into a `handlers/` subdirectory with the original file becoming a re-export barrel (e.g. `tasks/handlers/task-crud.ts`, `dashboard/handlers/workspace-dashboard.ts`). |
 | `routes/index.ts` | Route aggregator | Imports and mounts all domain routes. |
-| `middleware/` | Shared middleware | Cross-cutting concerns: auth, authorization (role guards plus the PAT workspace/project binding and scope guards), audit logging, request logging, rate limiting, validation, caching, telemetry, security headers. See [Middleware](../api/middleware.md). |
+| `middleware/` | Shared middleware | Cross-cutting concerns: auth, authorization (role guards plus the PAT workspace/project binding and scope guards), idempotent retries (`Idempotency-Key`), audit logging, request logging, rate limiting, validation, caching, telemetry, security headers. See [Middleware](../api/middleware.md). |
 | `test-utils/` | Shared API test utilities | Test database setup, fake data factories, database seeding, and HTTP request helpers. |
 | `lib/` | Shared utilities | Auth factory, email service, storage helpers, project access resolution (`access.ts`), webhook internals (`webhooks/` subdirectory with delivery and utils modules, re-exported via `webhooks.ts`), and payload builders (`webhook-payloads.ts`). Authorization *policy* that more than one route needs also lives here rather than as private handler helpers, so a rule stated once cannot disagree with itself: `workspace-roles.ts` holds the workspace role hierarchy (`outranks`, `mayGrantAdmin`) shared by the member endpoints and the invitation endpoint, `assignee-validation.ts` holds the "an assignee must be able to reach the task's project" rule shared by the task write paths, and `workspace-policy.ts` holds the single server-side read of `workspace.policy` behind an authorization decision, shared by the two routes that create projects. Note the split for that last one: the policy's *shape, defaults and resolver* live in `shared/types/workspace-policy.ts`, which the frontend context and the Zod schemas both type against, while this module holds only the D1 query — putting that in `shared/` would drag a `Database` import into browser code. |
 | `lib/email/` | Email service | Resend + console transports, with domain-specific templates (verification, password reset, workspace invitation). Sender resolution lives in its own leaf module `from.ts` — not in the barrel — so the transports can depend on it without importing the barrel back, and so every mail path resolves `From:` the same way. |
-| `scheduled/` | Cron-triggered tasks | Background maintenance (webhook retries, delivery cleanup, auth cleanup, notification cleanup, task activity cleanup, invitation cleanup). Entry point: `index.ts`. |
+| `scheduled/` | Cron-triggered tasks | Background maintenance (webhook retries, delivery cleanup, auth cleanup, notification cleanup, task activity cleanup, invitation cleanup, API token revocation, Idempotency-Key cleanup). Entry point: `index.ts`. |
 | `env.ts` | Environment types | Bindings, variables, and Hono env type. |

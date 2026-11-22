@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import type { Theme } from "@/shared/types/theme";
 import { Field, Input, Label, Textarea } from "@/web/components/form";
 import { Container, Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Alert, Button, Card, Dialog, Text } from "@/web/components/ui";
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { ThemeGrid } from "@/web/components/ui/ThemeGrid";
@@ -15,6 +16,7 @@ import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { useWorkspacePermissions } from "@/web/hooks/use-permissions";
 import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 
 import { MemberPermissionsCard } from "./components/MemberPermissionsCard";
@@ -39,6 +41,7 @@ export default function WorkspaceSettings() {
   const [description, setDescription] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [confirmText, setConfirmText] = useState("");
+  const onlineOnly = useOnlineOnly();
 
   // Sync form fields when workspace data arrives or changes
   const [prevWorkspaceId, setPrevWorkspaceId] = useState<string | null>(null);
@@ -84,7 +87,13 @@ export default function WorkspaceSettings() {
 
   const { mutate: updateTheme, isPending: themeSaving } = useMutation({
     mutationFn: (theme: Theme | null) =>
-      api.patch(`/api/workspaces/${workspace.id}`, { theme }),
+      sendWrite({
+        method: "PATCH",
+        path: `/api/workspaces/${workspace.id}`,
+        body: { theme },
+        label: "Change workspace theme",
+      }),
+    networkMode: "always",
     onMutate: async (newTheme) => {
       await qc.cancelQueries({ queryKey: queryKeys.workspaces.detail(workspace.id) });
       const previousData = qc.getQueryData(queryKeys.workspaces.detail(workspace.id));
@@ -101,7 +110,8 @@ export default function WorkspaceSettings() {
       }
       toast("Failed to update theme.", { variant: "error" });
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result.status === "queued") return;
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.detail(workspace.id) });
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.all });
       toast("Workspace theme updated.", { variant: "success" });
@@ -211,7 +221,13 @@ export default function WorkspaceSettings() {
               {saveError && <Alert variant="error">{saveError}</Alert>}
 
               {canManageWorkspace && (
-                <Button type="submit" variant="primary" size="md" disabled={saving}>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  disabled={saving || onlineOnly.disabled}
+                  title={onlineOnly.title}
+                >
                   {saving ? "Saving..." : "Save Changes"}
                 </Button>
               )}
@@ -252,7 +268,13 @@ export default function WorkspaceSettings() {
                 undone.
               </Text>
               <div>
-                <Button variant="danger" size="md" onClick={() => setDeleteDialogOpen(true)}>
+                <Button
+                  variant="danger"
+                  size="md"
+                  onClick={() => setDeleteDialogOpen(true)}
+                  disabled={onlineOnly.disabled}
+                  title={onlineOnly.title}
+                >
                   Delete Workspace
                 </Button>
               </div>
@@ -291,7 +313,8 @@ export default function WorkspaceSettings() {
                 variant="danger"
                 size="md"
                 onClick={() => void handleDelete()}
-                disabled={confirmText !== "DELETE" || deleting}
+                disabled={confirmText !== "DELETE" || deleting || onlineOnly.disabled}
+                title={onlineOnly.title}
               >
                 {deleting ? "Deleting..." : "Delete Workspace"}
               </Button>

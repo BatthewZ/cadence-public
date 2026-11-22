@@ -21,6 +21,7 @@
     "src/**/*.test.ts",
     "src/**/*.test.tsx",
     "src/api/test-utils.ts",
-    "src/web/test-setup.ts"
+    "src/web/test-setup.ts",
+    "src/web/vite-env.d.ts"
   ]
 }

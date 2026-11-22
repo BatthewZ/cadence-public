@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Bell } from "lucide-react";
+import { Bell, WifiOff } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -7,6 +7,7 @@ import { Popover } from "@/web/components/ui/Popover";
 import { useWorkspace, type WorkspacesResponse } from "@/web/contexts/WorkspaceContext";
 import { useNotificationMutations } from "@/web/hooks/use-notification-mutations";
 import { api } from "@/web/lib/api/client";
+import { useOnline } from "@/web/lib/offline/hooks";
 import { jitteredInterval } from "@/web/lib/poll-interval";
 import { queryKeys } from "@/web/lib/query-keys";
 
@@ -17,6 +18,7 @@ export function NotificationBell() {
   const navigate = useNavigate();
   const { workspace } = useWorkspace();
   const { markReadMutation, markAllReadMutation } = useNotificationMutations();
+  const online = useOnline();
 
   const { data: countData } = useQuery({
     queryKey: queryKeys.notifications.unreadCount,
@@ -109,16 +111,30 @@ export function NotificationBell() {
         </button>
       </Popover.Trigger>
       <Popover.Content>
-        <NotificationPanel
-          notifications={notifications}
-          isLoading={isLoading}
-          onMarkAllRead={() => markAllReadMutation.mutate()}
-          onMarkRead={(id) => markReadMutation.mutate(id)}
-          onNavigate={handleNavigate}
-          onClose={() => setOpen(false)}
-          hasUnread={unreadCount > 0}
-          viewAllHref={`/w/${workspace.slug}/notifications`}
-        />
+        {online || listData ? (
+          <NotificationPanel
+            notifications={notifications}
+            isLoading={isLoading}
+            onMarkAllRead={() => markAllReadMutation.mutate()}
+            onMarkRead={(id) => {
+              if (online) markReadMutation.mutate(id);
+            }}
+            onNavigate={handleNavigate}
+            onClose={() => setOpen(false)}
+            hasUnread={online && unreadCount > 0}
+            viewAllHref={`/w/${workspace.slug}/notifications`}
+          />
+        ) : (
+          <div className="notification-panel">
+            <div className="notification-panel-header">
+              <span className="notification-panel-header-title">Notifications</span>
+            </div>
+            <div className="notification-panel-empty" role="status">
+              <WifiOff size={32} className="notification-panel-empty-icon" />
+              <span className="notification-panel-empty-text">Notifications need a connection.</span>
+            </div>
+          </div>
+        )}
       </Popover.Content>
     </Popover>
   );

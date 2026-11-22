@@ -195,7 +195,7 @@ const createTaskRoute = createRoute({
   tags: ["Tasks"],
   summary: "Create a task",
   description:
-    "Create a new task inside a project. If the target task group is a completion group the task is marked completed on creation. When `recurrenceRule` is set but `dueDate` is omitted, today is used as the first occurrence.",
+    "Create a new task inside a project. If the target task group is a completion group the task is marked completed on creation. When `recurrenceRule` is set but `dueDate` is omitted, today is used as the first occurrence. An optional client-generated `id` (UUID) is used as the task's id.",
   security,
   middleware: [requireAuth, requireProjectRole("admin", "member")],
   request: {
@@ -216,6 +216,10 @@ const createTaskRoute = createRoute({
     404: {
       content: { "application/json": { schema: apiErrorResponseSchema } },
       description: "Task group not found in this project",
+    },
+    409: {
+      content: { "application/json": { schema: apiErrorResponseSchema } },
+      description: "The client-supplied `id` is already taken (`code: id_conflict`)",
     },
   },
 });
@@ -270,7 +274,7 @@ const updateTaskRoute = createRoute({
   tags: ["Tasks"],
   summary: "Update a task",
   description:
-    "Partial-update a task. Only fields included in the body are written; activity entries are logged per changed field. Webhook events are dispatched for `task.updated` and any derived events (e.g. `task.completed`, `task.assigned`).",
+    "Partial-update a task. Only fields included in the body are written; activity entries are logged per changed field. Send `descriptionBase` (the description the edit started from) alongside `description` to apply the patch only if the stored description still matches. Webhook events are dispatched for `task.updated` and any derived events (e.g. `task.completed`, `task.assigned`).",
   security,
   middleware: [requireAuth, requireTaskRole("admin", "member")],
   request: {
@@ -289,6 +293,10 @@ const updateTaskRoute = createRoute({
     401: unauthorizedResponse,
     403: forbiddenResponse,
     404: taskNotFoundResponse,
+    409: {
+      content: { "application/json": { schema: apiErrorResponseSchema } },
+      description: "`descriptionBase` no longer matches the stored description (`code: description_conflict`); nothing was applied and the body carries the current `task`",
+    },
   },
 });
 

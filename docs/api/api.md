@@ -42,7 +42,7 @@ A PAT in `Authorization: Bearer cdn_pat_…` takes precedence over any cookie on
 - [Assignee Validation](../../src/api/lib/assignee-validation.ts) -- single source of truth for "may this user hold a task in this project?". `canUserBeAssigned()` gates every request-supplied `assigneeId` (create + update; 400 on failure); `retainAssignableAssignee()` filters an *inherited* assignee on the duplicate, recurring-spawn and completion-notification paths, dropping it to `null` rather than failing the operation. Both delegate to `resolveProjectAccess`, so workspace owner/admin elevation is honoured without a `project_member` row and the access rules are never re-derived. See [Endpoints § Assignee rule](./endpoints.md#assignee-rule)
 - [Recurring Task Spawning](../../src/api/routes/tasks/helpers/spawn-recurring-instance.ts) -- `spawnNextRecurringInstance()` creates the next instance of a recurring task on completion (computes next due date, copies relations, guards against duplicate spawns via unique index); the spawned instance inherits the source assignee only while that person can still access the project, otherwise it spawns unassigned. `logRecurringInstanceCreated()` logs activity and notifies the **spawned** instance's assignee. `removeUntouchedRecurringInstance()` undoes a spawn on reopen (uncomplete, or move out of a completion group), deleting the instance only while `updatedAt = createdAt`
 - [Telemetry](../../src/api/lib/telemetry/index.ts) -- pluggable telemetry sink system with three backends: `AnalyticsEngineSink` (Cloudflare Analytics Engine), `ConsoleSink` (structured JSON to stdout), and `NoopSink` (silent discard). The sink is created per-request by `telemetryMiddleware` and stored in context as `c.get("telemetry")`. Events tracked: `http_request`, `webhook_delivery`, `webhook_retry`, `cron_run`, `cron_task`. Sink selection is driven by the `TELEMETRY_SINK` env var or auto-detected from the `ANALYTICS` binding. Types are defined in `src/api/lib/telemetry/types.ts`.
-- [Scheduled Handler](../../src/api/scheduled/index.ts) -- Cloudflare Cron Trigger handler (every 5 min) for webhook retry processing, delivery record cleanup, expired auth record cleanup (sessions + verification tokens), notification cleanup, task activity cleanup, and invitation cleanup. Each task is error-isolated so a single failure does not block others. Tracks `cron_task` and `cron_run` telemetry events.
+- [Scheduled Handler](../../src/api/scheduled/index.ts) -- Cloudflare Cron Trigger handler (every 5 min) for webhook retry processing, delivery record cleanup, expired auth record cleanup (sessions + verification tokens), notification cleanup, task activity cleanup, invitation cleanup, and expired `Idempotency-Key` cleanup. Each task is error-isolated so a single failure does not block others. Tracks `cron_task` and `cron_run` telemetry events.
 - [Legal Routes](../../src/api/routes/legal/legal.routes.ts) -- ToS status check and acceptance endpoints (`GET /api/legal/tos-status`, `POST /api/legal/accept-tos`), both require auth
 - [Config Route](../../src/api/routes/config/config.routes.ts) -- `GET /api/config` unauthenticated runtime feature flags (currently `features.unsplash`); `Cache-Control: private, max-age=300` so SPA navigation does not re-fetch but shared caches never store it
 - [Unsplash Routes](../../src/api/routes/unsplash/unsplash.routes.ts) -- `GET /api/unsplash/search` and `GET /api/unsplash/curated` proxy the Unsplash REST API; both require auth and share a 30 req/min per-user rate limit; normalise responses into `UnsplashCoverPayload` with mandatory UTM attribution
@@ -52,3 +52,39 @@ A PAT in `Authorization: Bearer cdn_pat_…` takes precedence over any cookie on
 - [Task Import Handler](../../src/api/routes/tasks/handlers/import.ts) -- `POST /api/projects/:projectId/tasks/import` bulk-creates up to 500 tasks from a client-parsed `.ics` calendar (server only ever sees validated JSON). Events carrying a `sourceUid` (ICS `UID`) dedupe per project via a partial unique index on (`projectId`, `source_uid`); all inserts run in one atomic D1 batch inside the position-conflict retry loop; no `task.created` webhook fan-out for bulk imports
 - [Unsplash Service](../../src/api/lib/unsplash.ts) -- `createUnsplashService(env)` factory that returns `null` when `UNSPLASH_ACCESS_KEY` is unset (callers surface 503), `appendUtm` / `toCoverPayload` normalisers, `UnsplashError` with upstream status, and `trackDownload` which MUST be safe to call via `waitUntil` and swallows all errors
 - [Cover Image Helpers](../../src/api/lib/cover-image.ts) -- shared `handleUploadCover` / `handleApplyUnsplashCover` / `handleDeleteCover` functions used by both project and task cover routes. Enforces the `coverImageKey` ↔ `coverUnsplash` XOR invariant in application code: every write funnels through a single `setEntityCover(db, { coverImageKey, coverUnsplash }, updatedAt)` callback that always writes BOTH fields so one source clears the other atomically. Apply-Unsplash fires `trackDownload()` via `deferWork` after the DB write succeeds.
+
+## Offline-safe writes
+
+The web client queues writes made offline and replays them through these same endpoints when the connection returns (design: [Offline](../architecture/offline.md)). Four server mechanisms make a replay safe; PAT clients can use them too. Every refusal below carries a machine-readable `code` next to `error` (values in `src/shared/constants/offline-sync.ts`).
+
+### `Idempotency-Key`
+
+Send `Idempotency-Key: <key>` on any `POST`, `PUT`, `PATCH` or `DELETE` under `/api/*` (except `/api/auth/*`) to make a retry of that request safe. Keys are 1–255 characters of `A–Z a–z 0–9 _ -`; the web client sends `crypto.randomUUID()`. Without the header nothing changes.
+
+Keys are scoped to the authenticated user, whether they arrive with a cookie session or a PAT (one user's PATs and browser sessions share one key space; two users never collide). Each key is bound to the request's method, path (query string included) and exact body bytes. Implemented by `src/api/middleware/idempotency.ts`, mounted after the auth session and before the PAT audit ledger.
+
+| A request with a key that… | Answer |
+|---|---|
+| has not been seen | Runs normally. A `2xx` JSON response of at most 1 MB is stored |
+| was seen, completed, same request | The stored status and body, with `Idempotent-Replayed: true`. The handler does not run again, so no second webhook, activity entry, notification or audit row |
+| was seen with a different method, path or body | `422`, `code: "idempotency_mismatch"` |
+| is still running (first seen under 60 s ago) | `409`, `code: "idempotency_in_progress"`, `Retry-After: 1` |
+| was left pending over 60 s ago (crashed attempt) | Taken over and run |
+| is malformed | `400` |
+
+A non-`2xx`, non-JSON or oversized response is not stored, so a retry with the same key runs the handler again. That includes a `204 No Content` (e.g. deleting a webhook): its retry runs the delete again and typically answers `404`. A key whose response was not stored is released, so the next request with it, whatever its body, runs as new. A replay carries only the stored status and JSON body, plus `Idempotent-Replayed: true`; other headers of the first response are not stored. Completed keys are kept for 30 days (`IDEMPOTENCY_TTL_DAYS`), then removed by the scheduled handler; a retry after that runs again, which client-supplied ids below turn into a `409` rather than a duplicate. A request with no authenticated user ignores the header and is handled as if it had none.
+
+Multipart bodies are fingerprinted byte for byte, boundary included, so a retry must resend the identical bytes or it is a mismatch.
+
+### Client-supplied ids
+
+`POST` creates for tasks, subtasks, comments, task groups, project labels and saved views accept an optional `id` (UUID). The row is created with that id, so an offline client can move, edit or comment on a row before the server has seen it. If any row of that type already has the id — in any project — the create answers `409`, `code: "id_conflict"`, and writes nothing.
+
+### Description compare-and-set
+
+`PATCH /api/tasks/:taskId` accepts `descriptionBase`: the description the edit started from. Sent together with `description`, the patch applies only if the stored description still equals it (`null` and `""` count as equal); otherwise the answer is `409`, `code: "description_conflict"`, nothing in the patch is applied, and the body carries the current task under `task` in the `GET /api/tasks/:taskId` shape. `descriptionBase` is never stored and never appears in webhook `changes`. See [Endpoints](./endpoints.md#patch-apitaskstaskid).
+
+### Stale positions and deletes
+
+- **Positions.** `PATCH /api/tasks/:taskId/move`, `PATCH /api/task-groups/:taskGroupId/reorder` and a `position` on `PATCH /api/subtasks/:subtaskId` write the client's fractional index. When a sibling already holds it, the row lands immediately after it instead of failing.
+- **Freshness.** `GET /api/projects/:projectId/freshness` also returns `taskCount` and `taskGroupCount`, and `GET /api/workspaces/:workspaceId/freshness` returns `projectCount` and `taskCount`. Deletes are hard and move no `updatedAt`, so a changed count is how a poller sees one. See [Endpoints](./endpoints.md#get-apiprojectsprojectidfreshness).

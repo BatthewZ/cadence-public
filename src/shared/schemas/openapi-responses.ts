@@ -23,6 +23,7 @@
 
 import { z } from "@hono/zod-openapi";
 
+import { WRITE_ERROR_CODES } from "../constants/offline-sync";
 import { PROJECT_ROLES, PROJECT_STATUSES, TASK_PRIORITIES, WORKSPACE_ROLES } from "../types/roles";
 import { THEMES } from "../types/theme";
 import type { WorkspacePolicy } from "../types/workspace-policy";
@@ -60,6 +61,9 @@ export const apiErrorResponseSchema = z
     error: z.string().openapi({ description: "Human-readable error message" }),
     requestId: z.string().optional().openapi({
       description: "Correlation id for the failing request. Surface this when filing a support ticket.",
+    }),
+    code: z.enum(Object.values(WRITE_ERROR_CODES)).optional().openapi({
+      description: "Machine-readable reason, present on refusals a retrying client must tell apart from a plain error.",
     }),
   })
   .openapi("ApiErrorResponse");

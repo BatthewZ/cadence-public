@@ -16,6 +16,15 @@ vi.mock("@/web/lib/auth/auth-client", () => ({
   useSession: (): unknown => mockUseSession(),
 }));
 
+const mockOfflineProvider = vi.fn();
+
+vi.mock("@/web/lib/offline/OfflineProvider", () => ({
+  OfflineProvider: (props: { userId: string; children: React.ReactNode }) => {
+    mockOfflineProvider(props.userId);
+    return <>{props.children}</>;
+  },
+}));
+
 import { AuthGuard } from "./AuthGuard";
 
 describe("AuthGuard", () => {
@@ -31,6 +40,16 @@ describe("AuthGuard", () => {
 
     render(<AuthGuard><span>Protected</span></AuthGuard>);
     expect(screen.getByText("Protected")).toBeInTheDocument();
+  });
+
+  it("starts offline mode for the signed-in account", () => {
+    mockUseSession.mockReturnValue({
+      data: { user: { id: "user-7" } },
+      isPending: false,
+    });
+
+    render(<AuthGuard><span>Protected</span></AuthGuard>);
+    expect(mockOfflineProvider).toHaveBeenCalledWith("user-7");
   });
 
   it("redirects to login when user is not authenticated", () => {

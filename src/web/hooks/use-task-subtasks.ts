@@ -3,20 +3,23 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
-import type { UseMutationResult } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 
 import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import type { Subtask, Task } from "@/web/contexts/ProjectContext";
 import { useDndSensors } from "@/web/hooks/use-dnd-sensors";
-import { api } from "@/web/lib/api/client";
+import { apiErrorMessage } from "@/web/lib/api/client";
 import { freshnessTracker } from "@/web/lib/freshness-tracker";
+import { sendWrite } from "@/web/lib/offline/send-write";
+import { queryKeys } from "@/web/lib/query-keys";
 import { sortByPosition } from "@/web/lib/sort-by-position";
 import type { TaskDetail } from "@/web/pages/TaskDetail/types";
 
 interface UseTaskSubtasksOptions {
   taskId: string;
   localTask: TaskDetail | null;
+  /** From `useLocalTask`: it writes each edit to the task's detail query, which the card counts are read from. */
   setLocalTask: React.Dispatch<React.SetStateAction<TaskDetail | null>>;
   updateTaskInContext: (taskId: string, updates: Partial<Task>) => void;
   invalidateTaskQueries: () => void;
@@ -24,11 +27,6 @@ interface UseTaskSubtasksOptions {
     message: string,
     options?: { variant?: "info" | "success" | "warning" | "error" },
   ) => string;
-  createSubtask: UseMutationResult<
-    { subtask: Subtask },
-    Error,
-    { title: string }
-  >;
 }
 
 /**
@@ -36,10 +34,9 @@ interface UseTaskSubtasksOptions {
  * DnD sensors, sorted subtask memos, active drag state, and CRUD
  * operations with optimistic updates and rollback.
  *
- * Extracted from TaskDetailPanelInner to keep the component focused on
- * rendering while this hook owns the subtask domain logic. The optimistic
- * update/rollback pattern for each operation ensures the UI stays
- * responsive and self-corrects on API failures.
+ * Every write goes through `sendWrite`, so it also works offline: a queued
+ * write keeps its optimistic state and skips the refetch (the queue's drain
+ * refreshes the cache); only a refusal rolls back.
  */
 export function useTaskSubtasks({
   taskId,
@@ -48,9 +45,20 @@ export function useTaskSubtasks({
   updateTaskInContext,
   invalidateTaskQueries,
   toast,
-  createSubtask,
 }: UseTaskSubtasksOptions) {
   const subtaskSensors = useDndSensors();
+  const qc = useQueryClient();
+
+  // The board card's counts, copied from the subtasks as they stand after an edit, never worked
+  // out from a captured list: that miscounted a rollback and edits made before an earlier one settled.
+  const syncCardCounts = useCallback(() => {
+    const current = qc.getQueryData<{ task: TaskDetail }>(queryKeys.tasks.detail(taskId))?.task.subtasks;
+    if (!current) return;
+    updateTaskInContext(taskId, {
+      subtaskCount: current.length,
+      subtaskCompletedCount: current.filter((s) => s.completed).length,
+    });
+  }, [qc, taskId, updateTaskInContext]);
 
   const subtasks = localTask?.subtasks;
   const sortedSubtasks = useMemo(
@@ -72,8 +80,6 @@ export function useTaskSubtasks({
   const handleSubtaskToggle = useCallback(
     async (subtask: Subtask) => {
       freshnessTracker.recordMutation("tasks");
-      const completedCount =
-        localTask?.subtasks.filter((s) => s.completed).length ?? 0;
       // Optimistic toggle
       setLocalTask((prev) => {
         if (!prev) return prev;
@@ -84,17 +90,16 @@ export function useTaskSubtasks({
           ),
         };
       });
-      updateTaskInContext(taskId, {
-        subtaskCompletedCount: subtask.completed
-          ? Math.max(0, completedCount - 1)
-          : completedCount + 1,
-      });
+      syncCardCounts();
       try {
-        await api.patch(`/api/subtasks/${subtask.id}`, {
-          completed: !subtask.completed,
+        const result = await sendWrite({
+          method: "PATCH",
+          path: `/api/subtasks/${subtask.id}`,
+          body: { completed: !subtask.completed },
+          label: `${subtask.completed ? "Reopen" : "Complete"} subtask “${subtask.title}”`,
         });
-        invalidateTaskQueries();
-      } catch {
+        if (result.status === "sent") invalidateTaskQueries();
+      } catch (err) {
         // Revert
         setLocalTask((prev) => {
           if (!prev) return prev;
@@ -105,18 +110,11 @@ export function useTaskSubtasks({
             ),
           };
         });
-        updateTaskInContext(taskId, { subtaskCompletedCount: completedCount });
-        toast("Failed to update subtask", { variant: "error" });
+        syncCardCounts();
+        toast(apiErrorMessage(err, "Failed to update subtask"), { variant: "error" });
       }
     },
-    [
-      taskId,
-      localTask?.subtasks,
-      setLocalTask,
-      updateTaskInContext,
-      invalidateTaskQueries,
-      toast,
-    ],
+    [setLocalTask, syncCardCounts, invalidateTaskQueries, toast],
   );
 
   const handleAddSubtask = useCallback(async () => {
@@ -131,7 +129,7 @@ export function useTaskSubtasks({
         ? sortedSubtasks[sortedSubtasks.length - 1].position
         : null;
     const optimisticSubtask: Subtask = {
-      id: `optimistic-${crypto.randomUUID()}`,
+      id: crypto.randomUUID(),
       title,
       completed: false,
       position: generateKeyBetween(lastPosition, null),
@@ -140,23 +138,27 @@ export function useTaskSubtasks({
       if (!prev) return prev;
       return { ...prev, subtasks: [...prev.subtasks, optimisticSubtask] };
     });
-    updateTaskInContext(taskId, {
-      subtaskCount: (localTask?.subtasks.length ?? 0) + 1,
-    });
+    syncCardCounts();
 
     try {
-      const result = await createSubtask.mutateAsync({ title });
-      // Replace optimistic subtask with server-returned subtask
-      setLocalTask((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          subtasks: prev.subtasks.map((s) =>
-            s.id === optimisticSubtask.id ? result.subtask : s,
-          ),
-        };
+      const result = await sendWrite<{ subtask: Subtask }>({
+        method: "POST",
+        path: `/api/tasks/${taskId}/subtasks`,
+        body: { id: optimisticSubtask.id, title },
+        label: `Add subtask “${title}”`,
       });
-    } catch {
+      if (result.status === "sent") {
+        const { subtask } = result.data;
+        setLocalTask((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            subtasks: prev.subtasks.map((s) => (s.id === subtask.id ? { ...s, ...subtask } : s)),
+          };
+        });
+        invalidateTaskQueries();
+      }
+    } catch (err) {
       // Remove optimistic subtask on failure
       setLocalTask((prev) => {
         if (!prev) return prev;
@@ -165,19 +167,16 @@ export function useTaskSubtasks({
           subtasks: prev.subtasks.filter((s) => s.id !== optimisticSubtask.id),
         };
       });
-      updateTaskInContext(taskId, {
-        subtaskCount: Math.max(0, (localTask?.subtasks.length ?? 1) - 1),
-      });
-      toast("Failed to add subtask", { variant: "error" });
+      syncCardCounts();
+      toast(apiErrorMessage(err, "Failed to add subtask"), { variant: "error" });
     }
   }, [
     newSubtaskTitle,
     sortedSubtasks,
     taskId,
-    localTask?.subtasks.length,
     setLocalTask,
-    updateTaskInContext,
-    createSubtask,
+    syncCardCounts,
+    invalidateTaskQueries,
     toast,
   ]);
 
@@ -197,41 +196,26 @@ export function useTaskSubtasks({
           subtasks: prev.subtasks.filter((s) => s.id !== subtaskId),
         };
       });
-      updateTaskInContext(taskId, {
-        subtaskCount: Math.max(0, (localTask?.subtasks.length ?? 1) - 1),
-        subtaskCompletedCount: removedSubtask.completed
-          ? Math.max(
-              0,
-              (localTask?.subtasks.filter((s) => s.completed).length ?? 1) - 1,
-            )
-          : (localTask?.subtasks.filter((s) => s.completed).length ?? 0),
-      });
+      syncCardCounts();
 
       try {
-        await api.delete(`/api/subtasks/${subtaskId}`);
-        invalidateTaskQueries();
-      } catch {
+        const result = await sendWrite({
+          method: "DELETE",
+          path: `/api/subtasks/${subtaskId}`,
+          label: `Delete subtask “${removedSubtask.title}”`,
+        });
+        if (result.status === "sent") invalidateTaskQueries();
+      } catch (err) {
         // Restore on failure
         setLocalTask((prev) => {
           if (!prev) return prev;
           return { ...prev, subtasks: [...prev.subtasks, removedSubtask] };
         });
-        updateTaskInContext(taskId, {
-          subtaskCount: localTask?.subtasks.length ?? 0,
-          subtaskCompletedCount:
-            localTask?.subtasks.filter((s) => s.completed).length ?? 0,
-        });
-        toast("Failed to delete subtask", { variant: "error" });
+        syncCardCounts();
+        toast(apiErrorMessage(err, "Failed to delete subtask"), { variant: "error" });
       }
     },
-    [
-      taskId,
-      localTask?.subtasks,
-      setLocalTask,
-      updateTaskInContext,
-      invalidateTaskQueries,
-      toast,
-    ],
+    [localTask?.subtasks, setLocalTask, syncCardCounts, invalidateTaskQueries, toast],
   );
 
   const handleRenameSubtask = useCallback(
@@ -250,9 +234,14 @@ export function useTaskSubtasks({
         };
       });
       try {
-        await api.patch(`/api/subtasks/${subtaskId}`, { title });
-        invalidateTaskQueries();
-      } catch {
+        const result = await sendWrite({
+          method: "PATCH",
+          path: `/api/subtasks/${subtaskId}`,
+          body: { title },
+          label: `Rename subtask “${oldTitle ?? title}”`,
+        });
+        if (result.status === "sent") invalidateTaskQueries();
+      } catch (err) {
         setLocalTask((prev) => {
           if (!prev) return prev;
           return {
@@ -262,7 +251,7 @@ export function useTaskSubtasks({
             ),
           };
         });
-        toast("Failed to rename subtask", { variant: "error" });
+        toast(apiErrorMessage(err, "Failed to rename subtask"), { variant: "error" });
       }
     },
     [localTask?.subtasks, setLocalTask, invalidateTaskQueries, toast],
@@ -306,11 +295,14 @@ export function useTaskSubtasks({
       });
 
       try {
-        await api.patch(`/api/subtasks/${movedSubtask.id}`, {
-          position: newPosition,
+        const result = await sendWrite({
+          method: "PATCH",
+          path: `/api/subtasks/${movedSubtask.id}`,
+          body: { position: newPosition },
+          label: `Reorder subtask “${movedSubtask.title}”`,
         });
-        invalidateTaskQueries();
-      } catch {
+        if (result.status === "sent") invalidateTaskQueries();
+      } catch (err) {
         setLocalTask((prev) => {
           if (!prev) return prev;
           return {
@@ -322,7 +314,7 @@ export function useTaskSubtasks({
             ),
           };
         });
-        toast("Failed to reorder subtask", { variant: "error" });
+        toast(apiErrorMessage(err, "Failed to reorder subtask"), { variant: "error" });
       }
     },
     [localTask, sortedSubtasks, setLocalTask, invalidateTaskQueries, toast],

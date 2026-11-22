@@ -5,6 +5,7 @@ import { type FormEvent, useState } from "react";
 import { type ProjectRole, ROLE_LABELS } from "@/shared/types/roles";
 import { Field, Label, Select } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import {
   Alert,
   Avatar,
@@ -43,6 +44,7 @@ export function MembersTab({
   const [addRole, setAddRole] = useState<ProjectRole>("member");
   const [roleMember, setRoleMember] = useState<ProjectMember | null>(null);
   const [newRole, setNewRole] = useState<ProjectRole>("member");
+  const onlineOnly = useOnlineOnly();
 
   // Used only to hide "Change Role" on the viewer's own row, mirroring the
   // server's refusal to let anyone re-role themselves (see `updateMemberRole`
@@ -184,7 +186,13 @@ export function MembersTab({
         return (
           <DropdownMenu>
             <DropdownMenu.Trigger asChild>
-              <Button variant="ghost" size="sm" aria-label={`Actions for ${row.name}`}>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={`Actions for ${row.name}`}
+                disabled={onlineOnly.disabled}
+                title={onlineOnly.title}
+              >
                 ...
               </Button>
             </DropdownMenu.Trigger>
@@ -279,7 +287,13 @@ export function MembersTab({
         <Text variant="body-2" color="secondary">
           {members.length} {members.length === 1 ? "member" : "members"}
         </Text>
-        <Button variant="primary" size="md" onClick={() => setAddDialogOpen(true)}>
+        <Button
+          variant="primary"
+          size="md"
+          onClick={() => setAddDialogOpen(true)}
+          disabled={onlineOnly.disabled}
+          title={onlineOnly.title}
+        >
           Add Member
         </Button>
       </Row>
@@ -331,7 +345,13 @@ export function MembersTab({
               >
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" size="md" disabled={adding}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                disabled={adding || onlineOnly.disabled}
+                title={onlineOnly.title}
+              >
                 {adding ? "Adding..." : "Add Member"}
               </Button>
             </Row>

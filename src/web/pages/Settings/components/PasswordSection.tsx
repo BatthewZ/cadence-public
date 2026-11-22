@@ -3,6 +3,7 @@ import { useState } from "react";
 import { changePasswordSchema } from "@/shared/schemas/user";
 import { Field, FieldError, Label, PasswordInput } from "@/web/components/form";
 import { Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Alert, Button, Card, Text } from "@/web/components/ui";
 import { changePassword } from "@/web/lib/auth/auth-client";
 
@@ -13,6 +14,7 @@ export function PasswordSection() {
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [success, setSuccess] = useState("");
+  const onlineOnly = useOnlineOnly();
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -104,7 +106,13 @@ export function PasswordSection() {
             {error && <Alert variant="error">{error}</Alert>}
             {success && <Alert variant="success">{success}</Alert>}
 
-            <Button type="submit" variant="primary" size="md" disabled={loading}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+              disabled={loading || onlineOnly.disabled}
+              title={onlineOnly.title}
+            >
               {loading ? "Changing..." : "Change Password"}
             </Button>
           </Stack>

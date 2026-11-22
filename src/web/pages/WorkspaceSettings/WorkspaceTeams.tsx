@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 
 import { Container, Row, Stack } from "@/web/components/layout";
+import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import {
   Accordion,
   Button,
@@ -40,6 +41,7 @@ export default function WorkspaceTeams() {
   const { toast } = useToast();
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const onlineOnly = useOnlineOnly();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addMemberDialogOpen, setAddMemberDialogOpen] = useState(false);
@@ -206,7 +208,13 @@ export default function WorkspaceTeams() {
 
         <Row justify="between" align="center">
           <Text variant="h4">Teams</Text>
-          <Button variant="primary" size="md" onClick={openCreateDialog}>
+          <Button
+            variant="primary"
+            size="md"
+            onClick={openCreateDialog}
+            disabled={onlineOnly.disabled}
+            title={onlineOnly.title}
+          >
             + Create Team
           </Button>
         </Row>
@@ -218,7 +226,13 @@ export default function WorkspaceTeams() {
               Create teams to organize workspace members into groups.
             </EmptyStateDescription>
             <EmptyStateActions>
-              <Button variant="primary" size="md" onClick={openCreateDialog}>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={openCreateDialog}
+                disabled={onlineOnly.disabled}
+                title={onlineOnly.title}
+              >
                 Create Your First Team
               </Button>
             </EmptyStateActions>

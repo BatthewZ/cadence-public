@@ -12,7 +12,8 @@ import { ThemeGrid } from "@/web/components/ui/ThemeGrid";
 import type { useToast } from "@/web/components/ui/ToastContext";
 import type { useProject } from "@/web/contexts/ProjectContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
-import { api } from "@/web/lib/api/client";
+import { apiErrorMessage } from "@/web/lib/api/client";
+import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 import { THEME_LABELS } from "@/web/lib/theme-constants";
 
@@ -31,8 +32,14 @@ export function AppearanceTab({
   const { workspace } = useWorkspace();
 
   const { mutate: updateTheme, isPending: themeSaving } = useMutation({
+    networkMode: "always",
     mutationFn: (theme: Theme | null) =>
-      api.patch(`/api/projects/${projectId}`, { theme }),
+      sendWrite({
+        method: "PATCH",
+        path: `/api/projects/${projectId}`,
+        body: { theme },
+        label: `Change theme of “${project.name}”`,
+      }),
     onMutate: async (newTheme) => {
       await qc.cancelQueries({ queryKey: queryKeys.projects.detail(projectId) });
       const previousData = qc.getQueryData(queryKeys.projects.detail(projectId));
@@ -43,16 +50,15 @@ export function AppearanceTab({
       );
       return { previousData };
     },
-    onError: (_err, _newTheme, context) => {
+    onError: (err, _newTheme, context) => {
       if (context?.previousData) {
         qc.setQueryData(queryKeys.projects.detail(projectId), context.previousData);
       }
-      toast("Failed to update theme.", { variant: "error" });
+      toast(apiErrorMessage(err, "Failed to update theme."), { variant: "error" });
     },
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: queryKeys.projects.detail(projectId) });
+    onSuccess: (result) => {
       toast("Project theme updated.", { variant: "success" });
-      refetch();
+      if (result.status === "sent") refetch();
     },
   });
 
