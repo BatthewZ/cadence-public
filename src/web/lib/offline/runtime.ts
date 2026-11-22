@@ -5,6 +5,7 @@ import { requestPersistentStorage } from "@/web/lib/pwa";
 
 import { deleteOfflineDb, type OfflineDb, openOfflineDb } from "./idb";
 import { Outbox } from "./outbox";
+import { startOfflinePrefetch } from "./prefetch";
 import { persistQueryCache } from "./query-persister";
 import { setReadBarrier } from "./read-barrier";
 
@@ -74,8 +75,11 @@ async function boot(runtime: Runtime, queryClient: QueryClient): Promise<void> {
   runtime.outbox = outbox;
   setReadBarrier(outbox.whenSettled);
   await outbox.start();
+  // Keeps every visible project readable offline, not only the ones opened while connected.
+  const stopPrefetch = startOfflinePrefetch({ qc: queryClient, db, outbox, isCurrent: () => current === runtime });
 
   runtime.stop = () => {
+    stopPrefetch();
     stopOnline();
     stopPersisting();
     // A newer runtime that already booted has set its own barrier.

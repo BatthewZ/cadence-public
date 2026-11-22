@@ -1497,7 +1497,8 @@ Lists all tasks in a project, ordered by position. Supports optional query-param
 | `assigneeId` | `string` | Filter by assignee |
 | `completed` | `string` | Filter by completion state (`"true"` or `"false"`) |
 | `priority` | `string` | Filter by priority (`urgent`, `high`, `medium`, `low`, `none`) |
-| `labelIds` | `string` | Comma-separated label IDs — only tasks with all specified labels |
+| `labelId` | `string` | Comma-separated label IDs — tasks with any of them |
+| `include` | `string` | `subtasks`: each task also carries `subtasks`, its subtask rows ordered as [`GET /api/tasks/:taskId`](#get-apitaskstaskid) returns them, so one request has every task's detail. The web app uses it to keep projects readable offline. |
 
 **Response** (200):
 
@@ -1505,7 +1506,7 @@ Lists all tasks in a project, ordered by position. Supports optional query-param
 { "tasks": [ { "id": "...", "title": "...", "status": "...", "recurrenceRule": null, "labels": [], "..." } ] }
 ```
 
-Each task object includes `recurrenceRule` (parsed object or `null`) and `labels` (array of label objects).
+Each task object includes `recurrenceRule` (parsed object or `null`) and `labels` (array of label objects), plus `subtasks` with `include=subtasks`.
 
 ### `GET /api/tasks/:taskId`
 

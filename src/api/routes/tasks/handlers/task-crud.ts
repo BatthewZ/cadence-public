@@ -313,6 +313,25 @@ export async function listTasks(c: Context<AppEnv>) {
     .where(and(...conditions))
     .orderBy(asc(task.position), asc(task.id));
 
+  // `include=subtasks`: every task's subtasks in one query, so the list carries each task's detail.
+  let subtasksByTask: Map<string, (typeof subtask.$inferSelect)[]> | null = null;
+  if (c.req.query("include") === "subtasks") {
+    subtasksByTask = new Map();
+    if (tasks.length > 0) {
+      const rows = await db
+        .select(getTableColumns(subtask))
+        .from(subtask)
+        .innerJoin(task, eq(subtask.taskId, task.id))
+        .where(eq(task.projectId, projectId))
+        .orderBy(asc(subtask.position), asc(subtask.id));
+      for (const row of rows) {
+        const list = subtasksByTask.get(row.taskId);
+        if (list) list.push(row);
+        else subtasksByTask.set(row.taskId, [row]);
+      }
+    }
+  }
+
   // Parse labels JSON and recurrenceRule JSON for each task
   const tasksWithLabels = tasks.map((t) => {
     const { labelsJson, recurrenceRule: recurrenceRuleJson, ...rest } = t;
@@ -324,7 +343,8 @@ export async function listTasks(c: Context<AppEnv>) {
         labels = [];
       }
     }
-    return { ...rest, recurrenceRule: parseRecurrenceRule(recurrenceRuleJson), labels };
+    const withLabels = { ...rest, recurrenceRule: parseRecurrenceRule(recurrenceRuleJson), labels };
+    return subtasksByTask ? { ...withLabels, subtasks: subtasksByTask.get(t.id) ?? [] } : withLabels;
   });
 
   return c.json({ tasks: tasksWithLabels });

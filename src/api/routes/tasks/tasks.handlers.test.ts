@@ -404,6 +404,23 @@ describe("listTasks", () => {
     expect(body.tasks.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("with include=subtasks, carries each task's subtasks in detail order; without it, none", async () => {
+    const withSubs = await seedTask(d1, projectId, taskGroupId, { title: "List Task With Subtasks", position: "a2" });
+    await seedSubtask(d1, withSubs, { title: "Second", position: "a1" });
+    await seedSubtask(d1, withSubs, { title: "First", position: "a0" });
+    const app = new Hono<AppEnv>();
+    app.get("/projects/:projectId/tasks", auth(), listTasks);
+
+    const res = await app.request(`/projects/${projectId}/tasks?include=subtasks`);
+    expect(res.status).toBe(200);
+    const body = await res.json<{ tasks: { id: string; subtasks?: { title: string }[] }[] }>();
+    expect(body.tasks.find((t) => t.id === withSubs)?.subtasks?.map((s) => s.title)).toEqual(["First", "Second"]);
+    expect(body.tasks.every((t) => Array.isArray(t.subtasks))).toBe(true);
+
+    const plain = await (await app.request(`/projects/${projectId}/tasks`)).json<{ tasks: { subtasks?: unknown }[] }>();
+    expect(plain.tasks.every((t) => t.subtasks === undefined)).toBe(true);
+  });
+
   it("filters by taskGroupId", async () => {
     const app = new Hono<AppEnv>();
     app.get("/projects/:projectId/tasks", auth(), listTasks);

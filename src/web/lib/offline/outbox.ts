@@ -123,6 +123,7 @@ export class Outbox {
   private readonly waiters = new Map<string, Waiter>();
   /** Awaited writes a drain has taken up to settle: no longer subject to the deadline, still `sending`. */
   private claimed = 0;
+  private writesStored = 0;
   private stopped = false;
   private readonly channel: ChannelLike | null;
   private readonly fetchImpl: typeof fetch;
@@ -190,6 +191,14 @@ export class Outbox {
     return this.status.pending + this.uncommitted - this.liveCount() <= 0;
   }
 
+  /**
+   * Goes up whenever a write is made on this device. A background read started before it may
+   * hold the pre-write state, so it mustn't be written over the optimistic one (see prefetch.ts).
+   */
+  writesMade(): number {
+    return this.writesStored;
+  }
+
   async list(): Promise<QueuedWrite[]> {
     const rows = await this.deps.db.getAll<QueuedWrite>(OUTBOX_STORE);
     return rows.sort(byReplayOrder);
@@ -253,6 +262,7 @@ export class Outbox {
       ...(batch && { batch }),
     }));
     // Synchronous up to `addAll`: `canSendNow` must count these from the moment they're made.
+    this.writesStored += rows.length;
     this.trackUncommitted(rows.length);
     try {
       // One transaction, so no later write can be stored between a batch's rows.

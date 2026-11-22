@@ -115,6 +115,11 @@ const listTasksQuerySchema = z.object({
     param: { name: "labelId", in: "query" },
     description: "Comma-separated list of label IDs; tasks matching any are returned",
   }),
+  include: z.enum(["subtasks"]).optional().openapi({
+    param: { name: "include", in: "query" },
+    description:
+      "`subtasks` adds each task's subtask rows (ordered as `GET /tasks/{taskId}` returns them), so one request carries every task's detail. The web app uses it to keep projects readable offline.",
+  }),
 });
 
 const unauthorizedResponse = {

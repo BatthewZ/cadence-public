@@ -286,6 +286,9 @@ export const taskListItemSchema = taskSchema
     commentCount: z.number().int().nonnegative(),
     attachmentCount: z.number().int().nonnegative(),
     labels: z.array(taskLabelInfoSchema),
+    subtasks: z.array(z.record(z.string(), z.unknown())).optional().openapi({
+      description: "Only with `include=subtasks`: the task's subtask rows; see Subtask schema for shape.",
+    }),
   })
   .openapi("TaskListItem");
 

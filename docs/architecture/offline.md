@@ -18,7 +18,7 @@ and webhooks as sending it live.
 | Task groups (create, rename, recolor, reorder, delete) | Members, teams, invitations, roles |
 | Saved views | Webhooks, API tokens, calendar feed |
 | Project fields and themes, project reorder | Account settings, sessions, sign-out, ToS acceptance |
-| Reading every project, board, list, timeline, calendar, task and dashboard opened on this device before | Notifications, activity feeds |
+| Reading every project you can see (its board, list, timeline, calendar and task panels, kept fresh in the background while online), and any dashboard opened on this device before | Notifications, activity feeds |
 
 ## The pieces
 
@@ -30,6 +30,7 @@ src/web/lib/offline/
   outbox.ts            the queue: replay order, retries, refusals, cross-tab lock, status
   read-barrier.ts      GETs wait while the queue is draining
   query-persister.ts   saves and restores the React Query cache (persisted-queries.ts says which queries)
+  prefetch.ts          background refresh: loads every visible project's board and task panels while online
   runtime.ts           starts all of it per signed-in account; wipeOfflineData() for sign-out
   OfflineProvider.tsx  mounted by AuthGuard; renders once the saved cache is back in memory
   hooks.ts             useOnline, useSyncStatus, useQueuedWrites, useSyncActions, useSyncRefusals
@@ -104,6 +105,28 @@ the drain lands.
   API stays compatible.
 - Queries pause while offline (TanStack `networkMode: "online"`). A screen whose data was never loaded on this
   device shows `OfflineUnavailable` instead of a spinner.
+
+## Background refresh
+
+Opening a project while connected used to be the only way to have it offline. `prefetch.ts` loads every project the
+person can see in the background, into the same queries the screens read, so the persister saves them as usual.
+
+- **When:** 5 s after the runtime starts, every 15 minutes, and 5 s after the connection returns. Not with data saver
+  on, not offline, and not while writes wait to sync. The server's copy lacks those writes, so loading it would hide
+  them on screen; the pass is retried 30 s later.
+- **What:** per workspace, the workspace, its members and its projects (skipped if loaded in the last 5 minutes). Per
+  project: the project, members, task groups, labels, saved views, and the task list with `include=subtasks`. That
+  list fills the board's query (without the subtasks) and each task's detail query, which is what the task panel
+  shows. Details are kept for open tasks and the 10 most recently completed, which is what the Done column shows.
+  Two projects load at a time.
+- **Skipping unchanged projects:** each project's freshness (`GET /api/projects/:id/freshness`) is compared with the
+  one stored at its last load (`prefetch:project:<id>` in the `kv` store). An unchanged project is skipped unless that
+  load is over an hour old, because freshness doesn't see every edit (subtasks, labels, members).
+- **Never over newer state:** a load is dropped if a write was made on this device while it was in flight
+  (`Outbox.writesMade`), because it may predate the edit. A task's detail newer than the load is kept, and nothing is
+  written once the account's runtime has stopped. One project failing doesn't stop the others; going offline or
+  losing the session ends the pass.
+- Comments, activity, dashboards and My Tasks are not prefetched; they are still available offline once opened.
 - Mutations use `networkMode: "always"`, so an online-only action fails at once with "You're offline — this needs a
   connection." (`OfflineError`), rather than pausing and firing whenever the connection returns.
 
