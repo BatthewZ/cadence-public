@@ -74,6 +74,12 @@ wrangler secret put BETTER_AUTH_URL
 
 Enter your production URL (e.g. `https://your-app.your-domain.com` or `https://cadence.your-subdomain.workers.dev`).
 
+```bash
+wrangler secret put TOKEN_HASH_PEPPER
+```
+
+Enter a strong random string (e.g. the output of `openssl rand -base64 48`), and keep a copy in your password manager. It is mixed into every API token and calendar feed token hash. If it is unset, creating or using those tokens returns a 500. Changing it later invalidates every existing token.
+
 Optionally, if you have additional trusted origins (e.g. for CORS):
 
 ```bash
