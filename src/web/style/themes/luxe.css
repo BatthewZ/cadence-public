@@ -60,9 +60,14 @@
   --RADIUS-XL: 0.875rem;
 
   /* Shadows — warm candlelight glow */
-  --SHADOW-SM: 0 1px 4px 0 oklch(0.1794 0.0165 296.16 / 0.4), 0 0 0 1px oklch(0.756 0.1093 80.19 / 0.03);
-  --SHADOW-MD: 0 4px 12px -2px oklch(0.1794 0.0165 296.16 / 0.5), 0 2px 4px -1px oklch(0.756 0.1093 80.19 / 0.04);
-  --SHADOW-LG: 0 14px 28px -6px oklch(0.1794 0.0165 296.16 / 0.6), 0 4px 8px -4px oklch(0.756 0.1093 80.19 / 0.05);
+  --SHADOW-SM:
+    0 1px 4px 0 oklch(0.1794 0.0165 296.16 / 0.4), 0 0 0 1px oklch(0.756 0.1093 80.19 / 0.03);
+  --SHADOW-MD:
+    0 4px 12px -2px oklch(0.1794 0.0165 296.16 / 0.5),
+    0 2px 4px -1px oklch(0.756 0.1093 80.19 / 0.04);
+  --SHADOW-LG:
+    0 14px 28px -6px oklch(0.1794 0.0165 296.16 / 0.6),
+    0 4px 8px -4px oklch(0.756 0.1093 80.19 / 0.05);
 
   /* Typography — elegant, precise */
   --Bold-Weight: 700;

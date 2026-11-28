@@ -53,7 +53,7 @@ function renderRoleOptions(canGrantAdmin: boolean): string[] {
       updatingRole={false}
       roleError={null}
       onSubmit={vi.fn()}
-    />,
+    />
   );
   const select = document.getElementById("new-role");
   if (select?.tagName !== "SELECT") {

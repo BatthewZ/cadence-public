@@ -171,11 +171,39 @@ beforeAll(async () => {
   const { taskActivity: taskActivityTable } = await import("../../../db/schema/task");
   const db = createDb(d1);
   const activityRecords = [
-    { id: "act-1", taskId: "task-a1", actorId: TEST_USER.id, action: "created", createdAt: new Date(Date.now() - 60 * 60 * 1000) },
-    { id: "act-2", taskId: "task-a2", actorId: TEST_USER_2.id, action: "assigned", newValue: TEST_USER_2.id, createdAt: new Date(Date.now() - 30 * 60 * 1000) },
-    { id: "act-3", taskId: "task-a1", actorId: TEST_USER.id, action: "priority_changed", field: "priority", oldValue: "none", newValue: "high", createdAt: new Date(Date.now() - 10 * 60 * 1000) },
+    {
+      id: "act-1",
+      taskId: "task-a1",
+      actorId: TEST_USER.id,
+      action: "created",
+      createdAt: new Date(Date.now() - 60 * 60 * 1000),
+    },
+    {
+      id: "act-2",
+      taskId: "task-a2",
+      actorId: TEST_USER_2.id,
+      action: "assigned",
+      newValue: TEST_USER_2.id,
+      createdAt: new Date(Date.now() - 30 * 60 * 1000),
+    },
+    {
+      id: "act-3",
+      taskId: "task-a1",
+      actorId: TEST_USER.id,
+      action: "priority_changed",
+      field: "priority",
+      oldValue: "none",
+      newValue: "high",
+      createdAt: new Date(Date.now() - 10 * 60 * 1000),
+    },
     // Activity for Project B task — should NOT appear in Project A activity
-    { id: "act-b1", taskId: "task-b1", actorId: TEST_USER.id, action: "created", createdAt: new Date(Date.now() - 5 * 60 * 1000) },
+    {
+      id: "act-b1",
+      taskId: "task-b1",
+      actorId: TEST_USER.id,
+      action: "created",
+      createdAt: new Date(Date.now() - 5 * 60 * 1000),
+    },
   ];
   for (const rec of activityRecords) {
     await db.insert(taskActivityTable).values({
@@ -210,35 +238,32 @@ afterAll(async () => {
 
 function workspaceApp(
   user: typeof TEST_USER | typeof TEST_USER_2,
-  role: "owner" | "admin" | "member",
+  role: "owner" | "admin" | "member"
 ) {
   const app = new Hono<AppEnv>();
-  app.use(
-    "/*",
-    fakeAuth(d1, user, { workspaceMembership: { id: "wm-fake", role } }),
-  );
+  app.use("/*", fakeAuth(d1, user, { workspaceMembership: { id: "wm-fake", role } }));
   app.get("/workspaces/:workspaceId/dashboard", workspaceDashboard);
   app.get(
     "/workspaces/:workspaceId/dashboard/my-tasks",
     validateQuery(myTasksQuerySchema),
-    myTasks,
+    myTasks
   );
   app.get(
     "/workspaces/:workspaceId/dashboard/upcoming",
     validateQuery(upcomingTasksQuerySchema),
-    upcomingTasks,
+    upcomingTasks
   );
   app.get(
     "/workspaces/:workspaceId/activity",
     validateQuery(workspaceActivityQuerySchema),
-    workspaceActivity,
+    workspaceActivity
   );
   return app;
 }
 
 function projectApp(
   user: typeof TEST_USER | typeof TEST_USER_2 = TEST_USER,
-  projectId: string = PROJECT_A_ID,
+  projectId: string = PROJECT_A_ID
 ) {
   const app = new Hono<AppEnv>();
   app.use(
@@ -246,7 +271,7 @@ function projectApp(
     fakeAuth(d1, user, {
       projectAccess: { role: "admin", source: "workspace" },
       currentProject: { id: projectId, workspaceId: WORKSPACE_ID },
-    }),
+    })
   );
   app.get("/projects/:projectId/dashboard", projectDashboard);
   app.get("/projects/:projectId/activity", projectActivity);
@@ -264,7 +289,12 @@ describe("workspaceDashboard", () => {
 
     expect(res.status).toBe(200);
     const body = await res.json<{
-      projects: Array<{ id: string; name: string; taskCounts: { active: number; completed: number; total: number }; memberCount: number }>;
+      projects: Array<{
+        id: string;
+        name: string;
+        taskCounts: { active: number; completed: number; total: number };
+        memberCount: number;
+      }>;
       taskCounts: { activeCount: number; completedCount: number; totalCount: number };
       priorityBreakdown: Array<{ priority: string; count: number }>;
       tasksPerMember: Array<{ id: string; name: string; image: string | null; count: number }>;
@@ -412,9 +442,7 @@ describe("workspaceDashboard", () => {
 describe("myTasks", () => {
   it("returns tasks assigned to the current user", async () => {
     const app = workspaceApp(TEST_USER, "owner");
-    const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks`,
-    );
+    const res = await app.request(`/workspaces/${WORKSPACE_ID}/dashboard/my-tasks`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ tasks: Array<{ id: string; projectName: string }> }>();
@@ -433,9 +461,7 @@ describe("myTasks", () => {
 
   it("returns tasks assigned to TEST_USER_2", async () => {
     const app = workspaceApp(TEST_USER_2, "member");
-    const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks`,
-    );
+    const res = await app.request(`/workspaces/${WORKSPACE_ID}/dashboard/my-tasks`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ tasks: Array<{ id: string }> }>();
@@ -447,9 +473,7 @@ describe("myTasks", () => {
 
   it("respects the 'week' period filter", async () => {
     const app = workspaceApp(TEST_USER, "owner");
-    const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?period=week`,
-    );
+    const res = await app.request(`/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?period=week`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ tasks: Array<{ id: string }> }>();
@@ -464,9 +488,7 @@ describe("myTasks", () => {
   it("period=week excludes tasks beyond 7 days", async () => {
     // TEST_USER_2 has task-a2 due in 10 days, which is beyond 1 week
     const app = workspaceApp(TEST_USER_2, "member");
-    const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?period=week`,
-    );
+    const res = await app.request(`/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?period=week`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ tasks: Array<{ id: string }> }>();
@@ -477,7 +499,7 @@ describe("myTasks", () => {
   it("period=fortnight includes tasks within 14 days", async () => {
     const app = workspaceApp(TEST_USER_2, "member");
     const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?period=fortnight`,
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?period=fortnight`
     );
 
     expect(res.status).toBe(200);
@@ -493,9 +515,7 @@ describe("myTasks", () => {
 
     // TEST_USER has 3 assigned incomplete tasks: task-a1, task-a-overdue1, task-b1
     // First page with limit=2
-    const res1 = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?limit=2`,
-    );
+    const res1 = await app.request(`/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?limit=2`);
 
     expect(res1.status).toBe(200);
     const body1 = await res1.json<{ tasks: Array<{ id: string }>; nextCursor: string | null }>();
@@ -505,7 +525,7 @@ describe("myTasks", () => {
 
     // Second page using cursor
     const res2 = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?limit=2&cursor=${encodeURIComponent(body1.nextCursor!)}`,
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?limit=2&cursor=${encodeURIComponent(body1.nextCursor!)}`
     );
 
     expect(res2.status).toBe(200);
@@ -519,9 +539,7 @@ describe("myTasks", () => {
 
   it("returns 400 for invalid period value", async () => {
     const app = workspaceApp(TEST_USER, "owner");
-    const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?period=invalid`,
-    );
+    const res = await app.request(`/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?period=invalid`);
 
     expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
@@ -531,7 +549,7 @@ describe("myTasks", () => {
   it("filters by projectIds (restricts to listed projects)", async () => {
     const app = workspaceApp(TEST_USER, "owner");
     const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_A_ID}`,
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_A_ID}`
     );
 
     expect(res.status).toBe(200);
@@ -553,7 +571,7 @@ describe("myTasks", () => {
   it("filters by taskGroupIds (restricts to listed columns)", async () => {
     const app = workspaceApp(TEST_USER, "owner");
     const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?taskGroupIds=${GROUP_TODO_B}`,
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?taskGroupIds=${GROUP_TODO_B}`
     );
 
     expect(res.status).toBe(200);
@@ -570,7 +588,7 @@ describe("myTasks", () => {
   it("combines projectIds and taskGroupIds filters (AND semantics)", async () => {
     const app = workspaceApp(TEST_USER, "owner");
     const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_A_ID}&taskGroupIds=${GROUP_TODO_A}`,
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_A_ID}&taskGroupIds=${GROUP_TODO_A}`
     );
 
     expect(res.status).toBe(200);
@@ -594,7 +612,7 @@ describe("myTasks", () => {
     // period=week includes both since overdue tasks are <= cutoff.
     const app = workspaceApp(TEST_USER, "owner");
     const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?period=week&projectIds=${PROJECT_A_ID}&taskGroupIds=${GROUP_TODO_A}`,
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?period=week&projectIds=${PROJECT_A_ID}&taskGroupIds=${GROUP_TODO_A}`
     );
 
     expect(res.status).toBe(200);
@@ -612,7 +630,7 @@ describe("myTasks", () => {
     // combined filter set.
     const app = workspaceApp(TEST_USER, "owner");
     const page1 = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_A_ID}&taskGroupIds=${GROUP_TODO_A}&limit=1`,
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_A_ID}&taskGroupIds=${GROUP_TODO_A}&limit=1`
     );
     expect(page1.status).toBe(200);
     const body1 = await page1.json<{
@@ -623,7 +641,7 @@ describe("myTasks", () => {
     expect(body1.nextCursor).not.toBeNull();
 
     const page2 = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_A_ID}&taskGroupIds=${GROUP_TODO_A}&limit=1&cursor=${encodeURIComponent(body1.nextCursor!)}`,
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_A_ID}&taskGroupIds=${GROUP_TODO_A}&limit=1&cursor=${encodeURIComponent(body1.nextCursor!)}`
     );
     expect(page2.status).toBe(200);
     const body2 = await page2.json<{ tasks: Array<{ id: string }> }>();
@@ -635,7 +653,7 @@ describe("myTasks", () => {
     const app = workspaceApp(TEST_USER_2, "member");
     // TEST_USER_2 has no assigned tasks in Project B
     const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_B_ID}`,
+      `/workspaces/${WORKSPACE_ID}/dashboard/my-tasks?projectIds=${PROJECT_B_ID}`
     );
 
     expect(res.status).toBe(200);
@@ -667,9 +685,7 @@ describe("myTasks", () => {
     /** Attach a label to a task (raw insert mirrors seed.ts conventions). */
     async function linkTaskLabel(taskId: string, labelId: string) {
       await d1
-        .prepare(
-          "INSERT INTO task_label (id, taskId, labelId, createdAt) VALUES (?, ?, ?, ?)",
-        )
+        .prepare("INSERT INTO task_label (id, taskId, labelId, createdAt) VALUES (?, ?, ?, ?)")
         .bind(crypto.randomUUID(), taskId, labelId, Math.floor(Date.now() / 1000))
         .run();
     }
@@ -819,9 +835,7 @@ describe("myTasks", () => {
     });
 
     it("range + noDueDate compose with OR (in range, or no due date)", async () => {
-      const ids = await fetchIds(
-        "dueDateFrom=2030-03-15&dueDateTo=2030-03-15&noDueDate=true",
-      );
+      const ids = await fetchIds("dueDateFrom=2030-03-15&dueDateTo=2030-03-15&noDueDate=true");
       expect(ids.sort()).toEqual(["task-f1-nodate", "task-f1-urgent", "task-f2-high"]);
     });
 
@@ -895,9 +909,7 @@ describe("myTasks", () => {
       expect(body1.nextCursor).not.toBeNull();
 
       const res2 = await app.request(
-        myTasksUrl(
-          `labelNames=bug&limit=1&cursor=${encodeURIComponent(body1.nextCursor!)}`,
-        ),
+        myTasksUrl(`labelNames=bug&limit=1&cursor=${encodeURIComponent(body1.nextCursor!)}`)
       );
       expect(res2.status).toBe(200);
       const body2 = await res2.json<{
@@ -917,12 +929,13 @@ describe("myTasks", () => {
 describe("upcomingTasks", () => {
   it("returns tasks grouped into time buckets for an owner", async () => {
     const app = workspaceApp(TEST_USER, "owner");
-    const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/upcoming`,
-    );
+    const res = await app.request(`/workspaces/${WORKSPACE_ID}/dashboard/upcoming`);
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ buckets: Record<string, Array<{ id: string }>>; nextCursor: string | null }>();
+    const body = await res.json<{
+      buckets: Record<string, Array<{ id: string }>>;
+      nextCursor: string | null;
+    }>();
 
     // Verify all expected bucket keys exist
     expect(body.buckets).toHaveProperty("overdue");
@@ -946,12 +959,13 @@ describe("upcomingTasks", () => {
 
   it("non-elevated member only sees tasks from their projects", async () => {
     const app = workspaceApp(TEST_USER_2, "member");
-    const res = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/upcoming`,
-    );
+    const res = await app.request(`/workspaces/${WORKSPACE_ID}/dashboard/upcoming`);
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ buckets: Record<string, Array<{ id: string }>>; nextCursor: string | null }>();
+    const body = await res.json<{
+      buckets: Record<string, Array<{ id: string }>>;
+      nextCursor: string | null;
+    }>();
 
     const allIds = Object.values(body.buckets)
       .flat()
@@ -968,12 +982,13 @@ describe("upcomingTasks", () => {
     const app = workspaceApp(TEST_USER, "owner");
 
     // 5 total tasks with due dates: overdue1 (-3d), overdue2 (-1d), a1 (+2d), b1 (+5d), a2 (+10d)
-    const res1 = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/upcoming?limit=3`,
-    );
+    const res1 = await app.request(`/workspaces/${WORKSPACE_ID}/dashboard/upcoming?limit=3`);
 
     expect(res1.status).toBe(200);
-    const body1 = await res1.json<{ buckets: Record<string, Array<{ id: string }>>; nextCursor: string | null }>();
+    const body1 = await res1.json<{
+      buckets: Record<string, Array<{ id: string }>>;
+      nextCursor: string | null;
+    }>();
 
     const firstPageIds = Object.values(body1.buckets)
       .flat()
@@ -982,11 +997,14 @@ describe("upcomingTasks", () => {
     expect(body1.nextCursor).not.toBeNull();
 
     const res2 = await app.request(
-      `/workspaces/${WORKSPACE_ID}/dashboard/upcoming?limit=3&cursor=${encodeURIComponent(body1.nextCursor!)}`,
+      `/workspaces/${WORKSPACE_ID}/dashboard/upcoming?limit=3&cursor=${encodeURIComponent(body1.nextCursor!)}`
     );
 
     expect(res2.status).toBe(200);
-    const body2 = await res2.json<{ buckets: Record<string, Array<{ id: string }>>; nextCursor: string | null }>();
+    const body2 = await res2.json<{
+      buckets: Record<string, Array<{ id: string }>>;
+      nextCursor: string | null;
+    }>();
 
     const secondPageIds = Object.values(body2.buckets)
       .flat()
@@ -1005,12 +1023,13 @@ describe("upcomingTasks", () => {
       slug: "no-tasks-ws",
     });
     const app = workspaceApp(TEST_USER, "owner");
-    const res = await app.request(
-      `/workspaces/${emptyWsId}/dashboard/upcoming`,
-    );
+    const res = await app.request(`/workspaces/${emptyWsId}/dashboard/upcoming`);
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ buckets: Record<string, Array<{ id: string }>>; nextCursor: string | null }>();
+    const body = await res.json<{
+      buckets: Record<string, Array<{ id: string }>>;
+      nextCursor: string | null;
+    }>();
 
     const totalTasks = Object.values(body.buckets).flat().length;
     expect(totalTasks).toBe(0);
@@ -1077,7 +1096,12 @@ describe("projectDashboard", () => {
 
     expect(res.status).toBe(200);
     const body = await res.json<{
-      overdueTasks: Array<{ id: string; title: string; priority: string; assigneeName: string | null }>;
+      overdueTasks: Array<{
+        id: string;
+        title: string;
+        priority: string;
+        assigneeName: string | null;
+      }>;
     }>();
 
     const overdueIds = body.overdueTasks.map((t) => t.id);
@@ -1297,7 +1321,7 @@ describe("projectActivity", () => {
 
     // Second page
     const res2 = await app.request(
-      `/projects/${PROJECT_A_ID}/activity?limit=2&cursor=${encodeURIComponent(body1.nextCursor!)}`,
+      `/projects/${PROJECT_A_ID}/activity?limit=2&cursor=${encodeURIComponent(body1.nextCursor!)}`
     );
     expect(res2.status).toBe(200);
     const body2 = await res2.json<{
@@ -1413,7 +1437,7 @@ describe("workspaceActivity", () => {
     expect(body1.nextCursor).not.toBeNull();
 
     const res2 = await app.request(
-      `/workspaces/${WORKSPACE_ID}/activity?limit=2&cursor=${encodeURIComponent(body1.nextCursor!)}`,
+      `/workspaces/${WORKSPACE_ID}/activity?limit=2&cursor=${encodeURIComponent(body1.nextCursor!)}`
     );
     expect(res2.status).toBe(200);
     const body2 = await res2.json<{

@@ -1,7 +1,12 @@
 import { WRITE_ERROR_CODES } from "@/shared/constants/offline-sync";
 
 import { type OfflineDb, OUTBOX_STORE } from "./idb";
-import { performWrite, type QueuedWrite, type WriteOutcome, type WriteRequest } from "./perform-write";
+import {
+  performWrite,
+  type QueuedWrite,
+  type WriteOutcome,
+  type WriteRequest,
+} from "./perform-write";
 
 export type SyncState = "idle" | "syncing" | "waiting" | "blocked";
 
@@ -34,8 +39,7 @@ export interface Refusal {
  * replays later like any other.
  */
 export type SendAnswer =
-  | Exclude<WriteOutcome, { kind: "network" } | { kind: "in-progress" }>
-  | { kind: "queued" };
+  Exclude<WriteOutcome, { kind: "network" } | { kind: "in-progress" }> | { kind: "queued" };
 
 export interface NewWrite {
   request: WriteRequest;
@@ -227,7 +231,7 @@ export class Outbox {
         new Promise<SendAnswer>((resolve) => {
           const deadline = setTimeout(() => this.stopWaiting(key), this.answerDeadlineMs);
           this.waiters.set(key, { resolve, deadline });
-        }),
+        })
     );
     this.update({ sending: this.liveCount() });
     try {
@@ -292,16 +296,18 @@ export class Outbox {
     if (this.status.state === "blocked") return;
     this.clearRetry();
     this.update({ state: "syncing", nextRetryAt: null });
-    this.flushing = this.lock(`cadence-outbox:${this.deps.userId}`, () => this.drain()).finally(() => {
-      this.flushing = null;
-      if (this.status.state === "syncing") this.update({ state: "idle" });
-      if (this.flushAgain) {
-        this.flushAgain = false;
-        this.kick();
+    this.flushing = this.lock(`cadence-outbox:${this.deps.userId}`, () => this.drain()).finally(
+      () => {
+        this.flushing = null;
+        if (this.status.state === "syncing") this.update({ state: "idle" });
+        if (this.flushAgain) {
+          this.flushAgain = false;
+          this.kick();
+        }
+        // No drain left to answer them (offline, stopped on an error, or another tab sent them).
+        if (!this.flushing) this.releaseWaiters();
       }
-      // No drain left to answer them (offline, stopped on an error, or another tab sent them).
-      if (!this.flushing) this.releaseWaiters();
-    });
+    );
   }
 
   /** Resolves once an active drain finishes; immediately when none runs. The read barrier. */
@@ -430,7 +436,12 @@ export class Outbox {
         }
         const attempts = write.attempts + 1;
         const stuck = attempts >= MAX_SERVER_ERROR_ATTEMPTS;
-        await this.deps.db.put(OUTBOX_STORE, { ...write, attempts, stuck, lastError: outcome.message });
+        await this.deps.db.put(OUTBOX_STORE, {
+          ...write,
+          attempts,
+          stuck,
+          lastError: outcome.message,
+        });
         if (stuck) {
           this.update({ state: "blocked", blockedReason: "stuck", lastError: outcome.message });
         } else {
@@ -537,13 +548,17 @@ export class Outbox {
     const before = this.uncommitted;
     this.uncommitted += delta;
     if (typeof window === "undefined") return;
-    if (before === 0 && this.uncommitted > 0) window.addEventListener("beforeunload", preventUnload);
-    if (before > 0 && this.uncommitted === 0) window.removeEventListener("beforeunload", preventUnload);
+    if (before === 0 && this.uncommitted > 0)
+      window.addEventListener("beforeunload", preventUnload);
+    if (before > 0 && this.uncommitted === 0)
+      window.removeEventListener("beforeunload", preventUnload);
   }
 
   private update(patch: Partial<SyncStatus>): void {
     const next = { ...this.status, ...patch };
-    const changed = (Object.keys(patch) as (keyof SyncStatus)[]).some((k) => next[k] !== this.status[k]);
+    const changed = (Object.keys(patch) as (keyof SyncStatus)[]).some(
+      (k) => next[k] !== this.status[k]
+    );
     if (!changed) return;
     this.status = next;
     for (const listener of this.listeners) listener();

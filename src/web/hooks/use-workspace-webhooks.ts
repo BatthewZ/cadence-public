@@ -1,7 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type SyntheticEvent, useCallback, useState } from "react";
 
-import { type CreateWebhookInput, createWebhookSchema, type UpdateWebhookInput } from "@/shared/schemas/webhook";
+import {
+  type CreateWebhookInput,
+  createWebhookSchema,
+  type UpdateWebhookInput,
+} from "@/shared/schemas/webhook";
 import type { WebhookEventType } from "@/shared/types/webhook";
 import { isUnavailableOffline, useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { useToast } from "@/web/components/ui/ToastContext";
@@ -38,7 +42,7 @@ export interface WebhookRow {
 /** Look up a project name by ID from the projects list. */
 export function projectName(
   projects: Array<{ id: string; name: string }>,
-  projectId: string | null,
+  projectId: string | null
 ): string | null {
   if (!projectId) return null;
   return projects.find((p) => p.id === projectId)?.name ?? null;
@@ -64,28 +68,37 @@ function useWebhookForm() {
   const [active, setActive] = useState(true);
   const [secret, setSecret] = useState<string | null>(null);
 
-  const reset = useCallback((values?: {
-    name?: string;
-    url?: string;
-    events?: WebhookEventType[];
-    projectId?: string | null;
-    active?: boolean;
-  }) => {
-    setName(values?.name ?? "");
-    setUrl(values?.url ?? "");
-    setEvents(values?.events ?? []);
-    setProjectId(values?.projectId ?? null);
-    setActive(values?.active ?? true);
-    setSecret(null);
-  }, []);
+  const reset = useCallback(
+    (values?: {
+      name?: string;
+      url?: string;
+      events?: WebhookEventType[];
+      projectId?: string | null;
+      active?: boolean;
+    }) => {
+      setName(values?.name ?? "");
+      setUrl(values?.url ?? "");
+      setEvents(values?.events ?? []);
+      setProjectId(values?.projectId ?? null);
+      setActive(values?.active ?? true);
+      setSecret(null);
+    },
+    []
+  );
 
   return {
-    name, setName,
-    url, setUrl,
-    events, setEvents,
-    projectId, setProjectId,
-    active, setActive,
-    secret, setSecret,
+    name,
+    setName,
+    url,
+    setUrl,
+    events,
+    setEvents,
+    projectId,
+    setProjectId,
+    active,
+    setActive,
+    secret,
+    setSecret,
     reset,
   };
 }
@@ -149,7 +162,7 @@ export function useWorkspaceWebhooks() {
     queryKey: queryKeys.workspaces.webhookDetail(workspaceId, selectedWebhookId ?? ""),
     queryFn: () =>
       api.get<{ webhook: WebhookRow; deliveries: DeliveryRow[] }>(
-        `/api/workspaces/${workspaceId}/webhooks/${selectedWebhookId}`,
+        `/api/workspaces/${workspaceId}/webhooks/${selectedWebhookId}`
       ),
     enabled: !!workspaceId && !!selectedWebhookId,
     staleTime: 15_000,
@@ -176,10 +189,7 @@ export function useWorkspaceWebhooks() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, ...data }: UpdateWebhookInput & { id: string }) =>
-      api.patch<{ webhook: WebhookRow }>(
-        `/api/workspaces/${workspaceId}/webhooks/${id}`,
-        data,
-      ),
+      api.patch<{ webhook: WebhookRow }>(`/api/workspaces/${workspaceId}/webhooks/${id}`, data),
     onSuccess: (result) => {
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.webhooks(workspaceId) });
       if (selectedWebhookId) {
@@ -197,8 +207,7 @@ export function useWorkspaceWebhooks() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) =>
-      api.delete(`/api/workspaces/${workspaceId}/webhooks/${id}`),
+    mutationFn: (id: string) => api.delete(`/api/workspaces/${workspaceId}/webhooks/${id}`),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.webhooks(workspaceId) });
       toast("Webhook deleted.", { variant: "success" });
@@ -213,7 +222,7 @@ export function useWorkspaceWebhooks() {
     mutationFn: (id: string) =>
       api.post<{ delivery: TestDeliveryResult | null }>(
         `/api/workspaces/${workspaceId}/webhooks/${id}/test`,
-        {},
+        {}
       ),
     onSuccess: (result) => {
       setTestResult(result.delivery ?? null);
@@ -242,68 +251,93 @@ export function useWorkspaceWebhooks() {
     createForm.setSecret(null);
   }, [createForm]);
 
-  const handleCreate = useCallback(async (e: SyntheticEvent) => {
-    e.preventDefault();
-    const input = {
-      name: createForm.name.trim(),
-      url: createForm.url.trim(),
-      events: createForm.events,
-      ...(createForm.projectId ? { projectId: createForm.projectId } : {}),
-    };
-    const result = createWebhookSchema.safeParse(input);
-    if (!result.success) {
-      createFieldErrors.setFromZodError(result.error);
-      return;
-    }
-    try {
-      await createMutation.mutateAsync(result.data);
-    } catch {
-      // error state handled by mutation
-    }
-  }, [createForm.name, createForm.url, createForm.events, createForm.projectId, createMutation, createFieldErrors]);
+  const handleCreate = useCallback(
+    async (e: SyntheticEvent) => {
+      e.preventDefault();
+      const input = {
+        name: createForm.name.trim(),
+        url: createForm.url.trim(),
+        events: createForm.events,
+        ...(createForm.projectId ? { projectId: createForm.projectId } : {}),
+      };
+      const result = createWebhookSchema.safeParse(input);
+      if (!result.success) {
+        createFieldErrors.setFromZodError(result.error);
+        return;
+      }
+      try {
+        await createMutation.mutateAsync(result.data);
+      } catch {
+        // error state handled by mutation
+      }
+    },
+    [
+      createForm.name,
+      createForm.url,
+      createForm.events,
+      createForm.projectId,
+      createMutation,
+      createFieldErrors,
+    ]
+  );
 
-  const handleOpenEdit = useCallback((wh: WebhookRow) => {
-    editForm.reset({
-      name: wh.name,
-      url: wh.url,
-      events: parseEvents(wh.events),
-      active: wh.active,
-      projectId: wh.projectId,
-    });
-    updateMutation.reset();
-    editFieldErrors.resetFieldErrors();
-    setEditDialogOpen(true);
-  }, [editForm, updateMutation, editFieldErrors]);
+  const handleOpenEdit = useCallback(
+    (wh: WebhookRow) => {
+      editForm.reset({
+        name: wh.name,
+        url: wh.url,
+        events: parseEvents(wh.events),
+        active: wh.active,
+        projectId: wh.projectId,
+      });
+      updateMutation.reset();
+      editFieldErrors.resetFieldErrors();
+      setEditDialogOpen(true);
+    },
+    [editForm, updateMutation, editFieldErrors]
+  );
 
   const handleCloseEdit = useCallback(() => {
     setEditDialogOpen(false);
     editForm.setSecret(null);
   }, [editForm]);
 
-  const handleUpdate = useCallback(async (e: SyntheticEvent) => {
-    e.preventDefault();
-    if (!selectedWebhookId) return;
-    const input = {
-      name: editForm.name.trim(),
-      url: editForm.url.trim(),
-      events: editForm.events,
-      ...(editForm.projectId ? { projectId: editForm.projectId } : {}),
-    };
-    const result = createWebhookSchema.safeParse(input);
-    if (!result.success) {
-      editFieldErrors.setFromZodError(result.error);
-      return;
-    }
-    try {
-      await updateMutation.mutateAsync({
-        id: selectedWebhookId,
-        ...result.data,
-        active: editForm.active,
-      });
-    } catch {
-      // error state handled by mutation
-    }
-  }, [selectedWebhookId, editForm.name, editForm.url, editForm.events, editForm.active, editForm.projectId, updateMutation, editFieldErrors]);
+  const handleUpdate = useCallback(
+    async (e: SyntheticEvent) => {
+      e.preventDefault();
+      if (!selectedWebhookId) return;
+      const input = {
+        name: editForm.name.trim(),
+        url: editForm.url.trim(),
+        events: editForm.events,
+        ...(editForm.projectId ? { projectId: editForm.projectId } : {}),
+      };
+      const result = createWebhookSchema.safeParse(input);
+      if (!result.success) {
+        editFieldErrors.setFromZodError(result.error);
+        return;
+      }
+      try {
+        await updateMutation.mutateAsync({
+          id: selectedWebhookId,
+          ...result.data,
+          active: editForm.active,
+        });
+      } catch {
+        // error state handled by mutation
+      }
+    },
+    [
+      selectedWebhookId,
+      editForm.name,
+      editForm.url,
+      editForm.events,
+      editForm.active,
+      editForm.projectId,
+      updateMutation,
+      editFieldErrors,
+    ]
+  );
 
   const handleRegenerateSecret = useCallback(async () => {
     if (!selectedWebhookId) return;
@@ -317,13 +351,16 @@ export function useWorkspaceWebhooks() {
     }
   }, [selectedWebhookId, updateMutation]);
 
-  const handleTest = useCallback((id: string) => {
-    setTestingId(id);
-    setTestResult(null);
-    testMutation.mutate(id, {
-      onSettled: () => setTestingId(null),
-    });
-  }, [testMutation]);
+  const handleTest = useCallback(
+    (id: string) => {
+      setTestingId(id);
+      setTestResult(null);
+      testMutation.mutate(id, {
+        onSettled: () => setTestingId(null),
+      });
+    },
+    [testMutation]
+  );
 
   const handleSelectWebhook = useCallback((id: string | null) => {
     setSelectedWebhookId(id);

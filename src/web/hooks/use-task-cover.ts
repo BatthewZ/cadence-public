@@ -1,9 +1,6 @@
 import { useCallback } from "react";
 
-import type {
-  StoredUnsplashCoverPayload,
-  UnsplashCoverPayload,
-} from "@/shared/schemas/unsplash";
+import type { StoredUnsplashCoverPayload, UnsplashCoverPayload } from "@/shared/schemas/unsplash";
 import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import type { Task } from "@/web/contexts/ProjectContext";
 import { useFileUpload } from "@/web/hooks/use-file-upload";
@@ -34,7 +31,7 @@ interface UseTaskCoverOptions {
   patchTaskMutateAsync: (updates: Partial<TaskDetail>) => Promise<unknown>;
   toast: (
     message: string,
-    options?: { variant?: "info" | "success" | "warning" | "error" },
+    options?: { variant?: "info" | "success" | "warning" | "error" }
   ) => string;
   refetch: () => Promise<unknown>;
 }
@@ -76,7 +73,7 @@ export function useTaskCover({
 
   const { coverUrl, coverSrcSet, coverAttribution } = resolveCoverDisplay(
     coverImageKey,
-    coverUnsplash,
+    coverUnsplash
   );
 
   const handleCoverUpload = useCallback(
@@ -90,9 +87,7 @@ export function useTaskCover({
       if (result) {
         // XOR: uploading a file cover clears any existing Unsplash payload.
         setLocalTask((prev) =>
-          prev
-            ? { ...prev, coverImageKey: result.coverImageKey, coverUnsplash: null }
-            : prev,
+          prev ? { ...prev, coverImageKey: result.coverImageKey, coverUnsplash: null } : prev
         );
         updateTaskInContext(taskId, {
           coverImageKey: result.coverImageKey,
@@ -101,7 +96,7 @@ export function useTaskCover({
         invalidateTaskQueries();
       }
     },
-    [taskId, uploadFile, setLocalTask, updateTaskInContext, invalidateTaskQueries],
+    [taskId, uploadFile, setLocalTask, updateTaskInContext, invalidateTaskQueries]
   );
 
   // Offline the optimistic change could never be confirmed or rolled back (the refetch is paused).
@@ -114,7 +109,7 @@ export function useTaskCover({
       freshnessTracker.recordMutation("tasks");
       // XOR: applying Unsplash clears any uploaded image key.
       setLocalTask((prev) =>
-        prev ? { ...prev, coverImageKey: null, coverUnsplash: payload } : prev,
+        prev ? { ...prev, coverImageKey: null, coverUnsplash: payload } : prev
       );
       updateTaskInContext(taskId, {
         coverImageKey: null,
@@ -123,7 +118,7 @@ export function useTaskCover({
       try {
         await api.put<{ coverUnsplash: UnsplashCoverPayload }>(
           `/api/tasks/${taskId}/cover/unsplash`,
-          payload,
+          payload
         );
         invalidateTaskQueries();
       } catch {
@@ -131,7 +126,7 @@ export function useTaskCover({
         void refetch();
       }
     },
-    [online, taskId, setLocalTask, updateTaskInContext, invalidateTaskQueries, toast, refetch],
+    [online, taskId, setLocalTask, updateTaskInContext, invalidateTaskQueries, toast, refetch]
   );
 
   const handleCoverRemove = useCallback(async () => {
@@ -141,9 +136,7 @@ export function useTaskCover({
     }
     freshnessTracker.recordMutation("tasks");
     // XOR: clear both columns optimistically — the backend clears both too.
-    setLocalTask((prev) =>
-      prev ? { ...prev, coverImageKey: null, coverUnsplash: null } : prev,
-    );
+    setLocalTask((prev) => (prev ? { ...prev, coverImageKey: null, coverUnsplash: null } : prev));
     updateTaskInContext(taskId, { coverImageKey: null, coverUnsplash: null });
     try {
       await api.delete(`/api/tasks/${taskId}/cover`);
@@ -157,9 +150,7 @@ export function useTaskCover({
   const handleCoverPositionChange = useCallback(
     async (pos: number) => {
       freshnessTracker.recordMutation("tasks");
-      setLocalTask((prev) =>
-        prev ? { ...prev, coverImagePosition: pos } : prev,
-      );
+      setLocalTask((prev) => (prev ? { ...prev, coverImagePosition: pos } : prev));
       updateTaskInContext(taskId, { coverImagePosition: pos });
       try {
         await patchTaskMutateAsync({
@@ -170,7 +161,7 @@ export function useTaskCover({
         void refetch();
       }
     },
-    [taskId, setLocalTask, updateTaskInContext, patchTaskMutateAsync, toast, refetch],
+    [taskId, setLocalTask, updateTaskInContext, patchTaskMutateAsync, toast, refetch]
   );
 
   return {

@@ -19,7 +19,11 @@ describe("StatCard", () => {
     });
 
     it("merges custom className", () => {
-      render(<StatCard data-testid="card" className="custom">Content</StatCard>);
+      render(
+        <StatCard data-testid="card" className="custom">
+          Content
+        </StatCard>
+      );
       const el = screen.getByTestId("card");
       expect(el.className).toContain("stat-card");
       expect(el.className).toContain("custom");
@@ -131,9 +135,7 @@ describe("StatCard", () => {
     });
 
     it("renders a trend arrow for up/down but not neutral", () => {
-      const { container: upContainer } = render(
-        <StatCard.Trend value={5} direction="up" />
-      );
+      const { container: upContainer } = render(<StatCard.Trend value={5} direction="up" />);
       expect(upContainer.querySelector("svg")).toBeInTheDocument();
 
       const { container: neutralContainer } = render(
@@ -170,7 +172,11 @@ describe("StatCard", () => {
     });
 
     it("merges custom className", () => {
-      render(<StatCard.Icon className="custom-icon" data-testid="icon">I</StatCard.Icon>);
+      render(
+        <StatCard.Icon className="custom-icon" data-testid="icon">
+          I
+        </StatCard.Icon>
+      );
       const el = screen.getByTestId("icon");
       expect(el.className).toContain("stat-card__icon");
       expect(el.className).toContain("custom-icon");

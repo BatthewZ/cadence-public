@@ -44,9 +44,7 @@ import type { TaskDetail } from "@/web/pages/TaskDetail/types";
 
 vi.mock("@/web/lib/api/client", async () => {
   const actual =
-    await vi.importActual<typeof import("@/web/lib/api/client")>(
-      "@/web/lib/api/client",
-    );
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -140,9 +138,7 @@ import { TaskDetailPanelInner } from "./TaskDetailPanelInner";
 // Typed as promise-returning so `mockImplementation` may route by URL without
 // tripping no-misused-promises (the bare `vi.fn()` shape infers a void return).
 const mockGet = api.get as unknown as Mock<(url: string) => Promise<unknown>>;
-const mockPatch = api.patch as unknown as Mock<
-  (url: string, body?: unknown) => Promise<unknown>
->;
+const mockPatch = api.patch as unknown as Mock<(url: string, body?: unknown) => Promise<unknown>>;
 
 const TASK_ID = "task-1";
 const DETAIL_KEY = queryKeys.tasks.detail(TASK_ID);
@@ -180,7 +176,7 @@ function renderPanel() {
           visible
         />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -194,9 +190,7 @@ async function flush() {
 /** Simulate the freshness poll pulling a collaborator's edit into the cache. */
 async function remoteEdit(task: TaskDetail) {
   mockGet.mockImplementation((url: string) =>
-    url === `/api/tasks/${TASK_ID}`
-      ? Promise.resolve({ task })
-      : Promise.resolve({}),
+    url === `/api/tasks/${TASK_ID}` ? Promise.resolve({ task }) : Promise.resolve({})
   );
   await act(async () => {
     await qc.refetchQueries({ queryKey: DETAIL_KEY });
@@ -210,9 +204,7 @@ beforeEach(() => {
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   mockGet.mockImplementation((url: string) =>
-    url === `/api/tasks/${TASK_ID}`
-      ? Promise.resolve({ task: makeTask() })
-      : Promise.resolve({}),
+    url === `/api/tasks/${TASK_ID}` ? Promise.resolve({ task: makeTask() }) : Promise.resolve({})
   );
 });
 
@@ -226,9 +218,7 @@ describe("TaskDetailPanelInner — adopting server data", () => {
   describe("remote edits reach an open panel", () => {
     it("shows a collaborator's new description", async () => {
       renderPanel();
-      await waitFor(() =>
-        expect(screen.getByText("Original description")).toBeTruthy(),
-      );
+      await waitFor(() => expect(screen.getByText("Original description")).toBeTruthy());
 
       await remoteEdit(makeTask({ description: "Alice rewrote this" }));
 
@@ -247,32 +237,26 @@ describe("TaskDetailPanelInner — adopting server data", () => {
 
     it("shows collaborator changes to properties, not just text fields", async () => {
       renderPanel();
-      await waitFor(() =>
-        expect(screen.getByTestId("priority").textContent).toBe("none"),
-      );
+      await waitFor(() => expect(screen.getByTestId("priority").textContent).toBe("none"));
 
       await remoteEdit(
         makeTask({
           priority: "high",
           assigneeName: "Alice",
           dueDate: "2026-09-01T00:00:00.000Z",
-        }),
+        })
       );
 
       expect(screen.getByTestId("priority").textContent).toBe("high");
       expect(screen.getByTestId("assignee").textContent).toBe("Alice");
-      expect(screen.getByTestId("due").textContent).toBe(
-        "2026-09-01T00:00:00.000Z",
-      );
+      expect(screen.getByTestId("due").textContent).toBe("2026-09-01T00:00:00.000Z");
     });
 
     it("keeps applying edits across several polls", async () => {
       // The reported symptom was updates arriving once and then stopping, so one
       // successful refetch is not enough evidence.
       renderPanel();
-      await waitFor(() =>
-        expect(screen.getByText("Original description")).toBeTruthy(),
-      );
+      await waitFor(() => expect(screen.getByText("Original description")).toBeTruthy());
 
       await remoteEdit(makeTask({ description: "First edit" }));
       expect(screen.getByText("First edit")).toBeTruthy();
@@ -289,9 +273,7 @@ describe("TaskDetailPanelInner — adopting server data", () => {
     it("does not clobber an open description draft", async () => {
       const user = userEvent.setup();
       renderPanel();
-      await waitFor(() =>
-        expect(screen.getByText("Original description")).toBeTruthy(),
-      );
+      await waitFor(() => expect(screen.getByText("Original description")).toBeTruthy());
 
       await user.click(screen.getByText("Original description"));
       const textarea = await screen.findByRole("textbox");
@@ -353,7 +335,7 @@ describe("TaskDetailPanelInner — adopting server data", () => {
         () =>
           new Promise<{ task: TaskDetail }>((resolve) => {
             resolvePatch = resolve;
-          }),
+          })
       );
 
       const user = userEvent.setup();
@@ -381,7 +363,7 @@ describe("TaskDetailPanelInner — adopting server data", () => {
                 description: "Alice edited meanwhile",
               }),
             })
-          : Promise.resolve({}),
+          : Promise.resolve({})
       );
       await act(async () => {
         resolvePatch({ task: makeTask({ title: "Locally renamed" }) });
@@ -389,9 +371,7 @@ describe("TaskDetailPanelInner — adopting server data", () => {
       });
       await flush();
 
-      await waitFor(() =>
-        expect(screen.getByText("Alice edited meanwhile")).toBeTruthy(),
-      );
+      await waitFor(() => expect(screen.getByText("Alice edited meanwhile")).toBeTruthy());
       expect(screen.getByText("Locally renamed")).toBeTruthy();
     });
   });
@@ -420,7 +400,7 @@ describe("TaskDetailPanelInner — description compare-and-set", () => {
       expect(mockPatch).toHaveBeenCalledWith(`/api/tasks/${TASK_ID}`, {
         description: "mine",
         descriptionBase: "Original description",
-      }),
+      })
     );
   });
 
@@ -436,16 +416,21 @@ describe("TaskDetailPanelInner — description compare-and-set", () => {
       expect(mockPatch).toHaveBeenCalledWith(`/api/tasks/${TASK_ID}`, {
         description: "mine",
         descriptionBase: "Original description",
-      }),
+      })
     );
   });
 
   it("keeps the user's text and offers to copy it when someone else changed the description", async () => {
     mockPatch.mockRejectedValue(
-      new ApiError(409, "The description changed since this edit was made", WRITE_ERROR_CODES.descriptionConflict, {
-        code: WRITE_ERROR_CODES.descriptionConflict,
-        task: makeTask({ description: "Alice's version" }),
-      }),
+      new ApiError(
+        409,
+        "The description changed since this edit was made",
+        WRITE_ERROR_CODES.descriptionConflict,
+        {
+          code: WRITE_ERROR_CODES.descriptionConflict,
+          task: makeTask({ description: "Alice's version" }),
+        }
+      )
     );
     const { user, textarea } = await editDescription("my careful wording");
     // After userEvent.setup(), which installs its own clipboard stub.
@@ -466,9 +451,14 @@ describe("TaskDetailPanelInner — description compare-and-set", () => {
 
   it("lets a second save replace the other version once the conflict was shown", async () => {
     mockPatch.mockRejectedValueOnce(
-      new ApiError(409, "The description changed since this edit was made", WRITE_ERROR_CODES.descriptionConflict, {
-        task: makeTask({ description: "Alice's version" }),
-      }),
+      new ApiError(
+        409,
+        "The description changed since this edit was made",
+        WRITE_ERROR_CODES.descriptionConflict,
+        {
+          task: makeTask({ description: "Alice's version" }),
+        }
+      )
     );
     mockPatch.mockResolvedValueOnce({ task: makeTask({ description: "mine" }) });
     const { user } = await editDescription("mine");
@@ -481,7 +471,7 @@ describe("TaskDetailPanelInner — description compare-and-set", () => {
       expect(mockPatch).toHaveBeenLastCalledWith(`/api/tasks/${TASK_ID}`, {
         description: "mine",
         descriptionBase: "Alice's version",
-      }),
+      })
     );
   });
 });

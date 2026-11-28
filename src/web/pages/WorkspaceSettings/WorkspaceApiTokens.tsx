@@ -27,9 +27,7 @@ export default function WorkspaceApiTokens() {
           <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>
             {workspace.name}
           </Breadcrumbs.Item>
-          <Breadcrumbs.Item href={`/w/${workspace.slug}/settings`}>
-            Settings
-          </Breadcrumbs.Item>
+          <Breadcrumbs.Item href={`/w/${workspace.slug}/settings`}>Settings</Breadcrumbs.Item>
           <Breadcrumbs.Item current>API Tokens</Breadcrumbs.Item>
         </Breadcrumbs>
         <Text variant="h3">Workspace Settings</Text>

@@ -9,9 +9,15 @@
 }
 
 /* Base column classes (no media query — override CSS fallback) */
-.masonry-grid--base-2 { --masonry-columns: 2; }
-.masonry-grid--base-3 { --masonry-columns: 3; }
-.masonry-grid--base-4 { --masonry-columns: 4; }
+.masonry-grid--base-2 {
+  --masonry-columns: 2;
+}
+.masonry-grid--base-3 {
+  --masonry-columns: 3;
+}
+.masonry-grid--base-4 {
+  --masonry-columns: 4;
+}
 
 /* Responsive column overrides — mobile-first */
 

@@ -16,7 +16,8 @@ import { queryKeys } from "@/web/lib/query-keys";
 import type { TaskDetail } from "@/web/pages/TaskDetail/types";
 
 function taskTitle(qc: QueryClient, taskId: string): string {
-  const title = qc.getQueryData<{ task: { title: string } }>(queryKeys.tasks.detail(taskId))?.task.title;
+  const title = qc.getQueryData<{ task: { title: string } }>(queryKeys.tasks.detail(taskId))?.task
+    .title;
   return title ? `“${title}”` : "a task";
 }
 
@@ -27,7 +28,7 @@ interface UseTaskCommentActionsOptions {
   invalidateTaskQueries: () => void;
   toast: (
     message: string,
-    options?: { variant?: "info" | "success" | "warning" | "error" },
+    options?: { variant?: "info" | "success" | "warning" | "error" }
   ) => string;
   /** The view's copy of the task, whose `commentCount` heads the comments list. */
   setLocalTask: Dispatch<SetStateAction<TaskDetail | null>>;
@@ -66,10 +67,12 @@ export function useTaskCommentActions({
       setLocalTask((prev) => (prev ? withCommentDelta(prev, delta) : prev));
       if (!projectId) return;
       qc.setQueryData<{ tasks: Task[] }>(queryKeys.projects.tasks(projectId), (old) =>
-        old ? { tasks: old.tasks.map((t) => (t.id === taskId ? withCommentDelta(t, delta) : t)) } : old,
+        old
+          ? { tasks: old.tasks.map((t) => (t.id === taskId ? withCommentDelta(t, delta) : t)) }
+          : old
       );
     },
-    [qc, taskId, projectId, setLocalTask],
+    [qc, taskId, projectId, setLocalTask]
   );
 
   // Local editing state
@@ -168,7 +171,7 @@ export function useTaskCommentActions({
         toast(apiErrorMessage(err, "Failed to update comment"), { variant: "error" });
       }
     },
-    [editingCommentBody, qc, taskId, updateCommentMutation, toast],
+    [editingCommentBody, qc, taskId, updateCommentMutation, toast]
   );
 
   const handleDeleteComment = useCallback(
@@ -199,7 +202,7 @@ export function useTaskCommentActions({
               comments: page.comments.filter((c) => c.id !== commentId),
             })),
           };
-        },
+        }
       );
       changeCommentCount(-1);
 
@@ -218,13 +221,13 @@ export function useTaskCommentActions({
               comments: [...pages[lastIdx].comments, removedComment],
             };
             return { ...old, pages };
-          },
+          }
         );
         changeCommentCount(1);
         toast(apiErrorMessage(err, "Failed to delete comment"), { variant: "error" });
       }
     },
-    [qc, taskId, changeCommentCount, deleteCommentMutation, toast],
+    [qc, taskId, changeCommentCount, deleteCommentMutation, toast]
   );
 
   const resetCommentState = useCallback(() => {

@@ -27,8 +27,10 @@ function stubFetch(handler: (call: Call) => Response | "network") {
       };
       calls.push(call);
       const reply = handler(call);
-      return reply === "network" ? Promise.reject(new TypeError("Failed to fetch")) : Promise.resolve(reply);
-    }),
+      return reply === "network"
+        ? Promise.reject(new TypeError("Failed to fetch"))
+        : Promise.resolve(reply);
+    })
   );
   return calls;
 }
@@ -36,7 +38,12 @@ function stubFetch(handler: (call: Call) => Response | "network") {
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
-const rename = { method: "PATCH" as const, path: "/api/tasks/t1", body: { title: "New" }, label: "Rename task" };
+const rename = {
+  method: "PATCH" as const,
+  path: "/api/tasks/t1",
+  body: { title: "New" },
+  label: "Rename task",
+};
 
 async function drained() {
   for (let i = 0; i < 20; i++) {
@@ -73,7 +80,10 @@ describe("sendWrite", () => {
     const calls = stubFetch(() => json(200, { task: { id: "t1" } }));
     await startOfflineRuntime("u1", queryClient);
 
-    await expect(sendWrite(rename)).resolves.toEqual({ status: "sent", data: { task: { id: "t1" } } });
+    await expect(sendWrite(rename)).resolves.toEqual({
+      status: "sent",
+      data: { task: { id: "t1" } },
+    });
     expect(calls).toHaveLength(1);
     expect(calls[0].key).toMatch(/^[0-9a-f-]{36}$/);
   });
@@ -99,7 +109,10 @@ describe("sendWrite", () => {
     up = true;
     activeOutbox()!.setOnline(true);
     await drained();
-    expect(calls.filter((c) => c.method === "PATCH").map((c) => c.key)).toEqual([calls[0].key, calls[0].key]);
+    expect(calls.filter((c) => c.method === "PATCH").map((c) => c.key)).toEqual([
+      calls[0].key,
+      calls[0].key,
+    ]);
     expect(activeOutbox()!.getStatus().pending).toBe(0);
   });
 
@@ -113,7 +126,9 @@ describe("sendWrite", () => {
     expect(calls).toHaveLength(0);
 
     onlineManager.setOnline(true);
-    await expect(sendWrite({ ...rename, path: "/api/tasks/c" })).resolves.toEqual({ status: "queued" });
+    await expect(sendWrite({ ...rename, path: "/api/tasks/c" })).resolves.toEqual({
+      status: "queued",
+    });
     await drained();
     expect(calls.filter((c) => c.method === "PATCH").map((c) => c.path)).toEqual([
       "/api/tasks/a",
@@ -136,11 +151,16 @@ describe("sendWrite", () => {
           });
         }
         return Promise.resolve(json(200, { task: { id: "t-new", title: "Renamed" } }));
-      }),
+      })
     );
     await startOfflineRuntime("u1", queryClient);
 
-    const create = sendWrite({ method: "POST", path: "/api/tasks", body: { id: "t-new" }, label: "Create task" });
+    const create = sendWrite({
+      method: "POST",
+      path: "/api/tasks",
+      body: { id: "t-new" },
+      label: "Create task",
+    });
     const edit = sendWrite({ ...rename, path: "/api/tasks/t-new" });
     await vi.waitFor(() => expect(order).toEqual(["POST /api/tasks"]));
     await new Promise((r) => setTimeout(r, 20));
@@ -148,7 +168,10 @@ describe("sendWrite", () => {
 
     releaseCreate();
     await expect(create).resolves.toEqual({ status: "sent", data: { task: { id: "t-new" } } });
-    await expect(edit).resolves.toEqual({ status: "sent", data: { task: { id: "t-new", title: "Renamed" } } });
+    await expect(edit).resolves.toEqual({
+      status: "sent",
+      data: { task: { id: "t-new", title: "Renamed" } },
+    });
     expect(order).toEqual(["POST /api/tasks", "PATCH /api/tasks/t-new"]);
   });
 
@@ -161,7 +184,7 @@ describe("sendWrite", () => {
         keys.push(new Headers(init?.headers).get(IDEMPOTENCY_KEY_HEADER));
         // Before the reload the request never completes; after it, the server answers.
         return land ? Promise.resolve(json(200, {})) : new Promise<Response>(() => undefined);
-      }),
+      })
     );
     await startOfflineRuntime("u1", queryClient);
     const pending = sendWrite(rename);
@@ -188,7 +211,7 @@ describe("sendWrite", () => {
       sendWrites([
         { ...rename, path: "/api/tasks/a" },
         { ...rename, path: "/api/tasks/b" },
-      ]),
+      ])
     );
     expect(results).toEqual([{ status: "queued" }, { status: "queued" }]);
     const stored = await activeOutbox()!.list();

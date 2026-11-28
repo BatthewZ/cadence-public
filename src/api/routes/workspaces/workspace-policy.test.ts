@@ -143,7 +143,7 @@ function createProjectApp(user: TestUserFixture) {
     requireWorkspaceMember(),
     requireProjectCreation(),
     validateBody(createProjectSchema),
-    createProject,
+    createProject
   );
   return app;
 }
@@ -158,7 +158,7 @@ function duplicateProjectApp(user: TestUserFixture) {
     requireProjectRole("admin"),
     requireProjectCreation(),
     validateBody(duplicateProjectSchema),
-    duplicateProject,
+    duplicateProject
   );
   return app;
 }
@@ -172,14 +172,14 @@ function workspaceApp(user: TestUserFixture) {
     fakeAuth(d1, user),
     requireWorkspaceRole("owner", "admin"),
     validateBody(updateWorkspaceSchema),
-    updateWorkspace,
+    updateWorkspace
   );
   app.get(
     "/workspaces/:workspaceId",
     fakeEnv(d1),
     fakeAuth(d1, user),
     requireWorkspaceMember(),
-    getWorkspace,
+    getWorkspace
   );
   return app;
 }
@@ -197,7 +197,7 @@ describe("POST /workspaces/:workspaceId/projects — creation policy", () => {
     expect(await getStoredPolicy(workspaceId)).toBeNull();
 
     const res = await createProjectApp(MEMBER).fetch(
-      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Member Project" }),
+      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Member Project" })
     );
 
     expect(res.status).toBe(201);
@@ -207,7 +207,7 @@ describe("POST /workspaces/:workspaceId/projects — creation policy", () => {
     await setStoredPolicy(workspaceId, { allowMemberProjectCreation: true });
 
     const res = await createProjectApp(MEMBER).fetch(
-      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Allowed" }),
+      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Allowed" })
     );
 
     expect(res.status).toBe(201);
@@ -217,7 +217,7 @@ describe("POST /workspaces/:workspaceId/projects — creation policy", () => {
     await setStoredPolicy(workspaceId, { allowMemberProjectCreation: false });
 
     const res = await createProjectApp(MEMBER).fetch(
-      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Refused" }),
+      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Refused" })
     );
 
     expect(res.status).toBe(403);
@@ -233,7 +233,7 @@ describe("POST /workspaces/:workspaceId/projects — creation policy", () => {
     await setStoredPolicy(workspaceId, { allowMemberProjectCreation: false });
 
     await createProjectApp(MEMBER).fetch(
-      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Refused" }),
+      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Refused" })
     );
 
     // The guard runs before the handler, so this should be impossible — which
@@ -253,7 +253,7 @@ describe("POST /workspaces/:workspaceId/projects — creation policy", () => {
     await setStoredPolicy(workspaceId, { allowMemberProjectCreation: false });
 
     const res = await createProjectApp(getUser()).fetch(
-      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Admin Project" }),
+      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Admin Project" })
     );
 
     // If this ever fails, turning the setting off has become a one-way door:
@@ -268,7 +268,7 @@ describe("POST /workspaces/:workspaceId/projects — creation policy", () => {
       .run();
 
     const res = await createProjectApp(MEMBER).fetch(
-      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Corrupt Policy" }),
+      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Corrupt Policy" })
     );
 
     // Documented behaviour, asserted so it stays a decision rather than an
@@ -284,10 +284,10 @@ describe("POST /workspaces/:workspaceId/projects — creation policy", () => {
     await setStoredPolicy(otherWorkspaceId, { allowMemberProjectCreation: true });
 
     const refused = await createProjectApp(MEMBER).fetch(
-      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "A" }),
+      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "A" })
     );
     const allowed = await createProjectApp(MEMBER).fetch(
-      jsonRequest("POST", `/workspaces/${otherWorkspaceId}/projects`, { name: "B" }),
+      jsonRequest("POST", `/workspaces/${otherWorkspaceId}/projects`, { name: "B" })
     );
 
     expect(refused.status).toBe(403);
@@ -305,7 +305,7 @@ describe("POST /projects/:projectId/duplicate — the second creation path", () 
     // The exact situation the guard exists for: a member created a project
     // while the toggle was on, so they hold project-admin on it.
     const created = await createProjectApp(MEMBER).fetch(
-      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Seeded By Member" }),
+      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "Seeded By Member" })
     );
     expect(created.status).toBe(201);
     const body = await readJson<{ project: { id: string } }>(created);
@@ -314,7 +314,7 @@ describe("POST /projects/:projectId/duplicate — the second creation path", () 
 
   it("lets the member duplicate their project while the policy is on", async () => {
     const res = await duplicateProjectApp(MEMBER).fetch(
-      jsonRequest("POST", `/projects/${memberOwnedProjectId}/duplicate`, { name: "Copy" }),
+      jsonRequest("POST", `/projects/${memberOwnedProjectId}/duplicate`, { name: "Copy" })
     );
 
     expect(res.status).toBe(201);
@@ -324,7 +324,7 @@ describe("POST /projects/:projectId/duplicate — the second creation path", () 
     await setStoredPolicy(workspaceId, { allowMemberProjectCreation: false });
 
     const res = await duplicateProjectApp(MEMBER).fetch(
-      jsonRequest("POST", `/projects/${memberOwnedProjectId}/duplicate`, { name: "Copy" }),
+      jsonRequest("POST", `/projects/${memberOwnedProjectId}/duplicate`, { name: "Copy" })
     );
 
     // THE bypass test. The member still passes `requireProjectRole("admin")`
@@ -337,7 +337,7 @@ describe("POST /projects/:projectId/duplicate — the second creation path", () 
     await setStoredPolicy(workspaceId, { allowMemberProjectCreation: false });
 
     await duplicateProjectApp(MEMBER).fetch(
-      jsonRequest("POST", `/projects/${memberOwnedProjectId}/duplicate`, { name: "Copy" }),
+      jsonRequest("POST", `/projects/${memberOwnedProjectId}/duplicate`, { name: "Copy" })
     );
 
     const count = await d1
@@ -351,7 +351,7 @@ describe("POST /projects/:projectId/duplicate — the second creation path", () 
     await setStoredPolicy(workspaceId, { allowMemberProjectCreation: false });
 
     const res = await duplicateProjectApp(ADMIN).fetch(
-      jsonRequest("POST", `/projects/${memberOwnedProjectId}/duplicate`, { name: "Copy" }),
+      jsonRequest("POST", `/projects/${memberOwnedProjectId}/duplicate`, { name: "Copy" })
     );
 
     // The admin's project access here is elevated from the workspace, and the
@@ -370,7 +370,7 @@ describe("POST /projects/:projectId/duplicate — the second creation path", () 
     await setStoredPolicy(workspaceId, { allowMemberProjectCreation: false });
 
     const res = await duplicateProjectApp(ADMIN).fetch(
-      jsonRequest("POST", `/projects/${seededId}/duplicate`, { name: "Copy" }),
+      jsonRequest("POST", `/projects/${seededId}/duplicate`, { name: "Copy" })
     );
 
     expect(res.status).toBe(201);
@@ -388,11 +388,13 @@ describe("PATCH /workspaces/:workspaceId — policy updates", () => {
     const res = await workspaceApp(ADMIN).fetch(
       jsonRequest("PATCH", `/workspaces/${workspaceId}`, {
         policy: { allowMemberProjectCreation: false },
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
-    const body = await readJson<{ workspace: { policy: { allowMemberProjectCreation: boolean } } }>(res);
+    const body = await readJson<{ workspace: { policy: { allowMemberProjectCreation: boolean } } }>(
+      res
+    );
     expect(body.workspace.policy.allowMemberProjectCreation).toBe(false);
     expect(JSON.parse((await getStoredPolicy(workspaceId)) ?? "{}")).toMatchObject({
       allowMemberProjectCreation: false,
@@ -403,11 +405,11 @@ describe("PATCH /workspaces/:workspaceId — policy updates", () => {
     await workspaceApp(ADMIN).fetch(
       jsonRequest("PATCH", `/workspaces/${workspaceId}`, {
         policy: { allowMemberProjectCreation: false },
-      }),
+      })
     );
 
     const res = await createProjectApp(MEMBER).fetch(
-      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "After Toggle" }),
+      jsonRequest("POST", `/workspaces/${workspaceId}/projects`, { name: "After Toggle" })
     );
 
     // End-to-end through the real write path, not a hand-written column. The
@@ -427,10 +429,13 @@ describe("PATCH /workspaces/:workspaceId — policy updates", () => {
     await workspaceApp(ADMIN).fetch(
       jsonRequest("PATCH", `/workspaces/${workspaceId}`, {
         policy: { allowMemberProjectCreation: false },
-      }),
+      })
     );
 
-    const stored = JSON.parse((await getStoredPolicy(workspaceId)) ?? "{}") as Record<string, unknown>;
+    const stored = JSON.parse((await getStoredPolicy(workspaceId)) ?? "{}") as Record<
+      string,
+      unknown
+    >;
     expect(stored.allowMemberProjectCreation).toBe(false);
     expect(stored.someOtherToggle).toBe(true);
   });
@@ -441,7 +446,7 @@ describe("PATCH /workspaces/:workspaceId — policy updates", () => {
     await workspaceApp(ADMIN).fetch(
       jsonRequest("PATCH", `/workspaces/${workspaceId}`, {
         policy: { allowMemberProjectCreation: false },
-      }),
+      })
     );
 
     // `json_patch(NULL, ...)` returns NULL, which would silently discard the
@@ -456,7 +461,7 @@ describe("PATCH /workspaces/:workspaceId — policy updates", () => {
     await setStoredPolicy(workspaceId, { allowMemberProjectCreation: false });
 
     await workspaceApp(ADMIN).fetch(
-      jsonRequest("PATCH", `/workspaces/${workspaceId}`, { name: "Renamed Workspace" }),
+      jsonRequest("PATCH", `/workspaces/${workspaceId}`, { name: "Renamed Workspace" })
     );
 
     // Renaming a workspace must not quietly re-enable member project creation.
@@ -469,7 +474,7 @@ describe("PATCH /workspaces/:workspaceId — policy updates", () => {
     const res = await workspaceApp(ADMIN).fetch(
       jsonRequest("PATCH", `/workspaces/${workspaceId}`, {
         policy: { allowMemberProjektCreation: false },
-      }),
+      })
     );
 
     // A typo that returned 200 would leave an admin certain they had changed a
@@ -482,7 +487,7 @@ describe("PATCH /workspaces/:workspaceId — policy updates", () => {
     const res = await workspaceApp(MEMBER).fetch(
       jsonRequest("PATCH", `/workspaces/${workspaceId}`, {
         policy: { allowMemberProjectCreation: true },
-      }),
+      })
     );
 
     // The governance setting must not be editable by the role it governs.
@@ -494,9 +499,7 @@ describe("GET /workspaces/:workspaceId — policy on the wire", () => {
   it("returns a fully-resolved policy object for a never-configured workspace", async () => {
     const workspaceId = await seedPolicyWorkspace();
 
-    const res = await workspaceApp(MEMBER).fetch(
-      jsonRequest("GET", `/workspaces/${workspaceId}`),
-    );
+    const res = await workspaceApp(MEMBER).fetch(jsonRequest("GET", `/workspaces/${workspaceId}`));
     const body = await readJson<{ workspace: { policy: unknown } }>(res);
 
     // Never the raw column and never null: the client reads a boolean, so it
@@ -508,9 +511,7 @@ describe("GET /workspaces/:workspaceId — policy on the wire", () => {
     const workspaceId = await seedPolicyWorkspace();
     await setStoredPolicy(workspaceId, { allowMemberProjectCreation: false });
 
-    const res = await workspaceApp(MEMBER).fetch(
-      jsonRequest("GET", `/workspaces/${workspaceId}`),
-    );
+    const res = await workspaceApp(MEMBER).fetch(jsonRequest("GET", `/workspaces/${workspaceId}`));
     const body = await readJson<{ workspace: { policy: unknown } }>(res);
 
     expect(body.workspace.policy).toEqual({ allowMemberProjectCreation: false });
@@ -523,9 +524,7 @@ describe("GET /workspaces/:workspaceId — policy on the wire", () => {
       .bind("{not json", workspaceId)
       .run();
 
-    const res = await workspaceApp(MEMBER).fetch(
-      jsonRequest("GET", `/workspaces/${workspaceId}`),
-    );
+    const res = await workspaceApp(MEMBER).fetch(jsonRequest("GET", `/workspaces/${workspaceId}`));
 
     // This endpoint is what every workspace route blocks on. A throw in the
     // resolver would take the whole tenant's UI down over one bad row.

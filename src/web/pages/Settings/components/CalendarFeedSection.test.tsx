@@ -66,7 +66,7 @@ function renderSection() {
   render(
     <Wrapper>
       <CalendarFeedSection workspaceId={WORKSPACE_ID} />
-    </Wrapper>,
+    </Wrapper>
   );
   return { user };
 }
@@ -121,7 +121,7 @@ describe("CalendarFeedSection", () => {
     renderSection();
 
     expect(
-      await screen.findByRole("button", { name: "Generate calendar URL" }),
+      await screen.findByRole("button", { name: "Generate calendar URL" })
     ).toBeInTheDocument();
     expect(mockApiGet).toHaveBeenCalledWith(FEED_PATH);
   });
@@ -132,8 +132,8 @@ describe("CalendarFeedSection", () => {
     expect(screen.getByText("Calendar Feed")).toBeInTheDocument();
     expect(
       await screen.findByText(
-        /Subscribe in Google Calendar, Apple Calendar, or Outlook\. Anyone with this URL can see your assigned task titles and dates\./,
-      ),
+        /Subscribe in Google Calendar, Apple Calendar, or Outlook\. Anyone with this URL can see your assigned task titles and dates\./
+      )
     ).toBeInTheDocument();
   });
 
@@ -154,9 +154,7 @@ describe("CalendarFeedSection", () => {
     mockApiGet.mockResolvedValueOnce(emptyStatus).mockResolvedValue(existingStatus());
     const { user } = renderSection();
 
-    await user.click(
-      await screen.findByRole("button", { name: "Generate calendar URL" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Generate calendar URL" }));
 
     await waitFor(() => {
       expect(mockApiPost).toHaveBeenCalledWith(FEED_PATH, {});
@@ -170,14 +168,10 @@ describe("CalendarFeedSection", () => {
   it("copies the revealed URL to the clipboard", async () => {
     const { user } = renderSection();
 
-    await user.click(
-      await screen.findByRole("button", { name: "Generate calendar URL" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Generate calendar URL" }));
     await screen.findByTestId("calendar-feed-url");
 
-    await user.click(
-      screen.getByRole("button", { name: "Copy calendar URL to clipboard" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Copy calendar URL to clipboard" }));
 
     expect(await screen.findByText("Copied!")).toBeInTheDocument();
     await expect(window.navigator.clipboard.readText()).resolves.toBe(FEED_URL);
@@ -187,9 +181,7 @@ describe("CalendarFeedSection", () => {
     mockApiGet.mockResolvedValueOnce(emptyStatus).mockResolvedValue(existingStatus());
     const { user } = renderSection();
 
-    await user.click(
-      await screen.findByRole("button", { name: "Generate calendar URL" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Generate calendar URL" }));
     await screen.findByTestId("calendar-feed-url");
 
     await user.click(screen.getByRole("button", { name: "Done" }));
@@ -206,13 +198,9 @@ describe("CalendarFeedSection", () => {
     mockApiPost.mockRejectedValueOnce(new Error("Failed to create calendar feed"));
     const { user } = renderSection();
 
-    await user.click(
-      await screen.findByRole("button", { name: "Generate calendar URL" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Generate calendar URL" }));
 
-    expect(
-      await screen.findByText("Failed to create calendar feed"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Failed to create calendar feed")).toBeInTheDocument();
     expect(screen.queryByTestId("calendar-feed-url")).not.toBeInTheDocument();
   });
 
@@ -230,9 +218,7 @@ describe("CalendarFeedSection", () => {
     expect(screen.getByText("Active")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Regenerate" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Revoke" })).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Generate calendar URL" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate calendar URL" })).not.toBeInTheDocument();
   });
 
   it("shows 'Never fetched' when the feed has never been pulled", async () => {
@@ -256,7 +242,7 @@ describe("CalendarFeedSection", () => {
     // Confirm dialog is mounted with destructive-consequence copy.
     expect(screen.getByText("Revoke Calendar Feed")).toBeInTheDocument();
     expect(
-      screen.getByText(/Calendar apps subscribed with this URL will stop updating/),
+      screen.getByText(/Calendar apps subscribed with this URL will stop updating/)
     ).toBeInTheDocument();
     expect(mockApiDelete).not.toHaveBeenCalled();
 
@@ -273,7 +259,7 @@ describe("CalendarFeedSection", () => {
 
     // Status invalidation refetches and the section returns to the CTA state.
     expect(
-      await screen.findByRole("button", { name: "Generate calendar URL" }),
+      await screen.findByRole("button", { name: "Generate calendar URL" })
     ).toBeInTheDocument();
     expect(screen.queryByText("Revoke Calendar Feed")).not.toBeInTheDocument();
   });
@@ -300,9 +286,7 @@ describe("CalendarFeedSection", () => {
     await user.click(await screen.findByRole("button", { name: "Regenerate" }));
 
     expect(screen.getByText("Regenerate Calendar URL")).toBeInTheDocument();
-    expect(
-      screen.getByText(/immediately disables the current\s+one/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/immediately disables the current\s+one/)).toBeInTheDocument();
     expect(mockApiPost).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Regenerate URL" }));
@@ -338,9 +322,7 @@ describe("CalendarFeedSection", () => {
       .mockResolvedValue(existingStatus());
     const { user } = renderSection();
 
-    expect(
-      await screen.findByText("Failed to load calendar feed"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Failed to load calendar feed")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Retry" }));
 

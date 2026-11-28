@@ -16,7 +16,11 @@ import {
   isUniqueConstraintViolation,
   retryOnPositionConflict,
 } from "../../../lib/position-conflict";
-import { buildTaskEventData, dispatchWebhook, resolveTaskEnrichment } from "../../../lib/webhook-payloads";
+import {
+  buildTaskEventData,
+  dispatchWebhook,
+  resolveTaskEnrichment,
+} from "../../../lib/webhook-payloads";
 import { logActivity } from "../log-activity";
 import { copyTaskRelations } from "./copy-task-relations";
 
@@ -61,7 +65,7 @@ export async function spawnNextRecurringInstance(
   db: Database,
   completedTask: TaskRow,
   completionDate: Date,
-  targetGroupId: string,
+  targetGroupId: string
 ): Promise<SpawnResult> {
   // 1. Parse the recurrence rule
   const rule = parseRecurrenceRule(completedTask.recurrenceRule);
@@ -75,10 +79,8 @@ export async function spawnNextRecurringInstance(
   // date-less recurring task anchors on the completion date (the "N days after
   // I finish" pattern) and materialises a due date. The recurrence math is
   // pure date arithmetic and doesn't care which field the anchor came from.
-  const recurOnStartOnly =
-    completedTask.dueDate === null && completedTask.startDate !== null;
-  const anchor =
-    completedTask.dueDate ?? completedTask.startDate ?? completionDate;
+  const recurOnStartOnly = completedTask.dueDate === null && completedTask.startDate !== null;
+  const anchor = completedTask.dueDate ?? completedTask.startDate ?? completionDate;
   const nextAnchor = computeNextDueDate(anchor, completionDate, rule);
   if (!nextAnchor) return { nextRecurringTask: null, created: false }; // Past endDate
 
@@ -103,7 +105,9 @@ export async function spawnNextRecurringInstance(
   // triggered the spawn) keeps the series alive for the team while cutting off
   // the leak; the next person to open the task can reassign it.
   const nextAssigneeId = await retainAssignableAssignee(
-    db, completedTask.projectId, completedTask.assigneeId,
+    db,
+    completedTask.projectId,
+    completedTask.assigneeId
   );
 
   const newTaskId = crypto.randomUUID();
@@ -246,7 +250,7 @@ export async function spawnNextRecurringInstance(
  */
 export async function removeUntouchedRecurringInstance(
   c: Context<AppEnv>,
-  parentTaskId: string,
+  parentTaskId: string
 ): Promise<string | null> {
   const db = c.get("db");
   const [removed] = await db
@@ -255,8 +259,8 @@ export async function removeUntouchedRecurringInstance(
       and(
         eq(task.recurrenceParentId, parentTaskId),
         eq(task.completed, false),
-        eq(task.updatedAt, task.createdAt),
-      ),
+        eq(task.updatedAt, task.createdAt)
+      )
     )
     .returning();
   if (!removed) return null;
@@ -295,7 +299,7 @@ export async function logRecurringInstanceCreated(
      * same token. Pass null for scheduled jobs / system-triggered spawns.
      */
     apiTokenId?: string | null;
-  },
+  }
 ): Promise<void> {
   await logActivity(db, {
     taskId: opts.nextTaskId,

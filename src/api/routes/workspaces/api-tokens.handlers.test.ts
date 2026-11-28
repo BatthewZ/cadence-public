@@ -37,16 +37,7 @@
  */
 
 import { Hono } from "hono";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ApiToken } from "../../../db/schema";
 import type { AppEnv } from "../../env";
@@ -76,8 +67,8 @@ import {
   TEST_USER_2,
 } from "../../test-utils";
 
-const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<EmailSendResult>>(
-  () => Promise.resolve({ id: "test-email-id" }),
+const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<EmailSendResult>>(() =>
+  Promise.resolve({ id: "test-email-id" })
 );
 vi.mock("../../lib/email", () => ({
   createEmailService: vi.fn(() => ({ send: mockEmailSend })),
@@ -165,8 +156,7 @@ async function seedApiToken(opts: TokenRowOpts = {}): Promise<string> {
   const userId = opts.userId ?? TEST_USER.id;
   const wsId = opts.workspaceId ?? workspaceId;
   const name = opts.name ?? "Seed Token";
-  const hash =
-    opts.tokenHash ?? `hash-${id}`.padEnd(64, "0").slice(0, 64);
+  const hash = opts.tokenHash ?? `hash-${id}`.padEnd(64, "0").slice(0, 64);
   const prefix = opts.tokenPrefix ?? `cdn_pat_${id.slice(0, 4)}`;
   const scopes = JSON.stringify(opts.scopes ?? ["workspace:read"]);
   const projectScope = opts.projectScope ?? "all";
@@ -174,12 +164,11 @@ async function seedApiToken(opts: TokenRowOpts = {}): Promise<string> {
     opts.projectIds === null || opts.projectIds === undefined
       ? null
       : JSON.stringify(opts.projectIds);
-  const toSec = (d: Date | null | undefined) =>
-    d ? Math.floor(d.getTime() / 1000) : null;
+  const toSec = (d: Date | null | undefined) => (d ? Math.floor(d.getTime() / 1000) : null);
   await d1
     .prepare(
       `INSERT INTO api_token (id, userId, workspaceId, name, tokenHash, tokenPrefix, scopes, projectScope, projectIds, lastUsedAt, expiresAt, revokeAt, revokedAt, rotatedToId, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       id,
@@ -196,14 +185,22 @@ async function seedApiToken(opts: TokenRowOpts = {}): Promise<string> {
       toSec(opts.revokeAt ?? null),
       toSec(opts.revokedAt ?? null),
       opts.rotatedToId ?? null,
-      Math.floor(Date.now() / 1000),
+      Math.floor(Date.now() / 1000)
     )
     .run();
   return id;
 }
 
 type Caller = {
-  user?: { id: string; name: string; email: string; emailVerified: boolean; image: string | null; createdAt: Date; updatedAt: Date };
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    emailVerified: boolean;
+    image: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
   role?: "owner" | "admin" | "member";
   apiToken?: ApiToken | null;
   workspaceId?: string;
@@ -216,10 +213,7 @@ type Caller = {
  * `workspaceMembership` option so handler-level role checks see the
  * intended role.
  */
-function buildApp(
-  caller: Caller,
-  mountFn: (app: Hono<AppEnv>) => void,
-): Hono<AppEnv> {
+function buildApp(caller: Caller, mountFn: (app: Hono<AppEnv>) => void): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   const wsId = caller.workspaceId ?? workspaceId;
   app.use(
@@ -230,7 +224,7 @@ function buildApp(
         workspaceId: wsId,
         role: caller.role ?? "owner",
       },
-    }),
+    })
   );
   // Layer in the PAT marker after fakeAuth so the production
   // `rejectPatAuth()` middleware can observe the PAT context. fakeAuth does
@@ -239,8 +233,7 @@ function buildApp(
     if (caller.apiToken !== undefined) c.set("apiToken", caller.apiToken);
     else c.set("apiToken", null);
     // Provide BETTER_AUTH_URL on the env so the email link composes cleanly.
-    (c.env as Record<string, unknown>).BETTER_AUTH_URL =
-      "https://cadence.example.com";
+    (c.env as Record<string, unknown>).BETTER_AUTH_URL = "https://cadence.example.com";
     (c.env as Record<string, unknown>).TOKEN_HASH_PEPPER = TEST_TOKEN_HASH_PEPPER;
     await next();
   });
@@ -283,7 +276,7 @@ describe("POST /workspaces/:workspaceId/api-tokens — createApiToken", () => {
     app.post(
       "/workspaces/:workspaceId/api-tokens",
       validateBody(createApiTokenSchema),
-      createApiToken,
+      createApiToken
     );
   }
 
@@ -296,11 +289,20 @@ describe("POST /workspaces/:workspaceId/api-tokens — createApiToken", () => {
         projectScope: "all",
       }),
       undefined,
-      {},
+      {}
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ token: { id: string; plaintext: string; tokenPrefix: string; scopes: string[]; projectScope: string; status: string } }>();
+    const body = await res.json<{
+      token: {
+        id: string;
+        plaintext: string;
+        tokenPrefix: string;
+        scopes: string[];
+        projectScope: string;
+        status: string;
+      };
+    }>();
     expect(body.token.plaintext).toMatch(/^cdn_pat_/);
     expect(body.token.tokenPrefix).toBe(body.token.plaintext.slice(0, 12));
     expect(body.token.scopes.sort()).toEqual(["task:read", "task:write"]);
@@ -310,9 +312,17 @@ describe("POST /workspaces/:workspaceId/api-tokens — createApiToken", () => {
     // The persisted row stores only the hash — never the plaintext.
     const expectedHash = await hashToken(body.token.plaintext, TEST_TOKEN_HASH_PEPPER);
     const persisted = await d1
-      .prepare("SELECT tokenHash, scopes, projectScope, projectIds, expiresAt FROM api_token WHERE id = ?")
+      .prepare(
+        "SELECT tokenHash, scopes, projectScope, projectIds, expiresAt FROM api_token WHERE id = ?"
+      )
       .bind(body.token.id)
-      .first<{ tokenHash: string; scopes: string; projectScope: string; projectIds: string | null; expiresAt: number | null }>();
+      .first<{
+        tokenHash: string;
+        scopes: string;
+        projectScope: string;
+        projectIds: string | null;
+        expiresAt: number | null;
+      }>();
     expect(persisted?.tokenHash).toBe(expectedHash);
     expect(persisted?.projectScope).toBe("all");
     expect(persisted?.projectIds).toBeNull();
@@ -337,7 +347,7 @@ describe("POST /workspaces/:workspaceId/api-tokens — createApiToken", () => {
         projectScope: "all",
       }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(201);
     const body = await res.json<{ token: { id: string; expiresAt: string } }>();
@@ -358,7 +368,7 @@ describe("POST /workspaces/:workspaceId/api-tokens — createApiToken", () => {
         expiresInDays: 3651,
       }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(400);
   });
@@ -372,7 +382,7 @@ describe("POST /workspaces/:workspaceId/api-tokens — createApiToken", () => {
         projectScope: "all",
       }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
@@ -388,7 +398,7 @@ describe("POST /workspaces/:workspaceId/api-tokens — createApiToken", () => {
         projectScope: "all",
       }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(400);
   });
@@ -402,7 +412,7 @@ describe("POST /workspaces/:workspaceId/api-tokens — createApiToken", () => {
         projectScope: "selected",
       }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(400);
   });
@@ -417,7 +427,7 @@ describe("POST /workspaces/:workspaceId/api-tokens — createApiToken", () => {
         projectIds: [otherWorkspaceProjectId],
       }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
@@ -434,7 +444,7 @@ describe("POST /workspaces/:workspaceId/api-tokens — createApiToken", () => {
         projectIds: [projectId],
       }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(201);
     const body = await res.json<{ token: { projectScope: string; projectIds: string[] | null } }>();
@@ -443,10 +453,7 @@ describe("POST /workspaces/:workspaceId/api-tokens — createApiToken", () => {
   });
 
   it("returns 403 when the caller authenticated with a PAT", async () => {
-    const app = buildApp(
-      { role: "owner", apiToken: fakePatToken() },
-      mountCreate,
-    );
+    const app = buildApp({ role: "owner", apiToken: fakePatToken() }, mountCreate);
     const res = await app.request(
       jsonRequest("POST", `/workspaces/${workspaceId}/api-tokens`, {
         name: "Pat cannot mint",
@@ -454,7 +461,7 @@ describe("POST /workspaces/:workspaceId/api-tokens — createApiToken", () => {
         projectScope: "all",
       }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(403);
     const body = await res.json<{ error: string }>();
@@ -476,7 +483,7 @@ describe("GET /workspaces/:workspaceId/api-tokens — listApiTokens", () => {
     app.get(
       "/workspaces/:workspaceId/api-tokens",
       validateQuery(listApiTokensQuerySchema),
-      listApiTokens,
+      listApiTokens
     );
   }
 
@@ -485,13 +492,11 @@ describe("GET /workspaces/:workspaceId/api-tokens — listApiTokens", () => {
     await seedApiToken({ name: "Other user", userId: TEST_USER_2.id });
 
     const app = buildApp({ role: "member" }, mountList);
-    const res = await app.request(
-      `/workspaces/${workspaceId}/api-tokens`,
-      undefined,
-      {},
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/api-tokens`, undefined, {});
     expect(res.status).toBe(200);
-    const body = await res.json<{ tokens: Array<{ name: string; userId: string; tokenHash?: string }> }>();
+    const body = await res.json<{
+      tokens: Array<{ name: string; userId: string; tokenHash?: string }>;
+    }>();
     expect(body.tokens).toHaveLength(1);
     expect(body.tokens[0].name).toBe("Mine");
     expect(body.tokens[0].userId).toBe(TEST_USER.id);
@@ -503,11 +508,7 @@ describe("GET /workspaces/:workspaceId/api-tokens — listApiTokens", () => {
     await seedApiToken({ name: "Sibling", userId: TEST_USER_2.id });
 
     const app = buildApp({ role: "admin" }, mountList);
-    const res = await app.request(
-      `/workspaces/${workspaceId}/api-tokens`,
-      undefined,
-      {},
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/api-tokens`, undefined, {});
     expect(res.status).toBe(200);
     const body = await res.json<{ tokens: Array<{ name: string }> }>();
     expect(body.tokens.map((t) => t.name).sort()).toEqual(["Mine", "Sibling"]);
@@ -518,26 +519,15 @@ describe("GET /workspaces/:workspaceId/api-tokens — listApiTokens", () => {
     await seedApiToken({ name: "There", workspaceId: otherWorkspaceId });
 
     const app = buildApp({ role: "owner" }, mountList);
-    const res = await app.request(
-      `/workspaces/${workspaceId}/api-tokens`,
-      undefined,
-      {},
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/api-tokens`, undefined, {});
     expect(res.status).toBe(200);
     const body = await res.json<{ tokens: Array<{ name: string }> }>();
     expect(body.tokens.map((t) => t.name)).toEqual(["Here"]);
   });
 
   it("returns 403 for PAT-authenticated callers", async () => {
-    const app = buildApp(
-      { role: "owner", apiToken: fakePatToken() },
-      mountList,
-    );
-    const res = await app.request(
-      `/workspaces/${workspaceId}/api-tokens`,
-      undefined,
-      {},
-    );
+    const app = buildApp({ role: "owner", apiToken: fakePatToken() }, mountList);
+    const res = await app.request(`/workspaces/${workspaceId}/api-tokens`, undefined, {});
     expect(res.status).toBe(403);
   });
 
@@ -559,11 +549,7 @@ describe("GET /workspaces/:workspaceId/api-tokens — listApiTokens", () => {
     });
 
     const app = buildApp({ role: "owner" }, mountList);
-    const res = await app.request(
-      `/workspaces/${workspaceId}/api-tokens`,
-      undefined,
-      {},
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/api-tokens`, undefined, {});
     expect(res.status).toBe(200);
     const body = await res.json<{ tokens: Array<{ name: string }> }>();
     expect(body.tokens.map((t) => t.name)).toEqual(["Active"]);
@@ -581,7 +567,7 @@ describe("GET /workspaces/:workspaceId/api-tokens — listApiTokens", () => {
     const res = await app.request(
       `/workspaces/${workspaceId}/api-tokens?includeRevoked=true`,
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(200);
     const body = await res.json<{ tokens: Array<{ name: string; status: string }> }>();
@@ -604,7 +590,7 @@ describe("GET /workspaces/:workspaceId/api-tokens — listApiTokens", () => {
     const res = await app.request(
       `/workspaces/${workspaceId}/api-tokens?includeRevoked=false`,
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(200);
     const body = await res.json<{ tokens: Array<{ name: string }> }>();
@@ -620,7 +606,7 @@ describe("GET /workspaces/:workspaceId/api-tokens — listApiTokens", () => {
     const res = await app.request(
       `/workspaces/${workspaceId}/api-tokens?includeRevoked=1`,
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(400);
   });
@@ -638,11 +624,7 @@ describe("GET /workspaces/:workspaceId/api-tokens/:tokenId — getApiToken", () 
   it("owner can fetch their own token detail", async () => {
     const id = await seedApiToken({ name: "Detailed", userId: TEST_USER.id });
     const app = buildApp({ role: "member" }, mountGet);
-    const res = await app.request(
-      `/workspaces/${workspaceId}/api-tokens/${id}`,
-      undefined,
-      {},
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/api-tokens/${id}`, undefined, {});
     expect(res.status).toBe(200);
     const body = await res.json<{ token: { id: string; name: string; tokenHash?: string } }>();
     expect(body.token.id).toBe(id);
@@ -653,22 +635,14 @@ describe("GET /workspaces/:workspaceId/api-tokens/:tokenId — getApiToken", () 
   it("non-owner member receives 404 to avoid disclosing token existence", async () => {
     const id = await seedApiToken({ name: "Not yours", userId: TEST_USER_2.id });
     const app = buildApp({ role: "member" }, mountGet);
-    const res = await app.request(
-      `/workspaces/${workspaceId}/api-tokens/${id}`,
-      undefined,
-      {},
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/api-tokens/${id}`, undefined, {});
     expect(res.status).toBe(404);
   });
 
   it("admin can fetch any member's token detail", async () => {
     const id = await seedApiToken({ name: "Admin view", userId: TEST_USER_2.id });
     const app = buildApp({ role: "admin" }, mountGet);
-    const res = await app.request(
-      `/workspaces/${workspaceId}/api-tokens/${id}`,
-      undefined,
-      {},
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/api-tokens/${id}`, undefined, {});
     expect(res.status).toBe(200);
     const body = await res.json<{ token: { id: string } }>();
     expect(body.token.id).toBe(id);
@@ -676,15 +650,8 @@ describe("GET /workspaces/:workspaceId/api-tokens/:tokenId — getApiToken", () 
 
   it("returns 403 for PAT-authenticated callers", async () => {
     const id = await seedApiToken();
-    const app = buildApp(
-      { role: "owner", apiToken: fakePatToken() },
-      mountGet,
-    );
-    const res = await app.request(
-      `/workspaces/${workspaceId}/api-tokens/${id}`,
-      undefined,
-      {},
-    );
+    const app = buildApp({ role: "owner", apiToken: fakePatToken() }, mountGet);
+    const res = await app.request(`/workspaces/${workspaceId}/api-tokens/${id}`, undefined, {});
     expect(res.status).toBe(403);
   });
 });
@@ -702,9 +669,11 @@ describe("DELETE /workspaces/:workspaceId/api-tokens/:tokenId — revokeApiToken
     const id = await seedApiToken({ userId: TEST_USER.id });
     const app = buildApp({ role: "member" }, mountDelete);
     const res = await app.request(
-      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}`, { method: "DELETE" }),
+      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}`, {
+        method: "DELETE",
+      }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(200);
     const row = await d1
@@ -718,9 +687,11 @@ describe("DELETE /workspaces/:workspaceId/api-tokens/:tokenId — revokeApiToken
     const id = await seedApiToken({ userId: TEST_USER_2.id });
     const app = buildApp({ role: "admin" }, mountDelete);
     const res = await app.request(
-      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}`, { method: "DELETE" }),
+      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}`, {
+        method: "DELETE",
+      }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(200);
     const row = await d1
@@ -734,9 +705,11 @@ describe("DELETE /workspaces/:workspaceId/api-tokens/:tokenId — revokeApiToken
     const id = await seedApiToken({ userId: TEST_USER_2.id });
     const app = buildApp({ role: "member" }, mountDelete);
     const res = await app.request(
-      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}`, { method: "DELETE" }),
+      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}`, {
+        method: "DELETE",
+      }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(404);
     const row = await d1
@@ -748,14 +721,13 @@ describe("DELETE /workspaces/:workspaceId/api-tokens/:tokenId — revokeApiToken
 
   it("returns 403 for PAT-authenticated callers", async () => {
     const id = await seedApiToken();
-    const app = buildApp(
-      { role: "owner", apiToken: fakePatToken() },
-      mountDelete,
-    );
+    const app = buildApp({ role: "owner", apiToken: fakePatToken() }, mountDelete);
     const res = await app.request(
-      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}`, { method: "DELETE" }),
+      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}`, {
+        method: "DELETE",
+      }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(403);
   });
@@ -767,10 +739,7 @@ describe("DELETE /workspaces/:workspaceId/api-tokens/:tokenId — revokeApiToken
 
 describe("POST /workspaces/:workspaceId/api-tokens/:tokenId/rotate — rotateApiToken", () => {
   function mountRotate(app: Hono<AppEnv>) {
-    app.post(
-      "/workspaces/:workspaceId/api-tokens/:tokenId/rotate",
-      rotateApiToken,
-    );
+    app.post("/workspaces/:workspaceId/api-tokens/:tokenId/rotate", rotateApiToken);
   }
 
   it("creates a sibling with the same scopes/projectScope/projectIds/expiresAt, points old to new, sets a 7-day revokeAt, and returns plaintext", async () => {
@@ -787,12 +756,24 @@ describe("POST /workspaces/:workspaceId/api-tokens/:tokenId/rotate — rotateApi
     const app = buildApp({ role: "owner" }, mountRotate);
     const before = Date.now();
     const res = await app.request(
-      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${oldId}/rotate`, { method: "POST" }),
+      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${oldId}/rotate`, {
+        method: "POST",
+      }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(201);
-    const body = await res.json<{ token: { id: string; plaintext: string; scopes: string[]; projectScope: string; projectIds: string[] | null; expiresAt: string; name: string } }>();
+    const body = await res.json<{
+      token: {
+        id: string;
+        plaintext: string;
+        scopes: string[];
+        projectScope: string;
+        projectIds: string[] | null;
+        expiresAt: string;
+        name: string;
+      };
+    }>();
     expect(body.token.plaintext).toMatch(/^cdn_pat_/);
     expect(body.token.scopes.sort()).toEqual(["task:read", "task:write"]);
     expect(body.token.projectScope).toBe("selected");
@@ -800,7 +781,7 @@ describe("POST /workspaces/:workspaceId/api-tokens/:tokenId/rotate — rotateApi
     expect(body.token.name).toBe("Original (rotated)");
     // Expiry is inherited byte-for-byte.
     expect(new Date(body.token.expiresAt).getTime()).toBe(
-      Math.floor(expiresAt.getTime() / 1000) * 1000,
+      Math.floor(expiresAt.getTime() / 1000) * 1000
     );
 
     // Old token row points at new id and has revokeAt ~7 days out.
@@ -824,9 +805,11 @@ describe("POST /workspaces/:workspaceId/api-tokens/:tokenId/rotate — rotateApi
     });
     const app = buildApp({ role: "owner" }, mountRotate);
     const res = await app.request(
-      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}/rotate`, { method: "POST" }),
+      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}/rotate`, {
+        method: "POST",
+      }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(409);
   });
@@ -840,9 +823,11 @@ describe("POST /workspaces/:workspaceId/api-tokens/:tokenId/rotate — rotateApi
     });
     const app = buildApp({ role: "owner" }, mountRotate);
     const res = await app.request(
-      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}/rotate`, { method: "POST" }),
+      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}/rotate`, {
+        method: "POST",
+      }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(409);
   });
@@ -851,23 +836,24 @@ describe("POST /workspaces/:workspaceId/api-tokens/:tokenId/rotate — rotateApi
     const id = await seedApiToken({ userId: TEST_USER_2.id });
     const app = buildApp({ role: "admin" }, mountRotate);
     const res = await app.request(
-      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}/rotate`, { method: "POST" }),
+      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}/rotate`, {
+        method: "POST",
+      }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(403);
   });
 
   it("returns 403 for PAT-authenticated callers", async () => {
     const id = await seedApiToken();
-    const app = buildApp(
-      { role: "owner", apiToken: fakePatToken() },
-      mountRotate,
-    );
+    const app = buildApp({ role: "owner", apiToken: fakePatToken() }, mountRotate);
     const res = await app.request(
-      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}/rotate`, { method: "POST" }),
+      new Request(`http://localhost/workspaces/${workspaceId}/api-tokens/${id}/rotate`, {
+        method: "POST",
+      }),
       undefined,
-      {},
+      {}
     );
     expect(res.status).toBe(403);
   });
@@ -881,12 +867,7 @@ describe("POST /workspaces/:workspaceId/api-tokens/:tokenId/rotate — rotateApi
 // ---------------------------------------------------------------------------
 describe("KNOWN_SCOPES", () => {
   it("includes the scopes exercised in this file", () => {
-    for (const s of [
-      "workspace:read",
-      "task:read",
-      "task:write",
-      "project:read",
-    ]) {
+    for (const s of ["workspace:read", "task:read", "task:write", "project:read"]) {
       expect(KNOWN_SCOPES.has(s)).toBe(true);
     }
   });

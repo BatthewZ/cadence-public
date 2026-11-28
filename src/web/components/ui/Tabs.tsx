@@ -328,11 +328,7 @@ const TabsPanel = forwardRef<HTMLDivElement, TabsPanelProps>(function TabsPanel(
   const shouldRender = isExiting || (isActive && exitingValue === null);
   if (!shouldRender) return null;
 
-  const animClass = reducedMotion
-    ? undefined
-    : isExiting
-      ? "fade-out"
-      : "fade-in";
+  const animClass = reducedMotion ? undefined : isExiting ? "fade-out" : "fade-in";
 
   function handleAnimationEnd(e: AnimationEvent) {
     // Ignore bubbled animation events from children

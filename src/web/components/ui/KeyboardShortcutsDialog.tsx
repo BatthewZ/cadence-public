@@ -59,7 +59,12 @@ export function KeyboardShortcutsDialog({ open, onClose }: KeyboardShortcutsDial
         <div className="keyboard-shortcuts-dialog__body">
           {SHORTCUT_SECTIONS.map((section) => (
             <div key={section.title} className="keyboard-shortcuts-dialog__section">
-              <Text variant="body-2" weight="semibold" color="muted" className="keyboard-shortcuts-dialog__section-title">
+              <Text
+                variant="body-2"
+                weight="semibold"
+                color="muted"
+                className="keyboard-shortcuts-dialog__section-title"
+              >
                 {section.title}
               </Text>
               <div className="keyboard-shortcuts-dialog__list">
@@ -73,7 +78,9 @@ export function KeyboardShortcutsDialog({ open, onClose }: KeyboardShortcutsDial
                         <span key={`${k}-${i}`}>
                           <kbd className="keyboard-shortcuts-dialog__kbd">{k}</kbd>
                           {i < shortcut.keys.length - 1 && (
-                            <span className="keyboard-shortcuts-dialog__separator">{shortcut.separator ?? "then"}</span>
+                            <span className="keyboard-shortcuts-dialog__separator">
+                              {shortcut.separator ?? "then"}
+                            </span>
                           )}
                         </span>
                       ))}

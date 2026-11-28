@@ -76,7 +76,12 @@ async function boot(runtime: Runtime, queryClient: QueryClient): Promise<void> {
   setReadBarrier(outbox.whenSettled);
   await outbox.start();
   // Keeps every visible project readable offline, not only the ones opened while connected.
-  const stopPrefetch = startOfflinePrefetch({ qc: queryClient, db, outbox, isCurrent: () => current === runtime });
+  const stopPrefetch = startOfflinePrefetch({
+    qc: queryClient,
+    db,
+    outbox,
+    isCurrent: () => current === runtime,
+  });
 
   runtime.stop = () => {
     stopPrefetch();

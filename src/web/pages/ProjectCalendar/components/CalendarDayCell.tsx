@@ -43,8 +43,7 @@ export function CalendarDayCell({
 }) {
   // Day-of-month from the ISO string itself — no Date parsing, no UTC risk.
   const dayNumber = Number(day.iso.slice(8, 10));
-  const visibleChips =
-    chips.length > CHIP_BUDGET ? chips.slice(0, CHIP_BUDGET) : chips;
+  const visibleChips = chips.length > CHIP_BUDGET ? chips.slice(0, CHIP_BUDGET) : chips;
   const hiddenCount = chips.length - visibleChips.length;
 
   return (
@@ -56,7 +55,7 @@ export function CalendarDayCell({
           "border-border-default",
           col < 7 && "border-r",
           !isLastWeek && "border-b",
-          day.inMonth ? "bg-surface-0" : "bg-surface-1",
+          day.inMonth ? "bg-surface-0" : "bg-surface-1"
         )}
         style={{ gridColumn: col, gridRow: "1 / -1" }}
       />
@@ -64,10 +63,7 @@ export function CalendarDayCell({
       {/* Date number row. `aria-current="date"` marks today's accent circle
           semantically (and is what tests target) instead of a decorative-only
           style. */}
-      <div
-        className="flex justify-end px-r6 pt-r6 pb-r6"
-        style={{ gridColumn: col, gridRow: 1 }}
-      >
+      <div className="flex justify-end px-r6 pt-r6 pb-r6" style={{ gridColumn: col, gridRow: 1 }}>
         {day.isToday ? (
           <span
             aria-current="date"
@@ -79,7 +75,7 @@ export function CalendarDayCell({
           <span
             className={cn(
               "inline-flex size-6 items-center justify-center text-body-3",
-              day.inMonth ? "text-fg-secondary" : "text-fg-muted",
+              day.inMonth ? "text-fg-secondary" : "text-fg-muted"
             )}
           >
             {dayNumber}

@@ -24,8 +24,9 @@
   font-variant-numeric: tabular-nums;
   color: var(--C-TEXT-SECONDARY);
   cursor: pointer;
-  transition: color var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT),
-              background-color var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+  transition:
+    color var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT),
+    background-color var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
 }
 
 .pagination__page:hover {

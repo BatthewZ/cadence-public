@@ -1,11 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  AVATAR_PRESET,
-  COVER_PRESET,
-  isAnimatedGif,
-  optimizeImage,
-} from "./image-optimization";
+import { AVATAR_PRESET, COVER_PRESET, isAnimatedGif, optimizeImage } from "./image-optimization";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -20,8 +15,19 @@ function createFile(name: string, size: number, type: string): File {
 function createGifBytes(frameCount: number): Uint8Array {
   // GIF89a header (6 bytes) + logical screen descriptor (7 bytes)
   const header = [
-    0x47, 0x49, 0x46, 0x38, 0x39, 0x61, // GIF89a
-    0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, // 1x1px, no GCT
+    0x47,
+    0x49,
+    0x46,
+    0x38,
+    0x39,
+    0x61, // GIF89a
+    0x01,
+    0x00,
+    0x01,
+    0x00,
+    0x00,
+    0x00,
+    0x00, // 1x1px, no GCT
   ];
 
   const frames: number[] = [];
@@ -29,12 +35,19 @@ function createGifBytes(frameCount: number): Uint8Array {
     // Image descriptor: 0x2C + position (4 bytes) + size (4 bytes) + flags
     frames.push(
       0x2c, // Image descriptor introducer
-      0x00, 0x00, 0x00, 0x00, // left, top
-      0x01, 0x00, 0x01, 0x00, // width=1, height=1
+      0x00,
+      0x00,
+      0x00,
+      0x00, // left, top
+      0x01,
+      0x00,
+      0x01,
+      0x00, // width=1, height=1
       0x00, // no LCT
       0x02, // LZW minimum code size
-      0x01, 0x01, // sub-block: 1 byte of data
-      0x00, // block terminator
+      0x01,
+      0x01, // sub-block: 1 byte of data
+      0x00 // block terminator
     );
   }
 

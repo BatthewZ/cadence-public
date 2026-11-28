@@ -41,7 +41,8 @@ vi.mock("react-router-dom", async () => {
 });
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -141,7 +142,7 @@ function renderWorkspaces() {
   render(
     <Wrapper>
       <Workspaces />
-    </Wrapper>,
+    </Wrapper>
   );
   return { user };
 }
@@ -241,7 +242,7 @@ describe("Workspaces", () => {
     });
 
     expect(
-      screen.getByText(/Workspaces are where your team organizes projects/),
+      screen.getByText(/Workspaces are where your team organizes projects/)
     ).toBeInTheDocument();
     expect(screen.getByText("Get started by creating your first workspace.")).toBeInTheDocument();
   });
@@ -312,7 +313,9 @@ describe("Workspaces", () => {
 
     // Zod validates all constraints: for an empty slug the regex check is the
     // last error recorded by useFieldErrors (which keeps the final error per field)
-    expect(screen.getByText("URL must contain only lowercase letters, numbers, and hyphens")).toBeInTheDocument();
+    expect(
+      screen.getByText("URL must contain only lowercase letters, numbers, and hyphens")
+    ).toBeInTheDocument();
     expect(mockPost).not.toHaveBeenCalled();
   });
 
@@ -419,9 +422,7 @@ describe("Workspaces", () => {
   // -------------------------------------------------------------------------
 
   it("renders the UserMenu with account menu trigger", async () => {
-    const workspaces = [
-      makeWorkspace({ id: "ws-1", name: "Test", slug: "test", memberCount: 1 }),
-    ];
+    const workspaces = [makeWorkspace({ id: "ws-1", name: "Test", slug: "test", memberCount: 1 })];
 
     mockGet.mockImplementation((path: string) => {
       if (path === "/api/workspaces") return Promise.resolve({ workspaces });
@@ -440,9 +441,7 @@ describe("Workspaces", () => {
   });
 
   it("opens UserMenu dropdown on click", async () => {
-    const workspaces = [
-      makeWorkspace({ id: "ws-1", name: "Test", slug: "test", memberCount: 1 }),
-    ];
+    const workspaces = [makeWorkspace({ id: "ws-1", name: "Test", slug: "test", memberCount: 1 })];
 
     mockGet.mockImplementation((path: string) => {
       if (path === "/api/workspaces") return Promise.resolve({ workspaces });
@@ -469,9 +468,7 @@ describe("Workspaces", () => {
   // -------------------------------------------------------------------------
 
   it("displays singular 'member' for count of 1", async () => {
-    const workspaces = [
-      makeWorkspace({ id: "ws-1", name: "Solo", slug: "solo", memberCount: 1 }),
-    ];
+    const workspaces = [makeWorkspace({ id: "ws-1", name: "Solo", slug: "solo", memberCount: 1 })];
 
     mockGet.mockImplementation((path: string) => {
       if (path === "/api/workspaces") return Promise.resolve({ workspaces });
@@ -489,9 +486,7 @@ describe("Workspaces", () => {
   });
 
   it("displays plural 'members' for count greater than 1", async () => {
-    const workspaces = [
-      makeWorkspace({ id: "ws-1", name: "Team", slug: "team", memberCount: 7 }),
-    ];
+    const workspaces = [makeWorkspace({ id: "ws-1", name: "Team", slug: "team", memberCount: 7 })];
 
     mockGet.mockImplementation((path: string) => {
       if (path === "/api/workspaces") return Promise.resolve({ workspaces });

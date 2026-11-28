@@ -1,6 +1,10 @@
 import { Hono } from "hono";
 
-import { myTasksQuerySchema, upcomingTasksQuerySchema, workspaceActivityQuerySchema } from "../../../shared/schemas/dashboard";
+import {
+  myTasksQuerySchema,
+  upcomingTasksQuerySchema,
+  workspaceActivityQuerySchema,
+} from "../../../shared/schemas/dashboard";
 import type { AppEnv } from "../../env";
 import {
   requireProjectAccess,
@@ -78,7 +82,7 @@ app.get(
   "/workspaces/:workspaceId/dashboard",
   requireAuth,
   requireWorkspaceMember(),
-  workspaceDashboard,
+  workspaceDashboard
 );
 
 app.get(
@@ -86,7 +90,7 @@ app.get(
   requireAuth,
   requireWorkspaceMember(),
   validateQuery(myTasksQuerySchema),
-  myTasks,
+  myTasks
 );
 
 app.get(
@@ -94,7 +98,7 @@ app.get(
   requireAuth,
   requireWorkspaceMember(),
   validateQuery(upcomingTasksQuerySchema),
-  upcomingTasks,
+  upcomingTasks
 );
 
 app.get(
@@ -102,21 +106,11 @@ app.get(
   requireAuth,
   requireWorkspaceMember(),
   validateQuery(workspaceActivityQuerySchema),
-  workspaceActivity,
+  workspaceActivity
 );
 
-app.get(
-  "/projects/:projectId/dashboard",
-  requireAuth,
-  requireProjectAccess(),
-  projectDashboard,
-);
+app.get("/projects/:projectId/dashboard", requireAuth, requireProjectAccess(), projectDashboard);
 
-app.get(
-  "/projects/:projectId/activity",
-  requireAuth,
-  requireProjectAccess(),
-  projectActivity,
-);
+app.get("/projects/:projectId/activity", requireAuth, requireProjectAccess(), projectActivity);
 
 export default app;

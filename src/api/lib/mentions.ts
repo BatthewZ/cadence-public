@@ -19,7 +19,7 @@ import { projectMember } from "../../db/schema/project";
 export async function parseMentions(
   db: Database,
   text: string,
-  projectId: string,
+  projectId: string
 ): Promise<string[]> {
   const members = await db
     .select({ userId: projectMember.userId, name: userTable.name })
@@ -45,7 +45,7 @@ export async function parseMentions(
   const unquotedPattern = /@(\w+)/g;
   while ((match = unquotedPattern.exec(text)) !== null) {
     // Skip if this @ is inside a quoted mention
-    const beforeAt = text.lastIndexOf("@\"", match.index);
+    const beforeAt = text.lastIndexOf('@"', match.index);
     if (beforeAt !== -1 && beforeAt === match.index - 1) continue;
 
     const startPos = match.index + 1; // position after @
@@ -62,7 +62,10 @@ export async function parseMentions(
       // Fall back to single-word match against name parts
       const word = match[1].toLowerCase();
       const partial = members.find((m) =>
-        m.name.toLowerCase().split(/\s+/).some((w) => w === word),
+        m.name
+          .toLowerCase()
+          .split(/\s+/)
+          .some((w) => w === word)
       );
       if (partial) resolvedIds.push(partial.userId);
     }

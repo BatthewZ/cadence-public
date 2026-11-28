@@ -29,7 +29,7 @@ describe("GET /config", () => {
     const res = await configRoutes.request(
       "/config",
       { method: "GET" },
-      buildEnv({ UNSPLASH_ACCESS_KEY: "some-key" }),
+      buildEnv({ UNSPLASH_ACCESS_KEY: "some-key" })
     );
 
     expect(res.status).toBe(200);
@@ -38,11 +38,7 @@ describe("GET /config", () => {
   });
 
   it("returns features.unsplash=false when UNSPLASH_ACCESS_KEY is missing", async () => {
-    const res = await configRoutes.request(
-      "/config",
-      { method: "GET" },
-      buildEnv(),
-    );
+    const res = await configRoutes.request("/config", { method: "GET" }, buildEnv());
 
     expect(res.status).toBe(200);
     const body = await res.json<{ features: { unsplash: boolean } }>();
@@ -53,7 +49,7 @@ describe("GET /config", () => {
     const res = await configRoutes.request(
       "/config",
       { method: "GET" },
-      buildEnv({ UNSPLASH_ACCESS_KEY: "" }),
+      buildEnv({ UNSPLASH_ACCESS_KEY: "" })
     );
 
     expect(res.status).toBe(200);
@@ -68,7 +64,7 @@ describe("GET /config", () => {
     const res = await configRoutes.request(
       "/config",
       { method: "GET" },
-      buildEnv({ UNSPLASH_ACCESS_KEY: "   " }),
+      buildEnv({ UNSPLASH_ACCESS_KEY: "   " })
     );
 
     expect(res.status).toBe(200);
@@ -80,7 +76,7 @@ describe("GET /config", () => {
     const res = await configRoutes.request(
       "/config",
       { method: "GET" },
-      buildEnv({ UNSPLASH_ACCESS_KEY: "some-key" }),
+      buildEnv({ UNSPLASH_ACCESS_KEY: "some-key" })
     );
 
     expect(res.headers.get("Cache-Control")).toBe("private, max-age=300");
@@ -89,11 +85,7 @@ describe("GET /config", () => {
   it("is accessible without authentication", async () => {
     // Endpoint has no auth middleware attached; no Authorization header
     // should not produce a 401.
-    const res = await configRoutes.request(
-      "/config",
-      { method: "GET" },
-      buildEnv(),
-    );
+    const res = await configRoutes.request("/config", { method: "GET" }, buildEnv());
     expect(res.status).toBe(200);
   });
 });

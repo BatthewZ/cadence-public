@@ -38,9 +38,7 @@ export function AuthenticatedLayout({ children }: AuthenticatedLayoutProps) {
         </AppShell.SidebarSection>
       </AppShell.Sidebar>
 
-      <AppShell.Main>
-        {children}
-      </AppShell.Main>
+      <AppShell.Main>{children}</AppShell.Main>
     </AppShell>
   );
 }

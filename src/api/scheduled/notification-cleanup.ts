@@ -42,86 +42,62 @@ export async function cleanupNotifications(db: Database): Promise<number> {
   // Policy 1: Delete read notifications older than 30 days
   // ---------------------------------------------------------------------------
   try {
-    const readCutoff = new Date(
-      Date.now() - READ_RETENTION_DAYS * 24 * 60 * 60 * 1000,
-    );
+    const readCutoff = new Date(Date.now() - READ_RETENTION_DAYS * 24 * 60 * 60 * 1000);
 
     let batchDeleted: number;
     do {
       const oldRows = await db
         .select({ id: notification.id })
         .from(notification)
-        .where(
-          and(
-            eq(notification.read, true),
-            lt(notification.createdAt, readCutoff),
-          ),
-        )
+        .where(and(eq(notification.read, true), lt(notification.createdAt, readCutoff)))
         .limit(DELETE_BATCH_SIZE);
 
       if (oldRows.length === 0) break;
 
       const idsToDelete = oldRows.map((r) => r.id);
-      await db
-        .delete(notification)
-        .where(
-          sql`${notification.id} IN (${sql.join(
-            idsToDelete.map((id) => sql`${id}`),
-            sql`, `,
-          )})`,
-        );
+      await db.delete(notification).where(
+        sql`${notification.id} IN (${sql.join(
+          idsToDelete.map((id) => sql`${id}`),
+          sql`, `
+        )})`
+      );
 
       batchDeleted = oldRows.length;
       totalDeleted += batchDeleted;
     } while (batchDeleted === DELETE_BATCH_SIZE);
   } catch (error) {
-    console.error(
-      "[notification-cleanup] Failed to delete old read notifications",
-      error,
-    );
+    console.error("[notification-cleanup] Failed to delete old read notifications", error);
   }
 
   // ---------------------------------------------------------------------------
   // Policy 2: Delete unread notifications older than 90 days
   // ---------------------------------------------------------------------------
   try {
-    const unreadCutoff = new Date(
-      Date.now() - UNREAD_RETENTION_DAYS * 24 * 60 * 60 * 1000,
-    );
+    const unreadCutoff = new Date(Date.now() - UNREAD_RETENTION_DAYS * 24 * 60 * 60 * 1000);
 
     let batchDeleted: number;
     do {
       const oldRows = await db
         .select({ id: notification.id })
         .from(notification)
-        .where(
-          and(
-            eq(notification.read, false),
-            lt(notification.createdAt, unreadCutoff),
-          ),
-        )
+        .where(and(eq(notification.read, false), lt(notification.createdAt, unreadCutoff)))
         .limit(DELETE_BATCH_SIZE);
 
       if (oldRows.length === 0) break;
 
       const idsToDelete = oldRows.map((r) => r.id);
-      await db
-        .delete(notification)
-        .where(
-          sql`${notification.id} IN (${sql.join(
-            idsToDelete.map((id) => sql`${id}`),
-            sql`, `,
-          )})`,
-        );
+      await db.delete(notification).where(
+        sql`${notification.id} IN (${sql.join(
+          idsToDelete.map((id) => sql`${id}`),
+          sql`, `
+        )})`
+      );
 
       batchDeleted = oldRows.length;
       totalDeleted += batchDeleted;
     } while (batchDeleted === DELETE_BATCH_SIZE);
   } catch (error) {
-    console.error(
-      "[notification-cleanup] Failed to delete old unread notifications",
-      error,
-    );
+    console.error("[notification-cleanup] Failed to delete old unread notifications", error);
   }
 
   return totalDeleted;

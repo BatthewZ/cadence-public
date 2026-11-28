@@ -18,7 +18,8 @@ const ctx = vi.hoisted(() => ({
 
 // Bulk actions batch their writes; each request still goes through the per-write mock.
 vi.mock("@/web/lib/offline/send-write", () => ({
-  sendWrites: (requests: unknown[]): unknown[] => requests.map((request): unknown => sendWriteMock(request)),
+  sendWrites: (requests: unknown[]): unknown[] =>
+    requests.map((request): unknown => sendWriteMock(request)),
 }));
 vi.mock("@/web/contexts/ProjectContext", () => ({ useProject: () => ctx }));
 vi.mock("@/web/contexts/WorkspaceContext", () => ({
@@ -29,17 +30,25 @@ vi.mock("@/web/components/ui/ToastContext", () => ({ useToast: () => ({ toast: t
 // The dropdowns' menus are not under test; each stands in as one button that picks a value.
 vi.mock("./PriorityDropdown", () => ({
   PriorityDropdown: ({ onSelect }: { onSelect: (p: string) => void }) => (
-    <button type="button" onClick={() => onSelect("high")}>Priority</button>
+    <button type="button" onClick={() => onSelect("high")}>
+      Priority
+    </button>
   ),
 }));
 vi.mock("./MoveToGroupDropdown", () => ({
   MoveToGroupDropdown: ({ onSelect }: { onSelect: (id: string) => void }) => (
-    <button type="button" onClick={() => onSelect("g-done")}>Move</button>
+    <button type="button" onClick={() => onSelect("g-done")}>
+      Move
+    </button>
   ),
 }));
 vi.mock("@/web/components/ui/ConfirmDialog", () => ({
   ConfirmDialog: ({ open, onConfirm }: { open: boolean; onConfirm: () => void }) =>
-    open ? <button type="button" onClick={onConfirm}>Confirm delete</button> : null,
+    open ? (
+      <button type="button" onClick={onConfirm}>
+        Confirm delete
+      </button>
+    ) : null,
 }));
 
 import { ApiError } from "@/web/lib/api/client";
@@ -47,8 +56,22 @@ import { ApiError } from "@/web/lib/api/client";
 import { BulkActionBar } from "./BulkActionBar";
 
 const TASKS: Task[] = [
-  { id: "t-1", title: "One", taskGroupId: "g-todo", priority: "none", completed: false, position: "a0" },
-  { id: "t-2", title: "Two", taskGroupId: "g-todo", priority: "low", completed: false, position: "a1" },
+  {
+    id: "t-1",
+    title: "One",
+    taskGroupId: "g-todo",
+    priority: "none",
+    completed: false,
+    position: "a0",
+  },
+  {
+    id: "t-2",
+    title: "Two",
+    taskGroupId: "g-todo",
+    priority: "low",
+    completed: false,
+    position: "a1",
+  },
 ];
 
 function renderBar() {
@@ -56,7 +79,7 @@ function renderBar() {
   return render(
     <QueryClientProvider client={qc}>
       <BulkActionBar selectedIds={new Set(["t-1", "t-2"])} onClearSelection={vi.fn()} />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -79,7 +102,9 @@ describe("BulkActionBar with queued writes", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Priority" }));
 
-    await waitFor(() => expect(toastMock).toHaveBeenCalledWith("Updated 2 tasks", { variant: "success" }));
+    await waitFor(() =>
+      expect(toastMock).toHaveBeenCalledWith("Updated 2 tasks", { variant: "success" })
+    );
     expect(sendWriteMock).toHaveBeenCalledWith({
       method: "PATCH",
       path: "/api/tasks/t-2",
@@ -95,7 +120,9 @@ describe("BulkActionBar with queued writes", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Move" }));
 
-    await waitFor(() => expect(toastMock).toHaveBeenCalledWith("Moved 2 tasks", { variant: "success" }));
+    await waitFor(() =>
+      expect(toastMock).toHaveBeenCalledWith("Moved 2 tasks", { variant: "success" })
+    );
     expect(ctx.updateTask.mock.calls).toEqual([
       ["t-1", { taskGroupId: "g-done", completed: true }],
       ["t-2", { taskGroupId: "g-done", completed: true }],
@@ -109,14 +136,18 @@ describe("BulkActionBar delete", () => {
     const restoreTwo = vi.fn();
     ctx.removeTask.mockImplementation((id: string) => (id === "t-1" ? restoreOne : restoreTwo));
     sendWriteMock.mockImplementation(({ path }: { path: string }) =>
-      path === "/api/tasks/t-1" ? Promise.resolve({ status: "queued" }) : Promise.reject(new ApiError(403, "No")),
+      path === "/api/tasks/t-1"
+        ? Promise.resolve({ status: "queued" })
+        : Promise.reject(new ApiError(403, "No"))
     );
     renderBar();
 
     await userEvent.click(screen.getByRole("button", { name: /delete/i }));
     await userEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
 
-    await waitFor(() => expect(toastMock).toHaveBeenCalledWith("Failed to delete 1 of 2 tasks", { variant: "error" }));
+    await waitFor(() =>
+      expect(toastMock).toHaveBeenCalledWith("Failed to delete 1 of 2 tasks", { variant: "error" })
+    );
     expect(ctx.removeTask).toHaveBeenCalledWith("t-1");
     expect(ctx.removeTask).toHaveBeenCalledWith("t-2");
     expect(restoreOne).not.toHaveBeenCalled();

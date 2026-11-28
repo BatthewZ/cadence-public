@@ -92,7 +92,7 @@ function renderCalendar(initialEntries: string[] = ["/"]) {
     <MemoryRouter initialEntries={initialEntries}>
       <ProjectCalendar />
       <LocationProbe />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
@@ -164,9 +164,7 @@ describe("ProjectCalendar", () => {
       expect(todayEl!.textContent).toBe(String(today.getDate()));
       // Default month is the user's local current month.
       expect(
-        screen.getByText(
-          today.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-        ),
+        screen.getByText(today.toLocaleDateString("en-US", { month: "long", year: "numeric" }))
       ).toBeInTheDocument();
     });
 
@@ -176,9 +174,7 @@ describe("ProjectCalendar", () => {
 
       const now = new Date();
       expect(
-        screen.getByText(
-          now.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-        ),
+        screen.getByText(now.toLocaleDateString("en-US", { month: "long", year: "numeric" }))
       ).toBeInTheDocument();
     });
   });
@@ -188,9 +184,7 @@ describe("ProjectCalendar", () => {
   // -----------------------------------------------------------------------
   describe("chip placement", () => {
     it("renders a due-only task as a chip on its due day", () => {
-      setupProjectMock([
-        makeTask({ id: "t-1", title: "Chip task", dueDate: "2026-03-10" }),
-      ]);
+      setupProjectMock([makeTask({ id: "t-1", title: "Chip task", dueDate: "2026-03-10" })]);
       renderCalendar([MARCH]);
 
       expect(within(getDayCell("2026-03-10")).getByText("Chip task")).toBeInTheDocument();
@@ -324,9 +318,7 @@ describe("ProjectCalendar", () => {
   describe("task open URL writes", () => {
     it("sets ?task= from a chip click and preserves all other params", async () => {
       const user = userEvent.setup();
-      setupProjectMock([
-        makeTask({ id: "t-1", title: "Chip task", dueDate: "2026-03-10" }),
-      ]);
+      setupProjectMock([makeTask({ id: "t-1", title: "Chip task", dueDate: "2026-03-10" })]);
       renderCalendar(["/?month=2026-03&foo=bar"]);
 
       await user.click(screen.getByText("Chip task"));
@@ -393,7 +385,7 @@ describe("ProjectCalendar", () => {
       const now = new Date();
       const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
       expect(getSearchParams().get("month")).toBe(
-        `${next.getFullYear()}-${pad2(next.getMonth() + 1)}`,
+        `${next.getFullYear()}-${pad2(next.getMonth() + 1)}`
       );
     });
 
@@ -410,9 +402,7 @@ describe("ProjectCalendar", () => {
       expect(params.get("foo")).toBe("bar");
       const now = new Date();
       expect(
-        screen.getByText(
-          now.toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-        ),
+        screen.getByText(now.toLocaleDateString("en-US", { month: "long", year: "numeric" }))
       ).toBeInTheDocument();
     });
   });

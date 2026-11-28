@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, type Mock,vi } from "vitest";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 import { ToastProvider } from "@/web/components/ui/ToastContext";
 import { api } from "@/web/lib/api/client";
@@ -69,7 +69,7 @@ function renderTab() {
   render(
     <Wrapper>
       <ApiTokensTab workspaceId="ws-1" />
-    </Wrapper>,
+    </Wrapper>
   );
   return { user };
 }
@@ -103,32 +103,28 @@ describe("ApiTokensTab — issuance is owner/admin-only", () => {
     mockCanManage = false;
     const { user } = renderTab();
 
-    await user.click(
-      await screen.findByRole("button", { name: `Actions for ${TOKEN.name}` }),
-    );
+    await user.click(await screen.findByRole("button", { name: `Actions for ${TOKEN.name}` }));
 
     // Rotate mints a fresh secret, so it is gated; revoking a token you
     // already hold is a security-positive action and stays open.
     expect(screen.getByRole("menuitem", { name: /Rotate/ })).toHaveAttribute(
       "aria-disabled",
-      "true",
+      "true"
     );
     expect(screen.getByRole("menuitem", { name: /Revoke/ })).not.toHaveAttribute(
       "aria-disabled",
-      "true",
+      "true"
     );
   });
 
   it("keeps Rotate available to an owner", async () => {
     const { user } = renderTab();
 
-    await user.click(
-      await screen.findByRole("button", { name: `Actions for ${TOKEN.name}` }),
-    );
+    await user.click(await screen.findByRole("button", { name: `Actions for ${TOKEN.name}` }));
 
     expect(screen.getByRole("menuitem", { name: /Rotate/ })).not.toHaveAttribute(
       "aria-disabled",
-      "true",
+      "true"
     );
   });
 
@@ -154,7 +150,7 @@ describe("ApiTokensTab — issuance is owner/admin-only", () => {
 
     expect(await screen.findByText("No API tokens yet")).toBeInTheDocument();
     expect(
-      screen.queryByText(/A workspace owner or admin can issue a token/),
+      screen.queryByText(/A workspace owner or admin can issue a token/)
     ).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /New Token/ })).not.toBeInTheDocument();
   });
@@ -166,8 +162,6 @@ describe("ApiTokensTab — issuance is owner/admin-only", () => {
 
     expect(await screen.findByText("No API tokens yet")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /New Token/ })).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/A workspace owner or admin can issue a token/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/A workspace owner or admin can issue a token/)).toBeInTheDocument();
   });
 });

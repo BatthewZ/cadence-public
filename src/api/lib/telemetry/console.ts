@@ -1,4 +1,4 @@
-import type { TelemetryEvent,TelemetrySink } from "./types";
+import type { TelemetryEvent, TelemetrySink } from "./types";
 
 /**
  * A telemetry sink that writes structured JSON to the console.
@@ -22,7 +22,7 @@ export class ConsoleSink implements TelemetrySink {
     } catch (err) {
       console.error(
         "[telemetry] Failed to write event:",
-        err instanceof Error ? err.message : String(err),
+        err instanceof Error ? err.message : String(err)
       );
     }
   }

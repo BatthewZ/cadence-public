@@ -6,7 +6,12 @@ import { project } from "../../../../db/schema/project";
 import { task, taskGroup } from "../../../../db/schema/task";
 import type { AppEnv } from "../../../env";
 import { requireParam } from "../../../lib/params";
-import { costAggregationColumns, emptyCostAggregation, emptyTaskCounts, taskCountColumns } from "./helpers";
+import {
+  costAggregationColumns,
+  emptyCostAggregation,
+  emptyTaskCounts,
+  taskCountColumns,
+} from "./helpers";
 
 /**
  * GET /projects/:projectId/dashboard
@@ -25,10 +30,7 @@ export async function projectDashboard(c: Context<AppEnv>) {
   const [taskCountsRows, tasksByGroup, tasksPerMember, overdue, priorityBreakdown, upcoming] =
     await db.batch([
       // Task counts by completion
-      db
-        .select(taskCountColumns)
-        .from(task)
-        .where(eq(task.projectId, projectId)),
+      db.select(taskCountColumns).from(task).where(eq(task.projectId, projectId)),
       // Task counts by task group
       db
         .select({

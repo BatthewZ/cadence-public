@@ -1,6 +1,4 @@
-import {
-  Calendar,
-} from "lucide-react";
+import { Calendar } from "lucide-react";
 
 import { Checkbox } from "@/web/components/form/Checkbox";
 import { Button } from "@/web/components/ui/Button";
@@ -56,11 +54,7 @@ export function DueDateFilter({ from, to, noDueDate, onChange }: DueDateFilterPr
       endOfWeek.setDate(endOfWeek.getDate() + (7 - endOfWeek.getDay()));
       onChange({ from: todayStr, to: endOfWeek.toISOString().split("T")[0] });
     } else if (type === "this-month") {
-      const endOfMonth = new Date(
-        today.getFullYear(),
-        today.getMonth() + 1,
-        0,
-      );
+      const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
       onChange({ from: todayStr, to: endOfMonth.toISOString().split("T")[0] });
     }
   }
@@ -83,7 +77,9 @@ export function DueDateFilter({ from, to, noDueDate, onChange }: DueDateFilterPr
 
         <div className="task-filter-bar__date-inputs">
           <label className="task-filter-bar__date-label">
-            <Text variant="body-3" color="muted">From</Text>
+            <Text variant="body-3" color="muted">
+              From
+            </Text>
             <input
               type="date"
               className="task-filter-bar__date-input"
@@ -92,7 +88,9 @@ export function DueDateFilter({ from, to, noDueDate, onChange }: DueDateFilterPr
             />
           </label>
           <label className="task-filter-bar__date-label">
-            <Text variant="body-3" color="muted">To</Text>
+            <Text variant="body-3" color="muted">
+              To
+            </Text>
             <input
               type="date"
               className="task-filter-bar__date-input"
@@ -103,34 +101,19 @@ export function DueDateFilter({ from, to, noDueDate, onChange }: DueDateFilterPr
         </div>
 
         <div className="task-filter-bar__quick-picks">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setQuickPick("overdue")}
-          >
+          <Button size="sm" variant="ghost" onClick={() => setQuickPick("overdue")}>
             Overdue
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setQuickPick("this-week")}
-          >
+          <Button size="sm" variant="ghost" onClick={() => setQuickPick("this-week")}>
             This week
           </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => setQuickPick("this-month")}
-          >
+          <Button size="sm" variant="ghost" onClick={() => setQuickPick("this-month")}>
             This month
           </Button>
         </div>
 
         <label className="task-filter-bar__option mt-2">
-          <Checkbox
-            checked={noDueDate}
-            onChange={() => onChange({ noDueDate: !noDueDate })}
-          />
+          <Checkbox checked={noDueDate} onChange={() => onChange({ noDueDate: !noDueDate })} />
           <span className="truncate">No due date</span>
         </label>
 

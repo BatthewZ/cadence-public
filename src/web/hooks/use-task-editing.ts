@@ -45,7 +45,7 @@ interface UseTaskEditingOptions {
       title?: string;
       duration?: number;
       action?: ToastAction;
-    },
+    }
   ) => string;
   refetch: () => Promise<unknown>;
   /** The task data from the server query, used to sync editable fields. */
@@ -115,7 +115,7 @@ export function useTaskEditing({
         void refetch(); // revert to server state on failure
       }
     },
-    [taskId, updateTaskInContext, setLocalTask, patchTaskMutateAsync, toast, refetch],
+    [taskId, updateTaskInContext, setLocalTask, patchTaskMutateAsync, toast, refetch]
   );
 
   // The description the open editor was seeded from.
@@ -153,7 +153,7 @@ export function useTaskEditing({
               title: "Description not saved",
               duration: CONFLICT_TOAST_MS,
               action: { label: "Copy my version", onClick: () => copyMyVersion(next, toast) },
-            },
+            }
           );
         } else {
           toast("Failed to update task", { variant: "error" });
@@ -162,7 +162,15 @@ export function useTaskEditing({
         throw err;
       }
     },
-    [taskId, currentDescription, updateTaskInContext, setLocalTask, patchTaskMutateAsync, toast, refetch],
+    [
+      taskId,
+      currentDescription,
+      updateTaskInContext,
+      setLocalTask,
+      patchTaskMutateAsync,
+      toast,
+      refetch,
+    ]
   );
 
   const handleTitleSave = useCallback(async () => {
@@ -176,8 +184,7 @@ export function useTaskEditing({
   const handleCostBlur = useCallback(async () => {
     dirtyFields.current.delete("cost");
     const parsed = parseFloat(costDisplay);
-    const newCostCents =
-      costDisplay.trim() === "" ? null : Math.round(parsed * 100);
+    const newCostCents = costDisplay.trim() === "" ? null : Math.round(parsed * 100);
     const currentCost = localTask?.cost ?? null;
 
     if (newCostCents !== currentCost && !Number.isNaN(parsed)) {

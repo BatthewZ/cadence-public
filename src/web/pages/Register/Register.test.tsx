@@ -47,7 +47,7 @@ function renderRegister({ route = "/register" }: { route?: string } = {}) {
   const result = render(
     <MemoryRouter initialEntries={[route]}>
       <Register />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
   return { user, ...result };
 }
@@ -184,7 +184,7 @@ describe("Register", () => {
 
     await waitFor(() => {
       expect(mockSignUpEmail).toHaveBeenCalledWith(
-        expect.objectContaining({ callbackURL: "/invite/abc123" }),
+        expect.objectContaining({ callbackURL: "/invite/abc123" })
       );
     });
   });
@@ -203,9 +203,7 @@ describe("Register", () => {
     await user.click(getSubmitButton());
 
     await waitFor(() => {
-      expect(mockSignUpEmail).toHaveBeenCalledWith(
-        expect.objectContaining({ callbackURL: "/" }),
-      );
+      expect(mockSignUpEmail).toHaveBeenCalledWith(expect.objectContaining({ callbackURL: "/" }));
     });
   });
 
@@ -302,7 +300,10 @@ describe("Register", () => {
     // Make signUp hang so we can observe the loading state
     let resolveSignUp!: (value: { error: null }) => void;
     mockSignUpEmail.mockImplementation(
-      () => new Promise<{ error: null }>((resolve) => { resolveSignUp = resolve; }),
+      () =>
+        new Promise<{ error: null }>((resolve) => {
+          resolveSignUp = resolve;
+        })
     );
 
     const { user } = renderRegister();
@@ -361,11 +362,11 @@ describe("Register", () => {
     expect(screen.queryByRole("checkbox")).toBeNull();
     expect(screen.getByRole("link", { name: /terms of service/i })).toHaveAttribute(
       "href",
-      "/terms",
+      "/terms"
     );
     expect(screen.getByRole("link", { name: /privacy policy/i })).toHaveAttribute(
       "href",
-      "/privacy",
+      "/privacy"
     );
 
     // …and the form is submittable without one. A leftover

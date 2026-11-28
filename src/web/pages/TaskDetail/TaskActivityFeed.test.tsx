@@ -13,9 +13,8 @@ import { TaskActivityFeed } from "./TaskActivityFeed";
 // ---------------------------------------------------------------------------
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -45,9 +44,7 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return (
-      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-    );
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
   };
 }
 
@@ -67,7 +64,12 @@ function makeActivity(overrides: Partial<ActivityItem> & { id: string }): Activi
 }
 
 const MEMBERS = [
-  { id: "user-1", userId: "user-1", role: "admin" as const, user: { id: "user-1", name: "Alice", email: "alice@test.com", image: undefined } },
+  {
+    id: "user-1",
+    userId: "user-1",
+    role: "admin" as const,
+    user: { id: "user-1", name: "Alice", email: "alice@test.com", image: undefined },
+  },
 ];
 
 /**
@@ -90,7 +92,7 @@ describe("TaskActivityFeed", () => {
     render(
       <Wrapper>
         <TaskActivityFeed taskId="task-1" members={MEMBERS} />
-      </Wrapper>,
+      </Wrapper>
     );
     // Skeleton elements render sr-only "Loading" text
     const loadingElements = screen.getAllByText("Loading");
@@ -105,7 +107,7 @@ describe("TaskActivityFeed", () => {
     render(
       <Wrapper>
         <TaskActivityFeed taskId="task-1" members={MEMBERS} />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -121,7 +123,7 @@ describe("TaskActivityFeed", () => {
         action: i === 0 ? "created" : "title_changed",
         actorName: "Alice",
         createdAt: new Date(2025, 0, 1, i).toISOString(),
-      }),
+      })
     );
 
     const page: ActivityPage = { activities, nextCursor: null };
@@ -131,7 +133,7 @@ describe("TaskActivityFeed", () => {
     render(
       <Wrapper>
         <TaskActivityFeed taskId="task-1" members={MEMBERS} />
-      </Wrapper>,
+      </Wrapper>
     );
 
     // Wait for data to load - should show only 4 items initially (INITIAL_LIMIT)
@@ -148,7 +150,7 @@ describe("TaskActivityFeed", () => {
         id: `act-${i}`,
         actorName: "Alice",
         createdAt: new Date(2025, 0, 1, i).toISOString(),
-      }),
+      })
     );
 
     const page: ActivityPage = { activities, nextCursor: null };
@@ -158,7 +160,7 @@ describe("TaskActivityFeed", () => {
     render(
       <Wrapper>
         <TaskActivityFeed taskId="task-1" members={MEMBERS} />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -173,7 +175,7 @@ describe("TaskActivityFeed", () => {
         id: `act-${i}`,
         actorName: "Alice",
         createdAt: new Date(2025, 0, 1, i).toISOString(),
-      }),
+      })
     );
 
     const page: ActivityPage = { activities, nextCursor: null };
@@ -183,7 +185,7 @@ describe("TaskActivityFeed", () => {
     render(
       <Wrapper>
         <TaskActivityFeed taskId="task-1" members={MEMBERS} />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -210,7 +212,7 @@ describe("TaskActivityFeed", () => {
         id: `act-${i}`,
         actorName: "Alice",
         createdAt: new Date(2025, 0, 1, i).toISOString(),
-      }),
+      })
     );
 
     const page1: ActivityPage = {
@@ -223,7 +225,7 @@ describe("TaskActivityFeed", () => {
     render(
       <Wrapper>
         <TaskActivityFeed taskId="task-1" members={MEMBERS} />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -246,7 +248,7 @@ describe("TaskActivityFeed", () => {
         id: `act-${i}`,
         actorName: "Alice",
         createdAt: new Date(2025, 0, 1, i).toISOString(),
-      }),
+      })
     );
 
     const page: ActivityPage = { activities, nextCursor: null };
@@ -256,7 +258,7 @@ describe("TaskActivityFeed", () => {
     render(
       <Wrapper>
         <TaskActivityFeed taskId="task-1" members={MEMBERS} />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {

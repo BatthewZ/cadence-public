@@ -60,10 +60,8 @@ beforeAll(() => {
 
 const SAMPLE_ATTRIBUTION = {
   name: "Jane Doe",
-  profileUrl:
-    "https://unsplash.com/@janedoe?utm_source=cadence&utm_medium=referral",
-  photoUrl:
-    "https://unsplash.com/photos/abc?utm_source=cadence&utm_medium=referral",
+  profileUrl: "https://unsplash.com/@janedoe?utm_source=cadence&utm_medium=referral",
+  photoUrl: "https://unsplash.com/photos/abc?utm_source=cadence&utm_medium=referral",
 };
 
 const SAMPLE_PAYLOAD: UnsplashCoverPayload = {
@@ -123,7 +121,7 @@ function renderCover(opts: RenderOpts = {}) {
       editable={opts.editable ?? true}
       onPositionChange={opts.onPositionChange}
     />,
-    { wrapper: Wrapper },
+    { wrapper: Wrapper }
   );
 
   return { ...utils, onUpload, onRemove, onApplyUnsplash };
@@ -168,9 +166,7 @@ describe("CoverImage", () => {
       const user = userEvent.setup();
       renderCover({ coverUrl: "https://example.com/cover.jpg" });
 
-      await user.click(
-        screen.getByRole("button", { name: /change cover image/i }),
-      );
+      await user.click(screen.getByRole("button", { name: /change cover image/i }));
       expect(screen.getByRole("dialog")).toBeInTheDocument();
     });
   });
@@ -227,9 +223,7 @@ describe("CoverImage", () => {
       // hover/focus — testing-library still finds it).
       expect(screen.getByText(/photo by/i)).toBeInTheDocument();
 
-      await user.click(
-        screen.getByRole("button", { name: /reposition cover image/i }),
-      );
+      await user.click(screen.getByRole("button", { name: /reposition cover image/i }));
 
       // Entering reposition mode hides the chip.
       expect(screen.queryByText(/photo by/i)).toBeNull();
@@ -252,9 +246,7 @@ describe("CoverImage", () => {
         onRemove,
       });
 
-      await user.click(
-        screen.getByRole("button", { name: /remove cover image/i }),
-      );
+      await user.click(screen.getByRole("button", { name: /remove cover image/i }));
 
       expect(onRemove).not.toHaveBeenCalled();
       expect(screen.getByRole("heading", { name: /remove cover image\?/i })).toBeInTheDocument();
@@ -268,9 +260,7 @@ describe("CoverImage", () => {
         onRemove,
       });
 
-      await user.click(
-        screen.getByRole("button", { name: /remove cover image/i }),
-      );
+      await user.click(screen.getByRole("button", { name: /remove cover image/i }));
       await user.click(screen.getByRole("button", { name: "Remove" }));
 
       expect(onRemove).toHaveBeenCalledTimes(1);
@@ -284,9 +274,7 @@ describe("CoverImage", () => {
         onRemove,
       });
 
-      await user.click(
-        screen.getByRole("button", { name: /remove cover image/i }),
-      );
+      await user.click(screen.getByRole("button", { name: /remove cover image/i }));
       await user.click(screen.getByRole("button", { name: "Cancel" }));
 
       expect(onRemove).not.toHaveBeenCalled();
@@ -312,9 +300,7 @@ describe("CoverImage", () => {
       if (!img) throw new Error("cover <img> not rendered");
       await user.click(img);
 
-      expect(
-        screen.getByRole("heading", { name: /set cover image/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /set cover image/i })).toBeInTheDocument();
     });
   });
 });

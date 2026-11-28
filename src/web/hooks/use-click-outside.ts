@@ -11,10 +11,7 @@ import { useEffect, useRef } from "react";
  * type-guard predicate also flows the matched node's type through, so callers
  * that need the element itself (e.g. the dialog) get it back without a cast.
  */
-function findAncestorOrSelf<T extends Node>(
-  node: Node,
-  predicate: (n: Node) => n is T
-): T | null {
+function findAncestorOrSelf<T extends Node>(node: Node, predicate: (n: Node) => n is T): T | null {
   let current: Node | null = node;
   while (current) {
     if (predicate(current)) return current;
@@ -33,9 +30,7 @@ function isInsideFloatingPortal(node: Node): boolean {
   return (
     findAncestorOrSelf(
       node,
-      (n): n is HTMLElement =>
-        n instanceof HTMLElement &&
-        n.hasAttribute("data-floating-ui-portal")
+      (n): n is HTMLElement => n instanceof HTMLElement && n.hasAttribute("data-floating-ui-portal")
     ) !== null
   );
 }
@@ -68,8 +63,7 @@ function isInsideAriaController(node: Node, controlledId: string): boolean {
     findAncestorOrSelf(
       node,
       (n): n is HTMLElement =>
-        n instanceof HTMLElement &&
-        n.getAttribute("aria-controls") === controlledId
+        n instanceof HTMLElement && n.getAttribute("aria-controls") === controlledId
     ) !== null
   );
 }

@@ -68,7 +68,7 @@ describe("VCALENDAR wrapper", () => {
         "CALSCALE:GREGORIAN\r\n" +
         "METHOD:PUBLISH\r\n" +
         "X-WR-CALNAME:Cadence\r\n" +
-        "END:VCALENDAR\r\n",
+        "END:VCALENDAR\r\n"
     );
   });
 
@@ -88,7 +88,7 @@ describe("VCALENDAR wrapper", () => {
   it("escapes the calendar name as a TEXT value", () => {
     const ics = generate([], "Work; Personal, and\nmore\\stuff");
     expect(getLine(ics, "X-WR-CALNAME:")).toBe(
-      "X-WR-CALNAME:Work\\; Personal\\, and\\nmore\\\\stuff",
+      "X-WR-CALNAME:Work\\; Personal\\, and\\nmore\\\\stuff"
     );
   });
 
@@ -134,7 +134,7 @@ describe("VEVENT fields", () => {
   it("throws on malformed date strings instead of emitting a broken feed", () => {
     expect(() => generate([makeEvent({ startDate: "2026-3-10" })])).toThrow(/startDate/);
     expect(() => generate([makeEvent({ endDateExclusive: "20260311" })])).toThrow(
-      /endDateExclusive/,
+      /endDateExclusive/
     );
   });
 
@@ -354,7 +354,7 @@ describe("global output invariants", () => {
         }),
         makeEvent({ uid: "task-short@cadence", summary: "ok" }),
       ],
-      "My Team Calendar 📅 with a fairly long name that itself needs folding!",
+      "My Team Calendar 📅 with a fairly long name that itself needs folding!"
     );
 
     expect(ics.endsWith("\r\n")).toBe(true);

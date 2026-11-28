@@ -56,14 +56,12 @@ export async function cleanupWebhookDeliveries(db: Database): Promise<number> {
       if (oldRows.length === 0) break;
 
       const idsToDelete = oldRows.map((r) => r.id);
-      await db
-        .delete(webhookDelivery)
-        .where(
-          sql`${webhookDelivery.id} IN (${sql.join(
-            idsToDelete.map((id) => sql`${id}`),
-            sql`, `,
-          )})`,
-        );
+      await db.delete(webhookDelivery).where(
+        sql`${webhookDelivery.id} IN (${sql.join(
+          idsToDelete.map((id) => sql`${id}`),
+          sql`, `
+        )})`
+      );
 
       batchDeleted = oldRows.length;
       totalDeleted += batchDeleted;
@@ -115,32 +113,27 @@ export async function cleanupWebhookDeliveries(db: Database): Promise<number> {
           .where(
             and(
               sql`${webhookDelivery.webhookId} = ${webhookId}`,
-              notInArray(webhookDelivery.id, keepIds),
-            ),
+              notInArray(webhookDelivery.id, keepIds)
+            )
           )
           .limit(DELETE_BATCH_SIZE);
 
         if (excessRows.length === 0) break;
 
         const idsToDelete = excessRows.map((r) => r.id);
-        await db
-          .delete(webhookDelivery)
-          .where(
-            sql`${webhookDelivery.id} IN (${sql.join(
-              idsToDelete.map((id) => sql`${id}`),
-              sql`, `,
-            )})`,
-          );
+        await db.delete(webhookDelivery).where(
+          sql`${webhookDelivery.id} IN (${sql.join(
+            idsToDelete.map((id) => sql`${id}`),
+            sql`, `
+          )})`
+        );
 
         batchDeleted = excessRows.length;
         totalDeleted += batchDeleted;
       } while (batchDeleted === DELETE_BATCH_SIZE);
     }
   } catch (error) {
-    console.error(
-      "[webhook-cleanup] Failed to enforce per-webhook delivery cap",
-      error,
-    );
+    console.error("[webhook-cleanup] Failed to enforce per-webhook delivery cap", error);
   }
 
   return totalDeleted;

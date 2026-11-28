@@ -73,7 +73,9 @@ export default function Workspaces() {
           <Row justify="between" align="center" className="h-14">
             <Row gap="r4" align="center">
               <img src="/favicon.png" alt="Cadence" className="w-8 h-8" />
-              <Text variant="h6" className="tracking-tight">Cadence</Text>
+              <Text variant="h6" className="tracking-tight">
+                Cadence
+              </Text>
             </Row>
             {session?.user && <UserMenu />}
           </Row>
@@ -84,7 +86,8 @@ export default function Workspaces() {
         {/* Greeting */}
         <div className="pt-r2 pb-r3">
           <Text variant="h3" className="tracking-tight">
-            {getGreeting()}{firstName ? `, ${firstName}` : ""}
+            {getGreeting()}
+            {firstName ? `, ${firstName}` : ""}
           </Text>
           <Text variant="body-2" color="secondary" className="mt-r6">
             {workspaces.length > 0
@@ -94,7 +97,9 @@ export default function Workspaces() {
         </div>
 
         {error && (
-          <Alert variant="error" className="mb-r4">{error.message}</Alert>
+          <Alert variant="error" className="mb-r4">
+            {error.message}
+          </Alert>
         )}
 
         <PendingInvitations />
@@ -176,7 +181,9 @@ export default function Workspaces() {
                 <Plus size={20} className="text-fg-muted" />
               </div>
               <div className="mt-3">
-                <Text variant="body-2" className="font-medium">New Workspace</Text>
+                <Text variant="body-2" className="font-medium">
+                  New Workspace
+                </Text>
                 <Text variant="body-3" color="muted" className="mt-0.5">
                   Start a new team or project
                 </Text>

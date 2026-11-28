@@ -10,12 +10,7 @@ import {
 
 describe("upload constants", () => {
   it("ALLOWED_IMAGE_TYPES contains exactly jpeg, png, gif, webp", () => {
-    expect(ALLOWED_IMAGE_TYPES).toEqual([
-      "image/jpeg",
-      "image/png",
-      "image/gif",
-      "image/webp",
-    ]);
+    expect(ALLOWED_IMAGE_TYPES).toEqual(["image/jpeg", "image/png", "image/gif", "image/webp"]);
   });
 
   it("MAX_AVATAR_SIZE is 2MB", () => {
@@ -47,9 +42,7 @@ describe("avatarUploadSchema", () => {
     const result = avatarUploadSchema.safeParse({ file });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
-        "File must be a JPEG, PNG, GIF, or WebP image",
-      );
+      expect(result.error.issues[0].message).toBe("File must be a JPEG, PNG, GIF, or WebP image");
     }
   });
 
@@ -60,9 +53,7 @@ describe("avatarUploadSchema", () => {
     const result = avatarUploadSchema.safeParse({ file });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const sizeError = result.error.issues.find((i) =>
-        i.message.includes("2MB"),
-      );
+      const sizeError = result.error.issues.find((i) => i.message.includes("2MB"));
       expect(sizeError).toBeDefined();
     }
   });
@@ -83,17 +74,13 @@ describe("uploadSchema", () => {
   });
 
   it("rejects file exceeding MAX_UPLOAD_SIZE", () => {
-    const file = new File(
-      [new ArrayBuffer(6 * 1024 * 1024)],
-      "big-file.bin",
-      { type: "application/octet-stream" },
-    );
+    const file = new File([new ArrayBuffer(6 * 1024 * 1024)], "big-file.bin", {
+      type: "application/octet-stream",
+    });
     const result = uploadSchema.safeParse({ file });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues[0].message).toBe(
-        "File must be smaller than 5MB",
-      );
+      expect(result.error.issues[0].message).toBe("File must be smaller than 5MB");
     }
   });
 

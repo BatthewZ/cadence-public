@@ -21,9 +21,7 @@ export function NotificationFilters({
     >
       <Tabs.List>
         <Tabs.Tab value="all">All</Tabs.Tab>
-        <Tabs.Tab value="unread">
-          Unread{unreadCount > 0 ? ` (${unreadCount})` : ""}
-        </Tabs.Tab>
+        <Tabs.Tab value="unread">Unread{unreadCount > 0 ? ` (${unreadCount})` : ""}</Tabs.Tab>
       </Tabs.List>
     </Tabs>
   );

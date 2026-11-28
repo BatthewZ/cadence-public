@@ -158,5 +158,6 @@
   --animate-fade-out: fade-out var(--MOTION-DURATION-EXIT) var(--MOTION-EASE-EXIT) forwards;
 
   --animate-slide-in-right: slide-in-right var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
-  --animate-slide-out-right: slide-out-right var(--MOTION-DURATION-EXIT) var(--MOTION-EASE-EXIT) forwards;
+  --animate-slide-out-right: slide-out-right var(--MOTION-DURATION-EXIT) var(--MOTION-EASE-EXIT)
+    forwards;
 }

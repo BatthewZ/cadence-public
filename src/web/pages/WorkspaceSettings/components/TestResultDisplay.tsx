@@ -8,11 +8,7 @@ export interface TestDeliveryResult {
   response: string | null;
 }
 
-export function TestResultDisplay({
-  testResult,
-}: {
-  testResult: TestDeliveryResult;
-}) {
+export function TestResultDisplay({ testResult }: { testResult: TestDeliveryResult }) {
   return (
     <Alert variant={testResult.success ? "success" : "error"}>
       <Stack gap="r6">

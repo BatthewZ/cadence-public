@@ -37,9 +37,7 @@ export function ThemeSwitcher({ className }: ThemeSwitcherProps) {
 
   // Determine what theme to display and how to set it
   const currentTheme: Theme = themeControl ? themeControl.effectiveTheme : localTheme;
-  const handleSetTheme = themeControl
-    ? (t: Theme) => themeControl.setTheme(t)
-    : setLocalTheme;
+  const handleSetTheme = themeControl ? (t: Theme) => themeControl.setTheme(t) : setLocalTheme;
 
   const scopeLabel = themeControl
     ? themeControl.scope === "project"
@@ -49,8 +47,7 @@ export function ThemeSwitcher({ className }: ThemeSwitcherProps) {
 
   const isPending = themeControl?.isPending ?? false;
 
-  const showResetOption =
-    themeControl?.scope === "project" && themeControl.hasProjectOverride;
+  const showResetOption = themeControl?.scope === "project" && themeControl.hasProjectOverride;
 
   // We need an extra menu item index offset when reset option is shown
   const themeIndexOffset = showResetOption ? 1 : 0;

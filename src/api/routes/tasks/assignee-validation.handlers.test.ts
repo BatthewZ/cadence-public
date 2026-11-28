@@ -93,10 +93,12 @@ const STRANGER_ID = STRANGER.id;
 /** Every notification row addressed to `userId`, newest first. */
 async function notificationsFor(
   d1: D1Database,
-  userId: string,
+  userId: string
 ): Promise<{ type: string; title: string; taskId: string | null }[]> {
   const { results } = await d1
-    .prepare("SELECT type, title, taskId FROM notification WHERE userId = ? ORDER BY createdAt DESC")
+    .prepare(
+      "SELECT type, title, taskId FROM notification WHERE userId = ? ORDER BY createdAt DESC"
+    )
     .bind(userId)
     .all<{ type: string; title: string; taskId: string | null }>();
   return results;
@@ -233,7 +235,7 @@ function postTask(body: Record<string, unknown>) {
   return send(
     createApp(),
     `/projects/${projectId}/tasks`,
-    jsonRequest("POST", `/projects/${projectId}/tasks`, body),
+    jsonRequest("POST", `/projects/${projectId}/tasks`, body)
   );
 }
 
@@ -357,7 +359,7 @@ describe("createTask — assignee validation", () => {
       jsonRequest("POST", `/projects/${autoProjectId}/tasks`, {
         title: "Auto assigned",
         taskGroupId: autoGroupId,
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -501,7 +503,7 @@ describe("duplicateTask — inherited assignee", () => {
     const res = await send(
       duplicateApp(),
       `/tasks/${taskId}/duplicate`,
-      jsonRequest("POST", `/tasks/${taskId}/duplicate`),
+      jsonRequest("POST", `/tasks/${taskId}/duplicate`)
     );
 
     expect(res.status).toBe(201);
@@ -520,7 +522,7 @@ describe("duplicateTask — inherited assignee", () => {
     const res = await send(
       duplicateApp(),
       `/tasks/${taskId}/duplicate`,
-      jsonRequest("POST", `/tasks/${taskId}/duplicate`),
+      jsonRequest("POST", `/tasks/${taskId}/duplicate`)
     );
 
     expect(res.status).toBe(201);
@@ -542,7 +544,7 @@ describe("duplicateTask — inherited assignee", () => {
     const res = await send(
       duplicateApp(),
       `/tasks/${taskId}/duplicate`,
-      jsonRequest("POST", `/tasks/${taskId}/duplicate`),
+      jsonRequest("POST", `/tasks/${taskId}/duplicate`)
     );
 
     expect(res.status).toBe(201);
@@ -570,7 +572,7 @@ describe("completeTask — assignee notification", () => {
     return send(
       completeApp(),
       `/tasks/${taskId}/complete`,
-      jsonRequest("POST", `/tasks/${taskId}/complete`),
+      jsonRequest("POST", `/tasks/${taskId}/complete`)
     );
   }
 

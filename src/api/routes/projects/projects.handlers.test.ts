@@ -96,10 +96,7 @@ let workspaceId: string;
  * by a real member of another tenant is precisely the state that must confer
  * nothing here.
  */
-const FOREIGN_WORKSPACE_USER = makeTestUser(
-  "foreign-workspace-user-id",
-  "Foreign Tenant User",
-);
+const FOREIGN_WORKSPACE_USER = makeTestUser("foreign-workspace-user-id", "Foreign Tenant User");
 const FOREIGN_WORKSPACE_USER_ID = FOREIGN_WORKSPACE_USER.id;
 let foreignWorkspaceId: string;
 
@@ -136,7 +133,7 @@ describe("createProject", () => {
         workspaceMembership: { id: "wm-1", role: "owner" },
       }),
       validateBody(createProjectSchema),
-      createProject,
+      createProject
     );
     return app;
   }
@@ -148,12 +145,14 @@ describe("createProject", () => {
       jsonRequest("POST", `/workspaces/${workspaceId}/projects`, {
         name: "My New Project",
         description: "A test project",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
 
-    const body = await res.json<{ project: { id: string; name: string; description: string | null; workspaceId: string } }>();
+    const body = await res.json<{
+      project: { id: string; name: string; description: string | null; workspaceId: string };
+    }>();
     expect(body.project.name).toBe("My New Project");
     expect(body.project.description).toBe("A test project");
     expect(body.project.workspaceId).toBe(workspaceId);
@@ -164,17 +163,11 @@ describe("createProject", () => {
       .bind(body.project.id)
       .all<{ name: string }>();
     expect(groups.results).toHaveLength(3);
-    expect(groups.results.map((g) => g.name)).toEqual([
-      "To Do",
-      "In Progress",
-      "Done",
-    ]);
+    expect(groups.results.map((g) => g.name)).toEqual(["To Do", "In Progress", "Done"]);
 
     // Verify the creator was auto-added as an admin member
     const members = await d1
-      .prepare(
-        "SELECT * FROM project_member WHERE projectId = ? AND userId = ?",
-      )
+      .prepare("SELECT * FROM project_member WHERE projectId = ? AND userId = ?")
       .bind(body.project.id, TEST_USER.id)
       .all<{ role: string }>();
     expect(members.results).toHaveLength(1);
@@ -187,7 +180,7 @@ describe("createProject", () => {
       `/workspaces/${workspaceId}/projects`,
       jsonRequest("POST", `/workspaces/${workspaceId}/projects`, {
         name: "Minimal Project",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -202,7 +195,7 @@ describe("createProject", () => {
       `/workspaces/${workspaceId}/projects`,
       jsonRequest("POST", `/workspaces/${workspaceId}/projects`, {
         name: "",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -217,7 +210,7 @@ describe("createProject", () => {
       `/workspaces/${workspaceId}/projects`,
       jsonRequest("POST", `/workspaces/${workspaceId}/projects`, {
         name: "x".repeat(101),
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -232,7 +225,7 @@ describe("createProject", () => {
         status: "completed",
         budget: 50000,
         theme: "sunset",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -250,7 +243,7 @@ describe("createProject", () => {
       `/workspaces/${workspaceId}/projects`,
       jsonRequest("POST", `/workspaces/${workspaceId}/projects`, {
         name: "Defaults Project",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -269,7 +262,7 @@ describe("createProject", () => {
       jsonRequest("POST", `/workspaces/${workspaceId}/projects`, {
         name: "Bad Status",
         status: "invalid",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -305,12 +298,12 @@ describe("listProjects", () => {
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-owner", role: "owner" },
       }),
-      listProjects,
+      listProjects
     );
 
     const res = await app.request(
       `/workspaces/${listWorkspaceId}/projects`,
-      jsonRequest("GET", `/workspaces/${listWorkspaceId}/projects`),
+      jsonRequest("GET", `/workspaces/${listWorkspaceId}/projects`)
     );
 
     expect(res.status).toBe(200);
@@ -325,12 +318,12 @@ describe("listProjects", () => {
       fakeAuth(d1, TEST_USER_2, {
         workspaceMembership: { id: "wm-member", role: "member" },
       }),
-      listProjects,
+      listProjects
     );
 
     const res = await app.request(
       `/workspaces/${listWorkspaceId}/projects`,
-      jsonRequest("GET", `/workspaces/${listWorkspaceId}/projects`),
+      jsonRequest("GET", `/workspaces/${listWorkspaceId}/projects`)
     );
 
     expect(res.status).toBe(200);
@@ -351,12 +344,12 @@ describe("listProjects", () => {
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-empty", role: "owner" },
       }),
-      listProjects,
+      listProjects
     );
 
     const res = await app.request(
       `/workspaces/${emptyWsId}/projects`,
-      jsonRequest("GET", `/workspaces/${emptyWsId}/projects`),
+      jsonRequest("GET", `/workspaces/${emptyWsId}/projects`)
     );
 
     expect(res.status).toBe(200);
@@ -371,16 +364,18 @@ describe("listProjects", () => {
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-counts", role: "owner" },
       }),
-      listProjects,
+      listProjects
     );
 
     const res = await app.request(
       `/workspaces/${listWorkspaceId}/projects`,
-      jsonRequest("GET", `/workspaces/${listWorkspaceId}/projects`),
+      jsonRequest("GET", `/workspaces/${listWorkspaceId}/projects`)
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ projects: Array<{ memberCount: number; taskGroupCount: number }> }>();
+    const body = await res.json<{
+      projects: Array<{ memberCount: number; taskGroupCount: number }>;
+    }>();
     for (const p of body.projects) {
       expect(typeof p.memberCount).toBe("number");
       expect(typeof p.taskGroupCount).toBe("number");
@@ -408,7 +403,7 @@ describe("getProject", () => {
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-get", role: "owner" },
       }),
-      getProject,
+      getProject
     );
     return app;
   }
@@ -417,7 +412,7 @@ describe("getProject", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${existingProjectId}`,
-      jsonRequest("GET", `/projects/${existingProjectId}`),
+      jsonRequest("GET", `/projects/${existingProjectId}`)
     );
 
     expect(res.status).toBe(200);
@@ -430,7 +425,7 @@ describe("getProject", () => {
     const app = createApp();
     const res = await app.request(
       "/projects/nonexistent-id",
-      jsonRequest("GET", "/projects/nonexistent-id"),
+      jsonRequest("GET", "/projects/nonexistent-id")
     );
 
     expect(res.status).toBe(404);
@@ -460,7 +455,7 @@ describe("updateProject", () => {
         workspaceMembership: { id: "wm-update", role: "owner" },
       }),
       validateBody(updateProjectSchema),
-      updateProject,
+      updateProject
     );
     return app;
   }
@@ -473,11 +468,13 @@ describe("updateProject", () => {
         name: "After Update",
         description: "Updated desc",
         status: "archived",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ project: { name: string; description: string | null; status: string } }>();
+    const body = await res.json<{
+      project: { name: string; description: string | null; status: string };
+    }>();
     expect(body.project.name).toBe("After Update");
     expect(body.project.description).toBe("Updated desc");
     expect(body.project.status).toBe("archived");
@@ -505,14 +502,14 @@ describe("updateProject", () => {
         theme: "ocean",
         budget: 12345,
         autoAssignCreator: true,
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
 
     const row = await d1
       .prepare(
-        "SELECT name, description, status, icon, cover_image_position AS pos, theme, budget, auto_assign_creator AS auto FROM project WHERE id = ?",
+        "SELECT name, description, status, icon, cover_image_position AS pos, theme, budget, auto_assign_creator AS auto FROM project WHERE id = ?"
       )
       .bind(projId)
       .first<Record<string, unknown>>();
@@ -548,7 +545,7 @@ describe("updateProject", () => {
       `/projects/${updateProjectId}`,
       jsonRequest("PATCH", `/projects/${updateProjectId}`, {
         name: "Renamed Again",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -603,7 +600,7 @@ describe("updateProject", () => {
         `/projects/${projId}`,
         jsonRequest("PATCH", `/projects/${projId}`, {
           coverImageKey: "project-cover/attacker/forged.jpg",
-        }),
+        })
       );
 
       expect(res.status).toBe(200);
@@ -620,7 +617,7 @@ describe("updateProject", () => {
         `/projects/${projId}`,
         jsonRequest("PATCH", `/projects/${projId}`, {
           coverImageKey: "project-cover/other-workspace-user/private.jpg",
-        }),
+        })
       );
 
       expect(res.status).toBe(200);
@@ -637,7 +634,7 @@ describe("updateProject", () => {
       const app = createApp();
       const res = await app.request(
         `/projects/${projId}`,
-        jsonRequest("PATCH", `/projects/${projId}`, { coverImageKey: null }),
+        jsonRequest("PATCH", `/projects/${projId}`, { coverImageKey: null })
       );
 
       expect(res.status).toBe(200);
@@ -660,11 +657,13 @@ describe("updateProject", () => {
           name: "Mixed Patch Renamed",
           coverImagePosition: 42,
           coverImageKey: "project-cover/attacker/forged.jpg",
-        }),
+        })
       );
 
       expect(res.status).toBe(200);
-      const body = await res.json<{ project: { name: string; coverImagePosition: number | null } }>();
+      const body = await res.json<{
+        project: { name: string; coverImagePosition: number | null };
+      }>();
       expect(body.project.name).toBe("Mixed Patch Renamed");
       expect(body.project.coverImagePosition).toBe(42);
       expect(await storedCoverKey(projId)).toBe(victimKey);
@@ -677,7 +676,7 @@ describe("updateProject", () => {
       `/projects/${updateProjectId}`,
       jsonRequest("PATCH", `/projects/${updateProjectId}`, {
         status: "invalid-status",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -691,7 +690,7 @@ describe("updateProject", () => {
       `/projects/${updateProjectId}`,
       jsonRequest("PATCH", `/projects/${updateProjectId}`, {
         name: "",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -703,7 +702,7 @@ describe("updateProject", () => {
       `/projects/${updateProjectId}`,
       jsonRequest("PATCH", `/projects/${updateProjectId}`, {
         description: null,
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -728,7 +727,7 @@ describe("updateProject", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}`,
-      jsonRequest("PATCH", `/projects/${projId}`, { status: "archived" }),
+      jsonRequest("PATCH", `/projects/${projId}`, { status: "archived" })
     );
     expect(res.status).toBe(200);
 
@@ -760,7 +759,7 @@ describe("deleteProject", () => {
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-delete", role: "owner" },
       }),
-      deleteProject,
+      deleteProject
     );
     return app;
   }
@@ -772,7 +771,7 @@ describe("deleteProject", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}`,
-      jsonRequest("DELETE", `/projects/${projId}`),
+      jsonRequest("DELETE", `/projects/${projId}`)
     );
 
     expect(res.status).toBe(200);
@@ -780,10 +779,7 @@ describe("deleteProject", () => {
     expect(body.ok).toBe(true);
 
     // Verify project no longer exists
-    const row = await d1
-      .prepare("SELECT id FROM project WHERE id = ?")
-      .bind(projId)
-      .first();
+    const row = await d1.prepare("SELECT id FROM project WHERE id = ?").bind(projId).first();
     expect(row).toBeNull();
   });
 
@@ -791,7 +787,7 @@ describe("deleteProject", () => {
     const app = createApp();
     const res = await app.request(
       "/projects/nonexistent-id",
-      jsonRequest("DELETE", "/projects/nonexistent-id"),
+      jsonRequest("DELETE", "/projects/nonexistent-id")
     );
 
     expect(res.status).toBe(404);
@@ -808,13 +804,13 @@ describe("deleteProject", () => {
     const now = Date.now();
     await d1
       .prepare(
-        "INSERT INTO task_group (id, projectId, name, is_completion_group, position, createdAt, updatedAt) VALUES (?, ?, ?, 0, 'a0', ?, ?)",
+        "INSERT INTO task_group (id, projectId, name, is_completion_group, position, createdAt, updatedAt) VALUES (?, ?, ?, 0, 'a0', ?, ?)"
       )
       .bind(groupId, projId, "Backlog", now, now)
       .run();
     await d1
       .prepare(
-        "INSERT INTO task (id, projectId, taskGroupId, title, completed, priority, position, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, 'none', 'a0', ?, ?)",
+        "INSERT INTO task (id, projectId, taskGroupId, title, completed, priority, position, createdAt, updatedAt) VALUES (?, ?, ?, ?, 0, 'none', 'a0', ?, ?)"
       )
       .bind(crypto.randomUUID(), projId, groupId, "Some Task", now, now)
       .run();
@@ -822,7 +818,7 @@ describe("deleteProject", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}`,
-      jsonRequest("DELETE", `/projects/${projId}`),
+      jsonRequest("DELETE", `/projects/${projId}`)
     );
 
     expect(res.status).toBe(200);
@@ -844,7 +840,7 @@ describe("duplicateProject", () => {
         workspaceMembership: { id: "wm-dup", role: "owner" },
       }),
       validateBody(duplicateProjectSchema),
-      duplicateProject,
+      duplicateProject
     );
     return app;
   }
@@ -863,7 +859,7 @@ describe("duplicateProject", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}/duplicate`,
-      jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+      jsonRequest("POST", `/projects/${projId}/duplicate`, {})
     );
 
     expect(res.status).toBe(201);
@@ -891,7 +887,7 @@ describe("duplicateProject", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}/duplicate`,
-      jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+      jsonRequest("POST", `/projects/${projId}/duplicate`, {})
     );
 
     expect(res.status).toBe(201);
@@ -899,14 +895,28 @@ describe("duplicateProject", () => {
     const newProjId = body.project.id;
 
     const groups = await d1
-      .prepare("SELECT name, position, is_completion_group FROM task_group WHERE projectId = ? ORDER BY position")
+      .prepare(
+        "SELECT name, position, is_completion_group FROM task_group WHERE projectId = ? ORDER BY position"
+      )
       .bind(newProjId)
       .all();
 
     expect(groups.results).toHaveLength(3);
-    expect(groups.results[0]).toMatchObject({ name: "Backlog", position: "a0", is_completion_group: 0 });
-    expect(groups.results[1]).toMatchObject({ name: "In Progress", position: "a1", is_completion_group: 0 });
-    expect(groups.results[2]).toMatchObject({ name: "Done", position: "a2", is_completion_group: 1 });
+    expect(groups.results[0]).toMatchObject({
+      name: "Backlog",
+      position: "a0",
+      is_completion_group: 0,
+    });
+    expect(groups.results[1]).toMatchObject({
+      name: "In Progress",
+      position: "a1",
+      is_completion_group: 0,
+    });
+    expect(groups.results[2]).toMatchObject({
+      name: "Done",
+      position: "a2",
+      is_completion_group: 1,
+    });
   });
 
   it("duplicates labels with name and color", async () => {
@@ -917,7 +927,7 @@ describe("duplicateProject", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}/duplicate`,
-      jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+      jsonRequest("POST", `/projects/${projId}/duplicate`, {})
     );
 
     expect(res.status).toBe(201);
@@ -941,7 +951,7 @@ describe("duplicateProject", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}/duplicate`,
-      jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+      jsonRequest("POST", `/projects/${projId}/duplicate`, {})
     );
 
     expect(res.status).toBe(201);
@@ -964,7 +974,7 @@ describe("duplicateProject", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}/duplicate`,
-      jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true }),
+      jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true })
     );
 
     expect(res.status).toBe(201);
@@ -977,8 +987,12 @@ describe("duplicateProject", () => {
 
     expect(members.results).toHaveLength(2);
     // duplicating user is always admin, not duplicated
-    expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER.id, role: "admin" }));
-    expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER_2.id, role: "viewer" }));
+    expect(members.results).toContainEqual(
+      expect.objectContaining({ userId: TEST_USER.id, role: "admin" })
+    );
+    expect(members.results).toContainEqual(
+      expect.objectContaining({ userId: TEST_USER_2.id, role: "viewer" })
+    );
     // Nobody was dropped — the workspace-membership filter must not be a
     // blanket "copy nobody".
     expect(body.skippedMemberIds).toEqual([]);
@@ -1021,7 +1035,7 @@ describe("duplicateProject", () => {
       const app = createApp();
       const res = await app.request(
         `/projects/${projId}/duplicate`,
-        jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true }),
+        jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true })
       );
 
       expect(res.status).toBe(201);
@@ -1036,8 +1050,12 @@ describe("duplicateProject", () => {
       // The orphan is gone from the copy...
       expect(copiedIds).not.toContain(ORPHAN_USER_ID);
       // ...and the genuine member is still there (the filter is not "copy nobody").
-      expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER_2.id, role: "viewer" }));
-      expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER.id, role: "admin" }));
+      expect(members.results).toContainEqual(
+        expect.objectContaining({ userId: TEST_USER_2.id, role: "viewer" })
+      );
+      expect(members.results).toContainEqual(
+        expect.objectContaining({ userId: TEST_USER.id, role: "admin" })
+      );
       expect(members.results).toHaveLength(2);
 
       // The drop is reported, not silent.
@@ -1059,7 +1077,7 @@ describe("duplicateProject", () => {
       const app = createApp();
       const res = await app.request(
         `/projects/${projId}/duplicate`,
-        jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true }),
+        jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true })
       );
 
       expect(res.status).toBe(201);
@@ -1086,7 +1104,7 @@ describe("duplicateProject", () => {
       const app = createApp();
       const res = await app.request(
         `/projects/${projId}/duplicate`,
-        jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+        jsonRequest("POST", `/projects/${projId}/duplicate`, {})
       );
 
       expect(res.status).toBe(201);
@@ -1127,7 +1145,7 @@ describe("duplicateProject", () => {
       const app = createApp();
       const res = await app.request(
         `/projects/${projId}/duplicate`,
-        jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true }),
+        jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true })
       );
 
       expect(res.status).toBe(201);
@@ -1140,8 +1158,12 @@ describe("duplicateProject", () => {
 
       expect(members.results.map((m) => m.userId)).not.toContain(FOREIGN_WORKSPACE_USER_ID);
       // The genuine members still copy — the rule is "wrong tenant", not "copy nobody".
-      expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER.id, role: "admin" }));
-      expect(members.results).toContainEqual(expect.objectContaining({ userId: TEST_USER_2.id, role: "viewer" }));
+      expect(members.results).toContainEqual(
+        expect.objectContaining({ userId: TEST_USER.id, role: "admin" })
+      );
+      expect(members.results).toContainEqual(
+        expect.objectContaining({ userId: TEST_USER_2.id, role: "viewer" })
+      );
       expect(members.results).toHaveLength(2);
 
       expect(body.skippedMemberIds).toEqual([FOREIGN_WORKSPACE_USER_ID]);
@@ -1165,7 +1187,7 @@ describe("duplicateProject", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}/duplicate`,
-      jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true }),
+      jsonRequest("POST", `/projects/${projId}/duplicate`, { includeMembers: true })
     );
 
     expect(res.status).toBe(201);
@@ -1177,7 +1199,9 @@ describe("duplicateProject", () => {
       .all();
 
     // duplicating user should appear exactly once as admin
-    const userEntries = members.results.filter((m: Record<string, unknown>) => m.userId === TEST_USER.id);
+    const userEntries = members.results.filter(
+      (m: Record<string, unknown>) => m.userId === TEST_USER.id
+    );
     expect(userEntries).toHaveLength(1);
     expect(userEntries[0]).toMatchObject({ role: "admin" });
   });
@@ -1186,7 +1210,7 @@ describe("duplicateProject", () => {
     const app = createApp();
     const res = await app.request(
       "/projects/nonexistent-id/duplicate",
-      jsonRequest("POST", "/projects/nonexistent-id/duplicate", {}),
+      jsonRequest("POST", "/projects/nonexistent-id/duplicate", {})
     );
 
     expect(res.status).toBe(404);
@@ -1201,7 +1225,7 @@ describe("duplicateProject", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}/duplicate`,
-      jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+      jsonRequest("POST", `/projects/${projId}/duplicate`, {})
     );
 
     expect(res.status).toBe(201);
@@ -1216,7 +1240,7 @@ describe("duplicateProject", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}/duplicate`,
-      jsonRequest("POST", `/projects/${projId}/duplicate`, {}),
+      jsonRequest("POST", `/projects/${projId}/duplicate`, {})
     );
 
     expect(res.status).toBe(201);
@@ -1259,7 +1283,7 @@ describe("listMembers", () => {
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-list-members", role: "owner" },
       }),
-      listMembers,
+      listMembers
     );
     return app;
   }
@@ -1268,11 +1292,13 @@ describe("listMembers", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${memberProjectId}/members`,
-      jsonRequest("GET", `/projects/${memberProjectId}/members`),
+      jsonRequest("GET", `/projects/${memberProjectId}/members`)
     );
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ members: Array<{ userId: string; user: { name: string; email: string } }> }>();
+    const body = await res.json<{
+      members: Array<{ userId: string; user: { name: string; email: string } }>;
+    }>();
     expect(body.members.length).toBe(2);
 
     const userIds = body.members.map((m) => m.userId).sort();
@@ -1293,7 +1319,7 @@ describe("listMembers", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${emptyProjId}/members`,
-      jsonRequest("GET", `/projects/${emptyProjId}/members`),
+      jsonRequest("GET", `/projects/${emptyProjId}/members`)
     );
 
     expect(res.status).toBe(200);
@@ -1323,7 +1349,7 @@ describe("addMember", () => {
         workspaceMembership: { id: "wm-add-member", role: "owner" },
       }),
       validateBody(addProjectMemberSchema),
-      addMember,
+      addMember
     );
     return app;
   }
@@ -1335,7 +1361,7 @@ describe("addMember", () => {
       jsonRequest("POST", `/projects/${addMemberProjectId}/members`, {
         userId: TEST_USER_2.id,
         role: "member",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -1353,7 +1379,7 @@ describe("addMember", () => {
       jsonRequest("POST", `/projects/${addMemberProjectId}/members`, {
         userId: TEST_USER_2.id,
         role: "member",
-      }),
+      })
     );
 
     expect(res.status).toBe(409);
@@ -1368,7 +1394,7 @@ describe("addMember", () => {
       jsonRequest("POST", `/projects/${addMemberProjectId}/members`, {
         userId: "non-workspace-user-id",
         role: "member",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -1401,7 +1427,7 @@ describe("addMember", () => {
       jsonRequest("POST", `/projects/${addMemberProjectId}/members`, {
         userId: FOREIGN_WORKSPACE_USER_ID,
         role: "member",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -1424,7 +1450,7 @@ describe("addMember", () => {
       jsonRequest("POST", `/projects/${addMemberProjectId}/members`, {
         userId: TEST_USER.id,
         role: "superadmin",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -1438,7 +1464,7 @@ describe("addMember", () => {
       `/projects/${addMemberProjectId}/members`,
       jsonRequest("POST", `/projects/${addMemberProjectId}/members`, {
         role: "member",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -1458,13 +1484,13 @@ describe("addMember", () => {
       jsonRequest("POST", `/projects/${notifProjId}/members`, {
         userId: TEST_USER_2.id,
         role: "viewer",
-      }),
+      })
     );
 
     // Verify notification was created
     const row = await d1
       .prepare(
-        "SELECT * FROM notification WHERE userId = ? AND type = 'project_member_added' AND projectId = ?",
+        "SELECT * FROM notification WHERE userId = ? AND type = 'project_member_added' AND projectId = ?"
       )
       .bind(TEST_USER_2.id, notifProjId)
       .first();
@@ -1498,7 +1524,7 @@ describe("updateMemberRole", () => {
         workspaceMembership: { id: "wm-update-role", role: "owner" },
       }),
       validateBody(updateProjectMemberRoleSchema),
-      updateMemberRole,
+      updateMemberRole
     );
     return app;
   }
@@ -1583,7 +1609,7 @@ describe("updateMemberRole", () => {
 
     expect(res.status).toBe(403);
     expect((await res.json<{ error: string }>()).error).toBe(
-      "You cannot change your own project role",
+      "You cannot change your own project role"
     );
 
     const row = await d1
@@ -1612,7 +1638,7 @@ describe("updateMemberRole", () => {
       // so the handler's own resolution is the only thing deciding.
       fakeAuth(d1, TEST_USER_2),
       validateBody(updateProjectMemberRoleSchema),
-      updateMemberRole,
+      updateMemberRole
     );
 
     const res = await patchRole(app, projId, FOREIGN_WORKSPACE_USER_ID, "admin");
@@ -1681,7 +1707,7 @@ describe("removeMember", () => {
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-remove-member", role: "owner" },
       }),
-      removeMember,
+      removeMember
     );
     return app;
   }
@@ -1695,10 +1721,7 @@ describe("removeMember", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}/members/${TEST_USER_2.id}`,
-      jsonRequest(
-        "DELETE",
-        `/projects/${projId}/members/${TEST_USER_2.id}`,
-      ),
+      jsonRequest("DELETE", `/projects/${projId}/members/${TEST_USER_2.id}`)
     );
 
     expect(res.status).toBe(200);
@@ -1707,9 +1730,7 @@ describe("removeMember", () => {
 
     // Verify the membership row is gone
     const row = await d1
-      .prepare(
-        "SELECT id FROM project_member WHERE projectId = ? AND userId = ?",
-      )
+      .prepare("SELECT id FROM project_member WHERE projectId = ? AND userId = ?")
       .bind(projId, TEST_USER_2.id)
       .first();
     expect(row).toBeNull();
@@ -1755,7 +1776,7 @@ describe("removeMember", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${targetProjId}/members/${TEST_USER_2.id}`,
-      jsonRequest("DELETE", `/projects/${targetProjId}/members/${TEST_USER_2.id}`),
+      jsonRequest("DELETE", `/projects/${targetProjId}/members/${TEST_USER_2.id}`)
     );
     expect(res.status).toBe(200);
 
@@ -1797,10 +1818,7 @@ describe("removeMember", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projId}/members/nonexistent-user-id`,
-      jsonRequest(
-        "DELETE",
-        `/projects/${projId}/members/nonexistent-user-id`,
-      ),
+      jsonRequest("DELETE", `/projects/${projId}/members/nonexistent-user-id`)
     );
 
     expect(res.status).toBe(404);
@@ -1819,20 +1837,14 @@ describe("removeMember", () => {
     // First removal succeeds
     const res1 = await app.request(
       `/projects/${projId}/members/${TEST_USER_2.id}`,
-      jsonRequest(
-        "DELETE",
-        `/projects/${projId}/members/${TEST_USER_2.id}`,
-      ),
+      jsonRequest("DELETE", `/projects/${projId}/members/${TEST_USER_2.id}`)
     );
     expect(res1.status).toBe(200);
 
     // Second removal returns 404
     const res2 = await app.request(
       `/projects/${projId}/members/${TEST_USER_2.id}`,
-      jsonRequest(
-        "DELETE",
-        `/projects/${projId}/members/${TEST_USER_2.id}`,
-      ),
+      jsonRequest("DELETE", `/projects/${projId}/members/${TEST_USER_2.id}`)
     );
     expect(res2.status).toBe(404);
   });
@@ -1901,14 +1913,11 @@ describe("project cover image handlers", () => {
 
   /** Build a request carrying a JSON Unsplash payload. */
   function unsplashRequest(projectId: string, payload: UnsplashCoverPayload): Request {
-    return new Request(
-      `http://localhost/projects/${projectId}/cover/unsplash`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      },
-    );
+    return new Request(`http://localhost/projects/${projectId}/cover/unsplash`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
   }
 
   /** Build a multipart upload request for the R2 cover path. */
@@ -1924,9 +1933,7 @@ describe("project cover image handlers", () => {
   /** Read `cover_image_key` + `cover_unsplash` straight from SQLite. */
   async function readCoverState(projectId: string) {
     const row = await coverD1
-      .prepare(
-        "SELECT cover_image_key AS k, cover_unsplash AS u FROM project WHERE id = ?",
-      )
+      .prepare("SELECT cover_image_key AS k, cover_unsplash AS u FROM project WHERE id = ?")
       .bind(projectId)
       .first<{ k: string | null; u: string | null }>();
     return {
@@ -1968,7 +1975,7 @@ describe("project cover image handlers", () => {
       "/projects/:projectId/cover/unsplash",
       coverAuth(),
       validateBody(unsplashCoverPayloadSchema),
-      applyProjectUnsplashCover,
+      applyProjectUnsplashCover
     );
 
     const payload = sampleUnsplashPayload("p-apply-fresh");
@@ -1988,7 +1995,7 @@ describe("project cover image handlers", () => {
 
     // trackDownload hits the payload's download_location with the Client-ID header.
     const matching = fetchSpy.calls.filter(
-      ([url]) => typeof url === "string" && url.startsWith(payload.downloadLocation),
+      ([url]) => typeof url === "string" && url.startsWith(payload.downloadLocation)
     );
     expect(matching.length).toBe(1);
     const init = matching[0][1] as RequestInit;
@@ -2004,9 +2011,7 @@ describe("project cover image handlers", () => {
     // First upload a real R2 cover so the swap path exercises cleanup.
     const uploadApp = new Hono<AppEnv>();
     uploadApp.put("/projects/:projectId/cover", coverAuth(), uploadProjectCover);
-    const uploadRes = await uploadApp.request(
-      uploadRequest(projectId, fakeCoverPngFile()),
-    );
+    const uploadRes = await uploadApp.request(uploadRequest(projectId, fakeCoverPngFile()));
     expect(uploadRes.status).toBe(200);
     const uploaded = await uploadRes.json<{ coverImageKey: string }>();
     const oldKey = uploaded.coverImageKey;
@@ -2019,7 +2024,7 @@ describe("project cover image handlers", () => {
       "/projects/:projectId/cover/unsplash",
       coverAuth(),
       validateBody(unsplashCoverPayloadSchema),
-      applyProjectUnsplashCover,
+      applyProjectUnsplashCover
     );
     const payload = sampleUnsplashPayload("p-swap-r2-us");
     const res = await app.request(unsplashRequest(projectId, payload));
@@ -2078,7 +2083,7 @@ describe("project cover image handlers", () => {
     const res = await app.request(
       new Request(`http://localhost/projects/${projectId}/cover`, {
         method: "DELETE",
-      }),
+      })
     );
     expect(res.status).toBe(200);
     const body = await res.json<{ ok: boolean }>();
@@ -2096,24 +2101,18 @@ describe("project cover image handlers", () => {
 
     const uploadApp = new Hono<AppEnv>();
     uploadApp.put("/projects/:projectId/cover", coverAuth(), uploadProjectCover);
-    const uploadRes = await uploadApp.request(
-      uploadRequest(projectId, fakeCoverPngFile()),
-    );
+    const uploadRes = await uploadApp.request(uploadRequest(projectId, fakeCoverPngFile()));
     expect(uploadRes.status).toBe(200);
     const { coverImageKey: key } = await uploadRes.json<{
       coverImageKey: string;
     }>();
 
     const delApp = new Hono<AppEnv>();
-    delApp.delete(
-      "/projects/:projectId/cover",
-      coverAuth(),
-      deleteProjectCover,
-    );
+    delApp.delete("/projects/:projectId/cover", coverAuth(), deleteProjectCover);
     const res = await delApp.request(
       new Request(`http://localhost/projects/${projectId}/cover`, {
         method: "DELETE",
-      }),
+      })
     );
     expect(res.status).toBe(200);
 
@@ -2139,12 +2138,10 @@ describe("project cover image handlers", () => {
       "/projects/:projectId/cover/unsplash",
       coverAuth({ unsplashAccessKey: null }),
       validateBody(unsplashCoverPayloadSchema),
-      applyProjectUnsplashCover,
+      applyProjectUnsplashCover
     );
 
-    const res = await app.request(
-      unsplashRequest(projectId, sampleUnsplashPayload("p-503")),
-    );
+    const res = await app.request(unsplashRequest(projectId, sampleUnsplashPayload("p-503")));
     expect(res.status).toBe(503);
     const body = await res.json<{ error: string }>();
     expect(body.error).toContain("Unsplash");
@@ -2164,7 +2161,7 @@ describe("project cover image handlers", () => {
 
     const r1 = await getApp.request(
       `/projects/${projectId}`,
-      jsonRequest("GET", `/projects/${projectId}`),
+      jsonRequest("GET", `/projects/${projectId}`)
     );
     expect(r1.status).toBe(200);
     const body1 = await r1.json<{
@@ -2182,16 +2179,16 @@ describe("project cover image handlers", () => {
       "/projects/:projectId/cover/unsplash",
       coverAuth(),
       validateBody(unsplashCoverPayloadSchema),
-      applyProjectUnsplashCover,
+      applyProjectUnsplashCover
     );
     const applyRes = await applyApp.request(
-      unsplashRequest(projectId, sampleUnsplashPayload("p-detail-reads")),
+      unsplashRequest(projectId, sampleUnsplashPayload("p-detail-reads"))
     );
     expect(applyRes.status).toBe(200);
 
     const r2 = await getApp.request(
       `/projects/${projectId}`,
-      jsonRequest("GET", `/projects/${projectId}`),
+      jsonRequest("GET", `/projects/${projectId}`)
     );
     const body2 = await r2.json<{
       project: { coverUnsplash: StoredUnsplashCoverPayload | null };
@@ -2214,12 +2211,12 @@ describe("project cover image handlers", () => {
       "/projects/:projectId/duplicate",
       coverAuth(),
       validateBody(duplicateProjectSchema),
-      duplicateProject,
+      duplicateProject
     );
 
     const res = await app.request(
       `/projects/${projectId}/duplicate`,
-      jsonRequest("POST", `/projects/${projectId}/duplicate`, {}),
+      jsonRequest("POST", `/projects/${projectId}/duplicate`, {})
     );
     expect(res.status).toBe(201);
     const body = await res.json<{

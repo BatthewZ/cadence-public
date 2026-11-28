@@ -46,11 +46,8 @@ export const calendarFeedToken = sqliteTable(
     lastUsedAt: integer("lastUsedAt", { mode: "timestamp" }),
   },
   (table) => [
-    uniqueIndex("calendar_feed_token_user_workspace_unique").on(
-      table.userId,
-      table.workspaceId,
-    ),
-  ],
+    uniqueIndex("calendar_feed_token_user_workspace_unique").on(table.userId, table.workspaceId),
+  ]
 );
 
 export type CalendarFeedToken = typeof calendarFeedToken.$inferSelect;

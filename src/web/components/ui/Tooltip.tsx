@@ -54,27 +54,20 @@ export function Tooltip({
   const dismiss = useDismiss(context, { ancestorScroll: true });
   const role = useRole(context, { role: "tooltip" });
 
-  const { getReferenceProps, getFloatingProps } = useInteractions([
-    hover,
-    focus,
-    dismiss,
-    role,
-  ]);
+  const { getReferenceProps, getFloatingProps } = useInteractions([hover, focus, dismiss, role]);
 
   const { isMounted, styles: transitionStyles } = useTransitionStyles(context, {
     duration: 150,
   });
 
   const childRef = isValidElement(children)
-    ? (children.props as Record<string, unknown>).ref as React.Ref<HTMLElement> | undefined
+    ? ((children.props as Record<string, unknown>).ref as React.Ref<HTMLElement> | undefined)
     : undefined;
 
-   
   const mergedRef = useMemo(
     () => mergeRefs(refs.setReference, childRef),
     [refs.setReference, childRef]
   );
-   
 
   return (
     <>
@@ -84,21 +77,21 @@ export function Tooltip({
           "aria-describedby": open ? id : undefined,
           ...getReferenceProps(),
         } as Record<string, unknown>)}
-      {isMounted && (() => {
-        const floating = (
-          <div
-             
-            ref={refs.setFloating}
-            id={id}
-            className="tooltip"
-            style={{ ...floatingStyles, ...transitionStyles }}
-            {...getFloatingProps()}
-          >
-            {content}
-          </div>
-        );
-        return portal ? <FloatingPortal>{floating}</FloatingPortal> : floating;
-      })()}
+      {isMounted &&
+        (() => {
+          const floating = (
+            <div
+              ref={refs.setFloating}
+              id={id}
+              className="tooltip"
+              style={{ ...floatingStyles, ...transitionStyles }}
+              {...getFloatingProps()}
+            >
+              {content}
+            </div>
+          );
+          return portal ? <FloatingPortal>{floating}</FloatingPortal> : floating;
+        })()}
     </>
   );
 }

@@ -165,9 +165,7 @@ function unfoldLines(text: string): string[] {
  * generator must escape backslashes FIRST).
  */
 function unescapeText(value: string): string {
-  return value.replace(/\\([\\;,nN])/g, (_, ch: string) =>
-    ch === "n" || ch === "N" ? "\n" : ch,
-  );
+  return value.replace(/\\([\\;,nN])/g, (_, ch: string) => (ch === "n" || ch === "N" ? "\n" : ch));
 }
 
 /**
@@ -306,11 +304,7 @@ function parseICSDateValue(rawValue: string): ICSDateValue | null {
 
   const ts = utcTimestamp(y, mo, d, h, mi, s);
   const check = new Date(ts);
-  if (
-    check.getUTCFullYear() !== y ||
-    check.getUTCMonth() !== mo - 1 ||
-    check.getUTCDate() !== d
-  ) {
+  if (check.getUTCFullYear() !== y || check.getUTCMonth() !== mo - 1 || check.getUTCDate() !== d) {
     return null; // impossible date (e.g. month 13, Feb 30) was normalized away
   }
 
@@ -378,16 +372,12 @@ function recordProperty(event: RawEvent, line: ContentLine): void {
  * the core robustness contract: one bad block must never kill the import.
  */
 function finalizeEvent(raw: RawEvent, events: ParsedEvent[], warnings: string[]): void {
-  const summaryText =
-    raw.summary !== undefined ? unescapeText(raw.summary).trim() : "";
+  const summaryText = raw.summary !== undefined ? unescapeText(raw.summary).trim() : "";
   const summary = summaryText === "" ? UNTITLED_SUMMARY : summaryText;
   const label =
-    summaryText === ""
-      ? `VEVENT #${raw.ordinal}`
-      : `VEVENT #${raw.ordinal} ("${summaryText}")`;
+    summaryText === "" ? `VEVENT #${raw.ordinal}` : `VEVENT #${raw.ordinal} ("${summaryText}")`;
 
-  const descriptionText =
-    raw.description !== undefined ? unescapeText(raw.description).trim() : "";
+  const descriptionText = raw.description !== undefined ? unescapeText(raw.description).trim() : "";
   const description = descriptionText === "" ? undefined : descriptionText;
 
   const uidText = raw.uid !== undefined ? unescapeText(raw.uid).trim() : "";
@@ -397,9 +387,7 @@ function finalizeEvent(raw: RawEvent, events: ParsedEvent[], warnings: string[])
     // A task without dates is a valid import target; DTEND without DTSTART
     // is meaningless on its own, so it is dropped with a warning.
     if (raw.dtend !== undefined || raw.duration !== undefined) {
-      warnings.push(
-        `${label}: has DTEND/DURATION but no DTSTART; imported without dates`,
-      );
+      warnings.push(`${label}: has DTEND/DURATION but no DTSTART; imported without dates`);
     }
     events.push({ uid, summary, description });
     return;
@@ -407,9 +395,7 @@ function finalizeEvent(raw: RawEvent, events: ParsedEvent[], warnings: string[])
 
   const start = parseICSDateValue(raw.dtstart.value);
   if (start === null) {
-    warnings.push(
-      `${label} skipped: invalid DTSTART value "${raw.dtstart.value.trim()}"`,
-    );
+    warnings.push(`${label} skipped: invalid DTSTART value "${raw.dtstart.value.trim()}"`);
     return;
   }
 
@@ -417,9 +403,7 @@ function finalizeEvent(raw: RawEvent, events: ParsedEvent[], warnings: string[])
   if (raw.dtend !== undefined) {
     const end = parseICSDateValue(raw.dtend.value);
     if (end === null) {
-      warnings.push(
-        `${label} skipped: invalid DTEND value "${raw.dtend.value.trim()}"`,
-      );
+      warnings.push(`${label} skipped: invalid DTEND value "${raw.dtend.value.trim()}"`);
       return;
     }
     // DTEND exclusivity reversal: all-day DTEND is the first day AFTER the
@@ -429,16 +413,13 @@ function finalizeEvent(raw: RawEvent, events: ParsedEvent[], warnings: string[])
   } else if (raw.duration !== undefined) {
     const durationMs = parseDurationMs(raw.duration);
     if (durationMs === null) {
-      warnings.push(
-        `${label} skipped: invalid DURATION value "${raw.duration.trim()}"`,
-      );
+      warnings.push(`${label} skipped: invalid DURATION value "${raw.duration.trim()}"`);
       return;
     }
     if (start.dateOnly) {
       // start + duration is the EXCLUSIVE end instant (like DTEND); the last
       // included day is 1ms before it. P1D from 2026-03-10 → 2026-03-10.
-      endDate =
-        durationMs <= 0 ? start.date : utcDateString(start.ts + durationMs - 1);
+      endDate = durationMs <= 0 ? start.date : utcDateString(start.ts + durationMs - 1);
     } else {
       // Mirrors the DATE-TIME DTEND rule: the end instant's date part.
       endDate = utcDateString(start.ts + durationMs);
@@ -491,7 +472,7 @@ export function parseICS(text: string): ParseICSResult {
       if (component === "VEVENT") {
         if (current !== null) {
           warnings.push(
-            `VEVENT #${current.ordinal} skipped: missing END:VEVENT before next BEGIN:VEVENT`,
+            `VEVENT #${current.ordinal} skipped: missing END:VEVENT before next BEGIN:VEVENT`
           );
         }
         ordinal += 1;
@@ -528,9 +509,7 @@ export function parseICS(text: string): ParseICSResult {
   }
 
   if (current !== null) {
-    warnings.push(
-      `VEVENT #${current.ordinal} skipped: missing END:VEVENT (file ended)`,
-    );
+    warnings.push(`VEVENT #${current.ordinal} skipped: missing END:VEVENT (file ended)`);
   }
 
   if (!sawVevent) {

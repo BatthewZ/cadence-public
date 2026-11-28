@@ -65,7 +65,10 @@ export function useProjectFreshness(projectId: string, multiUser = true): void {
 
     // Board list, plus the `tasks` prefix for any open detail view — the payload
     // is one MAX(updatedAt) and names no task id.
-    if ((freshness.tasks !== null && freshness.tasks !== prev.tasks) || freshness.taskCount !== prev.taskCount) {
+    if (
+      (freshness.tasks !== null && freshness.tasks !== prev.tasks) ||
+      freshness.taskCount !== prev.taskCount
+    ) {
       if (freshnessTracker.shouldInvalidate("tasks")) {
         void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(projectId) });
         void qc.invalidateQueries({ queryKey: queryKeys.tasks.all });
@@ -73,7 +76,10 @@ export function useProjectFreshness(projectId: string, multiUser = true): void {
     }
 
     // Task groups
-    if ((freshness.taskGroups !== null && freshness.taskGroups !== prev.taskGroups) || freshness.taskGroupCount !== prev.taskGroupCount) {
+    if (
+      (freshness.taskGroups !== null && freshness.taskGroups !== prev.taskGroups) ||
+      freshness.taskGroupCount !== prev.taskGroupCount
+    ) {
       if (freshnessTracker.shouldInvalidate("taskGroups")) {
         void qc.invalidateQueries({ queryKey: queryKeys.projects.taskGroups(projectId) });
       }

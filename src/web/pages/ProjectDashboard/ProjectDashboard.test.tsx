@@ -183,9 +183,7 @@ function setupProjectMock() {
   });
 }
 
-function makeDashboardData(
-  overrides: Partial<ProjectDashboardData> = {},
-): ProjectDashboardData {
+function makeDashboardData(overrides: Partial<ProjectDashboardData> = {}): ProjectDashboardData {
   return {
     taskCounts: { activeCount: 12, completedCount: 8, totalCount: 20 },
     tasksByGroup: [
@@ -256,7 +254,7 @@ function makeDashboardData(
 
 function setupDashboardMock(
   data: ProjectDashboardData | null = null,
-  opts: { isLoading?: boolean; isError?: boolean } = {},
+  opts: { isLoading?: boolean; isError?: boolean } = {}
 ) {
   mockUseProjectDashboard.mockReturnValue({
     data: data,
@@ -280,7 +278,7 @@ function setupActivityMock(
     newValue: string | null;
     createdAt: string;
   }> = [],
-  opts: { isLoading?: boolean; isError?: boolean; hasNextPage?: boolean } = {},
+  opts: { isLoading?: boolean; isError?: boolean; hasNextPage?: boolean } = {}
 ) {
   mockUseProjectActivity.mockReturnValue({
     data: { pages: [{ activities, nextCursor: null }] },
@@ -292,11 +290,7 @@ function setupActivityMock(
   });
 }
 
-function makeActivity(
-  id: string,
-  title: string,
-  action = "created",
-) {
+function makeActivity(id: string, title: string, action = "created") {
   return {
     id,
     taskId: `task-${id}`,

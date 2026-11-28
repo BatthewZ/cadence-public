@@ -63,7 +63,10 @@ export function useWorkspaceFreshness(workspaceId: string, multiUser = true): vo
     }
 
     // Project list
-    if ((freshness.projects !== null && freshness.projects !== prev.projects) || freshness.projectCount !== prev.projectCount) {
+    if (
+      (freshness.projects !== null && freshness.projects !== prev.projects) ||
+      freshness.projectCount !== prev.projectCount
+    ) {
       if (freshnessTracker.shouldInvalidate("projects")) {
         void qc.invalidateQueries({ queryKey: queryKeys.workspaces.projects(workspaceId) });
       }
@@ -71,11 +74,18 @@ export function useWorkspaceFreshness(workspaceId: string, multiUser = true): vo
 
     // Workspace lists (dashboard, my tasks, upcoming), plus the `tasks` prefix
     // for a detail dialog opened from any of them.
-    if ((freshness.tasks !== null && freshness.tasks !== prev.tasks) || freshness.taskCount !== prev.taskCount) {
+    if (
+      (freshness.tasks !== null && freshness.tasks !== prev.tasks) ||
+      freshness.taskCount !== prev.taskCount
+    ) {
       if (freshnessTracker.shouldInvalidate("tasks")) {
         void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboard(workspaceId) });
-        void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspaceId) });
-        void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardUpcoming(workspaceId) });
+        void qc.invalidateQueries({
+          queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspaceId),
+        });
+        void qc.invalidateQueries({
+          queryKey: queryKeys.workspaces.dashboardUpcoming(workspaceId),
+        });
         void qc.invalidateQueries({ queryKey: queryKeys.tasks.all });
       }
     }

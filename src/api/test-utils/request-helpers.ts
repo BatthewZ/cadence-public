@@ -3,11 +3,7 @@
 // ---------------------------------------------------------------------------
 
 /** Shorthand to build a JSON request. */
-export function jsonRequest(
-  method: string,
-  path: string,
-  body?: unknown,
-): Request {
+export function jsonRequest(method: string, path: string, body?: unknown): Request {
   const init: RequestInit = {
     method,
     headers: { "Content-Type": "application/json" },

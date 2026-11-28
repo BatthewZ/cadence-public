@@ -75,8 +75,7 @@ export function ProjectMultiSelect({
 
       {atCapacity && (
         <Alert variant="warning">
-          You&apos;ve selected the maximum of {MAX_PROJECTS} projects. Deselect
-          one to add another.
+          You&apos;ve selected the maximum of {MAX_PROJECTS} projects. Deselect one to add another.
         </Alert>
       )}
 
@@ -103,7 +102,9 @@ export function ProjectMultiSelect({
                   <label
                     className={
                       "flex items-center gap-r5 px-r4 py-r5 " +
-                      (disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-surface-1")
+                      (disabled
+                        ? "cursor-not-allowed opacity-60"
+                        : "cursor-pointer hover:bg-surface-1")
                     }
                   >
                     <Checkbox

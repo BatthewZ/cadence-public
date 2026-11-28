@@ -72,7 +72,7 @@ vi.mock("@/web/hooks/use-unsplash-search", () => ({
 
 vi.mock("@/web/util/image-optimization", async () => {
   const actual = await vi.importActual<typeof import("@/web/util/image-optimization")>(
-    "@/web/util/image-optimization",
+    "@/web/util/image-optimization"
   );
   return {
     ...actual,
@@ -169,7 +169,10 @@ Object.defineProperty(window, "matchMedia", {
 /*  Fixtures                                                           */
 /* ------------------------------------------------------------------ */
 
-function makePhoto(id: string, overrides: Partial<UnsplashCoverPayload> = {}): UnsplashCoverPayload {
+function makePhoto(
+  id: string,
+  overrides: Partial<UnsplashCoverPayload> = {}
+): UnsplashCoverPayload {
   return {
     id,
     rawUrl: `https://images.unsplash.com/${id}-raw.jpg`,
@@ -226,7 +229,7 @@ function renderPicker(opts: RenderOpts = {}) {
       onSelectUnsplash={onSelectUnsplash}
       initialTab={opts.initialTab}
     />,
-    { wrapper: Wrapper },
+    { wrapper: Wrapper }
   );
 
   return { ...utils, onUploadFile, onSelectUnsplash, onClose };
@@ -256,9 +259,7 @@ describe("CoverImagePicker", () => {
       expect(screen.queryByRole("tab", { name: /unsplash/i })).toBeNull();
       expect(screen.queryByRole("tab", { name: /upload/i })).toBeNull();
       // Upload panel content is visible
-      expect(
-        screen.getByLabelText("Upload cover image"),
-      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Upload cover image")).toBeInTheDocument();
     });
 
     it("renders both tabs when Unsplash is enabled and defaults to Unsplash", () => {
@@ -272,10 +273,7 @@ describe("CoverImagePicker", () => {
     it("respects initialTab='upload' override even when Unsplash is enabled", () => {
       renderPicker({ initialTab: "upload" });
 
-      expect(screen.getByRole("tab", { name: /upload/i })).toHaveAttribute(
-        "aria-selected",
-        "true",
-      );
+      expect(screen.getByRole("tab", { name: /upload/i })).toHaveAttribute("aria-selected", "true");
     });
   });
 
@@ -286,9 +284,7 @@ describe("CoverImagePicker", () => {
       renderPicker();
 
       const dropZone = screen.getByLabelText("Upload cover image");
-      const input = dropZone.querySelector(
-        "input[type='file']",
-      ) as HTMLInputElement;
+      const input = dropZone.querySelector("input[type='file']") as HTMLInputElement;
       const clickSpy = vi.spyOn(input, "click");
 
       await user.click(dropZone);
@@ -302,9 +298,7 @@ describe("CoverImagePicker", () => {
       renderPicker({ onUploadFile, onClose });
 
       const dropZone = screen.getByLabelText("Upload cover image");
-      const input = dropZone.querySelector(
-        "input[type='file']",
-      ) as HTMLInputElement;
+      const input = dropZone.querySelector("input[type='file']") as HTMLInputElement;
       const file = new File(["hello"], "cover.png", { type: "image/png" });
 
       await act(async () => {
@@ -402,12 +396,8 @@ describe("CoverImagePicker", () => {
       });
       renderPicker();
 
-      expect(
-        screen.getByRole("button", { name: /use photo by author a/i }),
-      ).toBeInTheDocument();
-      expect(
-        screen.getByRole("button", { name: /use photo by author b/i }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /use photo by author a/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /use photo by author b/i })).toBeInTheDocument();
     });
 
     it("clicking a card calls onSelectUnsplash with the full payload and closes", async () => {
@@ -419,9 +409,7 @@ describe("CoverImagePicker", () => {
       const user = userEvent.setup();
       renderPicker({ onSelectUnsplash, onClose });
 
-      await user.click(
-        screen.getByRole("button", { name: /use photo by author hero/i }),
-      );
+      await user.click(screen.getByRole("button", { name: /use photo by author hero/i }));
 
       expect(onSelectUnsplash).toHaveBeenCalledTimes(1);
       expect(onSelectUnsplash).toHaveBeenCalledWith(photo);
@@ -451,9 +439,7 @@ describe("CoverImagePicker", () => {
       });
       renderPicker();
 
-      expect(
-        screen.getByText(/no photos match that search/i),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/no photos match that search/i)).toBeInTheDocument();
     });
 
     it("renders an error alert with a working Retry button", async () => {
@@ -507,9 +493,7 @@ describe("CoverImagePicker", () => {
           expect(link).toHaveAttribute("rel", "noopener noreferrer");
         }
       }
-      const profile = links.find((l) =>
-        l.getAttribute("href")?.includes("/@author_credit"),
-      );
+      const profile = links.find((l) => l.getAttribute("href")?.includes("/@author_credit"));
       expect(profile).toBeTruthy();
       expect(profile?.getAttribute("href")).toContain("utm_source=cadence");
     });

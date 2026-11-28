@@ -61,7 +61,7 @@ vi.mock("@/web/lib/api/client", () => {
   class ApiError extends Error {
     constructor(
       public status: number,
-      message: string,
+      message: string
     ) {
       super(message);
       this.name = "ApiError";
@@ -145,7 +145,7 @@ const SAMPLE_ICS = makeIcs(
     "SUMMARY:Undated event",
     "END:VEVENT",
     "",
-  ].join("\n"),
+  ].join("\n")
 );
 
 /** SAMPLE_ICS plus one VEVENT with an impossible DTSTART → 1 parser warning. */
@@ -162,7 +162,7 @@ const ICS_WITH_BROKEN_EVENT = makeIcs(
     "SUMMARY:Broken event",
     "END:VEVENT",
     "",
-  ].join("\n"),
+  ].join("\n")
 );
 
 function icsFile(content: string, name = "calendar.ics"): File {
@@ -216,9 +216,7 @@ describe("ImportIcsDialog", () => {
     expect(screen.getByText("No date")).toBeInTheDocument();
 
     // The no-UID dedupe caveat is stated up front.
-    expect(
-      screen.getByText(/Events without an ID are\s+always created again/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Events without an ID are\s+always created again/)).toBeInTheDocument();
 
     // No warnings → no "couldn't be read" alert.
     expect(screen.queryByText(/couldn't\s+be read/)).not.toBeInTheDocument();
@@ -299,9 +297,7 @@ describe("ImportIcsDialog", () => {
     selectFile(icsFile(ICS_WITH_BROKEN_EVENT));
 
     expect(await screen.findByText(/1 event found in/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/1 event couldn't\s+be read and will be left out/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/1 event couldn't\s+be read and will be left out/)).toBeInTheDocument();
     expect(screen.getByText("Good event")).toBeInTheDocument();
     expect(screen.queryByText("Broken event")).not.toBeInTheDocument();
   });
@@ -311,7 +307,7 @@ describe("ImportIcsDialog", () => {
     selectFile(icsFile(makeIcs("")));
 
     expect(
-      await screen.findByText(/This file doesn't contain any readable events/),
+      await screen.findByText(/This file doesn't contain any readable events/)
     ).toBeInTheDocument();
     // Not a dead end: the dropzone is still there and no Import button appeared.
     expect(screen.getByRole("button", { name: "Upload file" })).toBeInTheDocument();
@@ -327,12 +323,10 @@ describe("ImportIcsDialog", () => {
     selectFile(
       new File([new Uint8Array(MAX_IMPORT_FILE_BYTES + 1)], "huge.ics", {
         type: "text/calendar",
-      }),
+      })
     );
 
-    expect(
-      await screen.findByText("File is too large — the limit is 1 MB."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("File is too large — the limit is 1 MB.")).toBeInTheDocument();
     expect(screen.queryByText(/events found in/)).not.toBeInTheDocument();
   });
 
@@ -341,7 +335,7 @@ describe("ImportIcsDialog", () => {
     selectFile(new File(["not a calendar"], "notes.txt", { type: "text/plain" }));
 
     expect(
-      await screen.findByText("That doesn't look like an .ics calendar file."),
+      await screen.findByText("That doesn't look like an .ics calendar file.")
     ).toBeInTheDocument();
   });
 
@@ -357,15 +351,13 @@ describe("ImportIcsDialog", () => {
         `SUMMARY:Event ${i}`,
         "END:VEVENT",
         "",
-      ].join("\n"),
+      ].join("\n")
     ).join("");
     renderDialog();
     selectFile(icsFile(makeIcs(manyEvents)));
 
     expect(await screen.findByText(/501 events found in/)).toBeInTheDocument();
-    expect(
-      screen.getByText(/only the\s+first 500 events will be imported/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/only the\s+first 500 events will be imported/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Import 500 tasks" }));
 

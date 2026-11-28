@@ -57,9 +57,7 @@ interface EditableMarkdownProps {
 
 const DEFAULT_PLACEHOLDER = "Add a description…";
 
-export function EditableMarkdown(
-  props: EditableMarkdownProps,
-): React.JSX.Element {
+export function EditableMarkdown(props: EditableMarkdownProps): React.JSX.Element {
   const {
     value,
     onSave,
@@ -161,7 +159,7 @@ export function EditableMarkdown(
           // edge instead of crowding it. Edit mode keeps the full editor width.
           "cursor-text rounded-md border border-transparent -mx-r5 px-r5 py-r5 text-fg-primary",
           "duration-fast hover:border-border-default hover:bg-surface-1",
-          "focus:outline-none focus-visible:border-border-focus focus-visible:bg-surface-1",
+          "focus:outline-none focus-visible:border-border-focus focus-visible:bg-surface-1"
         )}
       >
         {rendered}

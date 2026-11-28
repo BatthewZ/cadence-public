@@ -58,7 +58,7 @@ vi.mock("@/web/lib/api/client", () => {
   class ApiError extends Error {
     constructor(
       public status: number,
-      message: string,
+      message: string
     ) {
       super(message);
       this.name = "ApiError";
@@ -195,7 +195,7 @@ function renderSwitcher(initialEntry: string) {
         <SaveViewButton projectId="proj-1" />
         <LocationProbe />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -263,7 +263,7 @@ describe("ViewSwitcher", () => {
     // last ("?view=" identifies the active view across refreshes).
     await waitFor(() => {
       expect(screen.getByTestId("location")).toHaveTextContent(
-        `/w/test/projects/proj-1/board?assignee=u1%2Cnone&priority=high&view=${viewId}`,
+        `/w/test/projects/proj-1/board?assignee=u1%2Cnone&priority=high&view=${viewId}`
       );
     });
   });
@@ -289,7 +289,7 @@ describe("ViewSwitcher", () => {
     await user.click(row);
 
     expect(screen.getByTestId("location")).toHaveTextContent(
-      "/w/test/projects/proj-1/list?priority=high%2Curgent&view=v-1",
+      "/w/test/projects/proj-1/list?priority=high%2Curgent&view=v-1"
     );
   });
 
@@ -315,7 +315,7 @@ describe("ViewSwitcher", () => {
     // ONE navigation to the SAME tab with the view id and its filters stripped,
     // but the open task preserved — the pill degrades back to "Views".
     expect(screen.getByTestId("location")).toHaveTextContent(
-      "/w/test/projects/proj-1/list?task=t-9",
+      "/w/test/projects/proj-1/list?task=t-9"
     );
     expect(screen.getByText("Views")).toBeInTheDocument();
   });
@@ -362,7 +362,7 @@ describe("ViewSwitcher", () => {
 
     // Updating overwrites the snapshot in place — the URL must NOT change.
     expect(screen.getByTestId("location")).toHaveTextContent(
-      "/w/test/projects/proj-1/board?priority=high,urgent&view=v-1",
+      "/w/test/projects/proj-1/board?priority=high,urgent&view=v-1"
     );
   });
 
@@ -392,9 +392,7 @@ describe("ViewSwitcher", () => {
     renderSwitcher("/w/test/projects/proj-1/board");
 
     await user.click(await screen.findByRole("button", { name: /views/i }));
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Rename view High priority" }),
-    );
+    await user.click(await screen.findByRole("menuitem", { name: "Rename view High priority" }));
 
     const input = screen.getByLabelText("New name for High priority");
     expect(input).toHaveValue("High priority");
@@ -426,22 +424,16 @@ describe("ViewSwitcher", () => {
     renderSwitcher("/w/test/projects/proj-1/board");
 
     await user.click(await screen.findByRole("button", { name: /views/i }));
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Rename view High priority" }),
-    );
+    await user.click(await screen.findByRole("menuitem", { name: "Rename view High priority" }));
     expect(screen.getByLabelText("New name for High priority")).toBeInTheDocument();
 
     // Escape must mean "cancel the input", NOT "dismiss the menu": the
     // input stops propagation so the menu's dismiss handler never sees it.
     await user.keyboard("{Escape}");
 
-    expect(
-      screen.queryByLabelText("New name for High priority"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("New name for High priority")).not.toBeInTheDocument();
     // The menu survived — the row is back in place and nothing was PATCHed.
-    expect(
-      screen.getByRole("menuitemradio", { name: "High priority" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("menuitemradio", { name: "High priority" })).toBeInTheDocument();
     expect(mockPatch).not.toHaveBeenCalled();
   });
 
@@ -461,9 +453,7 @@ describe("ViewSwitcher", () => {
     const pill = await screen.findByRole("button", { name: /high priority/i });
     await user.click(pill);
 
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Delete view High priority" }),
-    );
+    await user.click(await screen.findByRole("menuitem", { name: "Delete view High priority" }));
 
     await waitFor(() => {
       expect(mockDelete).toHaveBeenCalledWith("/api/projects/proj-1/views/v-1");
@@ -472,7 +462,7 @@ describe("ViewSwitcher", () => {
     // Optimistic removal: the row disappears without waiting for refetch …
     await waitFor(() => {
       expect(
-        screen.queryByRole("menuitemradio", { name: "High priority" }),
+        screen.queryByRole("menuitemradio", { name: "High priority" })
       ).not.toBeInTheDocument();
     });
     // … the other view survives, and the pill degrades: the URL still says
@@ -514,7 +504,7 @@ describe("ViewSwitcher", () => {
     // "calendar" is not renderable by this client → resolveViewTab falls
     // back to board instead of building a dead route.
     expect(screen.getByTestId("location")).toHaveTextContent(
-      "/w/test/projects/proj-1/board?priority=low&view=v-cal",
+      "/w/test/projects/proj-1/board?priority=low&view=v-cal"
     );
   });
 
@@ -527,15 +517,13 @@ describe("ViewSwitcher", () => {
     await user.type(screen.getByLabelText("View name"), "Dup{Enter}");
 
     // Inline (under the input), not a toast — the user fixes it in place.
-    expect(
-      await screen.findByText("You already have a view with this name"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("You already have a view with this name")).toBeInTheDocument();
     expect(screen.getByLabelText("View name")).toBeInTheDocument();
     expect(mockToast).not.toHaveBeenCalled();
 
     // No navigation happened — the URL is untouched by the failed create.
     expect(screen.getByTestId("location")).toHaveTextContent(
-      "/w/test/projects/proj-1/board?priority=high",
+      "/w/test/projects/proj-1/board?priority=high"
     );
   });
 
@@ -552,9 +540,7 @@ describe("ViewSwitcher", () => {
     renderSwitcher("/w/test/projects/proj-1/board?priority=urgent");
 
     await user.click(await screen.findByRole("button", { name: /views/i }));
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Save current as view" }),
-    );
+    await user.click(await screen.findByRole("menuitem", { name: "Save current as view" }));
     await user.type(screen.getByLabelText("View name"), "One too many{Enter}");
 
     await waitFor(() => {

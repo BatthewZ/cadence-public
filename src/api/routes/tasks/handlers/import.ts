@@ -87,12 +87,7 @@ export async function importTasks(c: Context<AppEnv>) {
   const [group] = await db
     .select()
     .from(taskGroup)
-    .where(
-      and(
-        eq(taskGroup.id, body.taskGroupId),
-        eq(taskGroup.projectId, projectId),
-      ),
-    )
+    .where(and(eq(taskGroup.id, body.taskGroupId), eq(taskGroup.projectId, projectId)))
     .limit(1);
 
   if (!group) {
@@ -114,9 +109,7 @@ export async function importTasks(c: Context<AppEnv>) {
     //    duplicate UIDs within the payload itself.
     const incomingUids = [
       ...new Set(
-        body.tasks
-          .map((t) => t.sourceUid)
-          .filter((uid): uid is string => typeof uid === "string"),
+        body.tasks.map((t) => t.sourceUid).filter((uid): uid is string => typeof uid === "string")
       ),
     ];
 
@@ -125,12 +118,7 @@ export async function importTasks(c: Context<AppEnv>) {
       const rows = await db
         .select({ sourceUid: task.sourceUid })
         .from(task)
-        .where(
-          and(
-            eq(task.projectId, projectId),
-            inArray(task.sourceUid, uidChunk),
-          ),
-        );
+        .where(and(eq(task.projectId, projectId), inArray(task.sourceUid, uidChunk)));
       for (const row of rows) {
         if (row.sourceUid) existingUids.add(row.sourceUid);
       }
@@ -212,11 +200,9 @@ export async function importTasks(c: Context<AppEnv>) {
     const paramsPerRow = db.insert(task).values([rows[0]]).toSQL().params.length;
     const rowsPerInsert = Math.max(1, Math.floor(D1_MAX_BOUND_PARAMS / paramsPerRow));
     const statements = chunk(rows, rowsPerInsert).map((rowChunk) =>
-      db.insert(task).values(rowChunk),
+      db.insert(task).values(rowChunk)
     );
-    await db.batch(
-      statements as unknown as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]],
-    );
+    await db.batch(statements as unknown as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 
     return { createdRows: rows, skipped: skippedCount };
   });
@@ -242,8 +228,5 @@ export async function importTasks(c: Context<AppEnv>) {
   // (No dispatchWebhook call here — see the handler JSDoc for why bulk
   // import intentionally skips task.created fan-out.)
 
-  return c.json(
-    { created: createdRows.length, skipped, total },
-    201,
-  );
+  return c.json({ created: createdRows.length, skipped, total }, 201);
 }

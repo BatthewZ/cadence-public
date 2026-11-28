@@ -17,7 +17,7 @@ function trackDeliveryTelemetry(
   webhookRow: WebhookRow,
   deliveryId: string,
   event: string,
-  opts: { success: boolean; statusCode: number | null; durationMs: number; attempt: number },
+  opts: { success: boolean; statusCode: number | null; durationMs: number; attempt: number }
 ): void {
   if (!sink) return;
   const data = {
@@ -99,7 +99,7 @@ export async function dispatchWebhookEvent(
   event: WebhookEventType,
   payload: Record<string, unknown>,
   projectId?: string | null,
-  sink?: TelemetrySink,
+  sink?: TelemetrySink
 ): Promise<number> {
   try {
     // Use Drizzle select with raw SQL for json_each() to match webhooks
@@ -122,8 +122,8 @@ export async function dispatchWebhookEvent(
           eq(webhook.workspaceId, workspaceId),
           eq(webhook.active, true),
           sql`EXISTS (SELECT 1 FROM json_each(${webhook.events}) je WHERE je.value = ${event})`,
-          projectFilter,
-        ),
+          projectFilter
+        )
       );
 
     if (rows.length === 0) {
@@ -167,7 +167,7 @@ export async function deliverWebhook(
   deliveryId: string,
   event: WebhookEventType,
   payload: Record<string, unknown>,
-  sink?: TelemetrySink,
+  sink?: TelemetrySink
 ): Promise<void> {
   const now = new Date();
   const timestampSeconds = Math.floor(now.getTime() / 1000).toString();
@@ -208,7 +208,10 @@ export async function deliverWebhook(
     const durationMs = Date.now() - fetchStart;
 
     trackDeliveryTelemetry(sink, "webhook_delivery", webhookRow, deliveryId, event, {
-      success, statusCode: response.status, durationMs, attempt: 1,
+      success,
+      statusCode: response.status,
+      durationMs,
+      attempt: 1,
     });
 
     if (success) {
@@ -244,17 +247,19 @@ export async function deliverWebhook(
         response.status,
         responseBody.slice(0, 4096),
         1,
-        now,
+        now
       );
     }
   } catch (error) {
     // Network error, timeout, or other fetch failure
     const durationMs = Date.now() - fetchStart;
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown delivery error";
+    const errorMessage = error instanceof Error ? error.message : "Unknown delivery error";
 
     trackDeliveryTelemetry(sink, "webhook_delivery", webhookRow, deliveryId, event, {
-      success: false, statusCode: null, durationMs, attempt: 1,
+      success: false,
+      statusCode: null,
+      durationMs,
+      attempt: 1,
     });
 
     try {
@@ -267,14 +272,10 @@ export async function deliverWebhook(
         null,
         errorMessage.slice(0, 4096),
         1,
-        now,
+        now
       );
     } catch (dbError) {
-      console.error(
-        "[webhooks] Failed to record delivery failure for",
-        deliveryId,
-        dbError,
-      );
+      console.error("[webhooks] Failed to record delivery failure for", deliveryId, dbError);
     }
   }
 }
@@ -299,7 +300,7 @@ async function recordDeliveryFailure(
   statusCode: number | null,
   responseText: string,
   attempt: number,
-  now: Date,
+  now: Date
 ): Promise<void> {
   const nonRetryable = isNonRetryable(statusCode);
   const nextAttempt = attempt + 1;
@@ -313,7 +314,7 @@ async function recordDeliveryFailure(
 
   if (nonRetryable) {
     console.warn(
-      `[webhooks] Delivery ${deliveryId} received non-retryable status ${statusCode} — skipping retries`,
+      `[webhooks] Delivery ${deliveryId} received non-retryable status ${statusCode} — skipping retries`
     );
   }
 
@@ -333,9 +334,7 @@ async function recordDeliveryFailure(
   });
 
   const newFailureCount =
-    (typeof webhookRow.consecutiveFailures === "number"
-      ? webhookRow.consecutiveFailures
-      : 0) + 1;
+    (typeof webhookRow.consecutiveFailures === "number" ? webhookRow.consecutiveFailures : 0) + 1;
 
   const webhookUpdate: Record<string, unknown> = {
     consecutiveFailures: newFailureCount,
@@ -345,14 +344,11 @@ async function recordDeliveryFailure(
   if (newFailureCount >= AUTO_DISABLE_THRESHOLD) {
     webhookUpdate.active = false;
     console.warn(
-      `[webhooks] Auto-disabling webhook ${webhookRow.id} after ${newFailureCount} consecutive failures`,
+      `[webhooks] Auto-disabling webhook ${webhookRow.id} after ${newFailureCount} consecutive failures`
     );
   }
 
-  await db
-    .update(webhook)
-    .set(webhookUpdate)
-    .where(eq(webhook.id, webhookRow.id));
+  await db.update(webhook).set(webhookUpdate).where(eq(webhook.id, webhookRow.id));
 }
 
 // ---------------------------------------------------------------------------
@@ -397,8 +393,8 @@ export async function processWebhookRetries(db: Database, sink?: TelemetrySink):
         and(
           eq(webhookDelivery.success, false),
           lte(webhookDelivery.nextRetryAt, now),
-          lt(webhookDelivery.attempts, webhookDelivery.maxAttempts),
-        ),
+          lt(webhookDelivery.attempts, webhookDelivery.maxAttempts)
+        )
       )
       .limit(RETRY_BATCH_LIMIT);
 
@@ -455,7 +451,7 @@ async function retryDelivery(
   webhookRow: WebhookRow,
   delivery: typeof webhookDelivery.$inferSelect,
   now: Date,
-  sink?: TelemetrySink,
+  sink?: TelemetrySink
 ): Promise<void> {
   const attempt = delivery.attempts + 1;
   const timestampSeconds = Math.floor(now.getTime() / 1000).toString();
@@ -491,7 +487,10 @@ async function retryDelivery(
     const durationMs = Date.now() - fetchStart;
 
     trackDeliveryTelemetry(sink, "webhook_retry", webhookRow, delivery.id, delivery.event, {
-      success, statusCode: response.status, durationMs, attempt,
+      success,
+      statusCode: response.status,
+      durationMs,
+      attempt,
     });
 
     if (success) {
@@ -519,16 +518,18 @@ async function retryDelivery(
         attempt,
         response.status,
         responseBody.slice(0, 4096),
-        now,
+        now
       );
     }
   } catch (error) {
     const durationMs = Date.now() - fetchStart;
-    const errorMessage =
-      error instanceof Error ? error.message : "Unknown retry error";
+    const errorMessage = error instanceof Error ? error.message : "Unknown retry error";
 
     trackDeliveryTelemetry(sink, "webhook_retry", webhookRow, delivery.id, delivery.event, {
-      success: false, statusCode: null, durationMs, attempt,
+      success: false,
+      statusCode: null,
+      durationMs,
+      attempt,
     });
 
     try {
@@ -539,14 +540,10 @@ async function retryDelivery(
         attempt,
         null,
         errorMessage.slice(0, 4096),
-        now,
+        now
       );
     } catch (dbError) {
-      console.error(
-        "[webhooks] Failed to update retry failure for",
-        delivery.id,
-        dbError,
-      );
+      console.error("[webhooks] Failed to update retry failure for", delivery.id, dbError);
     }
   }
 }
@@ -566,7 +563,7 @@ async function updateDeliveryRetryFailure(
   attempt: number,
   statusCode: number | null,
   responseText: string,
-  now: Date,
+  now: Date
 ): Promise<void> {
   const nonRetryable = isNonRetryable(statusCode);
   const nextAttemptNumber = attempt + 1;
@@ -580,7 +577,7 @@ async function updateDeliveryRetryFailure(
 
   if (nonRetryable) {
     console.warn(
-      `[webhooks] Retry for delivery ${deliveryId} received non-retryable status ${statusCode} — stopping retries`,
+      `[webhooks] Retry for delivery ${deliveryId} received non-retryable status ${statusCode} — stopping retries`
     );
   }
 
@@ -597,9 +594,7 @@ async function updateDeliveryRetryFailure(
     .where(eq(webhookDelivery.id, deliveryId));
 
   const newFailureCount =
-    (typeof webhookRow.consecutiveFailures === "number"
-      ? webhookRow.consecutiveFailures
-      : 0) + 1;
+    (typeof webhookRow.consecutiveFailures === "number" ? webhookRow.consecutiveFailures : 0) + 1;
 
   const webhookUpdate: Record<string, unknown> = {
     consecutiveFailures: newFailureCount,
@@ -609,12 +604,9 @@ async function updateDeliveryRetryFailure(
   if (newFailureCount >= AUTO_DISABLE_THRESHOLD) {
     webhookUpdate.active = false;
     console.warn(
-      `[webhooks] Auto-disabling webhook ${webhookRow.id} after ${newFailureCount} consecutive failures`,
+      `[webhooks] Auto-disabling webhook ${webhookRow.id} after ${newFailureCount} consecutive failures`
     );
   }
 
-  await db
-    .update(webhook)
-    .set(webhookUpdate)
-    .where(eq(webhook.id, webhookRow.id));
+  await db.update(webhook).set(webhookUpdate).where(eq(webhook.id, webhookRow.id));
 }

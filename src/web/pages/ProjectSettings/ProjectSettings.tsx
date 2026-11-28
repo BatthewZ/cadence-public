@@ -42,9 +42,7 @@ export default function ProjectSettings() {
     return (
       <Container size="md">
         <Stack gap="r3" className="py-r2">
-          <Alert variant="info">
-            You do not have permission to manage project settings.
-          </Alert>
+          <Alert variant="info">You do not have permission to manage project settings.</Alert>
         </Stack>
       </Container>
     );
@@ -88,10 +86,7 @@ export default function ProjectSettings() {
 
           <Tabs.Panel value="taskgroups">
             <Stack gap="r3" className="pt-r3">
-              <TaskGroupsTab
-                projectId={projectId}
-                toast={toast}
-              />
+              <TaskGroupsTab projectId={projectId} toast={toast} />
             </Stack>
           </Tabs.Panel>
 

@@ -32,7 +32,7 @@ export function parseRecurrenceRule(json: string | null | undefined): Recurrence
 export function computeNextDueDate(
   currentDueDate: Date,
   completionDate: Date,
-  rule: RecurrenceRule,
+  rule: RecurrenceRule
 ): Date | null {
   const anchor =
     currentDueDate.getTime() >= completionDate.getTime()
@@ -49,12 +49,7 @@ export function computeNextDueDate(
       result = computeWeekly(anchor, rule.interval, rule.daysOfWeek);
       break;
     case "monthly":
-      result = computeMonthly(
-        anchor,
-        rule.interval,
-        rule.dayOfMonth,
-        rule.nthWeekday,
-      );
+      result = computeMonthly(anchor, rule.interval, rule.dayOfMonth, rule.nthWeekday);
       break;
     case "yearly":
       result = computeYearly(anchor, rule.interval);
@@ -122,11 +117,9 @@ const MS_PER_DAY = 86_400_000;
 export function computeNextStartDate(
   nextDueDate: Date,
   prevStartDate: Date,
-  prevDueDate: Date,
+  prevDueDate: Date
 ): Date {
-  const durationDays = Math.round(
-    (prevDueDate.getTime() - prevStartDate.getTime()) / MS_PER_DAY,
-  );
+  const durationDays = Math.round((prevDueDate.getTime() - prevStartDate.getTime()) / MS_PER_DAY);
   const result = new Date(nextDueDate.getTime());
   result.setUTCDate(result.getUTCDate() - durationDays);
   return result;
@@ -138,11 +131,7 @@ function computeDaily(anchor: Date, interval: number): Date {
   return result;
 }
 
-function computeWeekly(
-  anchor: Date,
-  interval: number,
-  daysOfWeek?: number[],
-): Date {
+function computeWeekly(anchor: Date, interval: number, daysOfWeek?: number[]): Date {
   if (!daysOfWeek || daysOfWeek.length === 0) {
     const result = new Date(anchor.getTime());
     result.setUTCDate(result.getUTCDate() + interval * 7);
@@ -173,9 +162,7 @@ function computeWeekly(
   const daysUntilNextWeekStart = 7 - anchorDay;
   const weeksToSkip = interval === 1 ? 0 : interval - 1;
   const nextWeekStart = new Date(anchor.getTime());
-  nextWeekStart.setUTCDate(
-    nextWeekStart.getUTCDate() + daysUntilNextWeekStart + weeksToSkip * 7,
-  );
+  nextWeekStart.setUTCDate(nextWeekStart.getUTCDate() + daysUntilNextWeekStart + weeksToSkip * 7);
   // nextWeekStart is now a Sunday
 
   const firstMatchDay = sorted[0];
@@ -204,7 +191,7 @@ function computeMonthly(
   anchor: Date,
   interval: number,
   dayOfMonth?: number,
-  nthWeekday?: { n: number; day: number },
+  nthWeekday?: { n: number; day: number }
 ): Date {
   if (nthWeekday) {
     return computeMonthlyNthWeekday(anchor, interval, nthWeekday);
@@ -216,11 +203,7 @@ function computeMonthly(
   return computeMonthlyDayOfMonth(anchor, interval, anchor.getUTCDate());
 }
 
-function computeMonthlyDayOfMonth(
-  anchor: Date,
-  interval: number,
-  targetDay: number,
-): Date {
+function computeMonthlyDayOfMonth(anchor: Date, interval: number, targetDay: number): Date {
   // Set day to 1 first to avoid overflow when advancing months
   // (e.g., Jan 31 + 1 month would overflow to Mar 3 without this)
   const year = anchor.getUTCFullYear();
@@ -239,11 +222,11 @@ function computeMonthlyDayOfMonth(
 function computeMonthlyNthWeekday(
   anchor: Date,
   interval: number,
-  nthWeekday: { n: number; day: number },
+  nthWeekday: { n: number; day: number }
 ): Date {
   // Use Date.UTC with month arithmetic to avoid day-overflow issues
   const targetMonth = new Date(
-    Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + interval, 1),
+    Date.UTC(anchor.getUTCFullYear(), anchor.getUTCMonth() + interval, 1)
   );
 
   const year = targetMonth.getUTCFullYear();
@@ -257,12 +240,7 @@ function computeMonthlyNthWeekday(
  * If the nth occurrence doesn't exist (e.g., 5th Monday in a short month),
  * returns the last occurrence of that weekday.
  */
-function findNthWeekdayInMonth(
-  year: number,
-  month: number,
-  n: number,
-  day: number,
-): Date {
+function findNthWeekdayInMonth(year: number, month: number, n: number, day: number): Date {
   // Find the first occurrence of `day` in this month
   const firstOfMonth = new Date(Date.UTC(year, month, 1));
   const firstDow = firstOfMonth.getUTCDay();
@@ -323,8 +301,7 @@ export function formatRecurrenceRule(rule: RecurrenceRule): string {
       return rule.interval === 1 ? "Every day" : `Every ${rule.interval} days`;
 
     case "weekly": {
-      const base =
-        rule.interval === 1 ? "Every week" : `Every ${rule.interval} weeks`;
+      const base = rule.interval === 1 ? "Every week" : `Every ${rule.interval} weeks`;
       if (rule.daysOfWeek && rule.daysOfWeek.length > 0) {
         const sorted = [...rule.daysOfWeek].sort((a, b) => a - b);
         const dayNames = sorted.map((d) => DAY_NAMES[d]);
@@ -334,8 +311,7 @@ export function formatRecurrenceRule(rule: RecurrenceRule): string {
     }
 
     case "monthly": {
-      const base =
-        rule.interval === 1 ? "Every month" : `Every ${rule.interval} months`;
+      const base = rule.interval === 1 ? "Every month" : `Every ${rule.interval} months`;
       if (rule.nthWeekday) {
         const ordinal = toOrdinal(rule.nthWeekday.n);
         const dayName = DAY_NAMES[rule.nthWeekday.day];
@@ -348,9 +324,7 @@ export function formatRecurrenceRule(rule: RecurrenceRule): string {
     }
 
     case "yearly":
-      return rule.interval === 1
-        ? "Every year"
-        : `Every ${rule.interval} years`;
+      return rule.interval === 1 ? "Every year" : `Every ${rule.interval} years`;
   }
 }
 

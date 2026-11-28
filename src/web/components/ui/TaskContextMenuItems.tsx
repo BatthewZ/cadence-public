@@ -91,9 +91,7 @@ export function TaskContextMenuItems({
     <>
       {/* Priority sub-menu */}
       <DropdownMenu.Sub>
-        <DropdownMenu.SubTrigger icon={<Flag size={14} />}>
-          Change priority
-        </DropdownMenu.SubTrigger>
+        <DropdownMenu.SubTrigger icon={<Flag size={14} />}>Change priority</DropdownMenu.SubTrigger>
         <DropdownMenu.SubContent className="min-w-[10rem]">
           {PRIORITY_OPTIONS.map((opt, i) => (
             <DropdownMenu.SubItem
@@ -116,9 +114,7 @@ export function TaskContextMenuItems({
 
       {/* Assign to sub-menu */}
       <DropdownMenu.Sub>
-        <DropdownMenu.SubTrigger icon={<Users size={14} />}>
-          Assign to
-        </DropdownMenu.SubTrigger>
+        <DropdownMenu.SubTrigger icon={<Users size={14} />}>Assign to</DropdownMenu.SubTrigger>
         <DropdownMenu.SubContent className="min-w-[10rem]">
           <DropdownMenu.SubItem
             index={0}

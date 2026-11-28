@@ -33,7 +33,7 @@ function fakeConverter(doc: ImportDocument): TrelloConverter {
 
 function expectFailure(
   result: ParseImportResult,
-  reason: "too-large" | "invalid-json" | "unsupported-format" | "invalid-document",
+  reason: "too-large" | "invalid-json" | "unsupported-format" | "invalid-document"
 ): string[] {
   if (result.ok) {
     throw new Error(`expected parse failure "${reason}" but parse succeeded`);
@@ -89,7 +89,7 @@ describe("parseImportFile — guards", () => {
   it("rejects JSON that is neither Cadence nor Trello", () => {
     const errors = expectFailure(
       parseImportFile(JSON.stringify({ some: "object" }), opts),
-      "unsupported-format",
+      "unsupported-format"
     );
     expect(errors[0]).toContain("cadence.workspace");
   });
@@ -192,7 +192,11 @@ describe("parseImportFile — Cadence documents", () => {
           taskGroups: [group],
           tasks: [
             makeTask(group.id, {
-              coverImage: { key: "covers/u/t.jpg", url: "/api/uploads/covers/u/t.jpg", position: null },
+              coverImage: {
+                key: "covers/u/t.jpg",
+                url: "/api/uploads/covers/u/t.jpg",
+                position: null,
+              },
             }),
           ],
         }),
@@ -216,20 +220,14 @@ describe("parseImportFile — Cadence documents", () => {
       ],
     });
 
-    const errors = expectFailure(
-      parseImportFile(JSON.stringify(file), opts),
-      "invalid-document",
-    );
+    const errors = expectFailure(parseImportFile(JSON.stringify(file), opts), "invalid-document");
     // The user must be able to FIND the bad value in a large file.
     expect(errors.some((e) => e.includes("projects[0].tasks[0].title"))).toBe(true);
   });
 
   it("rejects a future formatVersion with an exact, named mismatch", () => {
     const file = { ...makeExportFile(), formatVersion: EXPORT_FORMAT_VERSION + 1 };
-    const errors = expectFailure(
-      parseImportFile(JSON.stringify(file), opts),
-      "invalid-document",
-    );
+    const errors = expectFailure(parseImportFile(JSON.stringify(file), opts), "invalid-document");
     expect(errors.some((e) => e.includes("formatVersion"))).toBe(true);
   });
 
@@ -266,12 +264,9 @@ describe("parseImportFile — Cadence documents", () => {
       ],
     });
 
-    const errors = expectFailure(
-      parseImportFile(JSON.stringify(file), opts),
-      "invalid-document",
-    );
+    const errors = expectFailure(parseImportFile(JSON.stringify(file), opts), "invalid-document");
     expect(errors.some((e) => e.includes("Orphaned task") && e.includes("no-such-group"))).toBe(
-      true,
+      true
     );
   });
 
@@ -280,10 +275,7 @@ describe("parseImportFile — Cadence documents", () => {
       users: [makeUser("u1", "a@example.com"), makeUser("u1", "b@example.com")],
     });
 
-    const errors = expectFailure(
-      parseImportFile(JSON.stringify(file), opts),
-      "invalid-document",
-    );
+    const errors = expectFailure(parseImportFile(JSON.stringify(file), opts), "invalid-document");
     expect(errors.some((e) => e.includes('duplicate ref "u1"'))).toBe(true);
   });
 });
@@ -349,10 +341,10 @@ describe("parseImportFile — Trello converter seam", () => {
     };
     const zodErrors = expectFailure(
       parseImportFile(JSON.stringify(makeTrelloBoard()), { convertTrello: zodThrow }),
-      "invalid-document",
+      "invalid-document"
     );
     expect(zodErrors.some((e) => e.includes("lists") && e.includes("Board has no lists"))).toBe(
-      true,
+      true
     );
 
     const plainThrow: TrelloConverter = () => {
@@ -360,7 +352,7 @@ describe("parseImportFile — Trello converter seam", () => {
     };
     const plainErrors = expectFailure(
       parseImportFile(JSON.stringify(makeTrelloBoard()), { convertTrello: plainThrow }),
-      "invalid-document",
+      "invalid-document"
     );
     expect(plainErrors[0]).toContain("unsupported board version");
   });
@@ -377,7 +369,7 @@ describe("parseImportFile — Trello converter seam", () => {
     });
     const errors = expectFailure(
       parseImportFile(JSON.stringify(makeTrelloBoard()), { convertTrello }),
-      "invalid-document",
+      "invalid-document"
     );
     expect(errors.some((e) => e.includes("ghost-list"))).toBe(true);
   });
@@ -395,7 +387,7 @@ describe("validateDocumentIntegrity", () => {
 
   it("caps reported errors so a hugely broken file cannot flood the response", () => {
     const tasks = Array.from({ length: 100 }, (_, i) =>
-      makeTask(`missing-${i}`, { title: `Task ${i}` }),
+      makeTask(`missing-${i}`, { title: `Task ${i}` })
     );
     const doc: ImportDocument = {
       users: [],

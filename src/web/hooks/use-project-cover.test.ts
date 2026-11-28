@@ -5,9 +5,8 @@ import type { UnsplashCoverPayload } from "@/shared/schemas/unsplash";
 
 // Mock the api client module following the established pattern.
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -63,16 +62,12 @@ describe("useProjectCover", () => {
 
   it("resolves coverUrl from the Unsplash payload when set", () => {
     const updateProject = vi.fn();
-    const { result } = renderHook(() =>
-      useProjectCover("p1", null, SAMPLE_PAYLOAD, updateProject),
-    );
+    const { result } = renderHook(() => useProjectCover("p1", null, SAMPLE_PAYLOAD, updateProject));
 
     // coverUrl is now composed from rawUrl via buildUnsplashDisplayUrl's
     // "cover" preset, not the pre-baked regular URL.
     const parsed = new URL(result.current.coverUrl!);
-    expect(parsed.origin + parsed.pathname).toBe(
-      "https://images.unsplash.com/raw.jpg",
-    );
+    expect(parsed.origin + parsed.pathname).toBe("https://images.unsplash.com/raw.jpg");
     expect(parsed.searchParams.get("w")).toBe("1600");
     expect(parsed.searchParams.get("auto")).toBe("format");
     expect(result.current.coverAttribution).toEqual({
@@ -85,9 +80,7 @@ describe("useProjectCover", () => {
 
   it("falls back to the uploaded key when no Unsplash payload is set", () => {
     const updateProject = vi.fn();
-    const { result } = renderHook(() =>
-      useProjectCover("p1", "abc/def.png", null, updateProject),
-    );
+    const { result } = renderHook(() => useProjectCover("p1", "abc/def.png", null, updateProject));
 
     expect(result.current.coverUrl).toBe("/api/uploads/abc/def.png");
     expect(result.current.coverAttribution).toBeNull();
@@ -95,9 +88,7 @@ describe("useProjectCover", () => {
 
   it("returns null URL and attribution when no cover is set", () => {
     const updateProject = vi.fn();
-    const { result } = renderHook(() =>
-      useProjectCover("p1", null, null, updateProject),
-    );
+    const { result } = renderHook(() => useProjectCover("p1", null, null, updateProject));
 
     expect(result.current.coverUrl).toBeNull();
     expect(result.current.coverAttribution).toBeNull();
@@ -107,9 +98,7 @@ describe("useProjectCover", () => {
     const updateProject = vi.fn();
     mockPut.mockResolvedValueOnce({ coverUnsplash: SAMPLE_PAYLOAD });
 
-    const { result } = renderHook(() =>
-      useProjectCover("p1", "existing-key", null, updateProject),
-    );
+    const { result } = renderHook(() => useProjectCover("p1", "existing-key", null, updateProject));
 
     await act(async () => {
       await result.current.handleApplyUnsplash(SAMPLE_PAYLOAD);
@@ -120,10 +109,7 @@ describe("useProjectCover", () => {
       coverImageKey: null,
       coverUnsplash: SAMPLE_PAYLOAD,
     });
-    expect(mockPut).toHaveBeenCalledWith(
-      "/api/projects/p1/cover/unsplash",
-      SAMPLE_PAYLOAD,
-    );
+    expect(mockPut).toHaveBeenCalledWith("/api/projects/p1/cover/unsplash", SAMPLE_PAYLOAD);
   });
 
   it("fires onApplyError when the Unsplash PUT fails", async () => {
@@ -132,7 +118,7 @@ describe("useProjectCover", () => {
     mockPut.mockRejectedValueOnce(new Error("boom"));
 
     const { result } = renderHook(() =>
-      useProjectCover("p1", null, null, updateProject, undefined, onApplyError),
+      useProjectCover("p1", null, null, updateProject, undefined, onApplyError)
     );
 
     await act(async () => {
@@ -154,7 +140,7 @@ describe("useProjectCover", () => {
     mockDelete.mockResolvedValueOnce(undefined);
 
     const { result } = renderHook(() =>
-      useProjectCover("p1", "existing-key", SAMPLE_PAYLOAD, updateProject),
+      useProjectCover("p1", "existing-key", SAMPLE_PAYLOAD, updateProject)
     );
 
     await act(async () => {

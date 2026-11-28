@@ -111,7 +111,10 @@ describe("generateWebhookSecret", () => {
 
 describe("validateWebhookUrl", () => {
   /** Asserts the result is invalid and returns the narrowed type for further checks. */
-  function expectInvalid(result: ReturnType<typeof validateWebhookUrl>): { valid: false; error: string } {
+  function expectInvalid(result: ReturnType<typeof validateWebhookUrl>): {
+    valid: false;
+    error: string;
+  } {
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("Expected invalid result");
     return result;
@@ -218,9 +221,7 @@ describe("validateWebhookUrl", () => {
   });
 
   it("rejects IPv4-mapped IPv6 with dotted IPv4 (::ffff:127.0.0.1)", () => {
-    const result = expectInvalid(
-      validateWebhookUrl("https://[::ffff:127.0.0.1]/exfil"),
-    );
+    const result = expectInvalid(validateWebhookUrl("https://[::ffff:127.0.0.1]/exfil"));
     expect(result.error).toContain("private");
   });
 
@@ -231,9 +232,7 @@ describe("validateWebhookUrl", () => {
   });
 
   it("rejects IPv4-mapped IPv6 reaching a private IPv4 range (::ffff:10.0.0.1)", () => {
-    const result = expectInvalid(
-      validateWebhookUrl("https://[::ffff:10.0.0.1]/exfil"),
-    );
+    const result = expectInvalid(validateWebhookUrl("https://[::ffff:10.0.0.1]/exfil"));
     expect(result.error).toContain("private");
   });
 
@@ -254,15 +253,13 @@ describe("validateWebhookUrl", () => {
 
   it("rejects URLs containing userinfo (credential leakage)", () => {
     const result = expectInvalid(
-      validateWebhookUrl("https://attacker:password@public.example.com/exfil"),
+      validateWebhookUrl("https://attacker:password@public.example.com/exfil")
     );
     expect(result.error).toContain("userinfo");
   });
 
   it("rejects URLs with only a username (no password)", () => {
-    const result = expectInvalid(
-      validateWebhookUrl("https://attacker@public.example.com/exfil"),
-    );
+    const result = expectInvalid(validateWebhookUrl("https://attacker@public.example.com/exfil"));
     expect(result.error).toContain("userinfo");
   });
 
@@ -322,7 +319,9 @@ describe("signPayload", () => {
 
 describe("dispatchWebhookEvent", () => {
   it("returns 0 and does not call fetch when no active webhooks exist", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
     const { ctx } = createAwaitableExecutionCtx();
 
     // Use a workspace with no webhooks seeded
@@ -334,7 +333,9 @@ describe("dispatchWebhookEvent", () => {
   });
 
   it("dispatches to an active webhook subscribed to the event", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
     const { ctx, flush } = createAwaitableExecutionCtx();
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Dispatch WS" });
@@ -356,7 +357,9 @@ describe("dispatchWebhookEvent", () => {
   });
 
   it("returns 0 when active webhook is NOT subscribed to the event", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
     const { ctx, flush } = createAwaitableExecutionCtx();
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "No Match WS" });
@@ -373,7 +376,9 @@ describe("dispatchWebhookEvent", () => {
   });
 
   it("returns 0 for inactive webhooks", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
     const { ctx, flush } = createAwaitableExecutionCtx();
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Inactive WS" });
@@ -394,7 +399,9 @@ describe("dispatchWebhookEvent", () => {
   // -------------------------------------------------------------------------
 
   it("project-scoped webhook receives events from its project", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
     const { ctx, flush } = createAwaitableExecutionCtx();
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "ProjScope Match WS" });
@@ -406,7 +413,14 @@ describe("dispatchWebhookEvent", () => {
       projectId,
     });
 
-    const count = await dispatchWebhookEvent(db, ctx, ws, "task.created", { title: "Test" }, projectId);
+    const count = await dispatchWebhookEvent(
+      db,
+      ctx,
+      ws,
+      "task.created",
+      { title: "Test" },
+      projectId
+    );
     await flush();
 
     expect(count).toBe(1);
@@ -414,7 +428,9 @@ describe("dispatchWebhookEvent", () => {
   });
 
   it("project-scoped webhook ignores events from other projects", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
     const { ctx, flush } = createAwaitableExecutionCtx();
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "ProjScope Diff WS" });
@@ -435,7 +451,9 @@ describe("dispatchWebhookEvent", () => {
   });
 
   it("project-scoped webhook ignores workspace-scoped events (no projectId in dispatch)", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
     const { ctx, flush } = createAwaitableExecutionCtx();
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "ProjScope WS-Event WS" });
@@ -448,7 +466,9 @@ describe("dispatchWebhookEvent", () => {
     });
 
     // Dispatch without projectId (workspace-scoped event)
-    const count = await dispatchWebhookEvent(db, ctx, ws, "workspace.member_joined", { userId: "u1" });
+    const count = await dispatchWebhookEvent(db, ctx, ws, "workspace.member_joined", {
+      userId: "u1",
+    });
     await flush();
 
     expect(count).toBe(0);
@@ -456,7 +476,9 @@ describe("dispatchWebhookEvent", () => {
   });
 
   it("workspace-level webhook still receives all events (backward compat)", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
     const { ctx, flush } = createAwaitableExecutionCtx();
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "WS-Level Compat WS" });
@@ -468,7 +490,14 @@ describe("dispatchWebhookEvent", () => {
     });
 
     // Project-scoped event should reach it
-    const count1 = await dispatchWebhookEvent(db, ctx, ws, "task.created", { title: "Test" }, "some-proj");
+    const count1 = await dispatchWebhookEvent(
+      db,
+      ctx,
+      ws,
+      "task.created",
+      { title: "Test" },
+      "some-proj"
+    );
     await flush();
     expect(count1).toBe(1);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -477,14 +506,18 @@ describe("dispatchWebhookEvent", () => {
 
     // Workspace-scoped event should also reach it
     const { ctx: ctx2, flush: flush2 } = createAwaitableExecutionCtx();
-    const count2 = await dispatchWebhookEvent(db, ctx2, ws, "workspace.member_joined", { userId: "u2" });
+    const count2 = await dispatchWebhookEvent(db, ctx2, ws, "workspace.member_joined", {
+      userId: "u2",
+    });
     await flush2();
     expect(count2).toBe(1);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("mixed: workspace + project-scoped webhooks filter correctly", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
     const { ctx, flush } = createAwaitableExecutionCtx();
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Mixed Scope WS" });
@@ -506,14 +539,23 @@ describe("dispatchWebhookEvent", () => {
     });
 
     // Event from projX should reach both webhooks
-    const count = await dispatchWebhookEvent(db, ctx, ws, "task.created", { title: "Mixed" }, projX);
+    const count = await dispatchWebhookEvent(
+      db,
+      ctx,
+      ws,
+      "task.created",
+      { title: "Mixed" },
+      projX
+    );
     await flush();
     expect(count).toBe(2);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
   it("dispatches to multiple matching webhooks and returns correct count", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
     const { ctx, flush } = createAwaitableExecutionCtx();
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Multi WS" });
@@ -550,7 +592,9 @@ describe("dispatchWebhookEvent", () => {
 
 describe("deliverWebhook", () => {
   it("records successful delivery and resets consecutiveFailures", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Deliver OK WS" });
     const hook = await seedWebhook(d1, ws, {
@@ -596,7 +640,7 @@ describe("deliverWebhook", () => {
 
   it("records failed delivery with nextRetryAt when fetch returns 500", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response("Internal Server Error", { status: 500 }),
+      new Response("Internal Server Error", { status: 500 })
     );
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Deliver Fail WS" });
@@ -674,7 +718,7 @@ describe("deliverWebhook", () => {
 
   it("auto-disables webhook after 10 consecutive failures", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response("Service Unavailable", { status: 503 }),
+      new Response("Service Unavailable", { status: 503 })
     );
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Auto Disable WS" });
@@ -707,9 +751,7 @@ describe("deliverWebhook", () => {
 
   it("does not schedule retries for non-retryable status codes (401, 403)", async () => {
     for (const status of [401, 403, 404, 405, 410]) {
-      vi.spyOn(global, "fetch").mockResolvedValue(
-        new Response("Unauthorized", { status }),
-      );
+      vi.spyOn(global, "fetch").mockResolvedValue(new Response("Unauthorized", { status }));
 
       const ws = await seedWorkspace(d1, TEST_USER.id, { name: `NonRetry ${status} WS` });
       const hook = await seedWebhook(d1, ws, {
@@ -747,9 +789,7 @@ describe("deliverWebhook", () => {
 
   it("still schedules retries for retryable status codes (500, 502, 503)", async () => {
     for (const status of [500, 502, 503]) {
-      vi.spyOn(global, "fetch").mockResolvedValue(
-        new Response("Server Error", { status }),
-      );
+      vi.spyOn(global, "fetch").mockResolvedValue(new Response("Server Error", { status }));
 
       const ws = await seedWorkspace(d1, TEST_USER.id, { name: `Retryable ${status} WS` });
       const hook = await seedWebhook(d1, ws, {
@@ -785,7 +825,9 @@ describe("deliverWebhook", () => {
   });
 
   it("sends correct webhook headers", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Headers WS" });
     const hook = await seedWebhook(d1, ws, {
@@ -821,7 +863,9 @@ describe("deliverWebhook", () => {
   });
 
   it("includes delivery ID in the payload body envelope", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Envelope WS" });
     const hook = await seedWebhook(d1, ws, {
@@ -859,7 +903,9 @@ describe("processWebhookRetries", () => {
   });
 
   it("processes eligible retries and returns count", async () => {
-    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(new Response("OK", { status: 200 }));
+    const fetchSpy = vi
+      .spyOn(global, "fetch")
+      .mockResolvedValue(new Response("OK", { status: 200 }));
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Retry OK WS" });
     const hook = await seedWebhook(d1, ws, {
@@ -944,9 +990,7 @@ describe("processWebhookRetries", () => {
 
   it("stops retrying when a retry attempt receives a non-retryable status code", async () => {
     // First attempt failed with 500 (retryable), retry returns 401 (non-retryable)
-    vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response("Unauthorized", { status: 401 }),
-    );
+    vi.spyOn(global, "fetch").mockResolvedValue(new Response("Unauthorized", { status: 401 }));
 
     const ws = await seedWorkspace(d1, TEST_USER.id, { name: "Retry NonRetry WS" });
     const hook = await seedWebhook(d1, ws, {

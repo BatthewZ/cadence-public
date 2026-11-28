@@ -75,7 +75,7 @@ export interface ProjectAccessResult {
 export async function resolveProjectAccess(
   db: Database,
   projectId: string,
-  userId: string,
+  userId: string
 ): Promise<ProjectAccessResult | null> {
   const [row] = await db
     .select({
@@ -87,17 +87,11 @@ export async function resolveProjectAccess(
     .from(project)
     .leftJoin(
       workspaceMember,
-      and(
-        eq(workspaceMember.workspaceId, project.workspaceId),
-        eq(workspaceMember.userId, userId),
-      ),
+      and(eq(workspaceMember.workspaceId, project.workspaceId), eq(workspaceMember.userId, userId))
     )
     .leftJoin(
       projectMember,
-      and(
-        eq(projectMember.projectId, project.id),
-        eq(projectMember.userId, userId),
-      ),
+      and(eq(projectMember.projectId, project.id), eq(projectMember.userId, userId))
     )
     .where(eq(project.id, projectId))
     .limit(1);
@@ -146,13 +140,12 @@ export async function resolveProjectAccess(
  * - `{ found: true, access: ProjectAccessResult }` if the user has access
  */
 export type TaskAccessResult =
-  | { found: false }
-  | { found: true; access: ProjectAccessResult | null };
+  { found: false } | { found: true; access: ProjectAccessResult | null };
 
 export async function resolveTaskAccess(
   db: Database,
   taskId: string,
-  userId: string,
+  userId: string
 ): Promise<TaskAccessResult> {
   const [row] = await db
     .select({
@@ -166,17 +159,11 @@ export async function resolveTaskAccess(
     .innerJoin(project, eq(project.id, task.projectId))
     .leftJoin(
       workspaceMember,
-      and(
-        eq(workspaceMember.workspaceId, project.workspaceId),
-        eq(workspaceMember.userId, userId),
-      ),
+      and(eq(workspaceMember.workspaceId, project.workspaceId), eq(workspaceMember.userId, userId))
     )
     .leftJoin(
       projectMember,
-      and(
-        eq(projectMember.projectId, project.id),
-        eq(projectMember.userId, userId),
-      ),
+      and(eq(projectMember.projectId, project.id), eq(projectMember.userId, userId))
     )
     .where(eq(task.id, taskId))
     .limit(1);

@@ -97,10 +97,7 @@ export interface WorkspaceContextValue {
  * with the same slug (one they own, one they were invited to). In that case
  * this prefers the workspace the user owns, falling back to the first match.
  */
-export function findWorkspaceBySlug(
-  workspaces: Workspace[],
-  slug: string,
-): Workspace | undefined {
+export function findWorkspaceBySlug(workspaces: Workspace[], slug: string): Workspace | undefined {
   const matches = workspaces.filter((w) => w.slug === slug);
   if (matches.length <= 1) return matches[0];
   return matches.find((w) => w.role === "owner") ?? matches[0];
@@ -203,7 +200,9 @@ function useWorkspaceQueries(workspaceId: string | null) {
 export function useWorkspace(): WorkspaceContextValue {
   const ctx = useOptionalWorkspace();
   if (!ctx) {
-    throw new Error("useWorkspace must be used within a workspace route with WorkspaceGuard mounted above");
+    throw new Error(
+      "useWorkspace must be used within a workspace route with WorkspaceGuard mounted above"
+    );
   }
   return ctx;
 }

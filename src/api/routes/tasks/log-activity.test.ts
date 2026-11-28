@@ -85,10 +85,7 @@ describe("logActivity apiTokenId persistence", () => {
       apiTokenId: tokenId,
     });
 
-    const [row] = await db
-      .select()
-      .from(taskActivity)
-      .where(eq(taskActivity.taskId, taskId));
+    const [row] = await db.select().from(taskActivity).where(eq(taskActivity.taskId, taskId));
 
     expect(row.apiTokenId).toBe(tokenId);
   });
@@ -100,10 +97,7 @@ describe("logActivity apiTokenId persistence", () => {
       action: "created",
     });
 
-    const [row] = await db
-      .select()
-      .from(taskActivity)
-      .where(eq(taskActivity.taskId, taskId));
+    const [row] = await db.select().from(taskActivity).where(eq(taskActivity.taskId, taskId));
 
     expect(row.apiTokenId).toBeNull();
   });
@@ -116,10 +110,7 @@ describe("logActivity apiTokenId persistence", () => {
       apiTokenId: null,
     });
 
-    const [row] = await db
-      .select()
-      .from(taskActivity)
-      .where(eq(taskActivity.taskId, taskId));
+    const [row] = await db.select().from(taskActivity).where(eq(taskActivity.taskId, taskId));
 
     expect(row.apiTokenId).toBeNull();
   });
@@ -142,10 +133,7 @@ describe("logActivityBatch apiTokenId persistence", () => {
       },
     ]);
 
-    const rows = await db
-      .select()
-      .from(taskActivity)
-      .where(eq(taskActivity.taskId, taskId));
+    const rows = await db.select().from(taskActivity).where(eq(taskActivity.taskId, taskId));
 
     expect(rows).toHaveLength(2);
     expect(rows.every((r) => r.apiTokenId === tokenId)).toBe(true);
@@ -167,10 +155,7 @@ describe("logActivityBatch apiTokenId persistence", () => {
       },
     ]);
 
-    const rows = await db
-      .select()
-      .from(taskActivity)
-      .where(eq(taskActivity.taskId, taskId));
+    const rows = await db.select().from(taskActivity).where(eq(taskActivity.taskId, taskId));
 
     const moved = rows.find((r) => r.action === "moved");
     const completed = rows.find((r) => r.action === "completed");

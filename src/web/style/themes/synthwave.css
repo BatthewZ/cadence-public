@@ -60,9 +60,12 @@
   --RADIUS-XL: 0.5rem;
 
   /* Shadows — purple/magenta neon glow */
-  --SHADOW-SM: 0 0 8px 0 oklch(0.6429 0.2436 0.71 / 0.15), 0 0 4px 0 oklch(0.6032 0.2805 310.29 / 0.1);
-  --SHADOW-MD: 0 0 20px -2px oklch(0.6429 0.2436 0.71 / 0.2), 0 0 10px -2px oklch(0.6032 0.2805 310.29 / 0.12);
-  --SHADOW-LG: 0 0 36px -4px oklch(0.6429 0.2436 0.71 / 0.25), 0 0 18px -4px oklch(0.6032 0.2805 310.29 / 0.15);
+  --SHADOW-SM:
+    0 0 8px 0 oklch(0.6429 0.2436 0.71 / 0.15), 0 0 4px 0 oklch(0.6032 0.2805 310.29 / 0.1);
+  --SHADOW-MD:
+    0 0 20px -2px oklch(0.6429 0.2436 0.71 / 0.2), 0 0 10px -2px oklch(0.6032 0.2805 310.29 / 0.12);
+  --SHADOW-LG:
+    0 0 36px -4px oklch(0.6429 0.2436 0.71 / 0.25), 0 0 18px -4px oklch(0.6032 0.2805 310.29 / 0.15);
 
   /* Typography — bold display-forward */
   --Bold-Weight: 700;

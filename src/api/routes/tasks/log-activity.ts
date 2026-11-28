@@ -21,10 +21,7 @@ export interface ActivityEntry {
 }
 
 /** Insert a task activity record */
-export async function logActivity(
-  db: Database,
-  opts: ActivityEntry,
-) {
+export async function logActivity(db: Database, opts: ActivityEntry) {
   await db.insert(taskActivity).values({
     id: crypto.randomUUID(),
     taskId: opts.taskId,
@@ -44,10 +41,7 @@ export async function logActivity(
  * Reduces D1 round-trips when a handler needs to log several activities
  * (e.g. moved + completed).  Silently no-ops when the list is empty.
  */
-export async function logActivityBatch(
-  db: Database,
-  entries: ActivityEntry[],
-) {
+export async function logActivityBatch(db: Database, entries: ActivityEntry[]) {
   if (entries.length === 0) return;
   const now = new Date();
   await db.insert(taskActivity).values(
@@ -61,6 +55,6 @@ export async function logActivityBatch(
       newValue: opts.newValue ?? null,
       apiTokenId: opts.apiTokenId ?? null,
       createdAt: now,
-    })),
+    }))
   );
 }

@@ -82,7 +82,7 @@ beforeAll(async () => {
   await seedUser(d1, TEST_USER_2);
   await d1
     .prepare(
-      "INSERT INTO user (id, name, email, emailVerified, createdAt, updatedAt) VALUES (?, ?, ?, 0, ?, ?)",
+      "INSERT INTO user (id, name, email, emailVerified, createdAt, updatedAt) VALUES (?, ?, ?, 0, ?, ?)"
     )
     .bind(EX_MEMBER.id, EX_MEMBER.name, EX_MEMBER.email, 1700000000, 1700000000)
     .run();
@@ -120,7 +120,7 @@ function uploadRequest(url: string, doc: WorkspaceExport): Request {
   const formData = new FormData();
   formData.append(
     "file",
-    new File([JSON.stringify(doc)], "export.json", { type: "application/json" }),
+    new File([JSON.stringify(doc)], "export.json", { type: "application/json" })
   );
   return new Request(`http://localhost${url}`, { method: "POST", body: formData });
 }
@@ -173,10 +173,7 @@ async function seedWorkspaceA(): Promise<string> {
     budget: 500_000,
     coverUnsplash: sampleUnsplashPayload("alpha-project-cover"),
   });
-  await d1
-    .prepare("UPDATE project SET auto_assign_creator = 1 WHERE id = ?")
-    .bind(p1)
-    .run();
+  await d1.prepare("UPDATE project SET auto_assign_creator = 1 WHERE id = ?").bind(p1).run();
   // The importer must already be admin in the SOURCE too: import forces the
   // importing user to admin, so seeding anything else would assert a
   // documented divergence rather than the round trip.
@@ -227,9 +224,18 @@ async function seedWorkspaceA(): Promise<string> {
   const attachmentKey = `task-attachment/${TEST_USER.id}/${suffix}.pdf`;
   await d1
     .prepare(
-      "INSERT INTO upload (id, userId, key, filename, mimeType, size, purpose, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO upload (id, userId, key, filename, mimeType, size, purpose, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     )
-    .bind(uploadId, TEST_USER.id, attachmentKey, "spec.pdf", "application/pdf", 34_567, "task-attachment", toSec("2026-01-04T00:00:00Z"))
+    .bind(
+      uploadId,
+      TEST_USER.id,
+      attachmentKey,
+      "spec.pdf",
+      "application/pdf",
+      34_567,
+      "task-attachment",
+      toSec("2026-01-04T00:00:00Z")
+    )
     .run();
   await d1
     .prepare("INSERT INTO task_attachment (id, taskId, uploadId, createdAt) VALUES (?, ?, ?, ?)")
@@ -253,7 +259,7 @@ async function seedWorkspaceA(): Promise<string> {
     .bind(
       JSON.stringify({ frequency: "weekly", interval: 1, daysOfWeek: [1, 3] }),
       "series-roundtrip-1",
-      parentTask,
+      parentTask
     )
     .run();
   const childTask = await seedTask(d1, p1, done, {
@@ -263,15 +269,9 @@ async function seedWorkspaceA(): Promise<string> {
   });
   await d1
     .prepare(
-      "UPDATE task SET recurrence_parent_id = ?, recurrence_series_id = ?, completedAt = ?, completedBy = ? WHERE id = ?",
+      "UPDATE task SET recurrence_parent_id = ?, recurrence_series_id = ?, completedAt = ?, completedBy = ? WHERE id = ?"
     )
-    .bind(
-      parentTask,
-      "series-roundtrip-1",
-      toSec("2026-05-01T08:00:00Z"),
-      EX_MEMBER.id,
-      childTask,
-    )
+    .bind(parentTask, "series-roundtrip-1", toSec("2026-05-01T08:00:00Z"), EX_MEMBER.id, childTask)
     .run();
 
   // Task 4: reference to a user who is a member of NEITHER workspace.
@@ -423,10 +423,7 @@ interface NormalizeOptions {
  * comparison is order-insensitive where order is id-dependent, while
  * still asserting the portable ordering data (position strings) as values.
  */
-function normalizeProjects(
-  doc: WorkspaceExport,
-  opts: NormalizeOptions = {},
-): NormalizedProject[] {
+function normalizeProjects(doc: WorkspaceExport, opts: NormalizeOptions = {}): NormalizedProject[] {
   const emailByRef = new Map(doc.users.map((u) => [u.ref, u.email]));
   const resolveRef = (ref: string | null): string | null => {
     if (ref === null) return null;
@@ -494,58 +491,51 @@ function normalizeProjects(
         labels: [...p.labels]
           .map((l) => ({ name: l.name, color: l.color, createdAt: l.createdAt }))
           .sort((a, b) => a.name.localeCompare(b.name)),
-        tasks: sortedTasks.map(
-          (t): NormalizedTask => ({
-            group: requireName(groupNameById, t.taskGroupId, "Task group"),
-            title: t.title,
-            description: t.description,
-            assignee: resolveRef(t.assigneeRef),
-            priority: t.priority,
-            completed: t.completed,
-            completedAt: t.completedAt,
-            completedBy: resolveRef(t.completedByRef),
-            startDate: t.startDate,
-            dueDate: t.dueDate,
-            cost: t.cost,
-            icon: t.icon,
-            coverUnsplash: t.coverUnsplash,
-            recurrenceRule: t.recurrenceRule,
-            recurrenceParent:
-              t.recurrenceParentId !== null
-                ? requireName(taskTitleById, t.recurrenceParentId, "Recurrence parent")
-                : null,
-            recurrenceSeries:
-              t.recurrenceSeriesId !== null
-                ? (seriesToken.get(t.recurrenceSeriesId) ?? null)
-                : null,
-            sourceUid: t.sourceUid,
-            position: t.position,
-            createdAt: t.createdAt,
-            updatedAt: t.updatedAt,
-            labels: t.labelIds
-              .map((id) => requireName(labelNameById, id, "Label"))
-              .sort((a, b) => a.localeCompare(b)),
-            subtasks: [...t.subtasks]
-              .map((s) => ({
-                title: s.title,
-                completed: s.completed,
-                position: s.position,
-                createdAt: s.createdAt,
-              }))
-              .sort((a, b) => a.position.localeCompare(b.position)),
-            comments: [...t.comments]
-              .map((cm) => ({
-                body: cm.body,
-                author: resolveRef(cm.authorRef),
-                createdAt: cm.createdAt,
-                updatedAt: cm.updatedAt,
-              }))
-              .sort(
-                (a, b) =>
-                  a.createdAt.localeCompare(b.createdAt) || a.body.localeCompare(b.body),
-              ),
-          }),
-        ),
+        tasks: sortedTasks.map((t): NormalizedTask => ({
+          group: requireName(groupNameById, t.taskGroupId, "Task group"),
+          title: t.title,
+          description: t.description,
+          assignee: resolveRef(t.assigneeRef),
+          priority: t.priority,
+          completed: t.completed,
+          completedAt: t.completedAt,
+          completedBy: resolveRef(t.completedByRef),
+          startDate: t.startDate,
+          dueDate: t.dueDate,
+          cost: t.cost,
+          icon: t.icon,
+          coverUnsplash: t.coverUnsplash,
+          recurrenceRule: t.recurrenceRule,
+          recurrenceParent:
+            t.recurrenceParentId !== null
+              ? requireName(taskTitleById, t.recurrenceParentId, "Recurrence parent")
+              : null,
+          recurrenceSeries:
+            t.recurrenceSeriesId !== null ? (seriesToken.get(t.recurrenceSeriesId) ?? null) : null,
+          sourceUid: t.sourceUid,
+          position: t.position,
+          createdAt: t.createdAt,
+          updatedAt: t.updatedAt,
+          labels: t.labelIds
+            .map((id) => requireName(labelNameById, id, "Label"))
+            .sort((a, b) => a.localeCompare(b)),
+          subtasks: [...t.subtasks]
+            .map((s) => ({
+              title: s.title,
+              completed: s.completed,
+              position: s.position,
+              createdAt: s.createdAt,
+            }))
+            .sort((a, b) => a.position.localeCompare(b.position)),
+          comments: [...t.comments]
+            .map((cm) => ({
+              body: cm.body,
+              author: resolveRef(cm.authorRef),
+              createdAt: cm.createdAt,
+              updatedAt: cm.updatedAt,
+            }))
+            .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.body.localeCompare(b.body)),
+        })),
       };
     })
     .sort((a, b) => a.name.localeCompare(b.name));

@@ -108,17 +108,14 @@ describe("spawnNextRecurringInstance", () => {
       db,
       await loadTask(parentId),
       COMPLETION_DATE,
-      groupId,
+      groupId
     );
 
     expect(nextRecurringTask).not.toBeNull();
     expect(created).toBe(true);
     expect(nextRecurringTask?.recurrenceParentId).toBe(parentId);
 
-    const rows = await db
-      .select()
-      .from(task)
-      .where(eq(task.recurrenceParentId, parentId));
+    const rows = await db.select().from(task).where(eq(task.recurrenceParentId, parentId));
     expect(rows).toHaveLength(1);
     // Strictly after the completed task, i.e. genuinely appended rather than
     // reusing the boundary key it was computed from.
@@ -140,7 +137,7 @@ describe("spawnNextRecurringInstance", () => {
       db,
       await loadTask(parentId),
       COMPLETION_DATE,
-      groupId,
+      groupId
     );
 
     // Adopted, not re-created and not swallowed. Returning null here would be
@@ -149,10 +146,7 @@ describe("spawnNextRecurringInstance", () => {
     // Callers announce (webhook, activity, response) only what they created.
     expect(created).toBe(false);
 
-    const rows = await db
-      .select()
-      .from(task)
-      .where(eq(task.recurrenceParentId, parentId));
+    const rows = await db.select().from(task).where(eq(task.recurrenceParentId, parentId));
     expect(rows).toHaveLength(1);
   });
 
@@ -168,7 +162,7 @@ describe("spawnNextRecurringInstance", () => {
          BEGIN
            INSERT INTO task (id, projectId, taskGroupId, title, completed, priority, position, createdAt, updatedAt)
            VALUES ('rival-writer', NEW.projectId, NEW.taskGroupId, 'Rival writer', 0, 'none', NEW.position, NEW.createdAt, NEW.updatedAt);
-         END`,
+         END`
       )
       .run();
 
@@ -178,18 +172,15 @@ describe("spawnNextRecurringInstance", () => {
     // D1 UNIQUE error (which would mean the collision was never recognised as
     // retryable) and not a resolved `null` (which would mean it was misfiled as
     // a duplicate spawn and the series silently ended).
-    await expect(
-      spawnNextRecurringInstance(db, parent, COMPLETION_DATE, groupId),
-    ).rejects.toThrow(/Position conflict persisted after 10 attempts/);
+    await expect(spawnNextRecurringInstance(db, parent, COMPLETION_DATE, groupId)).rejects.toThrow(
+      /Position conflict persisted after 10 attempts/
+    );
 
     await d1.prepare("DROP TRIGGER steal_computed_position").run();
 
     // Nothing half-written survives: no instance, and no rival row (SQLite's
     // statement-level ABORT unwinds the trigger's insert with the failed one).
-    const spawned = await db
-      .select()
-      .from(task)
-      .where(eq(task.recurrenceParentId, parentId));
+    const spawned = await db.select().from(task).where(eq(task.recurrenceParentId, parentId));
     expect(spawned).toHaveLength(0);
 
     const rival = await db.select().from(task).where(eq(task.id, "rival-writer"));

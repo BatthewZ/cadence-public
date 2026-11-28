@@ -8,11 +8,7 @@ import { IconButton } from "@/web/components/ui/IconButton";
 import type { WorkspaceProjectSummary } from "@/web/hooks/use-workspace-projects";
 import { formatRelativeFuture, formatRelativeTime } from "@/web/util/activity";
 
-import {
-  type ApiTokenRow,
-  deriveStatus,
-  type TokenStatus,
-} from "./types";
+import { type ApiTokenRow, deriveStatus, type TokenStatus } from "./types";
 
 /* ------------------------------------------------------------------ */
 /*  ApiTokenList                                                       */
@@ -103,9 +99,7 @@ function computeLifecycle(token: ApiTokenRow) {
 
   const revokeAtMs = token.revokeAt ? new Date(token.revokeAt).getTime() : null;
   const daysUntilRevoke =
-    revokeAtMs !== null && revokeAtMs > now
-      ? Math.ceil((revokeAtMs - now) / MS_PER_DAY)
-      : null;
+    revokeAtMs !== null && revokeAtMs > now ? Math.ceil((revokeAtMs - now) / MS_PER_DAY) : null;
 
   return { expiresSoon, daysUntilRevoke };
 }
@@ -230,11 +224,7 @@ function ApiTokenCard({
           </LifecycleField>
 
           <LifecycleField label="Expires">
-            <ExpiryCell
-              expiresAt={token.expiresAt}
-              expiresSoon={expiresSoon}
-              status={status}
-            />
+            <ExpiryCell expiresAt={token.expiresAt} expiresSoon={expiresSoon} status={status} />
           </LifecycleField>
         </Row>
 
@@ -262,21 +252,10 @@ function ApiTokenCard({
  * label and a multi-element value (e.g. an icon-prefixed expiry warning) sit on
  * the same text baseline rather than centre-of-line.
  */
-function LifecycleField({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function LifecycleField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <Row gap="r6" align="baseline">
-      <Text
-        variant="body-3"
-        color="muted"
-        as="span"
-        className="uppercase tracking-wide"
-      >
+      <Text variant="body-3" color="muted" as="span" className="uppercase tracking-wide">
         {label}
       </Text>
       <div className="flex items-baseline">{children}</div>
@@ -315,11 +294,7 @@ function partitionScopes(scopes: string[]): {
   for (const scope of scopes) {
     if (scope === "read:*" || scope.endsWith(":read")) {
       read.push(scope);
-    } else if (
-      scope === "write:*" ||
-      scope.endsWith(":write") ||
-      scope.endsWith(":delete")
-    ) {
+    } else if (scope === "write:*" || scope.endsWith(":write") || scope.endsWith(":delete")) {
       write.push(scope);
     } else {
       other.push(scope);
@@ -373,12 +348,7 @@ function ScopeSection({ label, scopes }: { label: string; scopes: string[] }) {
   return (
     <Stack gap="r6">
       <Row gap="r6" align="baseline">
-        <Text
-          variant="body-3"
-          color="muted"
-          as="span"
-          className="uppercase tracking-wide"
-        >
+        <Text variant="body-3" color="muted" as="span" className="uppercase tracking-wide">
           {label}
         </Text>
         <Text variant="body-3" color="muted" as="span">
@@ -396,11 +366,7 @@ function ScopeSection({ label, scopes }: { label: string; scopes: string[] }) {
             // access" volume signal while adding a "what kind" signal on top.
             const isDestructive = scope.endsWith(":delete");
             return (
-              <Badge
-                key={scope}
-                variant={isDestructive ? "warning" : "info"}
-                className="font-mono"
-              >
+              <Badge key={scope} variant={isDestructive ? "warning" : "info"} className="font-mono">
                 {scope}
               </Badge>
             );

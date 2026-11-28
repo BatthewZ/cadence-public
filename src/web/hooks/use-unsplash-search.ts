@@ -1,10 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 
-import type {
-  UnsplashCoverPayload,
-  UnsplashSearchResponse,
-} from "@/shared/schemas/unsplash";
+import type { UnsplashCoverPayload, UnsplashSearchResponse } from "@/shared/schemas/unsplash";
 import { useDebounce } from "@/web/hooks/use-debounce";
 import { api } from "@/web/lib/api/client";
 
@@ -97,13 +94,9 @@ export function useUnsplashSearch({
       if (isSearch) {
         params.set("query", debouncedQuery);
         if (orientation) params.set("orientation", orientation);
-        return api.get<UnsplashSearchResponse>(
-          `/api/unsplash/search?${params.toString()}`,
-        );
+        return api.get<UnsplashSearchResponse>(`/api/unsplash/search?${params.toString()}`);
       }
-      return api.get<UnsplashSearchResponse>(
-        `/api/unsplash/curated?${params.toString()}`,
-      );
+      return api.get<UnsplashSearchResponse>(`/api/unsplash/curated?${params.toString()}`);
     },
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
@@ -119,7 +112,7 @@ export function useUnsplashSearch({
 
   const results = useMemo<UnsplashCoverPayload[]>(
     () => result.data?.pages.flatMap((p) => p.results) ?? [],
-    [result.data],
+    [result.data]
   );
 
   return {

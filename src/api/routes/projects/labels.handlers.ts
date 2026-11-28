@@ -19,17 +19,11 @@ export async function createLabel(c: Context<AppEnv>) {
 
   // Batch label count + name uniqueness check in a single round-trip
   const [countResult, duplicateResult] = await db.batch([
-    db.select({ value: count() })
+    db.select({ value: count() }).from(label).where(eq(label.projectId, projectId)),
+    db
+      .select({ id: label.id })
       .from(label)
-      .where(eq(label.projectId, projectId)),
-    db.select({ id: label.id })
-      .from(label)
-      .where(
-        and(
-          eq(label.projectId, projectId),
-          sql`LOWER(${label.name}) = LOWER(${body.name})`,
-        ),
-      )
+      .where(and(eq(label.projectId, projectId), sql`LOWER(${label.name}) = LOWER(${body.name})`))
       .limit(1),
   ] as const);
 
@@ -74,12 +68,10 @@ export async function listLabels(c: Context<AppEnv>) {
       name: label.name,
       color: label.color,
       createdAt: label.createdAt,
-      taskCount: sql<number>`COALESCE(${
-        db
-          .select({ cnt: count() })
-          .from(taskLabel)
-          .where(eq(taskLabel.labelId, label.id))
-      }, 0)`.as("taskCount"),
+      taskCount: sql<number>`COALESCE(${db
+        .select({ cnt: count() })
+        .from(taskLabel)
+        .where(eq(taskLabel.labelId, label.id))}, 0)`.as("taskCount"),
     })
     .from(label)
     .where(eq(label.projectId, projectId))
@@ -136,30 +128,15 @@ export async function listWorkspaceLabels(c: Context<AppEnv>) {
     ? await db
         .select({ id: project.id })
         .from(project)
-        .where(
-          and(
-            eq(project.workspaceId, workspaceId),
-            eq(project.status, "active"),
-            patScope,
-          ),
-        )
+        .where(and(eq(project.workspaceId, workspaceId), eq(project.status, "active"), patScope))
     : await db
         .select({ id: project.id })
         .from(project)
         .innerJoin(
           projectMember,
-          and(
-            eq(projectMember.projectId, project.id),
-            eq(projectMember.userId, user.id),
-          ),
+          and(eq(projectMember.projectId, project.id), eq(projectMember.userId, user.id))
         )
-        .where(
-          and(
-            eq(project.workspaceId, workspaceId),
-            eq(project.status, "active"),
-            patScope,
-          ),
-        );
+        .where(and(eq(project.workspaceId, workspaceId), eq(project.status, "active"), patScope));
 
   const visibleIds = visibleProjects.map((p) => p.id);
 
@@ -190,17 +167,16 @@ export async function updateLabel(c: Context<AppEnv>) {
 
   // Batch label existence + name uniqueness check in a single round-trip
   const [existingResult, duplicateResult] = await db.batch([
-    db.select()
+    db
+      .select()
       .from(label)
       .where(and(eq(label.id, labelId), eq(label.projectId, projectId)))
       .limit(1),
-    db.select({ id: label.id })
+    db
+      .select({ id: label.id })
       .from(label)
       .where(
-        and(
-          eq(label.projectId, projectId),
-          sql`LOWER(${label.name}) = LOWER(${body.name ?? ""})`,
-        ),
+        and(eq(label.projectId, projectId), sql`LOWER(${label.name}) = LOWER(${body.name ?? ""})`)
       )
       .limit(1),
   ] as const);

@@ -15,9 +15,7 @@ export function formatDueDate(dateStr: string | null | undefined): string {
   const date = new Date(dateStr);
   const today = startOfDay(new Date());
   const target = startOfDay(date);
-  const diffDays = Math.round(
-    (target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  const diffDays = Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   if (diffDays < 0) return `${Math.abs(diffDays)}d overdue`;
   if (diffDays === 0) return "Today";
@@ -64,11 +62,7 @@ export function endOfWeek(d: Date): Date {
 
 function startOfNextWeek(d: Date): Date {
   const end = endOfWeek(d);
-  return new Date(
-    end.getFullYear(),
-    end.getMonth(),
-    end.getDate() + 1,
-  );
+  return new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1);
 }
 
 /**
@@ -76,11 +70,7 @@ function startOfNextWeek(d: Date): Date {
  */
 export function endOfNextWeek(d: Date): Date {
   const start = startOfNextWeek(d);
-  const result = new Date(
-    start.getFullYear(),
-    start.getMonth(),
-    start.getDate() + 6,
-  );
+  const result = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
   result.setHours(23, 59, 59, 999);
   return result;
 }
@@ -121,11 +111,7 @@ export function addMonths(d: Date, n: number): Date {
   const result = new Date(d.getTime());
   result.setDate(1); // avoid day-of-month overflow while the month changes
   result.setMonth(result.getMonth() + n);
-  const daysInTarget = new Date(
-    result.getFullYear(),
-    result.getMonth() + 1,
-    0,
-  ).getDate();
+  const daysInTarget = new Date(result.getFullYear(), result.getMonth() + 1, 0).getDate();
   result.setDate(Math.min(day, daysInTarget));
   return result;
 }

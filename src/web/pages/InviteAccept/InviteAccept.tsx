@@ -79,15 +79,13 @@ export default function InviteAccept() {
               </Center>
             )}
 
-            {unavailableOffline && <OfflineUnavailable what="This invitation" className="min-h-0" />}
-
-            {error && !unavailableOffline && (
-              <Alert variant="error">{error.message}</Alert>
+            {unavailableOffline && (
+              <OfflineUnavailable what="This invitation" className="min-h-0" />
             )}
 
-            {acceptError && (
-              <Alert variant="error">{acceptError}</Alert>
-            )}
+            {error && !unavailableOffline && <Alert variant="error">{error.message}</Alert>}
+
+            {acceptError && <Alert variant="error">{acceptError}</Alert>}
 
             {invitation && (
               <Stack gap="r4">
@@ -112,11 +110,7 @@ export default function InviteAccept() {
                     >
                       {accepting ? "Accepting..." : "Accept Invitation"}
                     </Button>
-                    <Button
-                      variant="ghost"
-                      className="w-full"
-                      onClick={handleDecline}
-                    >
+                    <Button variant="ghost" className="w-full" onClick={handleDecline}>
                       Decline
                     </Button>
                   </Stack>

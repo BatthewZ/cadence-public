@@ -7,9 +7,8 @@ import type { UnsplashSearchResponse } from "@/shared/schemas/unsplash";
 
 // Mock the api client module.
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -43,17 +42,11 @@ function createWrapper() {
     defaultOptions: { queries: { retry: false, gcTime: 0 } },
   });
   return function Wrapper({ children }: { children: ReactNode }) {
-    return createElement(
-      QueryClientProvider,
-      { client: queryClient },
-      children,
-    );
+    return createElement(QueryClientProvider, { client: queryClient }, children);
   };
 }
 
-function makePage(
-  overrides: Partial<UnsplashSearchResponse> = {},
-): UnsplashSearchResponse {
+function makePage(overrides: Partial<UnsplashSearchResponse> = {}): UnsplashSearchResponse {
   return {
     page: 1,
     perPage: 24,
@@ -94,10 +87,9 @@ describe("useUnsplashSearch", () => {
   it("routes to the search endpoint once a query is present", async () => {
     mockGet.mockResolvedValue(makePage());
 
-    const { result } = renderHook(
-      () => useUnsplashSearch({ query: "mountains" }),
-      { wrapper: createWrapper() },
-    );
+    const { result } = renderHook(() => useUnsplashSearch({ query: "mountains" }), {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
       expect(mockGet).toHaveBeenCalled();
@@ -119,7 +111,7 @@ describe("useUnsplashSearch", () => {
     // the final URL after changes settle.
     const { rerender } = renderHook(
       ({ query }: { query: string }) => useUnsplashSearch({ query }),
-      { wrapper: createWrapper(), initialProps: { query: "initial" } },
+      { wrapper: createWrapper(), initialProps: { query: "initial" } }
     );
 
     // Rapidly change the input multiple times within the 300ms debounce
@@ -135,7 +127,7 @@ describe("useUnsplashSearch", () => {
         const urls = mockGet.mock.calls.map((c) => c[0] as string);
         expect(urls.some((u) => u.includes("query=abcd"))).toBe(true);
       },
-      { timeout: 2000 },
+      { timeout: 2000 }
     );
 
     // None of the intermediate values should have been requested.
@@ -162,7 +154,7 @@ describe("useUnsplashSearch", () => {
           query: "forest",
           orientation: "landscape" as const,
         },
-      },
+      }
     );
 
     await waitFor(() => {
@@ -186,10 +178,9 @@ describe("useUnsplashSearch", () => {
   it("does not fire requests when disabled", async () => {
     mockGet.mockResolvedValue(makePage());
 
-    renderHook(
-      () => useUnsplashSearch({ query: "anything", enabled: false }),
-      { wrapper: createWrapper() },
-    );
+    renderHook(() => useUnsplashSearch({ query: "anything", enabled: false }), {
+      wrapper: createWrapper(),
+    });
 
     // Give any pending debounce / query scheduling a chance to fire.
     await new Promise((resolve) => setTimeout(resolve, 500));

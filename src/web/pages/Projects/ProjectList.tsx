@@ -77,7 +77,7 @@ export default function ProjectList() {
     projectId: string,
     status: "active" | "completed" | "archived",
     successMessage: string,
-    failureMessage: string,
+    failureMessage: string
   ) {
     setStatusOverrides((prev) => new Map(prev).set(projectId, status));
     toast(successMessage, { variant: "success" });
@@ -149,15 +149,15 @@ export default function ProjectList() {
 
   const activeProjects = useMemo(
     () => visibleProjects?.filter((p) => p.status === "active") ?? [],
-    [visibleProjects],
+    [visibleProjects]
   );
   const completedProjects = useMemo(
     () => visibleProjects?.filter((p) => p.status === "completed") ?? [],
-    [visibleProjects],
+    [visibleProjects]
   );
   const archivedProjects = useMemo(
     () => visibleProjects?.filter((p) => p.status === "archived") ?? [],
-    [visibleProjects],
+    [visibleProjects]
   );
 
   if (loading) {
@@ -267,7 +267,9 @@ export default function ProjectList() {
             {completedProjects.length === 0 ? (
               <EmptyState>
                 <EmptyStateTitle>No completed projects yet</EmptyStateTitle>
-                <EmptyStateDescription>Projects you mark as completed will appear here</EmptyStateDescription>
+                <EmptyStateDescription>
+                  Projects you mark as completed will appear here
+                </EmptyStateDescription>
               </EmptyState>
             ) : (
               <ProjectCardGrid projects={completedProjects} tab="completed" {...gridProps} />

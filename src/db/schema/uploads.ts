@@ -16,5 +16,5 @@ export const upload = sqliteTable(
     purpose: text("purpose").notNull(),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
   },
-  (table) => [index("upload_user_idx").on(table.userId)],
+  (table) => [index("upload_user_idx").on(table.userId)]
 );

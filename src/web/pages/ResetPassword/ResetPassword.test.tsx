@@ -10,9 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mockResetPassword = vi.fn();
 
 vi.mock("@/web/lib/auth/auth-client", () => ({
-  resetPassword: (
-    ...args: unknown[]
-  ): Promise<{ error: null | { message?: string } }> =>
+  resetPassword: (...args: unknown[]): Promise<{ error: null | { message?: string } }> =>
     mockResetPassword(...args) as Promise<{
       error: null | { message?: string };
     }>,
@@ -33,7 +31,7 @@ function renderResetPassword(searchParams = "?token=valid-token-123") {
   render(
     <MemoryRouter initialEntries={[`/reset-password${searchParams}`]}>
       <ResetPassword />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
   return { user };
 }
@@ -62,14 +60,10 @@ describe("ResetPassword", () => {
   it("renders new password and confirm password fields with a submit button", () => {
     renderResetPassword();
 
-    expect(
-      screen.getByRole("heading", { name: "Reset Password" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Reset Password" })).toBeInTheDocument();
     expect(screen.getByLabelText("New Password")).toBeInTheDocument();
     expect(screen.getByLabelText("Confirm Password")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Reset Password" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reset Password" })).toBeInTheDocument();
   });
 
   it("renders 'Back to Sign In' link pointing to /login", () => {
@@ -88,9 +82,7 @@ describe("ResetPassword", () => {
     renderResetPassword("");
 
     expect(
-      screen.getByText(
-        "Invalid or expired reset link. Please request a new one.",
-      ),
+      screen.getByText("Invalid or expired reset link. Please request a new one.")
     ).toBeInTheDocument();
 
     const link = screen.getByRole("link", {
@@ -106,25 +98,17 @@ describe("ResetPassword", () => {
   it("shows password requirements when user starts typing in password field", async () => {
     const { user } = renderResetPassword();
 
-    expect(
-      screen.queryByLabelText("Password requirements"),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Password requirements")).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText("New Password"), "a");
 
     await waitFor(() => {
-      expect(
-        screen.getByLabelText("Password requirements"),
-      ).toBeInTheDocument();
+      expect(screen.getByLabelText("Password requirements")).toBeInTheDocument();
     });
 
     expect(screen.getByText("At least 8 characters")).toBeInTheDocument();
-    expect(
-      screen.getByText("Contains an uppercase letter"),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Contains a lowercase letter"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Contains an uppercase letter")).toBeInTheDocument();
+    expect(screen.getByText("Contains a lowercase letter")).toBeInTheDocument();
     expect(screen.getByText("Contains a number")).toBeInTheDocument();
   });
 
@@ -138,14 +122,10 @@ describe("ResetPassword", () => {
     await user.click(screen.getByRole("button", { name: "Reset Password" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Password must be at least 8 characters"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Password must be at least 8 characters")).toBeInTheDocument();
     });
 
-    expect(
-      screen.getByText("Please confirm your password"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Please confirm your password")).toBeInTheDocument();
     expect(mockResetPassword).not.toHaveBeenCalled();
   });
 
@@ -169,17 +149,13 @@ describe("ResetPassword", () => {
     await user.click(screen.getByRole("button", { name: "Reset Password" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Password must be at least 8 characters"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Password must be at least 8 characters")).toBeInTheDocument();
     });
 
     await user.type(screen.getByLabelText("New Password"), "a");
 
     await waitFor(() => {
-      expect(
-        screen.queryByText("Password must be at least 8 characters"),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Password must be at least 8 characters")).not.toBeInTheDocument();
     });
   });
 
@@ -202,9 +178,7 @@ describe("ResetPassword", () => {
     });
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Your password has been reset successfully."),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Your password has been reset successfully.")).toBeInTheDocument();
     });
 
     const link = screen.getByRole("link", {
@@ -243,9 +217,7 @@ describe("ResetPassword", () => {
     await user.click(screen.getByRole("button", { name: "Reset Password" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Failed to reset password"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Failed to reset password")).toBeInTheDocument();
     });
   });
 
@@ -258,9 +230,7 @@ describe("ResetPassword", () => {
     await user.click(screen.getByRole("button", { name: "Reset Password" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Network error. Please try again."),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Network error. Please try again.")).toBeInTheDocument();
     });
   });
 
@@ -274,7 +244,7 @@ describe("ResetPassword", () => {
       () =>
         new Promise<{ error: null }>((resolve) => {
           resolveReset = resolve;
-        }),
+        })
     );
 
     const { user } = renderResetPassword();
@@ -284,17 +254,13 @@ describe("ResetPassword", () => {
     await user.click(screen.getByRole("button", { name: "Reset Password" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Resetting..." }),
-      ).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Resetting..." })).toBeDisabled();
     });
 
     resolveReset({ error: null });
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Your password has been reset successfully."),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Your password has been reset successfully.")).toBeInTheDocument();
     });
   });
 });

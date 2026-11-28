@@ -328,7 +328,7 @@ export const exportTeamSchema = z.object({
     z.object({
       userRef,
       role: z.enum(TEAM_ROLES),
-    }),
+    })
   ),
 });
 

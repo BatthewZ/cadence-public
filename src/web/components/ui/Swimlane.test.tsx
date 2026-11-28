@@ -11,7 +11,7 @@ beforeEach(() => {
       media: query,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
-    })),
+    }))
   );
 });
 
@@ -24,7 +24,7 @@ describe("Swimlane", () => {
     const { container } = render(
       <Swimlane title="Popular">
         <div>Item 1</div>
-      </Swimlane>,
+      </Swimlane>
     );
     expect(container.querySelector(".swimlane")).toBeInTheDocument();
   });
@@ -33,7 +33,7 @@ describe("Swimlane", () => {
     render(
       <Swimlane title="Trending">
         <div>Content</div>
-      </Swimlane>,
+      </Swimlane>
     );
     expect(screen.getByRole("heading", { level: 2, name: "Trending" })).toBeInTheDocument();
   });
@@ -42,7 +42,7 @@ describe("Swimlane", () => {
     render(
       <Swimlane title="Featured" subtitle="Hand-picked for you">
         <div>Content</div>
-      </Swimlane>,
+      </Swimlane>
     );
     expect(screen.getByText("Hand-picked for you")).toBeInTheDocument();
   });
@@ -51,7 +51,7 @@ describe("Swimlane", () => {
     render(
       <Swimlane title="Recent" viewAllHref="/all">
         <div>Content</div>
-      </Swimlane>,
+      </Swimlane>
     );
     const link = screen.getByRole("link", { name: "View all" });
     expect(link).toBeInTheDocument();
@@ -62,7 +62,7 @@ describe("Swimlane", () => {
     render(
       <Swimlane title="Recent">
         <div>Content</div>
-      </Swimlane>,
+      </Swimlane>
     );
     expect(screen.queryByRole("link", { name: "View all" })).not.toBeInTheDocument();
   });
@@ -72,7 +72,7 @@ describe("Swimlane", () => {
       <Swimlane title="Items">
         <div data-testid="child-1">Child 1</div>
         <div data-testid="child-2">Child 2</div>
-      </Swimlane>,
+      </Swimlane>
     );
     const body = container.querySelector(".swimlane__body");
     expect(body).toBeInTheDocument();
@@ -84,7 +84,7 @@ describe("Swimlane", () => {
     const { container } = render(
       <Swimlane title="Styled" className="extra-class">
         <div>Content</div>
-      </Swimlane>,
+      </Swimlane>
     );
     const root = container.querySelector(".swimlane");
     expect(root?.className).toContain("extra-class");

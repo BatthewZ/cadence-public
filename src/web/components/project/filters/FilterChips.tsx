@@ -1,13 +1,8 @@
-import {
-  X,
-} from "lucide-react";
+import { X } from "lucide-react";
 
 import type { ProjectMember } from "@/web/contexts/ProjectContext";
 import { type Label } from "@/web/hooks/use-labels";
-import {
-  FILTER_NONE,
-  type UseTaskFiltersReturn,
-} from "@/web/hooks/use-task-filters";
+import { FILTER_NONE, type UseTaskFiltersReturn } from "@/web/hooks/use-task-filters";
 import { getPriorityLabel } from "@/web/util/task-display";
 
 /**
@@ -61,7 +56,7 @@ export function FilterChips({
             onClick={() =>
               filtersReturn.setFilter(
                 "assigneeIds",
-                filters.assigneeIds.filter((a) => a !== FILTER_NONE),
+                filters.assigneeIds.filter((a) => a !== FILTER_NONE)
               )
             }
             aria-label="Remove unassigned filter"
@@ -83,7 +78,7 @@ export function FilterChips({
                 onClick={() =>
                   filtersReturn.setFilter(
                     "assigneeIds",
-                    filters.assigneeIds.filter((a) => a !== id),
+                    filters.assigneeIds.filter((a) => a !== id)
                   )
                 }
                 aria-label={`Remove filter for ${member?.name ?? id}`}
@@ -102,7 +97,7 @@ export function FilterChips({
             onClick={() =>
               filtersReturn.setFilter(
                 "priorities",
-                filters.priorities.filter((p) => p !== priority),
+                filters.priorities.filter((p) => p !== priority)
               )
             }
             aria-label={`Remove priority filter ${priority}`}
@@ -134,9 +129,7 @@ export function FilterChips({
               : `Until ${filters.dueDateTo}`}
           <button
             type="button"
-            onClick={() =>
-              filtersReturn.setFilters({ dueDateFrom: null, dueDateTo: null })
-            }
+            onClick={() => filtersReturn.setFilters({ dueDateFrom: null, dueDateTo: null })}
             aria-label="Remove due date filter"
           >
             <X size={12} />
@@ -165,7 +158,7 @@ export function FilterChips({
             onClick={() =>
               filtersReturn.setFilter(
                 "labelIds",
-                filters.labelIds.filter((lid) => lid !== FILTER_NONE),
+                filters.labelIds.filter((lid) => lid !== FILTER_NONE)
               )
             }
             aria-label="Remove no label filter"
@@ -191,7 +184,7 @@ export function FilterChips({
                 onClick={() =>
                   filtersReturn.setFilter(
                     "labelIds",
-                    filters.labelIds.filter((lid) => lid !== id),
+                    filters.labelIds.filter((lid) => lid !== id)
                   )
                 }
                 aria-label={`Remove label filter ${lbl?.name ?? id}`}

@@ -2,10 +2,7 @@ import { Hono } from "hono";
 
 import { searchQuerySchema } from "../../../shared/schemas/search";
 import type { AppEnv } from "../../env";
-import {
-  requireReadScopeForResource,
-  requireWorkspaceMember,
-} from "../../middleware/authorize";
+import { requireReadScopeForResource, requireWorkspaceMember } from "../../middleware/authorize";
 import { defaultRateLimitKey, rateLimit } from "../../middleware/rate-limit";
 import { requireAuth } from "../../middleware/require-auth";
 import { validateQuery } from "../../middleware/validate";
@@ -39,7 +36,7 @@ const app = new Hono<AppEnv>();
 app.use(
   "/workspaces/:workspaceId/search",
   requireReadScopeForResource("task"),
-  requireReadScopeForResource("project"),
+  requireReadScopeForResource("project")
 );
 
 app.get(
@@ -48,7 +45,7 @@ app.get(
   requireWorkspaceMember(),
   rateLimit({ max: 60, windowSeconds: 60, prefix: "search", keyFn: defaultRateLimitKey }),
   validateQuery(searchQuerySchema),
-  workspaceSearch,
+  workspaceSearch
 );
 
 export default app;

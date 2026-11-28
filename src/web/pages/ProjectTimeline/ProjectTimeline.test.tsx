@@ -52,7 +52,16 @@ let mockCompletedFilter: boolean | null = null;
 vi.mock("@/web/hooks/use-task-filters", () => ({
   useTaskFilters: (tasks: Task[]) => ({
     filteredTasks: tasks,
-    filters: { assigneeIds: [], priorities: [], get completed() { return mockCompletedFilter; }, dueDateFrom: null, dueDateTo: null, labelIds: [] },
+    filters: {
+      assigneeIds: [],
+      priorities: [],
+      get completed() {
+        return mockCompletedFilter;
+      },
+      dueDateFrom: null,
+      dueDateTo: null,
+      labelIds: [],
+    },
     hasActiveFilters: false,
     clearFilters: vi.fn(),
   }),
@@ -104,7 +113,8 @@ class IntersectionObserverStub {
   unobserve() {}
   disconnect() {}
 }
-globalThis.IntersectionObserver = IntersectionObserverStub as unknown as typeof IntersectionObserver;
+globalThis.IntersectionObserver =
+  IntersectionObserverStub as unknown as typeof IntersectionObserver;
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,
@@ -163,8 +173,24 @@ function setupProjectMock(tasks: Task[], selfRole = "admin") {
   mockUseProject.mockReturnValue({
     project: { id: "proj-1", name: "Test Project", workspaceId: "ws-1" },
     members: [
-      { id: "m-1", userId: "user-1", name: "Alice", email: "alice@test.com", image: null, role: selfRole, joinedAt: "2025-01-01" },
-      { id: "m-2", userId: "user-2", name: "Bob", email: "bob@test.com", image: null, role: "member", joinedAt: "2025-01-01" },
+      {
+        id: "m-1",
+        userId: "user-1",
+        name: "Alice",
+        email: "alice@test.com",
+        image: null,
+        role: selfRole,
+        joinedAt: "2025-01-01",
+      },
+      {
+        id: "m-2",
+        userId: "user-2",
+        name: "Bob",
+        email: "bob@test.com",
+        image: null,
+        role: "member",
+        joinedAt: "2025-01-01",
+      },
     ],
     taskGroups: [
       { id: "tg-1", name: "To Do", isCompletionGroup: false, position: "a" },
@@ -194,7 +220,7 @@ function renderTimeline(initialEntries: string[] = ["/"]) {
       <MemoryRouter initialEntries={initialEntries}>
         <ProjectTimeline />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -222,9 +248,7 @@ describe("ProjectTimeline", () => {
   // -----------------------------------------------------------------------
   describe("time bucket grouping", () => {
     it("groups overdue tasks into the Overdue bucket", () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "Overdue task", dueDate: daysFromNow(-3) }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Overdue task", dueDate: daysFromNow(-3) })];
       setupProjectMock(tasks);
       renderTimeline();
 
@@ -233,9 +257,7 @@ describe("ProjectTimeline", () => {
     });
 
     it("groups tasks due today into the Today bucket", () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "Today task", dueDate: daysFromNow(0) }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Today task", dueDate: daysFromNow(0) })];
       setupProjectMock(tasks);
       renderTimeline();
 
@@ -253,9 +275,7 @@ describe("ProjectTimeline", () => {
       const daysUntilSunday = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
       // Only test this if there are days remaining in the week after today
       if (daysUntilSunday >= 2) {
-        const tasks = [
-          makeTask({ id: "t-1", title: "This week task", dueDate: daysFromNow(2) }),
-        ];
+        const tasks = [makeTask({ id: "t-1", title: "This week task", dueDate: daysFromNow(2) })];
         setupProjectMock(tasks);
         renderTimeline();
         expect(screen.getByText("This Week")).toBeInTheDocument();
@@ -264,9 +284,7 @@ describe("ProjectTimeline", () => {
     });
 
     it("places tasks without a due date in the Unscheduled bucket", () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "No date task", dueDate: null }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "No date task", dueDate: null })];
       setupProjectMock(tasks);
       renderTimeline();
 
@@ -275,9 +293,7 @@ describe("ProjectTimeline", () => {
     });
 
     it("places tasks far in the future into the Later bucket", () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "Far future task", dueDate: daysFromNow(90) }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Far future task", dueDate: daysFromNow(90) })];
       setupProjectMock(tasks);
       renderTimeline();
 
@@ -332,9 +348,7 @@ describe("ProjectTimeline", () => {
   // -----------------------------------------------------------------------
   describe("Unscheduled section", () => {
     it("renders the CalendarOff icon for unscheduled section", () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "No date", dueDate: null }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "No date", dueDate: null })];
       setupProjectMock(tasks);
       renderTimeline();
 
@@ -364,9 +378,7 @@ describe("ProjectTimeline", () => {
   // -----------------------------------------------------------------------
   describe("task row display", () => {
     it("renders task title", () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "Important task", dueDate: daysFromNow(0) }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Important task", dueDate: daysFromNow(0) })];
       setupProjectMock(tasks);
       renderTimeline();
 
@@ -422,9 +434,7 @@ describe("ProjectTimeline", () => {
 
     it("renders formatted due date", () => {
       const dueDate = daysFromNow(30);
-      const tasks = [
-        makeTask({ id: "t-1", title: "Dated task", dueDate }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Dated task", dueDate })];
       setupProjectMock(tasks);
       renderTimeline();
 
@@ -465,7 +475,8 @@ describe("ProjectTimeline", () => {
         makeTask({ id: "t-1", title: "Toggle me", dueDate: daysFromNow(0), completed: false }),
       ];
       setupProjectMock(tasks);
-      const mockUpdateTask = (mockUseProject() as { updateTask: ReturnType<typeof vi.fn> }).updateTask;
+      const mockUpdateTask = (mockUseProject() as { updateTask: ReturnType<typeof vi.fn> })
+        .updateTask;
 
       // Mock the API post for completing a task
       mockPost.mockResolvedValueOnce({
@@ -478,7 +489,10 @@ describe("ProjectTimeline", () => {
       await user.click(checkbox);
 
       // updateTask should have been called with completed: true (optimistic)
-      expect(mockUpdateTask).toHaveBeenCalledWith("t-1", expect.objectContaining({ completed: true }));
+      expect(mockUpdateTask).toHaveBeenCalledWith(
+        "t-1",
+        expect.objectContaining({ completed: true })
+      );
     });
 
     it("calls the complete endpoint when checking an incomplete task", async () => {
@@ -542,7 +556,7 @@ describe("ProjectTimeline", () => {
       renderTimeline();
 
       await user.click(
-        screen.getByRole("checkbox", { name: /Mark "Weekly review" as incomplete/ }),
+        screen.getByRole("checkbox", { name: /Mark "Weekly review" as incomplete/ })
       );
 
       await waitFor(() => {
@@ -599,9 +613,7 @@ describe("ProjectTimeline", () => {
 
     it("shows assignee options in the assign dropdown", async () => {
       const user = userEvent.setup();
-      const tasks = [
-        makeTask({ id: "t-1", title: "Assign task", dueDate: daysFromNow(0) }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Assign task", dueDate: daysFromNow(0) })];
       setupProjectMock(tasks);
       renderTimeline();
 
@@ -617,9 +629,7 @@ describe("ProjectTimeline", () => {
     });
 
     it("renders the task actions three-dot menu", () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "Actions task", dueDate: daysFromNow(0) }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Actions task", dueDate: daysFromNow(0) })];
       setupProjectMock(tasks);
       renderTimeline();
 
@@ -633,9 +643,7 @@ describe("ProjectTimeline", () => {
     // because viewing is exactly what the role exists for.
     it("hides the task actions menu from a project viewer", () => {
       mockWorkspaceMembers = [{ userId: "user-1", role: "member" }];
-      const tasks = [
-        makeTask({ id: "t-1", title: "Actions task", dueDate: daysFromNow(0) }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Actions task", dueDate: daysFromNow(0) })];
       setupProjectMock(tasks, "viewer");
       renderTimeline();
 
@@ -681,9 +689,7 @@ describe("ProjectTimeline", () => {
       renderTimeline();
 
       expect(screen.getByText("No tasks")).toBeInTheDocument();
-      expect(
-        screen.getByText("Create tasks to see them on the timeline"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Create tasks to see them on the timeline")).toBeInTheDocument();
     });
 
     it("does not show accordion when there are no tasks", () => {
@@ -713,8 +719,9 @@ describe("ProjectTimeline", () => {
       expect(overdueTrigger!.getAttribute("aria-expanded")).toBe("true");
 
       // Today trigger should be expanded — find the one inside accordion-trigger-text
-      const todayTrigger = screen.getAllByText("Today")
-        .find(el => el.closest(".accordion-trigger-text"))
+      const todayTrigger = screen
+        .getAllByText("Today")
+        .find((el) => el.closest(".accordion-trigger-text"))
         ?.closest("button");
       expect(todayTrigger).not.toBeNull();
       expect(todayTrigger!.getAttribute("aria-expanded")).toBe("true");
@@ -727,9 +734,7 @@ describe("ProjectTimeline", () => {
 
     it("toggles accordion section when trigger is clicked", async () => {
       const user = userEvent.setup();
-      const tasks = [
-        makeTask({ id: "t-1", title: "Later task", dueDate: daysFromNow(90) }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Later task", dueDate: daysFromNow(90) })];
       setupProjectMock(tasks);
       renderTimeline();
 
@@ -896,8 +901,20 @@ describe("ProjectTimeline", () => {
   describe("assignee grouping", () => {
     it("groups tasks by assignee with Unassigned last", () => {
       const tasks = [
-        makeTask({ id: "t-1", title: "Alice task", assigneeId: "user-1", assigneeName: "Alice", dueDate: daysFromNow(0) }),
-        makeTask({ id: "t-2", title: "Bob task", assigneeId: "user-2", assigneeName: "Bob", dueDate: daysFromNow(1) }),
+        makeTask({
+          id: "t-1",
+          title: "Alice task",
+          assigneeId: "user-1",
+          assigneeName: "Alice",
+          dueDate: daysFromNow(0),
+        }),
+        makeTask({
+          id: "t-2",
+          title: "Bob task",
+          assigneeId: "user-2",
+          assigneeName: "Bob",
+          dueDate: daysFromNow(1),
+        }),
         makeTask({ id: "t-3", title: "Orphan task", assigneeId: null, dueDate: daysFromNow(2) }),
       ];
       setupProjectMock(tasks);
@@ -917,7 +934,13 @@ describe("ProjectTimeline", () => {
 
     it("hides empty assignee groups", () => {
       const tasks = [
-        makeTask({ id: "t-1", title: "Alice task", assigneeId: "user-1", assigneeName: "Alice", dueDate: daysFromNow(0) }),
+        makeTask({
+          id: "t-1",
+          title: "Alice task",
+          assigneeId: "user-1",
+          assigneeName: "Alice",
+          dueDate: daysFromNow(0),
+        }),
       ];
       setupProjectMock(tasks);
       renderTimeline(["/?groupBy=assignee"]);
@@ -938,7 +961,12 @@ describe("ProjectTimeline", () => {
     it("groups tasks by label with the No label group last", () => {
       const tasks = [
         makeTask({ id: "t-1", title: "Bug task", dueDate: daysFromNow(0), labels: [bugLabel] }),
-        makeTask({ id: "t-2", title: "Feature task", dueDate: daysFromNow(1), labels: [featureLabel] }),
+        makeTask({
+          id: "t-2",
+          title: "Feature task",
+          dueDate: daysFromNow(1),
+          labels: [featureLabel],
+        }),
         makeTask({ id: "t-3", title: "Plain task", dueDate: daysFromNow(2), labels: [] }),
       ];
       setupProjectMock(tasks);
@@ -962,8 +990,18 @@ describe("ProjectTimeline", () => {
 
     it("shows a multi-label task in every matching group with truthful counts", () => {
       const tasks = [
-        makeTask({ id: "t-1", title: "Dual task", dueDate: daysFromNow(0), labels: [bugLabel, featureLabel] }),
-        makeTask({ id: "t-2", title: "Bug only task", dueDate: daysFromNow(1), labels: [bugLabel] }),
+        makeTask({
+          id: "t-1",
+          title: "Dual task",
+          dueDate: daysFromNow(0),
+          labels: [bugLabel, featureLabel],
+        }),
+        makeTask({
+          id: "t-2",
+          title: "Bug only task",
+          dueDate: daysFromNow(1),
+          labels: [bugLabel],
+        }),
       ];
       setupProjectMock(tasks);
       renderTimeline(["/?groupBy=label"]);
@@ -987,9 +1025,7 @@ describe("ProjectTimeline", () => {
     });
 
     it("renders the No label header muted, matching the Unscheduled treatment", () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "Plain task", dueDate: daysFromNow(0) }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Plain task", dueDate: daysFromNow(0) })];
       setupProjectMock(tasks);
       renderTimeline(["/?groupBy=label"]);
 

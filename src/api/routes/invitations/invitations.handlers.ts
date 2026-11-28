@@ -128,7 +128,7 @@ const INVITATION_PUBLIC_COLUMNS = {
  * `INVITATION_PUBLIC_COLUMNS` gives the queries. Keep the two in step.
  */
 function toPublicInvitation(
-  row: typeof invitation.$inferSelect,
+  row: typeof invitation.$inferSelect
 ): Omit<typeof invitation.$inferSelect, "token"> {
   return {
     id: row.id,
@@ -151,10 +151,7 @@ function toPublicInvitation(
  * keeps every outbound link pointing at the same host instead of introducing
  * a second source of truth for "where does this deployment live".
  */
-export function buildInviteUrl(
-  env: Pick<AppBindings, "BETTER_AUTH_URL">,
-  token: string,
-): string {
+export function buildInviteUrl(env: Pick<AppBindings, "BETTER_AUTH_URL">, token: string): string {
   const baseUrl = env.BETTER_AUTH_URL?.replace(/\/+$/, "") ?? "";
   return `${baseUrl}/invite/${token}`;
 }
@@ -195,7 +192,7 @@ async function sendInvitationEmail(
     inviterName: string;
     role: string;
     token: string;
-  },
+  }
 ): Promise<void> {
   try {
     const env = c.env;
@@ -224,7 +221,7 @@ async function sendInvitationEmail(
         op: "sendInvitationEmail",
         email: args.recipientEmail,
         error: error instanceof Error ? error.message : String(error),
-      }),
+      })
     );
   }
 }
@@ -253,11 +250,7 @@ export async function createInvitation(c: Context<AppEnv>) {
   // letter, which suppressed the `invitation_received` notification for
   // someone who did in fact have an account. See `normalizeEmail`.
   const [userResult, invitationResult, actorResult] = await db.batch([
-    db
-      .select()
-      .from(userTable)
-      .where(eq(userTable.email, body.email))
-      .limit(1),
+    db.select().from(userTable).where(eq(userTable.email, body.email)).limit(1),
     db
       .select()
       .from(invitation)
@@ -265,19 +258,14 @@ export async function createInvitation(c: Context<AppEnv>) {
         and(
           eq(invitation.workspaceId, workspaceId),
           eq(invitation.email, body.email),
-          eq(invitation.status, "pending"),
-        ),
+          eq(invitation.status, "pending")
+        )
       )
       .limit(1),
     db
       .select({ role: workspaceMember.role })
       .from(workspaceMember)
-      .where(
-        and(
-          eq(workspaceMember.workspaceId, workspaceId),
-          eq(workspaceMember.userId, user.id),
-        ),
-      )
+      .where(and(eq(workspaceMember.workspaceId, workspaceId), eq(workspaceMember.userId, user.id)))
       .limit(1),
   ] as const);
 
@@ -304,11 +292,7 @@ export async function createInvitation(c: Context<AppEnv>) {
   // Admins keep the whole of the authority the audit assigned them; what they
   // lose is the ability to enlarge the tier that outranks their own peers.
   if (body.role === "admin" && !mayGrantAdmin(actorMembership)) {
-    return errorResponse(
-      c,
-      "Only the workspace owner can invite someone as an admin",
-      403,
-    );
+    return errorResponse(c, "Only the workspace owner can invite someone as an admin", 403);
   }
 
   // Membership check is conditional — only runs if the user exists (needs existingUser.id)
@@ -319,8 +303,8 @@ export async function createInvitation(c: Context<AppEnv>) {
       .where(
         and(
           eq(workspaceMember.workspaceId, workspaceId),
-          eq(workspaceMember.userId, existingUser.id),
-        ),
+          eq(workspaceMember.userId, existingUser.id)
+        )
       )
       .limit(1);
 
@@ -416,12 +400,7 @@ export async function listInvitations(c: Context<AppEnv>) {
   const invitations = await db
     .select(INVITATION_PUBLIC_COLUMNS)
     .from(invitation)
-    .where(
-      and(
-        eq(invitation.workspaceId, workspaceId),
-        eq(invitation.status, "pending"),
-      ),
-    );
+    .where(and(eq(invitation.workspaceId, workspaceId), eq(invitation.status, "pending")));
 
   return c.json({ invitations });
 }
@@ -488,22 +467,14 @@ export async function revokeInvitation(c: Context<AppEnv>) {
   const [existing] = await db
     .select()
     .from(invitation)
-    .where(
-      and(
-        eq(invitation.id, id),
-        eq(invitation.workspaceId, workspaceId),
-      ),
-    )
+    .where(and(eq(invitation.id, id), eq(invitation.workspaceId, workspaceId)))
     .limit(1);
 
   if (!existing) {
     return errorResponse(c, "Invitation not found", 404);
   }
 
-  await db
-    .update(invitation)
-    .set({ status: "revoked" })
-    .where(eq(invitation.id, id));
+  await db.update(invitation).set({ status: "revoked" }).where(eq(invitation.id, id));
 
   // Non-blocking webhook dispatch for invitation.revoked
   const user = c.get("user")!;
@@ -554,8 +525,8 @@ export async function listMyPendingInvitations(c: Context<AppEnv>) {
         // their only way in.
         eq(invitation.email, normalizeEmail(user.email)),
         eq(invitation.status, "pending"),
-        gt(invitation.expiresAt, new Date()),
-      ),
+        gt(invitation.expiresAt, new Date())
+      )
     );
 
   const invitations = rows.map((r) => ({
@@ -563,12 +534,8 @@ export async function listMyPendingInvitations(c: Context<AppEnv>) {
     role: r.role,
     expiresAt: r.expiresAt,
     createdAt: r.createdAt,
-    workspace: r.workspaceId
-      ? { id: r.workspaceId, name: r.workspaceName }
-      : null,
-    invitedBy: r.inviterId
-      ? { id: r.inviterId, name: r.inviterName, email: r.inviterEmail }
-      : null,
+    workspace: r.workspaceId ? { id: r.workspaceId, name: r.workspaceName } : null,
+    invitedBy: r.inviterId ? { id: r.inviterId, name: r.inviterName, email: r.inviterEmail } : null,
   }));
 
   return c.json({ invitations });
@@ -582,11 +549,7 @@ export async function getInvitation(c: Context<AppEnv>) {
   const db = c.get("db");
   const token = requireParam(c, "token");
 
-  const [inv] = await db
-    .select()
-    .from(invitation)
-    .where(eq(invitation.token, token))
-    .limit(1);
+  const [inv] = await db.select().from(invitation).where(eq(invitation.token, token)).limit(1);
 
   if (!inv) {
     return errorResponse(c, "Invitation not found", 404);
@@ -693,11 +656,7 @@ export async function acceptInvitation(c: Context<AppEnv>) {
     return errorResponse(c, "Provide exactly one of token or invitationId", 400);
   }
 
-  const [inv] = await db
-    .select()
-    .from(invitation)
-    .where(selector)
-    .limit(1);
+  const [inv] = await db.select().from(invitation).where(selector).limit(1);
 
   if (!inv) {
     return errorResponse(c, "Invitation not found", 404);
@@ -724,10 +683,7 @@ export async function acceptInvitation(c: Context<AppEnv>) {
     .select()
     .from(workspaceMember)
     .where(
-      and(
-        eq(workspaceMember.workspaceId, inv.workspaceId),
-        eq(workspaceMember.userId, user.id),
-      ),
+      and(eq(workspaceMember.workspaceId, inv.workspaceId), eq(workspaceMember.userId, user.id))
     )
     .limit(1);
 
@@ -804,7 +760,7 @@ export async function acceptInvitation(c: Context<AppEnv>) {
       db.insert(workspaceMember).select(
         sql`SELECT ${newMemberId}, "invitation"."workspaceId", ${user.id}, "invitation"."role", "invitation"."invitedBy", ${joinedAtSeconds}
             FROM "invitation"
-            WHERE "invitation"."id" = ${inv.id} AND "invitation"."status" = 'pending'`,
+            WHERE "invitation"."id" = ${inv.id} AND "invitation"."status" = 'pending'`
       ),
       db
         .update(invitation)
@@ -829,10 +785,7 @@ export async function acceptInvitation(c: Context<AppEnv>) {
       .select({ id: workspaceMember.id })
       .from(workspaceMember)
       .where(
-        and(
-          eq(workspaceMember.workspaceId, inv.workspaceId),
-          eq(workspaceMember.userId, user.id),
-        ),
+        and(eq(workspaceMember.workspaceId, inv.workspaceId), eq(workspaceMember.userId, user.id))
       )
       .limit(1);
 
@@ -871,7 +824,14 @@ export async function acceptInvitation(c: Context<AppEnv>) {
   const joinedUser = { id: user.id, name: user.name, email: user.email };
   fireWebhookEvent(db, () => c.executionCtx, { workspaceId: inv.workspaceId, actorId: user.id }, [
     { event: "invitation.accepted", data: buildInvitationEventData(acceptedInvitation) },
-    { event: "workspace.member_joined", data: buildMemberEventData({ userId: user.id, workspaceId: inv.workspaceId }, inv.role, joinedUser) },
+    {
+      event: "workspace.member_joined",
+      data: buildMemberEventData(
+        { userId: user.id, workspaceId: inv.workspaceId },
+        inv.role,
+        joinedUser
+      ),
+    },
   ]);
 
   return c.json({ ok: true, workspaceId: inv.workspaceId });

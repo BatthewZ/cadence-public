@@ -44,13 +44,10 @@ import { storedUnsplashCoverPayloadSchema } from "./unsplash";
  * keys entirely (covers are only attachable after creation via the
  * dedicated cover endpoints).
  */
-const coverUnsplashResponseSchema = storedUnsplashCoverPayloadSchema
-  .nullable()
-  .optional()
-  .openapi({
-    description:
-      "Unsplash cover payload when the cover source is Unsplash. Mutually exclusive with `coverImageKey` (exactly one source is set at a time; both null when no cover).",
-  });
+const coverUnsplashResponseSchema = storedUnsplashCoverPayloadSchema.nullable().optional().openapi({
+  description:
+    "Unsplash cover payload when the cover source is Unsplash. Mutually exclusive with `coverImageKey` (exactly one source is set at a time; both null when no cover).",
+});
 
 // ---------------------------------------------------------------------------
 // Shared error / validation schemas (re-exported for convenience)
@@ -60,10 +57,12 @@ export const apiErrorResponseSchema = z
   .object({
     error: z.string().openapi({ description: "Human-readable error message" }),
     requestId: z.string().optional().openapi({
-      description: "Correlation id for the failing request. Surface this when filing a support ticket.",
+      description:
+        "Correlation id for the failing request. Surface this when filing a support ticket.",
     }),
     code: z.enum(Object.values(WRITE_ERROR_CODES)).optional().openapi({
-      description: "Machine-readable reason, present on refusals a retrying client must tell apart from a plain error.",
+      description:
+        "Machine-readable reason, present on refusals a retrying client must tell apart from a plain error.",
     }),
   })
   .openapi("ApiErrorResponse");
@@ -75,7 +74,7 @@ export const apiValidationErrorResponseSchema = z
       z.object({
         path: z.string(),
         message: z.string(),
-      }),
+      })
     ),
   })
   .openapi("ApiValidationErrorResponse");
@@ -229,9 +228,7 @@ const recurrenceRuleResponseSchema = z
     interval: z.number().int(),
     daysOfWeek: z.array(z.number().int()).optional(),
     dayOfMonth: z.number().int().optional(),
-    nthWeekday: z
-      .object({ n: z.number().int(), day: z.number().int() })
-      .optional(),
+    nthWeekday: z.object({ n: z.number().int(), day: z.number().int() }).optional(),
     endDate: z.string().optional(),
   })
   .nullable()
@@ -287,7 +284,8 @@ export const taskListItemSchema = taskSchema
     attachmentCount: z.number().int().nonnegative(),
     labels: z.array(taskLabelInfoSchema),
     subtasks: z.array(z.record(z.string(), z.unknown())).optional().openapi({
-      description: "Only with `include=subtasks`: the task's subtask rows; see Subtask schema for shape.",
+      description:
+        "Only with `include=subtasks`: the task's subtask rows; see Subtask schema for shape.",
     }),
   })
   .openapi("TaskListItem");
@@ -500,10 +498,13 @@ export const createApiTokenRequestSchema = z
       description: "Human-readable label shown in the UI and audit emails.",
       example: "GitHub Actions deploy",
     }),
-    scopes: z.array(z.string().min(1)).min(1).openapi({
-      description: "List of scope strings (e.g. `task:read`, `task:write`, `read:*`).",
-      example: ["task:read", "task:write"],
-    }),
+    scopes: z
+      .array(z.string().min(1))
+      .min(1)
+      .openapi({
+        description: "List of scope strings (e.g. `task:read`, `task:write`, `read:*`).",
+        example: ["task:read", "task:write"],
+      }),
     projectScope: z.enum(["all", "selected"]).openapi({
       description:
         "`all` grants access to every project in the workspace. `selected` restricts to the project IDs in `projectIds`.",
@@ -511,15 +512,9 @@ export const createApiTokenRequestSchema = z
     projectIds: z.array(z.string().min(1)).max(50).optional().openapi({
       description: "Required when `projectScope` is `selected`. Max 50 entries.",
     }),
-    expiresInDays: z
-      .number()
-      .int()
-      .min(1)
-      .max(3650)
-      .optional()
-      .openapi({
-        description: "Token lifetime in days. Defaults to 365.",
-        example: 365,
-      }),
+    expiresInDays: z.number().int().min(1).max(3650).optional().openapi({
+      description: "Token lifetime in days. Defaults to 365.",
+      example: 365,
+    }),
   })
   .openapi("CreateApiTokenRequest");

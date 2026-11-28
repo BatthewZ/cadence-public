@@ -78,7 +78,9 @@ describe("withSpaSecurityHeaders", () => {
     expect(wrapped.headers.get("X-Content-Type-Options")).toBe("nosniff");
     expect(wrapped.headers.get("X-Frame-Options")).toBe("DENY");
     expect(wrapped.headers.get("Referrer-Policy")).toBe("strict-origin-when-cross-origin");
-    expect(wrapped.headers.get("Permissions-Policy")).toBe("camera=(), microphone=(), geolocation=()");
+    expect(wrapped.headers.get("Permissions-Policy")).toBe(
+      "camera=(), microphone=(), geolocation=()"
+    );
     expect(wrapped.headers.get("X-XSS-Protection")).toBe("0");
     expect(wrapped.headers.get("Strict-Transport-Security")).toBe(
       "max-age=31536000; includeSubDomains"
@@ -90,7 +92,9 @@ describe("withSpaSecurityHeaders", () => {
     const wrapped = withSpaSecurityHeaders(original, "/workspaces");
     const csp = wrapped.headers.get("Content-Security-Policy");
 
-    expect(csp).toContain("script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com");
+    expect(csp).toContain(
+      "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com"
+    );
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
   });
@@ -134,9 +138,7 @@ describe("withSpaSecurityHeaders", () => {
     });
     const wrapped = withSpaSecurityHeaders(original, "/assets/index-Orfbpl8o.js");
 
-    expect(wrapped.headers.get("Cache-Control")).toBe(
-      "public, max-age=31536000, immutable"
-    );
+    expect(wrapped.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
   });
 
   it("sets no-cache for HTML pages", () => {
@@ -149,7 +151,9 @@ describe("withSpaSecurityHeaders", () => {
   });
 
   it("SPA CSP lets the app register its service worker and manifest", () => {
-    const csp = withSpaSecurityHeaders(new Response("<html></html>"), "/").headers.get("Content-Security-Policy");
+    const csp = withSpaSecurityHeaders(new Response("<html></html>"), "/").headers.get(
+      "Content-Security-Policy"
+    );
 
     expect(csp).toContain("worker-src 'self'");
     expect(csp).toContain("manifest-src 'self'");
@@ -157,7 +161,10 @@ describe("withSpaSecurityHeaders", () => {
 
   /** The service worker's own fetches of cover images are governed by connect-src, not img-src. */
   it("SPA CSP connect-src allows https://images.unsplash.com for the service worker's image cache", () => {
-    const csp = withSpaSecurityHeaders(new Response("<html></html>"), "/").headers.get("Content-Security-Policy") ?? "";
+    const csp =
+      withSpaSecurityHeaders(new Response("<html></html>"), "/").headers.get(
+        "Content-Security-Policy"
+      ) ?? "";
     const connectSrc = csp.split("; ").find((d) => d.startsWith("connect-src "));
 
     expect(connectSrc).toContain("https://images.unsplash.com");
@@ -168,10 +175,10 @@ describe("withSpaSecurityHeaders", () => {
     (path) => {
       const wrapped = withSpaSecurityHeaders(
         new Response("x", { headers: { "Content-Type": "application/octet-stream" } }),
-        path,
+        path
       );
       expect(wrapped.headers.get("Cache-Control")).toBe("no-cache");
-    },
+    }
   );
 
   it.each([
@@ -182,7 +189,7 @@ describe("withSpaSecurityHeaders", () => {
   ])("serves %s as %s", (path, contentType) => {
     const wrapped = withSpaSecurityHeaders(
       new Response("x", { headers: { "Content-Type": "application/octet-stream" } }),
-      path,
+      path
     );
     expect(wrapped.headers.get("Content-Type")).toBe(contentType);
   });
@@ -190,7 +197,7 @@ describe("withSpaSecurityHeaders", () => {
   it("leaves the SPA fallback for a missing service worker as HTML so registration fails cleanly", () => {
     const wrapped = withSpaSecurityHeaders(
       new Response("<html></html>", { headers: { "Content-Type": "text/html" } }),
-      "/sw.js",
+      "/sw.js"
     );
     expect(wrapped.headers.get("Content-Type")).toBe("text/html");
   });
@@ -201,7 +208,7 @@ describe("withSpaSecurityHeaders", () => {
         status: 200,
         headers: { "Content-Type": "text/html; charset=utf-8" },
       }),
-      "/assets/index-Gone1234.js",
+      "/assets/index-Gone1234.js"
     );
 
     expect(wrapped.status).toBe(404);

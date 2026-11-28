@@ -47,7 +47,7 @@ async function seedLabel(
   d1Instance: D1Database,
   pid: string,
   name: string,
-  color = "#3b82f6",
+  color = "#3b82f6"
 ): Promise<string> {
   const id = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);
@@ -65,12 +65,7 @@ function createApp() {
     currentProject: { id: projectId, workspaceId },
   });
 
-  app.post(
-    "/tasks/:taskId/labels",
-    auth,
-    validateBody(assignLabelSchema),
-    assignLabel,
-  );
+  app.post("/tasks/:taskId/labels", auth, validateBody(assignLabelSchema), assignLabel);
   app.delete("/tasks/:taskId/labels/:labelId", auth, unassignLabel);
 
   return app;
@@ -83,7 +78,7 @@ describe("assignLabel", () => {
 
     const res = await app.request(
       `/tasks/${taskId}/labels`,
-      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId }),
+      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId })
     );
 
     expect(res.status).toBe(201);
@@ -105,13 +100,13 @@ describe("assignLabel", () => {
     // First assignment
     await app.request(
       `/tasks/${taskId}/labels`,
-      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId }),
+      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId })
     );
 
     // Second assignment (same label)
     const res = await app.request(
       `/tasks/${taskId}/labels`,
-      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId }),
+      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId })
     );
 
     expect(res.status).toBe(200);
@@ -123,7 +118,7 @@ describe("assignLabel", () => {
 
     const res = await app.request(
       `/tasks/${taskId}/labels`,
-      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId: otherLabelId }),
+      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId: otherLabelId })
     );
 
     expect(res.status).toBe(400);
@@ -133,7 +128,7 @@ describe("assignLabel", () => {
     const app = createApp();
     const res = await app.request(
       `/tasks/${taskId}/labels`,
-      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId: "nonexistent" }),
+      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId: "nonexistent" })
     );
 
     expect(res.status).toBe(404);
@@ -145,12 +140,12 @@ describe("assignLabel", () => {
 
     await app.request(
       `/tasks/${taskId}/labels`,
-      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId }),
+      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId })
     );
 
     const activity = await d1
       .prepare(
-        "SELECT * FROM task_activity WHERE taskId = ? AND action = 'label_added' ORDER BY createdAt DESC LIMIT 1",
+        "SELECT * FROM task_activity WHERE taskId = ? AND action = 'label_added' ORDER BY createdAt DESC LIMIT 1"
       )
       .bind(taskId)
       .first();
@@ -168,13 +163,13 @@ describe("unassignLabel", () => {
     // Assign first
     await app.request(
       `/tasks/${taskId}/labels`,
-      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId }),
+      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId })
     );
 
     // Then unassign
     const res = await app.request(
       `/tasks/${taskId}/labels/${labelId}`,
-      jsonRequest("DELETE", `/tasks/${taskId}/labels/${labelId}`),
+      jsonRequest("DELETE", `/tasks/${taskId}/labels/${labelId}`)
     );
 
     expect(res.status).toBe(200);
@@ -193,7 +188,7 @@ describe("unassignLabel", () => {
     const app = createApp();
     const res = await app.request(
       `/tasks/${taskId}/labels/nonexistent`,
-      jsonRequest("DELETE", `/tasks/${taskId}/labels/nonexistent`),
+      jsonRequest("DELETE", `/tasks/${taskId}/labels/nonexistent`)
     );
 
     expect(res.status).toBe(404);
@@ -206,18 +201,18 @@ describe("unassignLabel", () => {
     // Assign
     await app.request(
       `/tasks/${taskId}/labels`,
-      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId }),
+      jsonRequest("POST", `/tasks/${taskId}/labels`, { labelId })
     );
 
     // Unassign
     await app.request(
       `/tasks/${taskId}/labels/${labelId}`,
-      jsonRequest("DELETE", `/tasks/${taskId}/labels/${labelId}`),
+      jsonRequest("DELETE", `/tasks/${taskId}/labels/${labelId}`)
     );
 
     const activity = await d1
       .prepare(
-        "SELECT * FROM task_activity WHERE taskId = ? AND action = 'label_removed' ORDER BY createdAt DESC LIMIT 1",
+        "SELECT * FROM task_activity WHERE taskId = ? AND action = 'label_removed' ORDER BY createdAt DESC LIMIT 1"
       )
       .bind(taskId)
       .first();

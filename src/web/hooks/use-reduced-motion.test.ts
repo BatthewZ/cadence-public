@@ -25,7 +25,7 @@ describe("usePrefersReducedMotion", () => {
         removeEventListener: (_event: string, handler: EventListener) => {
           listeners.get(_event)?.delete(handler);
         },
-      })),
+      }))
     );
   });
 

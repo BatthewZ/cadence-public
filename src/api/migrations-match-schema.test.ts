@@ -25,7 +25,7 @@ interface PragmaForeignKey {
 }
 
 const tables = Object.values<unknown>(schema).filter((value): value is SQLiteTable =>
-  is(value, SQLiteTable),
+  is(value, SQLiteTable)
 );
 
 function describeForeignKey(fk: {
@@ -98,6 +98,6 @@ describe("migrations build the foreign keys the schema declares", () => {
     "%s",
     async (tableName, table) => {
       expect(await migratedForeignKeys(d1, tableName)).toEqual(declaredForeignKeys(table));
-    },
+    }
   );
 });

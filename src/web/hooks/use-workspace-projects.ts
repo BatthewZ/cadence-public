@@ -35,16 +35,11 @@ export interface WorkspaceProjectSummary {
  * members see only the projects they are a direct member of. The backend
  * handles this visibility split, so callers can trust the returned list.
  */
-export function useWorkspaceProjects(
-  workspaceId: string,
-  options?: { enabled?: boolean },
-) {
+export function useWorkspaceProjects(workspaceId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.workspaces.projects(workspaceId),
     queryFn: () =>
-      api.get<{ projects: WorkspaceProjectSummary[] }>(
-        `/api/workspaces/${workspaceId}/projects`,
-      ),
+      api.get<{ projects: WorkspaceProjectSummary[] }>(`/api/workspaces/${workspaceId}/projects`),
     enabled: options?.enabled,
   });
 }

@@ -37,16 +37,7 @@
  */
 
 import { Hono } from "hono";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Mock better-auth's session resolver BEFORE importing the middleware that
 // consumes it — vitest hoists vi.mock, but keeping the declaration first
@@ -125,7 +116,7 @@ function installCookieAuthMock() {
             });
           }),
         },
-      }) as never,
+      }) as never
   );
 }
 
@@ -187,21 +178,18 @@ async function seedFeedToken(opts?: {
   userId?: string;
   workspaceId?: string;
 }): Promise<{ plaintext: string; id: string }> {
-  const { plaintext, hash } = await mintToken(
-    CALENDAR_FEED_TOKEN_PREFIX,
-    TEST_TOKEN_HASH_PEPPER,
-  );
+  const { plaintext, hash } = await mintToken(CALENDAR_FEED_TOKEN_PREFIX, TEST_TOKEN_HASH_PEPPER);
   const id = crypto.randomUUID();
   await d1
     .prepare(
-      "INSERT INTO calendar_feed_token (id, userId, workspaceId, tokenHash, createdAt, lastUsedAt) VALUES (?, ?, ?, ?, ?, NULL)",
+      "INSERT INTO calendar_feed_token (id, userId, workspaceId, tokenHash, createdAt, lastUsedAt) VALUES (?, ?, ?, ?, ?, NULL)"
     )
     .bind(
       id,
       opts?.userId ?? TEST_USER.id,
       opts?.workspaceId ?? workspaceId,
       hash,
-      Math.floor(Date.now() / 1000),
+      Math.floor(Date.now() / 1000)
     )
     .run();
   return { plaintext, id };
@@ -214,14 +202,11 @@ async function seedFeedToken(opts?: {
  * not just malformed bearers.
  */
 async function seedPat(): Promise<string> {
-  const { plaintext, hash } = await mintToken(
-    TOKEN_PREFIX,
-    TEST_TOKEN_HASH_PEPPER,
-  );
+  const { plaintext, hash } = await mintToken(TOKEN_PREFIX, TEST_TOKEN_HASH_PEPPER);
   await d1
     .prepare(
       `INSERT INTO api_token (id, userId, workspaceId, name, tokenHash, tokenPrefix, scopes, projectScope, projectIds, lastUsedAt, expiresAt, revokeAt, revokedAt, rotatedToId, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'all', NULL, NULL, NULL, NULL, NULL, NULL, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'all', NULL, NULL, NULL, NULL, NULL, NULL, ?)`
     )
     .bind(
       crypto.randomUUID(),
@@ -231,7 +216,7 @@ async function seedPat(): Promise<string> {
       hash,
       plaintext.slice(0, 12),
       JSON.stringify(["read:*", "write:*"]),
-      Math.floor(Date.now() / 1000),
+      Math.floor(Date.now() / 1000)
     )
     .run();
   return plaintext;
@@ -490,7 +475,7 @@ describe("GET /calendar/feed/:token — content", () => {
         d1
           .prepare(
             `INSERT INTO task (id, projectId, taskGroupId, title, completed, priority, assigneeId, dueDate, position, createdAt, updatedAt)
-             VALUES (?, ?, ?, ?, 0, 'none', ?, ?, ?, ?, ?)`,
+             VALUES (?, ?, ?, ?, 0, 'none', ?, ?, ?, ?, ?)`
           )
           .bind(
             crypto.randomUUID(),
@@ -501,8 +486,8 @@ describe("GET /calendar/feed/:token — content", () => {
             Math.floor((baseUtc + i * DAY_MS) / 1000),
             `bulk${String(i).padStart(6, "0")}`,
             nowSec,
-            nowSec,
-          ),
+            nowSec
+          )
       );
     }
     for (let i = 0; i < stmts.length; i += 100) {
@@ -537,13 +522,13 @@ describe("GET /calendar/feed/:token — verification", () => {
     // prefix check, hashes, then misses the DB.
     const { plaintext: unknownToken } = await mintToken(
       CALENDAR_FEED_TOKEN_PREFIX,
-      TEST_TOKEN_HASH_PEPPER,
+      TEST_TOKEN_HASH_PEPPER
     );
     const unknown = await app.request(feedRequest(unknownToken));
     // PAT prefix: the credential classes are disjoint — even a syntactically
     // perfect PAT must be cheap-rejected by the cdn_cal_ prefix gate.
     const pat = await app.request(
-      feedRequest(`${TOKEN_PREFIX}AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`),
+      feedRequest(`${TOKEN_PREFIX}AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`)
     );
 
     expect(garbage.status).toBe(404);
@@ -600,9 +585,7 @@ describe("GET /calendar/feed/:token — verification", () => {
 describe("calendar-feed management surface", () => {
   it("GET reports exists:false (with no-store) before any feed is minted", async () => {
     const app = buildApp();
-    const res = await app.request(
-      cookieRequest("GET", `/workspaces/${workspaceId}/calendar-feed`),
-    );
+    const res = await app.request(cookieRequest("GET", `/workspaces/${workspaceId}/calendar-feed`));
     expect(res.status).toBe(200);
     // Credential telemetry must never sit in a shared cache.
     expect(res.headers.get("Cache-Control")).toBe("no-store");
@@ -616,15 +599,15 @@ describe("calendar-feed management surface", () => {
   it("POST mints an absolute one-time URL and persists only the peppered hash", async () => {
     const app = buildApp();
     const res = await app.request(
-      cookieRequest("POST", `/workspaces/${workspaceId}/calendar-feed`),
+      cookieRequest("POST", `/workspaces/${workspaceId}/calendar-feed`)
     );
     expect(res.status).toBe(201);
     const { url } = await res.json<{ url: string }>();
     // 32 random bytes → 43 unpadded base64url chars.
     expect(url).toMatch(
       new RegExp(
-        `^http://localhost/api/calendar/feed/${CALENDAR_FEED_TOKEN_PREFIX}[A-Za-z0-9_-]{43}$`,
-      ),
+        `^http://localhost/api/calendar/feed/${CALENDAR_FEED_TOKEN_PREFIX}[A-Za-z0-9_-]{43}$`
+      )
     );
 
     const plaintext = url.slice(url.lastIndexOf("/") + 1);
@@ -635,16 +618,14 @@ describe("calendar-feed management surface", () => {
     expect(rows.results).toHaveLength(1);
     // Plaintext-once contract: only the HMAC lives in the DB.
     expect(rows.results[0].tokenHash).not.toContain(plaintext);
-    expect(rows.results[0].tokenHash).toBe(
-      await hashToken(plaintext, TEST_TOKEN_HASH_PEPPER),
-    );
+    expect(rows.results[0].tokenHash).toBe(await hashToken(plaintext, TEST_TOKEN_HASH_PEPPER));
 
     // The minted URL's token must actually open the feed (mint → verify
     // round-trip through the production hash path, mounted at /api in prod
     // and at / in this harness).
     const feedPath = new URL(url).pathname.replace(/^\/api/, "");
     const feedRes = await app.request(
-      new Request(`http://localhost${feedPath}`, { method: "GET" }),
+      new Request(`http://localhost${feedPath}`, { method: "GET" })
     );
     expect(feedRes.status).toBe(200);
   });
@@ -652,11 +633,11 @@ describe("calendar-feed management surface", () => {
   it("regenerating replaces the row and instantly kills the old URL", async () => {
     const app = buildApp();
     const first = await app.request(
-      cookieRequest("POST", `/workspaces/${workspaceId}/calendar-feed`),
+      cookieRequest("POST", `/workspaces/${workspaceId}/calendar-feed`)
     );
     const { url: urlA } = await first.json<{ url: string }>();
     const second = await app.request(
-      cookieRequest("POST", `/workspaces/${workspaceId}/calendar-feed`),
+      cookieRequest("POST", `/workspaces/${workspaceId}/calendar-feed`)
     );
     expect(second.status).toBe(201);
     const { url: urlB } = await second.json<{ url: string }>();
@@ -679,13 +660,13 @@ describe("calendar-feed management surface", () => {
   it("DELETE revokes the feed, is idempotent, and the old URL 404s", async () => {
     const app = buildApp();
     const minted = await app.request(
-      cookieRequest("POST", `/workspaces/${workspaceId}/calendar-feed`),
+      cookieRequest("POST", `/workspaces/${workspaceId}/calendar-feed`)
     );
     const { url } = await minted.json<{ url: string }>();
     const token = url.slice(url.lastIndexOf("/") + 1);
 
     const del = await app.request(
-      cookieRequest("DELETE", `/workspaces/${workspaceId}/calendar-feed`),
+      cookieRequest("DELETE", `/workspaces/${workspaceId}/calendar-feed`)
     );
     expect(del.status).toBe(200);
     expect(await del.json()).toEqual({ ok: true });
@@ -693,7 +674,7 @@ describe("calendar-feed management surface", () => {
     expect((await app.request(feedRequest(token))).status).toBe(404);
 
     const status = await app.request(
-      cookieRequest("GET", `/workspaces/${workspaceId}/calendar-feed`),
+      cookieRequest("GET", `/workspaces/${workspaceId}/calendar-feed`)
     );
     expect(await status.json()).toEqual({
       exists: false,
@@ -703,7 +684,7 @@ describe("calendar-feed management surface", () => {
 
     // Idempotent: a retried revoke must not error.
     const delAgain = await app.request(
-      cookieRequest("DELETE", `/workspaces/${workspaceId}/calendar-feed`),
+      cookieRequest("DELETE", `/workspaces/${workspaceId}/calendar-feed`)
     );
     expect(delAgain.status).toBe(200);
     expect(await delAgain.json()).toEqual({ ok: true });
@@ -712,13 +693,13 @@ describe("calendar-feed management surface", () => {
   it("GET reflects createdAt immediately and lastUsedAt after a feed fetch", async () => {
     const app = buildApp();
     const minted = await app.request(
-      cookieRequest("POST", `/workspaces/${workspaceId}/calendar-feed`),
+      cookieRequest("POST", `/workspaces/${workspaceId}/calendar-feed`)
     );
     const { url } = await minted.json<{ url: string }>();
     const token = url.slice(url.lastIndexOf("/") + 1);
 
     const before = await app.request(
-      cookieRequest("GET", `/workspaces/${workspaceId}/calendar-feed`),
+      cookieRequest("GET", `/workspaces/${workspaceId}/calendar-feed`)
     );
     const beforeBody = await before.json<{
       exists: boolean;
@@ -741,7 +722,7 @@ describe("calendar-feed management surface", () => {
     });
 
     const after = await app.request(
-      cookieRequest("GET", `/workspaces/${workspaceId}/calendar-feed`),
+      cookieRequest("GET", `/workspaces/${workspaceId}/calendar-feed`)
     );
     const afterBody = await after.json<{ lastUsedAt: string | null }>();
     expect(afterBody.lastUsedAt).toEqual(expect.any(String));
@@ -755,7 +736,7 @@ describe("calendar-feed management surface", () => {
     // out: a leaked API token must never mint a second credential class.
     for (const method of ["GET", "POST", "DELETE"] as const) {
       const res = await app.request(
-        patRequest(pat, method, `/workspaces/${workspaceId}/calendar-feed`),
+        patRequest(pat, method, `/workspaces/${workspaceId}/calendar-feed`)
       );
       expect(res.status).toBe(403);
       const body = await res.json<{ error: string }>();
@@ -768,11 +749,11 @@ describe("calendar-feed management surface", () => {
     // Cookie auth resolves to TEST_USER, who is not a member of the foreign
     // workspace — mint and status must both refuse.
     const get = await app.request(
-      cookieRequest("GET", `/workspaces/${foreignWorkspaceId}/calendar-feed`),
+      cookieRequest("GET", `/workspaces/${foreignWorkspaceId}/calendar-feed`)
     );
     expect(get.status).toBe(403);
     const post = await app.request(
-      cookieRequest("POST", `/workspaces/${foreignWorkspaceId}/calendar-feed`),
+      cookieRequest("POST", `/workspaces/${foreignWorkspaceId}/calendar-feed`)
     );
     expect(post.status).toBe(403);
   });
@@ -782,7 +763,7 @@ describe("calendar-feed management surface", () => {
     const res = await app.request(
       new Request(`http://localhost/workspaces/${workspaceId}/calendar-feed`, {
         method: "GET",
-      }),
+      })
     );
     expect(res.status).toBe(401);
   });

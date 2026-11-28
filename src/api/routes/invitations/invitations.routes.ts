@@ -1,9 +1,6 @@
 import { Hono } from "hono";
 
-import {
-  acceptInvitationSchema,
-  createInvitationSchema,
-} from "../../../shared/schemas/invitation";
+import { acceptInvitationSchema, createInvitationSchema } from "../../../shared/schemas/invitation";
 import type { AppEnv } from "../../env";
 import {
   rejectPatAuth,
@@ -91,7 +88,7 @@ app.post(
     keyFn: defaultRateLimitKey,
   }),
   validateBody(createInvitationSchema),
-  createInvitation,
+  createInvitation
 );
 
 // List pending invitations
@@ -99,7 +96,7 @@ app.get(
   "/workspaces/:workspaceId/invitations",
   requireAuth,
   requireWorkspaceRole("owner", "admin"),
-  listInvitations,
+  listInvitations
 );
 
 // Copy-link fallback for a pending invitation. Same role guard as the list it
@@ -123,7 +120,7 @@ app.get(
   requireAuth,
   rejectPatAuth("API tokens cannot retrieve invitation links"),
   requireWorkspaceRole("owner", "admin"),
-  getInvitationLink,
+  getInvitationLink
 );
 
 // Revoke invitation
@@ -131,7 +128,7 @@ app.delete(
   "/workspaces/:workspaceId/invitations/:id",
   requireAuth,
   requireWorkspaceRole("owner", "admin"),
-  revokeInvitation,
+  revokeInvitation
 );
 
 // List pending invitations for the authenticated user
@@ -158,14 +155,14 @@ app.get(
   "/invitations/pending",
   requireAuth,
   rejectPatAuth("API tokens cannot list invitations"),
-  listMyPendingInvitations,
+  listMyPendingInvitations
 );
 
 // Get invitation by token (public, no auth)
 app.get(
   "/invitations/:token",
   rateLimit({ max: 10, windowSeconds: 60, prefix: "invitation-lookup" }),
-  getInvitation,
+  getInvitation
 );
 
 // Accept invitation
@@ -199,9 +196,14 @@ app.post(
   "/invitations/accept",
   requireAuth,
   rejectPatAuth("API tokens cannot accept invitations"),
-  rateLimit({ max: 10, windowSeconds: 60, prefix: "invitation-accept", keyFn: defaultRateLimitKey }),
+  rateLimit({
+    max: 10,
+    windowSeconds: 60,
+    prefix: "invitation-accept",
+    keyFn: defaultRateLimitKey,
+  }),
   validateBody(acceptInvitationSchema),
-  acceptInvitation,
+  acceptInvitation
 );
 
 export default app;

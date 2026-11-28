@@ -32,42 +32,32 @@ interface TaskActivityFeedProps {
 const activityHeader = (
   <div className="flex items-center gap-r5">
     <History size={16} className="text-fg-muted" />
-    <Text variant="body-2" weight="semibold">Activity</Text>
+    <Text variant="body-2" weight="semibold">
+      Activity
+    </Text>
   </div>
 );
 
 export function TaskActivityFeed({ taskId, members }: TaskActivityFeedProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const {
-    data,
-    isLoading,
-    isError,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  } = useInfiniteQuery<ActivityPage>({
-    queryKey: queryKeys.tasks.activity(taskId),
-    queryFn: ({ pageParam }) => {
-      const params = new URLSearchParams({ limit: String(INITIAL_LIMIT + 1) });
-      if (pageParam) params.set("cursor", pageParam as string);
-      return api.get<ActivityPage>(
-        `/api/tasks/${taskId}/activity?${params.toString()}`,
-      );
-    },
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-    initialPageParam: undefined as string | undefined,
-  });
+  const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery<ActivityPage>({
+      queryKey: queryKeys.tasks.activity(taskId),
+      queryFn: ({ pageParam }) => {
+        const params = new URLSearchParams({ limit: String(INITIAL_LIMIT + 1) });
+        if (pageParam) params.set("cursor", pageParam as string);
+        return api.get<ActivityPage>(`/api/tasks/${taskId}/activity?${params.toString()}`);
+      },
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+      initialPageParam: undefined as string | undefined,
+    });
 
-  const allActivities = useMemo(
-    () => data?.pages.flatMap((p) => p.activities) ?? [],
-    [data],
-  );
+  const allActivities = useMemo(() => data?.pages.flatMap((p) => p.activities) ?? [], [data]);
 
   const canCollapse = allActivities.length > INITIAL_LIMIT;
-  const visibleActivities = canCollapse && !expanded
-    ? allActivities.slice(0, INITIAL_LIMIT)
-    : allActivities;
+  const visibleActivities =
+    canCollapse && !expanded ? allActivities.slice(0, INITIAL_LIMIT) : allActivities;
 
   if (isLoading) {
     return (
@@ -90,7 +80,9 @@ export function TaskActivityFeed({ taskId, members }: TaskActivityFeedProps) {
     return (
       <Stack gap="r4">
         {activityHeader}
-        <Text variant="body-2" color="secondary">Failed to load activity.</Text>
+        <Text variant="body-2" color="secondary">
+          Failed to load activity.
+        </Text>
       </Stack>
     );
   }
@@ -100,7 +92,9 @@ export function TaskActivityFeed({ taskId, members }: TaskActivityFeedProps) {
       {activityHeader}
 
       {allActivities.length === 0 ? (
-        <Text variant="body-3" color="muted">No activity yet</Text>
+        <Text variant="body-3" color="muted">
+          No activity yet
+        </Text>
       ) : (
         <div className="relative">
           {/* Timeline connector line */}
@@ -121,9 +115,7 @@ export function TaskActivityFeed({ taskId, members }: TaskActivityFeedProps) {
                   </div>
                   <div className="min-w-0 flex-1 pt-px">
                     <Text variant="body-3">
-                      <span className="font-semibold">
-                        {activity.actorName ?? "Someone"}
-                      </span>
+                      <span className="font-semibold">{activity.actorName ?? "Someone"}</span>
                       {tokenAttribution && (
                         <>
                           {" "}
@@ -156,7 +148,8 @@ export function TaskActivityFeed({ taskId, members }: TaskActivityFeedProps) {
               ) : (
                 <>
                   <ChevronDown size={14} />
-                  Show {allActivities.length - INITIAL_LIMIT} more {allActivities.length - INITIAL_LIMIT === 1 ? "activity" : "activities"}
+                  Show {allActivities.length - INITIAL_LIMIT} more{" "}
+                  {allActivities.length - INITIAL_LIMIT === 1 ? "activity" : "activities"}
                 </>
               )}
             </button>

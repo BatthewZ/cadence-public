@@ -10,9 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mockRequestPasswordReset = vi.fn();
 
 vi.mock("@/web/lib/auth/auth-client", () => ({
-  requestPasswordReset: (
-    ...args: unknown[]
-  ): Promise<{ error: null | { message?: string } }> =>
+  requestPasswordReset: (...args: unknown[]): Promise<{ error: null | { message?: string } }> =>
     mockRequestPasswordReset(...args) as Promise<{
       error: null | { message?: string };
     }>,
@@ -33,7 +31,7 @@ function renderForgotPassword() {
   render(
     <MemoryRouter>
       <ForgotPassword />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
   return { user };
 }
@@ -62,13 +60,9 @@ describe("ForgotPassword", () => {
   it("renders the heading, email input, and submit button", () => {
     renderForgotPassword();
 
-    expect(
-      screen.getByRole("heading", { name: "Forgot Password" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Forgot Password" })).toBeInTheDocument();
     expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Send Reset Link" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send Reset Link" })).toBeInTheDocument();
   });
 
   it("renders 'Back to Sign In' link pointing to /login", () => {
@@ -89,9 +83,7 @@ describe("ForgotPassword", () => {
     await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Please enter a valid email address"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Please enter a valid email address")).toBeInTheDocument();
     });
 
     expect(mockRequestPasswordReset).not.toHaveBeenCalled();
@@ -104,9 +96,7 @@ describe("ForgotPassword", () => {
     await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Please enter a valid email address"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Please enter a valid email address")).toBeInTheDocument();
     });
 
     expect(mockRequestPasswordReset).not.toHaveBeenCalled();
@@ -118,17 +108,13 @@ describe("ForgotPassword", () => {
     await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Please enter a valid email address"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Please enter a valid email address")).toBeInTheDocument();
     });
 
     await user.type(screen.getByLabelText("Email"), "a");
 
     await waitFor(() => {
-      expect(
-        screen.queryByText("Please enter a valid email address"),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Please enter a valid email address")).not.toBeInTheDocument();
     });
   });
 
@@ -151,9 +137,7 @@ describe("ForgotPassword", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          "If an account exists with that email, we've sent a password reset link.",
-        ),
+        screen.getByText("If an account exists with that email, we've sent a password reset link.")
       ).toBeInTheDocument();
     });
   });
@@ -166,9 +150,7 @@ describe("ForgotPassword", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          "If an account exists with that email, we've sent a password reset link.",
-        ),
+        screen.getByText("If an account exists with that email, we've sent a password reset link.")
       ).toBeInTheDocument();
     });
 
@@ -204,9 +186,7 @@ describe("ForgotPassword", () => {
     await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Failed to send reset link"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Failed to send reset link")).toBeInTheDocument();
     });
   });
 
@@ -218,9 +198,7 @@ describe("ForgotPassword", () => {
     await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Network error. Please try again."),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Network error. Please try again.")).toBeInTheDocument();
     });
   });
 
@@ -234,7 +212,7 @@ describe("ForgotPassword", () => {
       () =>
         new Promise<{ error: null }>((resolve) => {
           resolveReset = resolve;
-        }),
+        })
     );
 
     const { user } = renderForgotPassword();
@@ -243,18 +221,14 @@ describe("ForgotPassword", () => {
     await user.click(screen.getByRole("button", { name: "Send Reset Link" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Sending..." }),
-      ).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Sending..." })).toBeDisabled();
     });
 
     resolveReset({ error: null });
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          "If an account exists with that email, we've sent a password reset link.",
-        ),
+        screen.getByText("If an account exists with that email, we've sent a password reset link.")
       ).toBeInTheDocument();
     });
   });

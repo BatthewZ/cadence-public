@@ -13,6 +13,4 @@ export const listNotificationsQuerySchema = z.object({
   cursor: z.string().optional(),
 });
 
-export type ListNotificationsQuery = z.infer<
-  typeof listNotificationsQuerySchema
->;
+export type ListNotificationsQuery = z.infer<typeof listNotificationsQuerySchema>;

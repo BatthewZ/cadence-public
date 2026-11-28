@@ -30,9 +30,7 @@ export function IconGrid({ value, onChange, tooltipPortal }: IconGridProps) {
     if (!search) return CURATED_ICONS;
     const lower = search.toLowerCase();
     return CURATED_ICONS.filter(
-      (name) =>
-        name.includes(lower) ||
-        ICON_TAGS[name].some((tag) => tag.includes(lower))
+      (name) => name.includes(lower) || ICON_TAGS[name].some((tag) => tag.includes(lower))
     );
   }, [search]);
 
@@ -92,9 +90,7 @@ export function IconGrid({ value, onChange, tooltipPortal }: IconGridProps) {
       </div>
 
       {filtered.length === 0 && (
-        <p className="text-body-3 text-fg-muted text-center py-r6">
-          No icons match your search.
-        </p>
+        <p className="text-body-3 text-fg-muted text-center py-r6">No icons match your search.</p>
       )}
     </div>
   );
@@ -119,28 +115,29 @@ type IconPickerProps = {
  * Icon picker with search, grid selection, and optional compact popover mode.
  * Uses the curated icon set defined in CURATED_ICONS.
  */
-export const IconPicker = forwardRef<HTMLDivElement, IconPickerProps>(
-  function IconPicker({ value, onChange, compact = false, portal, className, ...props }, ref) {
-    if (compact) {
-      return (
-        <CompactIconPicker
-          ref={ref}
-          value={value}
-          onChange={onChange}
-          portal={portal}
-          className={className}
-          {...props}
-        />
-      );
-    }
-
+export const IconPicker = forwardRef<HTMLDivElement, IconPickerProps>(function IconPicker(
+  { value, onChange, compact = false, portal, className, ...props },
+  ref
+) {
+  if (compact) {
     return (
-      <div ref={ref} className={cn("w-full", className)} {...props}>
-        <IconGrid value={value} onChange={onChange} tooltipPortal={portal} />
-      </div>
+      <CompactIconPicker
+        ref={ref}
+        value={value}
+        onChange={onChange}
+        portal={portal}
+        className={className}
+        {...props}
+      />
     );
   }
-);
+
+  return (
+    <div ref={ref} className={cn("w-full", className)} {...props}>
+      <IconGrid value={value} onChange={onChange} tooltipPortal={portal} />
+    </div>
+  );
+});
 
 /* ------------------------------------------------------------------ */
 /*  Compact Icon Picker (popover mode)                                */
@@ -176,23 +173,20 @@ const CompactIconPicker = forwardRef<HTMLDivElement, CompactIconPickerProps>(
                 "text-body-2 cursor-pointer duration-fast",
                 "hover:bg-surface-2 hover:border-fg-muted",
                 "focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-0 focus:border-border-focus",
-                "active:bg-surface-3 active:scale-[0.98]",
+                "active:bg-surface-3 active:scale-[0.98]"
               )}
             >
-              <span className={cn(
-                "inline-flex items-center justify-center shrink-0",
-                value ? "text-fg-primary" : "text-fg-muted",
-              )}>
-                {value ? (
-                  <IconDisplay name={value} size={18} />
-                ) : (
-                  <Image size={18} />
+              <span
+                className={cn(
+                  "inline-flex items-center justify-center shrink-0",
+                  value ? "text-fg-primary" : "text-fg-muted"
                 )}
+              >
+                {value ? <IconDisplay name={value} size={18} /> : <Image size={18} />}
               </span>
-              <span className={cn(
-                "whitespace-nowrap",
-                value ? "text-fg-primary" : "text-fg-muted",
-              )}>
+              <span
+                className={cn("whitespace-nowrap", value ? "text-fg-primary" : "text-fg-muted")}
+              >
                 {value ?? "Choose icon"}
               </span>
             </button>

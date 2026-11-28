@@ -14,10 +14,17 @@ vi.mock("@/web/lib/offline/send-write", async (importOriginal) => {
 });
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
-    api: Object.assign(vi.fn(), { get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() }),
+    api: Object.assign(vi.fn(), {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      patch: vi.fn(),
+      delete: vi.fn(),
+    }),
   };
 });
 
@@ -27,7 +34,12 @@ vi.mock("@/web/lib/auth/auth-client", () => ({
   useSession: () => ({ data: { user: { id: "user-1", name: "Ada", image: null } } }),
 }));
 
-import { ProjectProvider, type Task, type TaskGroup, useProject } from "@/web/contexts/ProjectContext";
+import {
+  ProjectProvider,
+  type Task,
+  type TaskGroup,
+  useProject,
+} from "@/web/contexts/ProjectContext";
 import { api, ApiError } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 import type { TaskDetail } from "@/web/pages/TaskDetail/types";
@@ -38,13 +50,22 @@ const mockGet = api.get as unknown as Mock<(url: string) => Promise<unknown>>;
 const mockPost = api.post as unknown as Mock<(url: string, body: unknown) => Promise<unknown>>;
 
 const GROUP: TaskGroup = { id: "g-1", name: "To do", isCompletionGroup: false, position: "a0" };
-const EXISTING: Task = { id: "t-1", title: "Existing", taskGroupId: "g-1", priority: "none", completed: false, position: "a0" };
+const EXISTING: Task = {
+  id: "t-1",
+  title: "Existing",
+  taskGroupId: "g-1",
+  priority: "none",
+  completed: false,
+  position: "a0",
+};
 
 let autoAssignCreator = false;
 
 function respond(url: string): Promise<unknown> {
   if (url === "/api/projects/p-1") {
-    return Promise.resolve({ project: { id: "p-1", name: "Launch", workspaceId: "ws-1", autoAssignCreator } });
+    return Promise.resolve({
+      project: { id: "p-1", name: "Launch", workspaceId: "ws-1", autoAssignCreator },
+    });
   }
   if (url === "/api/projects/p-1/tasks") return Promise.resolve({ tasks: [EXISTING] });
   if (url === "/api/projects/p-1/task-groups") return Promise.resolve({ taskGroups: [GROUP] });
@@ -80,7 +101,7 @@ function renderForm() {
           <LocationSpy />
         </ProjectProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -111,7 +132,12 @@ afterEach(() => {
 describe("AddTaskInline — optimistic create", () => {
   it("shows the task before the server answers, then adopts the server's row", async () => {
     let answer: (value: { task: Task }) => void = () => {};
-    mockPost.mockImplementation(() => new Promise((resolve) => { answer = resolve; }));
+    mockPost.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          answer = resolve;
+        })
+    );
     renderForm();
     await screen.findByText(/Existing/);
 
@@ -127,9 +153,21 @@ describe("AddTaskInline — optimistic create", () => {
     const optimisticPosition = card.textContent?.split(" · ")[1];
     expect(optimisticPosition && optimisticPosition > EXISTING.position).toBe(true);
 
-    answer({ task: { id: createdId(), title: "Write the brief", taskGroupId: "g-1", priority: "none", completed: false, position: "zz", assigneeName: "Server" } });
+    answer({
+      task: {
+        id: createdId(),
+        title: "Write the brief",
+        taskGroupId: "g-1",
+        priority: "none",
+        completed: false,
+        position: "zz",
+        assigneeName: "Server",
+      },
+    });
 
-    await waitFor(() => expect(screen.getByTestId("card-Write the brief").textContent).toContain("zz · Server"));
+    await waitFor(() =>
+      expect(screen.getByTestId("card-Write the brief").textContent).toContain("zz · Server")
+    );
     expect(screen.getAllByTestId("card-Write the brief")).toHaveLength(1);
     expect(screen.getByTestId("search").textContent).toBe(`?task=${createdId()}`);
   });
@@ -153,7 +191,9 @@ describe("AddTaskInline — optimistic create", () => {
     const input = await submit("Not allowed");
 
     await waitFor(() => expect(screen.queryByTestId("card-Not allowed")).toBeNull());
-    expect(toastMock).toHaveBeenCalledWith("You can't add tasks to this project", { variant: "error" });
+    expect(toastMock).toHaveBeenCalledWith("You can't add tasks to this project", {
+      variant: "error",
+    });
     expect(input.value).toBe("Not allowed");
   });
 
@@ -172,6 +212,12 @@ describe("AddTaskInline — optimistic create", () => {
     expect(card.textContent).toContain("unassigned");
     expect(mockPost).not.toHaveBeenCalled();
     const detail = qc.getQueryData<{ task: TaskDetail }>(queryKeys.tasks.detail(id));
-    expect(detail?.task).toMatchObject({ id, title: "Offline idea", subtasks: [], commentCount: 0, projectId: "p-1" });
+    expect(detail?.task).toMatchObject({
+      id,
+      title: "Offline idea",
+      subtasks: [],
+      commentCount: 0,
+      projectId: "p-1",
+    });
   });
 });

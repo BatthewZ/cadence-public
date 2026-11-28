@@ -6,7 +6,10 @@ import type { WriteRequest } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 
 /** `POST /api/tasks/:id/complete` (or `/uncomplete`), named for the sync status. */
-export function taskCompletionWrite(task: { id: string; title: string }, complete: boolean): WriteRequest {
+export function taskCompletionWrite(
+  task: { id: string; title: string },
+  complete: boolean
+): WriteRequest {
   return {
     method: "POST",
     path: `/api/tasks/${task.id}/${complete ? "complete" : "uncomplete"}`,
@@ -28,7 +31,15 @@ export function completionFields(task: CompletionFields): CompletionFields {
 }
 
 const byPosition = (a: { position: string; id: string }, b: { position: string; id: string }) =>
-  a.position < b.position ? -1 : a.position > b.position ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+  a.position < b.position
+    ? -1
+    : a.position > b.position
+      ? 1
+      : a.id < b.id
+        ? -1
+        : a.id > b.id
+          ? 1
+          : 0;
 
 /**
  * What completing (or reopening) the task changes, as the server will set it
@@ -45,14 +56,16 @@ export function completionChange(
   projectId: string | undefined,
   taskId: string,
   complete: boolean,
-  now: Date = new Date(),
+  now: Date = new Date()
 ): Partial<CompletionFields> {
   const change: Partial<CompletionFields> = {
     completed: complete,
     completedAt: complete ? now.toISOString() : null,
   };
   if (!projectId) return change;
-  const groups = qc.getQueryData<{ taskGroups: TaskGroup[] }>(queryKeys.projects.taskGroups(projectId))?.taskGroups;
+  const groups = qc.getQueryData<{ taskGroups: TaskGroup[] }>(
+    queryKeys.projects.taskGroups(projectId)
+  )?.taskGroups;
   const tasks = qc.getQueryData<{ tasks: Task[] }>(queryKeys.projects.tasks(projectId))?.tasks;
   const task = tasks?.find((t) => t.id === taskId);
   if (!groups || !tasks || !task) return change;
@@ -66,6 +79,12 @@ export function completionChange(
       : undefined;
   if (!target || target.id === task.taskGroupId) return change;
 
-  const first = tasks.filter((t) => t.taskGroupId === target.id && t.id !== taskId).sort(byPosition)[0];
-  return { ...change, taskGroupId: target.id, position: generateKeyBetween(null, first?.position ?? null) };
+  const first = tasks
+    .filter((t) => t.taskGroupId === target.id && t.id !== taskId)
+    .sort(byPosition)[0];
+  return {
+    ...change,
+    taskGroupId: target.id,
+    position: generateKeyBetween(null, first?.position ?? null),
+  };
 }

@@ -1,4 +1,4 @@
-import { and,desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import type { Context } from "hono";
 
 import type { Database } from "../../../db";
@@ -36,17 +36,12 @@ import {
 async function projectBelongsToWorkspace(
   db: Database,
   projectId: string,
-  workspaceId: string,
+  workspaceId: string
 ): Promise<boolean> {
   const [proj] = await db
     .select({ id: project.id })
     .from(project)
-    .where(
-      and(
-        eq(project.id, projectId),
-        eq(project.workspaceId, workspaceId),
-      ),
-    )
+    .where(and(eq(project.id, projectId), eq(project.workspaceId, workspaceId)))
     .limit(1);
   return !!proj;
 }
@@ -84,7 +79,7 @@ async function projectBelongsToWorkspace(
 function enforceTokenWebhookBinding(
   c: Context<AppEnv>,
   workspaceId: string,
-  projectId: string | null,
+  projectId: string | null
 ): Response | null {
   if (projectId === null) return enforceTokenWorkspaceWideAccess(c);
   return enforceTokenProjectBinding(c, { id: projectId, workspaceId });
@@ -145,7 +140,11 @@ export async function createWebhook(c: Context<AppEnv>) {
     .where(eq(webhook.workspaceId, workspaceId));
 
   if (existing.length >= MAX_WEBHOOKS_PER_WORKSPACE) {
-    return errorResponse(c, `Maximum of ${MAX_WEBHOOKS_PER_WORKSPACE} webhooks per workspace exceeded`, 409);
+    return errorResponse(
+      c,
+      `Maximum of ${MAX_WEBHOOKS_PER_WORKSPACE} webhooks per workspace exceeded`,
+      409
+    );
   }
 
   const id = crypto.randomUUID();
@@ -212,10 +211,7 @@ export async function listWebhooks(c: Context<AppEnv>) {
     .select()
     .from(webhook)
     .where(
-      and(
-        eq(webhook.workspaceId, workspaceId),
-        tokenProjectScopeFilter(c, webhook.projectId),
-      ),
+      and(eq(webhook.workspaceId, workspaceId), tokenProjectScopeFilter(c, webhook.projectId))
     );
 
   return c.json({ webhooks: rows.map(omitSecret) });
@@ -235,12 +231,7 @@ export async function getWebhook(c: Context<AppEnv>) {
     db
       .select()
       .from(webhook)
-      .where(
-        and(
-          eq(webhook.id, webhookId),
-          eq(webhook.workspaceId, workspaceId),
-        ),
-      )
+      .where(and(eq(webhook.id, webhookId), eq(webhook.workspaceId, workspaceId)))
       .limit(1),
     db
       .select()
@@ -276,12 +267,7 @@ export async function updateWebhook(c: Context<AppEnv>) {
   const [existing] = await db
     .select()
     .from(webhook)
-    .where(
-      and(
-        eq(webhook.id, webhookId),
-        eq(webhook.workspaceId, workspaceId),
-      ),
-    )
+    .where(and(eq(webhook.id, webhookId), eq(webhook.workspaceId, workspaceId)))
     .limit(1);
 
   if (!existing) {
@@ -301,8 +287,7 @@ export async function updateWebhook(c: Context<AppEnv>) {
     }
   }
 
-  const effectiveProjectId =
-    body.projectId !== undefined ? body.projectId : existing.projectId;
+  const effectiveProjectId = body.projectId !== undefined ? body.projectId : existing.projectId;
 
   // PAT binding on the webhook's NEW target. Checked separately from the
   // current target because the two differ precisely in the attack that
@@ -324,12 +309,13 @@ export async function updateWebhook(c: Context<AppEnv>) {
 
   // Cross-validate: project-scoped webhooks cannot have workspace-scoped events
   if (effectiveProjectId) {
-    const effectiveEvents: WebhookEventType[] = body.events ?? (JSON.parse(existing.events) as WebhookEventType[]);
+    const effectiveEvents: WebhookEventType[] =
+      body.events ?? (JSON.parse(existing.events) as WebhookEventType[]);
     if (effectiveEvents.some((e) => WORKSPACE_SCOPED_EVENTS.has(e))) {
       return errorResponse(
         c,
         "Project-scoped webhooks cannot subscribe to workspace or invitation events",
-        400,
+        400
       );
     }
   }
@@ -391,12 +377,7 @@ export async function deleteWebhook(c: Context<AppEnv>) {
   const [existing] = await db
     .select({ id: webhook.id, projectId: webhook.projectId })
     .from(webhook)
-    .where(
-      and(
-        eq(webhook.id, webhookId),
-        eq(webhook.workspaceId, workspaceId),
-      ),
-    )
+    .where(and(eq(webhook.id, webhookId), eq(webhook.workspaceId, workspaceId)))
     .limit(1);
 
   if (!existing) {
@@ -425,12 +406,7 @@ export async function testWebhook(c: Context<AppEnv>) {
   const [row] = await db
     .select()
     .from(webhook)
-    .where(
-      and(
-        eq(webhook.id, webhookId),
-        eq(webhook.workspaceId, workspaceId),
-      ),
-    )
+    .where(and(eq(webhook.id, webhookId), eq(webhook.workspaceId, workspaceId)))
     .limit(1);
 
   if (!row) {

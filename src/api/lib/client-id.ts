@@ -16,7 +16,7 @@ import { errorResponse } from "./error-response";
 export async function clientIdConflict(
   c: Context<AppEnv>,
   table: SQLiteTable & { id: SQLiteColumn },
-  id: string | undefined,
+  id: string | undefined
 ): Promise<Response | null> {
   if (id === undefined) return null;
   const [existing] = await c

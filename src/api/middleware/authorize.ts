@@ -67,7 +67,7 @@ export type TokenBoundProject = { id: string; workspaceId: string };
  */
 export function tokenAllowsProject(
   token: ApiToken | null | undefined,
-  proj: TokenBoundProject,
+  proj: TokenBoundProject
 ): boolean {
   if (!token) return true;
   if (token.workspaceId !== proj.workspaceId) return false;
@@ -82,10 +82,7 @@ export function tokenAllowsProject(
  * hold a project must go through `tokenAllowsProject` so they cannot
  * accidentally enforce only the workspace half and skip project selection.
  */
-function tokenAllowsWorkspace(
-  token: ApiToken | null | undefined,
-  workspaceId: string,
-): boolean {
+function tokenAllowsWorkspace(token: ApiToken | null | undefined, workspaceId: string): boolean {
   if (!token) return true;
   return token.workspaceId === workspaceId;
 }
@@ -116,7 +113,7 @@ function tokenAllowsWorkspace(
  */
 export function enforceTokenProjectBinding(
   c: Context<AppEnv>,
-  proj: TokenBoundProject,
+  proj: TokenBoundProject
 ): Response | null {
   if (tokenAllowsProject(c.get("apiToken"), proj)) return null;
   return errorResponse(c, "Forbidden", 403);
@@ -172,9 +169,7 @@ export function enforceTokenProjectBinding(
  * is not a hypothetical, it is exactly the shape of the `/notifications` bug
  * this policy was extended to cover.
  */
-export function tokenProjectAllowList(
-  token: ApiToken | null | undefined,
-): string[] | null {
+export function tokenProjectAllowList(token: ApiToken | null | undefined): string[] | null {
   if (!token) return null;
   if (token.projectScope === "all") return null;
   if (token.projectScope === "selected") return parseProjectIds(token.projectIds);
@@ -210,7 +205,7 @@ export function tokenProjectAllowList(
  */
 export function tokenProjectScopeFilter(
   c: Context<AppEnv>,
-  projectIdColumn: Column<ColumnBaseConfig<"string", string>>,
+  projectIdColumn: Column<ColumnBaseConfig<"string", string>>
 ): SQL | undefined {
   const allowed = tokenProjectAllowList(c.get("apiToken"));
   if (allowed === null) return undefined;
@@ -238,7 +233,7 @@ export function tokenProjectScopeFilter(
  */
 export function tokenWorkspaceScopeFilter(
   c: Context<AppEnv>,
-  workspaceIdColumn: Column<ColumnBaseConfig<"string", string>>,
+  workspaceIdColumn: Column<ColumnBaseConfig<"string", string>>
 ): SQL | undefined {
   const token = c.get("apiToken");
   if (!token) return undefined;
@@ -264,9 +259,7 @@ export function tokenWorkspaceScopeFilter(
  * keeps the failure mode of a mis-scoped token obvious (empty results) rather
  * than indistinguishable from a permissions misconfiguration.
  */
-export function enforceTokenWorkspaceWideAccess(
-  c: Context<AppEnv>,
-): Response | null {
+export function enforceTokenWorkspaceWideAccess(c: Context<AppEnv>): Response | null {
   if (tokenProjectAllowList(c.get("apiToken")) === null) return null;
   return errorResponse(c, "Forbidden", 403);
 }
@@ -275,20 +268,11 @@ export function enforceTokenWorkspaceWideAccess(
 // Shared helpers (keep middleware functions DRY)
 // ---------------------------------------------------------------------------
 
-async function lookupWorkspaceMembership(
-  db: Database,
-  workspaceId: string,
-  userId: string,
-) {
+async function lookupWorkspaceMembership(db: Database, workspaceId: string, userId: string) {
   const [membership] = await db
     .select()
     .from(workspaceMember)
-    .where(
-      and(
-        eq(workspaceMember.workspaceId, workspaceId),
-        eq(workspaceMember.userId, userId),
-      ),
-    )
+    .where(and(eq(workspaceMember.workspaceId, workspaceId), eq(workspaceMember.userId, userId)))
     .limit(1);
 
   return membership ?? null;
@@ -301,7 +285,7 @@ async function lookupWorkspaceMembership(
 async function getOrResolveWorkspaceMembership(
   c: Context<AppEnv>,
   workspaceId: string,
-  userId: string,
+  userId: string
 ): Promise<{ id: string; workspaceId: string; role: WorkspaceRole } | null> {
   const cached = c.get("workspaceMembership");
   if (cached && cached.workspaceId === workspaceId) return cached;
@@ -330,7 +314,7 @@ async function getOrResolveWorkspaceMembership(
 async function getOrResolveProjectAccess(
   c: Context<AppEnv>,
   projectId: string,
-  userId: string,
+  userId: string
 ): Promise<
   | { role: ProjectRole; source: "workspace" | "project"; project: TokenBoundProject }
   | "not_found"
@@ -414,9 +398,7 @@ export function requireWorkspaceMember(): MiddlewareHandler<AppEnv> {
  * selection. Handlers behind it that touch project-owned rows must apply the
  * project half themselves.
  */
-export function requireWorkspaceRole(
-  ...allowedRoles: string[]
-): MiddlewareHandler<AppEnv> {
+export function requireWorkspaceRole(...allowedRoles: string[]): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const user = c.get("user");
     if (!user) return errorResponse(c, "Unauthorized", 401);
@@ -486,8 +468,7 @@ export function requireProjectCreation(): MiddlewareHandler<AppEnv> {
     const user = c.get("user");
     if (!user) return errorResponse(c, "Unauthorized", 401);
 
-    const workspaceId =
-      c.req.param("workspaceId") ?? c.get("currentProject")?.workspaceId;
+    const workspaceId = c.req.param("workspaceId") ?? c.get("currentProject")?.workspaceId;
 
     // Not a client error: it means this middleware was mounted on a route that
     // supplies neither a `workspaceId` parameter nor a prior project-access
@@ -495,7 +476,7 @@ export function requireProjectCreation(): MiddlewareHandler<AppEnv> {
     // policy check that had nothing to check.
     if (!workspaceId) {
       throw new Error(
-        "requireProjectCreation: no workspaceId parameter and no resolved project on the request — mount it after a project-access guard, or on a route with a :workspaceId parameter",
+        "requireProjectCreation: no workspaceId parameter and no resolved project on the request — mount it after a project-access guard, or on a route with a :workspaceId parameter"
       );
     }
 
@@ -515,7 +496,7 @@ export function requireProjectCreation(): MiddlewareHandler<AppEnv> {
       return errorResponse(
         c,
         "Only workspace owners and admins can create projects in this workspace",
-        403,
+        403
       );
     }
 
@@ -562,9 +543,7 @@ export function requireProjectAccess(): MiddlewareHandler<AppEnv> {
  * Caches the result in context (`projectAccess` and `currentProject`) so
  * downstream middleware or handlers can skip re-querying via `c.get(...)`.
  */
-export function requireProjectRole(
-  ...allowedRoles: string[]
-): MiddlewareHandler<AppEnv> {
+export function requireProjectRole(...allowedRoles: string[]): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const user = c.get("user");
     if (!user) return errorResponse(c, "Unauthorized", 401);
@@ -639,9 +618,7 @@ export function requireTaskAccess(): MiddlewareHandler<AppEnv> {
  *
  * Caches `projectAccess` and `currentProject` in context for downstream use.
  */
-export function requireTaskRole(
-  ...allowedRoles: string[]
-): MiddlewareHandler<AppEnv> {
+export function requireTaskRole(...allowedRoles: string[]): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const user = c.get("user");
     if (!user) {
@@ -709,7 +686,7 @@ export function requireTaskRole(
  *   Optional, and defaulted, so existing mounts and their tests are unchanged.
  */
 export function rejectPatAuth(
-  message = "API tokens cannot manage other tokens",
+  message = "API tokens cannot manage other tokens"
 ): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     if (c.get("apiToken")) {
@@ -787,9 +764,7 @@ export type WriteScopeOptions = { resource: string; allowDelete?: boolean };
  * is a guaranteed bug surface. One mount per resource is auditable in a
  * single grep.
  */
-export function requireWriteScopeForResource(
-  opts: WriteScopeOptions,
-): MiddlewareHandler<AppEnv> {
+export function requireWriteScopeForResource(opts: WriteScopeOptions): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const token = c.get("apiToken");
     if (!token) {
@@ -827,9 +802,7 @@ export function requireWriteScopeForResource(
  * into two factories keeps each mount focused and makes it explicit at
  * the call site that the route group intends to enforce BOTH directions.
  */
-export function requireReadScopeForResource(
-  resource: string,
-): MiddlewareHandler<AppEnv> {
+export function requireReadScopeForResource(resource: string): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const token = c.get("apiToken");
     if (!token) {

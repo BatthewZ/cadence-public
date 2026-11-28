@@ -82,11 +82,7 @@ export async function exportProjectCsv(c: Context<AppEnv>) {
   const db = c.get("db");
 
   const [projectRows, taskRows, labelRows] = await db.batch([
-    db
-      .select({ name: project.name })
-      .from(project)
-      .where(eq(project.id, projectId))
-      .limit(1),
+    db.select({ name: project.name }).from(project).where(eq(project.id, projectId)).limit(1),
     db
       .select({
         id: task.id,
@@ -144,7 +140,7 @@ export async function exportProjectCsv(c: Context<AppEnv>) {
       labels: labelsByTask.get(t.id)?.join(";") ?? "",
       completed: t.completed, // boolean → "true"/"false", exempt from hardening
       cost: t.cost === null ? null : formatCostCents(t.cost),
-    })),
+    }))
   );
 
   // Same header-injection sanitation as the uploads serve endpoint, plus path

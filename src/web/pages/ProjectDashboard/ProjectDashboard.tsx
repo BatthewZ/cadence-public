@@ -33,7 +33,7 @@ export default function ProjectDashboard() {
 
   const allActivities = useMemo(
     () => activityQuery.data?.pages.flatMap((p) => p.activities) ?? [],
-    [activityQuery.data],
+    [activityQuery.data]
   );
 
   const activityRows = useMemo(
@@ -43,7 +43,7 @@ export default function ProjectDashboard() {
         activity,
         message: formatActivityMessage(activity, members),
       })),
-    [allActivities, members],
+    [allActivities, members]
   );
 
   useDocumentTitle(`${project.name} — Dashboard`);
@@ -53,26 +53,19 @@ export default function ProjectDashboard() {
   }
 
   if (isError || !data) {
-    return (
-      <QueryErrorRetry message="Failed to load project dashboard." onRetry={refetch} />
-    );
+    return <QueryErrorRetry message="Failed to load project dashboard." onRetry={refetch} />;
   }
 
   return (
     <Stack gap="r3">
-      <OverdueTasksSection
-        overdueTasks={data.overdueTasks}
-        onTaskClick={setSelectedTaskId}
-      />
+      <OverdueTasksSection overdueTasks={data.overdueTasks} onTaskClick={setSelectedTaskId} />
 
       <StatCardsRow data={data} />
 
       <div className="grid grid-cols-1 gap-r4 md:grid-cols-3">
         <div className="md:col-span-2">
           <Stack gap="r4">
-            <PriorityBreakdownSection
-              priorityBreakdown={data.priorityBreakdown}
-            />
+            <PriorityBreakdownSection priorityBreakdown={data.priorityBreakdown} />
             <TasksByGroupSection
               tasksByGroup={data.tasksByGroup}
               totalCount={data.taskCounts.totalCount}

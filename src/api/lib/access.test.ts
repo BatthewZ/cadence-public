@@ -75,9 +75,17 @@ beforeAll(async () => {
   for (const u of [OUTSIDER_USER, ADMIN_USER, MEMBER_USER]) {
     await d1
       .prepare(
-        "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)"
       )
-      .bind(u.id, u.name, u.email, u.emailVerified ? 1 : 0, u.image, Math.floor(u.createdAt.getTime() / 1000), Math.floor(u.updatedAt.getTime() / 1000))
+      .bind(
+        u.id,
+        u.name,
+        u.email,
+        u.emailVerified ? 1 : 0,
+        u.image,
+        Math.floor(u.createdAt.getTime() / 1000),
+        Math.floor(u.updatedAt.getTime() / 1000)
+      )
       .run();
   }
 

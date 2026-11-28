@@ -32,19 +32,11 @@ vi.mock("@/web/components/ui/AppShell", () => {
       {children as React.ReactNode}
     </div>
   );
-  AppShell.Navbar = ({ children }: { children: React.ReactNode }) => (
-    <nav>{children}</nav>
-  );
+  AppShell.Navbar = ({ children }: { children: React.ReactNode }) => <nav>{children}</nav>;
   AppShell.Toggle = () => <button>Toggle</button>;
-  AppShell.Brand = ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  );
-  AppShell.NavbarActions = ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  );
-  AppShell.Sidebar = ({ children }: { children: React.ReactNode }) => (
-    <aside>{children}</aside>
-  );
+  AppShell.Brand = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
+  AppShell.NavbarActions = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
+  AppShell.Sidebar = ({ children }: { children: React.ReactNode }) => <aside>{children}</aside>;
   AppShell.SidebarSection = ({
     children,
     title,
@@ -57,18 +49,16 @@ vi.mock("@/web/components/ui/AppShell", () => {
       {children}
     </div>
   );
-  AppShell.SidebarLink = ({
-    children,
-    to,
-  }: {
-    children: React.ReactNode;
-    to: string;
-  }) => <a href={to}>{children}</a>;
-  AppShell.Main = ({ children }: { children: React.ReactNode }) => (
-    <main>{children}</main>
+  AppShell.SidebarLink = ({ children, to }: { children: React.ReactNode; to: string }) => (
+    <a href={to}>{children}</a>
   );
+  AppShell.Main = ({ children }: { children: React.ReactNode }) => <main>{children}</main>;
   const useAppShell = () => ({ isMobile: false, sidebarOpen: true, setSidebarOpen: vi.fn() });
-  const useOptionalAppShell = () => ({ isMobile: false, sidebarOpen: true, setSidebarOpen: vi.fn() });
+  const useOptionalAppShell = () => ({
+    isMobile: false,
+    sidebarOpen: true,
+    setSidebarOpen: vi.fn(),
+  });
   return { AppShell, useAppShell, useOptionalAppShell };
 });
 
@@ -155,7 +145,7 @@ describe("AuthenticatedLayout", () => {
     render(
       <AuthenticatedLayout>
         <div>Page Content</div>
-      </AuthenticatedLayout>,
+      </AuthenticatedLayout>
     );
     expect(screen.getByText("Page Content")).toBeInTheDocument();
   });
@@ -164,7 +154,7 @@ describe("AuthenticatedLayout", () => {
     render(
       <AuthenticatedLayout>
         <div data-testid="child">Child</div>
-      </AuthenticatedLayout>,
+      </AuthenticatedLayout>
     );
     const main = screen.getByRole("main");
     expect(main).toContainElement(screen.getByTestId("child"));

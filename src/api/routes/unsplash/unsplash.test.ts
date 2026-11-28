@@ -20,25 +20,10 @@
 
 import type { MiddlewareHandler } from "hono";
 import { Hono } from "hono";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AppBindings, AppEnv } from "../../env";
-import {
-  createTestD1,
-  fakeAuth,
-  jsonRequest,
-  seedUser,
-  TEST_USER,
-} from "../../test-utils";
+import { createTestD1, fakeAuth, jsonRequest, seedUser, TEST_USER } from "../../test-utils";
 import unsplashRoutes from "./unsplash.routes";
 
 // ---------------------------------------------------------------------------
@@ -80,9 +65,7 @@ function mockFetchOnce(response: Response) {
 
 function mockFetchAlways(response: Response | (() => Response)) {
   globalThis.fetch = vi.fn().mockImplementation(() => {
-    return Promise.resolve(
-      typeof response === "function" ? response() : response.clone(),
-    );
+    return Promise.resolve(typeof response === "function" ? response() : response.clone());
   });
 }
 
@@ -141,8 +124,7 @@ const rawSearchPayload = {
         self: "https://api.unsplash.com/photos/abc123",
         html: "https://unsplash.com/photos/abc123",
         download: "https://unsplash.com/photos/abc123/download",
-        download_location:
-          "https://api.unsplash.com/photos/abc123/download?ixid=xxx",
+        download_location: "https://api.unsplash.com/photos/abc123/download?ixid=xxx",
       },
       user: {
         username: "janesmith",
@@ -164,7 +146,7 @@ describe("GET /unsplash/search", () => {
     const res = await app.request(
       "/unsplash/search?query=mountains",
       jsonRequest("GET", "/unsplash/search?query=mountains"),
-      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" }),
+      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" })
     );
     expect(res.status).toBe(401);
   });
@@ -174,7 +156,7 @@ describe("GET /unsplash/search", () => {
     const res = await app.request(
       "/unsplash/search?query=",
       jsonRequest("GET", "/unsplash/search?query="),
-      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" }),
+      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" })
     );
     expect(res.status).toBe(400);
   });
@@ -184,7 +166,7 @@ describe("GET /unsplash/search", () => {
     const res = await app.request(
       "/unsplash/search?query=mountains",
       jsonRequest("GET", "/unsplash/search?query=mountains"),
-      buildEnv(),
+      buildEnv()
     );
     expect(res.status).toBe(503);
     const body = await res.json<{ error: string; requestId: string }>();
@@ -197,14 +179,14 @@ describe("GET /unsplash/search", () => {
       new Response(JSON.stringify(rawSearchPayload), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      }),
+      })
     );
 
     const app = buildApp({ auth: fakeAuth(d1, TEST_USER) });
     const res = await app.request(
       "/unsplash/search?query=mountains&perPage=10",
       jsonRequest("GET", "/unsplash/search?query=mountains&perPage=10"),
-      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" }),
+      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" })
     );
 
     expect(res.status).toBe(200);
@@ -236,18 +218,14 @@ describe("GET /unsplash/search", () => {
     expect(first.photoUrl).toContain("utm_source=");
     expect(first.photoUrl).toContain("utm_medium=referral");
     expect(first.user.profileUrl).toBe(
-      "https://unsplash.com/@janesmith?utm_source=cadence&utm_medium=referral",
+      "https://unsplash.com/@janesmith?utm_source=cadence&utm_medium=referral"
     );
-    expect(first.downloadLocation).toBe(
-      "https://api.unsplash.com/photos/abc123/download?ixid=xxx",
-    );
+    expect(first.downloadLocation).toBe("https://api.unsplash.com/photos/abc123/download?ixid=xxx");
 
     // Verify fetch was called with the correct URL and auth header.
     const fetchMock = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
     const call = fetchMock.mock.calls[0];
-    expect(String(call[0])).toContain(
-      "https://api.unsplash.com/search/photos",
-    );
+    expect(String(call[0])).toContain("https://api.unsplash.com/search/photos");
     expect(String(call[0])).toContain("query=mountains");
     expect(String(call[0])).toContain("per_page=10");
     const init = call[1] as RequestInit;
@@ -260,7 +238,7 @@ describe("GET /unsplash/search", () => {
       new Response(JSON.stringify(rawSearchPayload), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      }),
+      })
     );
 
     const app = buildApp({ auth: fakeAuth(d1, TEST_USER) });
@@ -270,29 +248,27 @@ describe("GET /unsplash/search", () => {
       buildEnv({
         UNSPLASH_ACCESS_KEY: "test-key",
         UNSPLASH_APP_NAME: "cadence-staging",
-      }),
+      })
     );
     expect(res.status).toBe(200);
     const body = await res.json<{
       results: Array<{ user: { profileUrl: string } }>;
     }>();
-    expect(body.results[0].user.profileUrl).toContain(
-      "utm_source=cadence-staging",
-    );
+    expect(body.results[0].user.profileUrl).toContain("utm_source=cadence-staging");
   });
 
   it("returns 502 when upstream Unsplash returns 403", async () => {
     mockFetchOnce(
       new Response("Forbidden", {
         status: 403,
-      }),
+      })
     );
 
     const app = buildApp({ auth: fakeAuth(d1, TEST_USER) });
     const res = await app.request(
       "/unsplash/search?query=mountains",
       jsonRequest("GET", "/unsplash/search?query=mountains"),
-      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" }),
+      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" })
     );
 
     expect(res.status).toBe(502);
@@ -315,7 +291,7 @@ describe("GET /unsplash/search", () => {
     const res = await app.request(
       "/unsplash/search?query=mountains",
       jsonRequest("GET", "/unsplash/search?query=mountains"),
-      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" }),
+      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" })
     );
     expect(res.status).toBe(429);
   });
@@ -327,14 +303,14 @@ describe("GET /unsplash/curated", () => {
       new Response(JSON.stringify(rawCuratedPayload), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      }),
+      })
     );
 
     const app = buildApp({ auth: fakeAuth(d1, TEST_USER) });
     const res = await app.request(
       "/unsplash/curated?perPage=5",
       jsonRequest("GET", "/unsplash/curated?perPage=5"),
-      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" }),
+      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" })
     );
 
     expect(res.status).toBe(200);
@@ -367,7 +343,7 @@ describe("GET /unsplash/curated", () => {
     const res = await app.request(
       "/unsplash/curated",
       jsonRequest("GET", "/unsplash/curated"),
-      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" }),
+      buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" })
     );
     expect(res.status).toBe(401);
   });
@@ -377,7 +353,7 @@ describe("GET /unsplash/curated", () => {
     const res = await app.request(
       "/unsplash/curated",
       jsonRequest("GET", "/unsplash/curated"),
-      buildEnv(),
+      buildEnv()
     );
     expect(res.status).toBe(503);
   });
@@ -398,7 +374,7 @@ describe("Rate limiting", () => {
       new Response(JSON.stringify(rawSearchPayload), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      }),
+      })
     );
 
     // Force a stable client IP so we share the rate-limit bucket across all
@@ -416,7 +392,7 @@ describe("Rate limiting", () => {
             "cf-connecting-ip": "10.0.0.1",
           },
         },
-        buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" }),
+        buildEnv({ UNSPLASH_ACCESS_KEY: "test-key" })
       );
 
     // First 30 should all succeed.

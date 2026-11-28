@@ -66,8 +66,9 @@
   font-size: var(--BodyText-2);
   line-height: 1;
   letter-spacing: 0.1em;
-  transition: color var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT),
-              background-color var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
+  transition:
+    color var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT),
+    background-color var(--MOTION-DURATION-SHIFT) var(--MOTION-EASE-SHIFT);
 }
 
 .breadcrumbs__ellipsis:hover {

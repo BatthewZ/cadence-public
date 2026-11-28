@@ -55,9 +55,7 @@ function chipIsosFor(layouts: ReturnType<typeof placeTasks>, taskId: string): st
 }
 
 function allSegmentsFor(layouts: ReturnType<typeof placeTasks>, taskId: string) {
-  return layouts.flatMap((layout) =>
-    layout.segments.filter((s) => s.task.id === taskId),
-  );
+  return layouts.flatMap((layout) => layout.segments.filter((s) => s.task.id === taskId));
 }
 
 beforeEach(() => {
@@ -99,20 +97,16 @@ describe("buildMonthGrid", () => {
         const prev = localDate(days[i - 1].iso);
         const next = localDate(days[i].iso);
         expect(next.getTime() - prev.getTime()).toBeGreaterThanOrEqual(
-          23 * 60 * 60 * 1000, // ≥23h handles DST-shortened days
+          23 * 60 * 60 * 1000 // ≥23h handles DST-shortened days
         );
-        expect(next.getTime() - prev.getTime()).toBeLessThanOrEqual(
-          25 * 60 * 60 * 1000,
-        );
+        expect(next.getTime() - prev.getTime()).toBeLessThanOrEqual(25 * 60 * 60 * 1000);
       }
 
       // Exactly the month's days are inMonth, starting at the 1st.
       const inMonth = days.filter((d) => d.inMonth);
       const daysInMonth = new Date(2026, month + 1, 0).getDate();
       expect(inMonth).toHaveLength(daysInMonth);
-      expect(inMonth[0].iso).toBe(
-        `2026-${String(month + 1).padStart(2, "0")}-01`,
-      );
+      expect(inMonth[0].iso).toBe(`2026-${String(month + 1).padStart(2, "0")}-01`);
       // The 1st sits at the column matching its weekday (Monday-start rotation).
       const firstIdx = days.findIndex((d) => d.inMonth);
       expect(firstIdx).toBe((new Date(2026, month, 1).getDay() + 6) % 7);
@@ -351,18 +345,12 @@ describe("placeTasks", () => {
 
     const w0 = layouts[0];
     expect(w0.segments).toHaveLength(MAX_LANES);
-    const laneById = Object.fromEntries(
-      w0.segments.map((s) => [s.task.id, s.lane]),
-    );
+    const laneById = Object.fromEntries(w0.segments.map((s) => [s.task.id, s.lane]));
     expect(laneById).toEqual({ a: 0, b: 1, c: 2 });
 
     // The overflow span appears as a chip on EVERY day it covers this week.
     expect(allSegmentsFor(layouts, "d")).toEqual([]);
-    expect(chipIsosFor(layouts, "d")).toEqual([
-      "2026-06-04",
-      "2026-06-05",
-      "2026-06-06",
-    ]);
+    expect(chipIsosFor(layouts, "d")).toEqual(["2026-06-04", "2026-06-05", "2026-06-06"]);
   });
 
   it("reuses a freed lane for non-overlapping spans (greedy lowest-free-lane)", () => {
@@ -379,7 +367,7 @@ describe("placeTasks", () => {
     // Three blockers fill W0's lanes; "long" spans W0 and W1 but only W0
     // is crowded, so it demotes in W0 and gets a lane in W1.
     const blockers = [1, 2, 3].map((n) =>
-      makeTask({ id: `blk${n}`, startDate: "2026-06-01", dueDate: "2026-06-07" }),
+      makeTask({ id: `blk${n}`, startDate: "2026-06-01", dueDate: "2026-06-07" })
     );
     const long = makeTask({
       id: "long",
@@ -389,11 +377,7 @@ describe("placeTasks", () => {
     const layouts = placeTasks(weeks, [...blockers, long]);
 
     expect(allSegmentsFor([layouts[0]], "long")).toEqual([]);
-    expect(chipIsosFor([layouts[0]], "long")).toEqual([
-      "2026-06-05",
-      "2026-06-06",
-      "2026-06-07",
-    ]);
+    expect(chipIsosFor([layouts[0]], "long")).toEqual(["2026-06-05", "2026-06-06", "2026-06-07"]);
     expect(allSegmentsFor([layouts[1]], "long")).toEqual([
       {
         task: long,
@@ -478,37 +462,27 @@ describe("placeTasks", () => {
 describe("addMonths", () => {
   it("clamps Jan 31 + 1 month to Feb 28 in a non-leap year", () => {
     const result = addMonths(new Date(2026, 0, 31), 1);
-    expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([
-      2026, 1, 28,
-    ]);
+    expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([2026, 1, 28]);
   });
 
   it("clamps Jan 31 + 1 month to Feb 29 in a leap year", () => {
     const result = addMonths(new Date(2028, 0, 31), 1);
-    expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([
-      2028, 1, 29,
-    ]);
+    expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([2028, 1, 29]);
   });
 
   it("rolls Dec + 1 month into January of the next year", () => {
     const result = addMonths(new Date(2026, 11, 15), 1);
-    expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([
-      2027, 0, 15,
-    ]);
+    expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([2027, 0, 15]);
   });
 
   it("rolls Jan - 1 month into December of the previous year", () => {
     const result = addMonths(new Date(2026, 0, 15), -1);
-    expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([
-      2025, 11, 15,
-    ]);
+    expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([2025, 11, 15]);
   });
 
   it("clamps when stepping backwards (Mar 31 - 1 month = Feb 28)", () => {
     const result = addMonths(new Date(2026, 2, 31), -1);
-    expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([
-      2026, 1, 28,
-    ]);
+    expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([2026, 1, 28]);
   });
 
   it("preserves time-of-day and does not mutate its input", () => {
@@ -526,9 +500,7 @@ describe("addMonths", () => {
 
   it("returns the same calendar date for n = 0", () => {
     const result = addMonths(new Date(2026, 5, 11), 0);
-    expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([
-      2026, 5, 11,
-    ]);
+    expect([result.getFullYear(), result.getMonth(), result.getDate()]).toEqual([2026, 5, 11]);
   });
 
   it("steps every month of a year exactly once when navigating from a month-end anchor", () => {

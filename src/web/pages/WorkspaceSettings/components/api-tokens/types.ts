@@ -127,9 +127,7 @@ export const SCOPE_GROUPS: ScopeGroup[] = [
   {
     label: "Invitations",
     description: "Send workspace invitations.",
-    scopes: [
-      { value: "invitation:write", label: "Send invitations" },
-    ],
+    scopes: [{ value: "invitation:write", label: "Send invitations" }],
   },
   {
     label: "Webhooks",
@@ -150,14 +148,10 @@ export const SCOPE_GROUPS: ScopeGroup[] = [
 ];
 
 /** Flat list of every scope value the UI knows about. */
-export const ALL_KNOWN_SCOPES: string[] = SCOPE_GROUPS.flatMap((g) =>
-  g.scopes.map((s) => s.value),
-);
+export const ALL_KNOWN_SCOPES: string[] = SCOPE_GROUPS.flatMap((g) => g.scopes.map((s) => s.value));
 
 /** Every "*:read" scope plus the read-aggregate convenience. */
-export const ALL_READ_SCOPES: string[] = ALL_KNOWN_SCOPES.filter((s) =>
-  s.endsWith(":read"),
-);
+export const ALL_READ_SCOPES: string[] = ALL_KNOWN_SCOPES.filter((s) => s.endsWith(":read"));
 
 /* ------------------------------------------------------------------ */
 /*  Lifecycle status derivation                                        */

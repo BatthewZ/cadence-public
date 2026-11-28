@@ -26,8 +26,7 @@ export function TasksByGroupSection({
           <EmptyState size="sm">
             <EmptyStateTitle>No tasks yet</EmptyStateTitle>
             <EmptyStateDescription>
-              Create tasks on the Board to see how they distribute across
-              sections.
+              Create tasks on the Board to see how they distribute across sections.
             </EmptyStateDescription>
           </EmptyState>
         ) : (

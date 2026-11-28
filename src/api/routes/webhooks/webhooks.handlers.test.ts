@@ -3,10 +3,7 @@ import { Hono } from "hono";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ApiToken } from "../../../db/schema";
-import {
-  createWebhookSchema,
-  updateWebhookSchema,
-} from "../../../shared/schemas/webhook";
+import { createWebhookSchema, updateWebhookSchema } from "../../../shared/schemas/webhook";
 import type { AppBindings, AppEnv } from "../../env";
 import type { EmailMessage, EmailSendResult } from "../../lib/email/types";
 import { validateBody } from "../../middleware/validate";
@@ -28,8 +25,8 @@ import {
 // mock must be installed BEFORE the handler module is imported (vitest
 // hoists vi.mock automatically) so the handler's `createEmailService`
 // call resolves to the stub.
-const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<EmailSendResult>>(
-  () => Promise.resolve({ id: "test-email-id" }),
+const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<EmailSendResult>>(() =>
+  Promise.resolve({ id: "test-email-id" })
 );
 vi.mock("../../lib/email", () => ({
   createEmailService: vi.fn(() => ({ send: mockEmailSend })),
@@ -80,7 +77,7 @@ afterAll(async () => {
  */
 async function waitFor(
   predicate: () => boolean,
-  opts: { timeoutMs?: number; intervalMs?: number } = {},
+  opts: { timeoutMs?: number; intervalMs?: number } = {}
 ): Promise<void> {
   const timeoutMs = opts.timeoutMs ?? 1000;
   const intervalMs = opts.intervalMs ?? 10;
@@ -105,14 +102,14 @@ describe("createWebhook", () => {
   function buildApp(
     role: "owner" | "admin" | "member" = "owner",
     user: typeof TEST_USER | typeof TEST_USER_2 = TEST_USER,
-    opts: { apiToken?: ApiToken | null } = {},
+    opts: { apiToken?: ApiToken | null } = {}
   ) {
     const app = new Hono<AppEnv>();
     app.use(
       "/*",
       fakeAuth(d1, user, {
         workspaceMembership: { id: "wm-1", role },
-      }),
+      })
     );
     // Provide BETTER_AUTH_URL so the email helper composes a sensible
     // settings link; without it the helper still runs but the URL is "/".
@@ -123,11 +120,7 @@ describe("createWebhook", () => {
       }
       await next();
     });
-    app.post(
-      "/workspaces/:workspaceId/webhooks",
-      validateBody(createWebhookSchema),
-      createWebhook,
-    );
+    app.post("/workspaces/:workspaceId/webhooks", validateBody(createWebhookSchema), createWebhook);
     return app;
   }
 
@@ -463,7 +456,7 @@ describe("listWebhooks", () => {
       "/*",
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-1", role: "owner" },
-      }),
+      })
     );
     app.get("/workspaces/:workspaceId/webhooks", listWebhooks);
     return app;
@@ -471,11 +464,7 @@ describe("listWebhooks", () => {
 
   it("returns all webhooks for the workspace", async () => {
     const app = buildApp();
-    const res = await app.request(
-      `/workspaces/${listWsId}/webhooks`,
-      undefined,
-      env,
-    );
+    const res = await app.request(`/workspaces/${listWsId}/webhooks`, undefined, env);
 
     expect(res.status).toBe(200);
     const body = await res.json<{
@@ -488,11 +477,7 @@ describe("listWebhooks", () => {
 
   it("excludes secret from list response", async () => {
     const app = buildApp();
-    const res = await app.request(
-      `/workspaces/${listWsId}/webhooks`,
-      undefined,
-      env,
-    );
+    const res = await app.request(`/workspaces/${listWsId}/webhooks`, undefined, env);
 
     expect(res.status).toBe(200);
     const body = await res.json<{
@@ -508,11 +493,7 @@ describe("listWebhooks", () => {
       name: "Empty Webhooks WS",
     });
     const app = buildApp();
-    const res = await app.request(
-      `/workspaces/${emptyWsId}/webhooks`,
-      undefined,
-      env,
-    );
+    const res = await app.request(`/workspaces/${emptyWsId}/webhooks`, undefined, env);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ webhooks: Array<unknown> }>();
@@ -556,11 +537,7 @@ describe("listWebhooks", () => {
     const app = buildApp();
 
     // List webhooks for listWsId - should NOT include otherWsId's webhook
-    const res = await app.request(
-      `/workspaces/${listWsId}/webhooks`,
-      undefined,
-      env,
-    );
+    const res = await app.request(`/workspaces/${listWsId}/webhooks`, undefined, env);
 
     expect(res.status).toBe(200);
     const body = await res.json<{
@@ -608,7 +585,7 @@ describe("getWebhook", () => {
       "/*",
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-1", role: "owner" },
-      }),
+      })
     );
     app.get("/workspaces/:workspaceId/webhooks/:webhookId", getWebhook);
     return app;
@@ -619,7 +596,7 @@ describe("getWebhook", () => {
     const res = await app.request(
       `/workspaces/${getWsId}/webhooks/${webhookObj.id}`,
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(200);
@@ -639,7 +616,7 @@ describe("getWebhook", () => {
     const res = await app.request(
       `/workspaces/${getWsId}/webhooks/${webhookObj.id}`,
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(200);
@@ -651,11 +628,7 @@ describe("getWebhook", () => {
 
   it("returns 404 for non-existent webhook", async () => {
     const app = buildApp();
-    const res = await app.request(
-      `/workspaces/${getWsId}/webhooks/nonexistent-id`,
-      undefined,
-      env,
-    );
+    const res = await app.request(`/workspaces/${getWsId}/webhooks/nonexistent-id`, undefined, env);
 
     expect(res.status).toBe(404);
     const body = await res.json<{ error: string }>();
@@ -676,7 +649,7 @@ describe("getWebhook", () => {
     const res = await app.request(
       `/workspaces/${getWsId}/webhooks/${otherHook.id}`,
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(404);
@@ -704,12 +677,12 @@ describe("updateWebhook", () => {
       "/*",
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-1", role: "owner" },
-      }),
+      })
     );
     app.patch(
       "/workspaces/:workspaceId/webhooks/:webhookId",
       validateBody(updateWebhookSchema),
-      updateWebhook,
+      updateWebhook
     );
     return app;
   }
@@ -720,11 +693,9 @@ describe("updateWebhook", () => {
       url: "https://original.example.com/hook",
     });
     const app = buildApp();
-    const req = jsonRequest(
-      "PATCH",
-      `/workspaces/${updateWsId}/webhooks/${hook.id}`,
-      { name: "Updated Name" },
-    );
+    const req = jsonRequest("PATCH", `/workspaces/${updateWsId}/webhooks/${hook.id}`, {
+      name: "Updated Name",
+    });
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(200);
@@ -742,11 +713,9 @@ describe("updateWebhook", () => {
       url: "https://old-url.example.com/hook",
     });
     const app = buildApp();
-    const req = jsonRequest(
-      "PATCH",
-      `/workspaces/${updateWsId}/webhooks/${hook.id}`,
-      { url: "https://new-url.example.com/hook" },
-    );
+    const req = jsonRequest("PATCH", `/workspaces/${updateWsId}/webhooks/${hook.id}`, {
+      url: "https://new-url.example.com/hook",
+    });
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(200);
@@ -763,21 +732,16 @@ describe("updateWebhook", () => {
       events: JSON.stringify(["task.created"]),
     });
     const app = buildApp();
-    const req = jsonRequest(
-      "PATCH",
-      `/workspaces/${updateWsId}/webhooks/${hook.id}`,
-      { events: ["task.updated", "task.deleted"] },
-    );
+    const req = jsonRequest("PATCH", `/workspaces/${updateWsId}/webhooks/${hook.id}`, {
+      events: ["task.updated", "task.deleted"],
+    });
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(200);
     const body = await res.json<{
       webhook: { events: string };
     }>();
-    expect(JSON.parse(body.webhook.events)).toEqual([
-      "task.updated",
-      "task.deleted",
-    ]);
+    expect(JSON.parse(body.webhook.events)).toEqual(["task.updated", "task.deleted"]);
   });
 
   it("re-validates URL if changed and rejects invalid URL", async () => {
@@ -786,11 +750,9 @@ describe("updateWebhook", () => {
       url: "https://valid.example.com/hook",
     });
     const app = buildApp();
-    const req = jsonRequest(
-      "PATCH",
-      `/workspaces/${updateWsId}/webhooks/${hook.id}`,
-      { url: "https://localhost/evil" },
-    );
+    const req = jsonRequest("PATCH", `/workspaces/${updateWsId}/webhooks/${hook.id}`, {
+      url: "https://localhost/evil",
+    });
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(400);
@@ -804,11 +766,9 @@ describe("updateWebhook", () => {
       secret: "original-secret-value-000",
     });
     const app = buildApp();
-    const req = jsonRequest(
-      "PATCH",
-      `/workspaces/${updateWsId}/webhooks/${hook.id}`,
-      { regenerateSecret: true },
-    );
+    const req = jsonRequest("PATCH", `/workspaces/${updateWsId}/webhooks/${hook.id}`, {
+      regenerateSecret: true,
+    });
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(200);
@@ -827,11 +787,9 @@ describe("updateWebhook", () => {
       secret: "hidden-secret-value-abc",
     });
     const app = buildApp();
-    const req = jsonRequest(
-      "PATCH",
-      `/workspaces/${updateWsId}/webhooks/${hook.id}`,
-      { name: "Renamed Hook" },
-    );
+    const req = jsonRequest("PATCH", `/workspaces/${updateWsId}/webhooks/${hook.id}`, {
+      name: "Renamed Hook",
+    });
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(200);
@@ -848,11 +806,9 @@ describe("updateWebhook", () => {
       events: JSON.stringify(["task.created"]),
     });
     const app = buildApp();
-    const req = jsonRequest(
-      "PATCH",
-      `/workspaces/${updateWsId}/webhooks/${hook.id}`,
-      { projectId: projId },
-    );
+    const req = jsonRequest("PATCH", `/workspaces/${updateWsId}/webhooks/${hook.id}`, {
+      projectId: projId,
+    });
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(200);
@@ -870,11 +826,9 @@ describe("updateWebhook", () => {
       projectId: projId,
     });
     const app = buildApp();
-    const req = jsonRequest(
-      "PATCH",
-      `/workspaces/${updateWsId}/webhooks/${hook.id}`,
-      { projectId: null },
-    );
+    const req = jsonRequest("PATCH", `/workspaces/${updateWsId}/webhooks/${hook.id}`, {
+      projectId: null,
+    });
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(200);
@@ -892,11 +846,9 @@ describe("updateWebhook", () => {
       projectId: projId,
     });
     const app = buildApp();
-    const req = jsonRequest(
-      "PATCH",
-      `/workspaces/${updateWsId}/webhooks/${hook.id}`,
-      { events: ["task.created", "workspace.member_joined"] },
-    );
+    const req = jsonRequest("PATCH", `/workspaces/${updateWsId}/webhooks/${hook.id}`, {
+      events: ["task.created", "workspace.member_joined"],
+    });
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(400);
@@ -906,11 +858,9 @@ describe("updateWebhook", () => {
 
   it("returns 404 for non-existent webhook", async () => {
     const app = buildApp();
-    const req = jsonRequest(
-      "PATCH",
-      `/workspaces/${updateWsId}/webhooks/nonexistent-id`,
-      { name: "Ghost" },
-    );
+    const req = jsonRequest("PATCH", `/workspaces/${updateWsId}/webhooks/nonexistent-id`, {
+      name: "Ghost",
+    });
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(404);
@@ -938,12 +888,9 @@ describe("deleteWebhook", () => {
       "/*",
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-1", role: "owner" },
-      }),
+      })
     );
-    app.delete(
-      "/workspaces/:workspaceId/webhooks/:webhookId",
-      deleteWebhook,
-    );
+    app.delete("/workspaces/:workspaceId/webhooks/:webhookId", deleteWebhook);
     return app;
   }
 
@@ -952,10 +899,7 @@ describe("deleteWebhook", () => {
       name: "To Delete",
     });
     const app = buildApp();
-    const req = jsonRequest(
-      "DELETE",
-      `/workspaces/${deleteWsId}/webhooks/${hook.id}`,
-    );
+    const req = jsonRequest("DELETE", `/workspaces/${deleteWsId}/webhooks/${hook.id}`);
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(204);
@@ -970,10 +914,7 @@ describe("deleteWebhook", () => {
 
   it("returns 404 for non-existent webhook", async () => {
     const app = buildApp();
-    const req = jsonRequest(
-      "DELETE",
-      `/workspaces/${deleteWsId}/webhooks/nonexistent-id`,
-    );
+    const req = jsonRequest("DELETE", `/workspaces/${deleteWsId}/webhooks/nonexistent-id`);
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(404);
@@ -991,10 +932,7 @@ describe("deleteWebhook", () => {
 
     const app = buildApp();
     // Try to delete from deleteWsId but webhook belongs to otherWsId
-    const req = jsonRequest(
-      "DELETE",
-      `/workspaces/${deleteWsId}/webhooks/${hook.id}`,
-    );
+    const req = jsonRequest("DELETE", `/workspaces/${deleteWsId}/webhooks/${hook.id}`);
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(404);
@@ -1025,12 +963,9 @@ describe("testWebhook", () => {
       "/*",
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-1", role: "owner" },
-      }),
+      })
     );
-    app.post(
-      "/workspaces/:workspaceId/webhooks/:webhookId/test",
-      testWebhook,
-    );
+    app.post("/workspaces/:workspaceId/webhooks/:webhookId/test", testWebhook);
     return app;
   }
 
@@ -1042,15 +977,12 @@ describe("testWebhook", () => {
     });
 
     // Mock global fetch to simulate a successful webhook delivery
-    const spy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response("OK", { status: 200 }),
-    );
+    const spy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("OK", { status: 200 }));
 
     const app = buildApp();
-    const req = jsonRequest(
-      "POST",
-      `/workspaces/${testWsId}/webhooks/${hook.id}/test`,
-    );
+    const req = jsonRequest("POST", `/workspaces/${testWsId}/webhooks/${hook.id}/test`);
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(200);
@@ -1083,14 +1015,11 @@ describe("testWebhook", () => {
 
     // Mock global fetch to simulate a server error
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
-      new Response("Internal Server Error", { status: 500 }),
+      new Response("Internal Server Error", { status: 500 })
     );
 
     const app = buildApp();
-    const req = jsonRequest(
-      "POST",
-      `/workspaces/${testWsId}/webhooks/${hook.id}/test`,
-    );
+    const req = jsonRequest("POST", `/workspaces/${testWsId}/webhooks/${hook.id}/test`);
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(200);
@@ -1110,10 +1039,7 @@ describe("testWebhook", () => {
 
   it("returns 404 for non-existent webhook", async () => {
     const app = buildApp();
-    const req = jsonRequest(
-      "POST",
-      `/workspaces/${testWsId}/webhooks/nonexistent-id/test`,
-    );
+    const req = jsonRequest("POST", `/workspaces/${testWsId}/webhooks/nonexistent-id/test`);
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(404);
@@ -1130,10 +1056,7 @@ describe("testWebhook", () => {
     });
 
     const app = buildApp();
-    const req = jsonRequest(
-      "POST",
-      `/workspaces/${testWsId}/webhooks/${otherHook.id}/test`,
-    );
+    const req = jsonRequest("POST", `/workspaces/${testWsId}/webhooks/${otherHook.id}/test`);
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(404);

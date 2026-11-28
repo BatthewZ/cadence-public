@@ -11,7 +11,9 @@
   color: var(--C-TEXT-PRIMARY);
   font-size: var(--BodyText-3);
   cursor: pointer;
-  transition: background var(--DURATION-FAST) ease, color var(--DURATION-FAST) ease;
+  transition:
+    background var(--DURATION-FAST) ease,
+    color var(--DURATION-FAST) ease;
   width: 100%;
   text-align: left;
   line-height: 1.4;

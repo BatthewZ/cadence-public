@@ -97,10 +97,7 @@ export async function createSavedView(c: Context<AppEnv>) {
   const userId = c.get("user")!.id;
   const body = validJson(c, createSavedViewSchema);
 
-  const ownViews = and(
-    eq(savedView.projectId, projectId),
-    eq(savedView.creatorId, userId),
-  );
+  const ownViews = and(eq(savedView.projectId, projectId), eq(savedView.creatorId, userId));
 
   const [countResult, duplicateResult, lastPositionResult] = await db.batch([
     db.select({ value: count() }).from(savedView).where(ownViews),
@@ -121,7 +118,7 @@ export async function createSavedView(c: Context<AppEnv>) {
     return errorResponse(
       c,
       `Maximum of ${MAX_SAVED_VIEWS_PER_PROJECT_USER} saved views per project reached`,
-      400,
+      400
     );
   }
 
@@ -172,7 +169,7 @@ export async function updateSavedView(c: Context<AppEnv>) {
   const ownView = and(
     eq(savedView.id, viewId),
     eq(savedView.projectId, projectId),
-    eq(savedView.creatorId, userId),
+    eq(savedView.creatorId, userId)
   );
 
   const [existingResult, duplicateResult] = await db.batch([
@@ -184,8 +181,8 @@ export async function updateSavedView(c: Context<AppEnv>) {
         and(
           eq(savedView.projectId, projectId),
           eq(savedView.creatorId, userId),
-          sql`LOWER(${savedView.name}) = LOWER(${body.name ?? ""})`,
-        ),
+          sql`LOWER(${savedView.name}) = LOWER(${body.name ?? ""})`
+        )
       )
       .limit(1),
   ] as const);
@@ -197,11 +194,7 @@ export async function updateSavedView(c: Context<AppEnv>) {
     return errorResponse(c, "Saved view not found", 404);
   }
 
-  if (
-    body.name &&
-    body.name.toLowerCase() !== existing.name.toLowerCase() &&
-    duplicateResult[0]
-  ) {
+  if (body.name && body.name.toLowerCase() !== existing.name.toLowerCase() && duplicateResult[0]) {
     return errorResponse(c, "A saved view with this name already exists", 409);
   }
 
@@ -219,11 +212,7 @@ export async function updateSavedView(c: Context<AppEnv>) {
 
   // No companion `project.updatedAt` write here — see the module JSDoc:
   // private bookmarks must not invalidate the team's freshness polling.
-  const [updated] = await db
-    .update(savedView)
-    .set(updates)
-    .where(ownView)
-    .returning();
+  const [updated] = await db.update(savedView).set(updates).where(ownView).returning();
 
   return c.json({ view: serializeSavedView(updated) });
 }
@@ -246,8 +235,8 @@ export async function deleteSavedView(c: Context<AppEnv>) {
       and(
         eq(savedView.id, viewId),
         eq(savedView.projectId, projectId),
-        eq(savedView.creatorId, userId),
-      ),
+        eq(savedView.creatorId, userId)
+      )
     )
     .returning({ id: savedView.id });
 

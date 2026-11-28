@@ -95,11 +95,7 @@ export type RecordPatAuditLogInput = AuditLogEventInput & {
  * `op` names the public entry point in the error log line so an alert
  * still identifies which code path lost a row.
  */
-function persistAuditLogRow(
-  c: Context<AppEnv>,
-  op: string,
-  input: AuditLogEventInput,
-): void {
+function persistAuditLogRow(c: Context<AppEnv>, op: string, input: AuditLogEventInput): void {
   deferWork(c, async () => {
     try {
       const db = c.get("db");
@@ -132,7 +128,7 @@ function persistAuditLogRow(
           workspaceId: input.workspaceId,
           path: input.path,
           error: err instanceof Error ? err.message : String(err),
-        }),
+        })
       );
     }
   });
@@ -145,10 +141,7 @@ function persistAuditLogRow(
  * would only delay the client. See {@link persistAuditLogRow} for the
  * defer/swallow-errors rationale.
  */
-export function recordPatAuditLog(
-  c: Context<AppEnv>,
-  input: RecordPatAuditLogInput,
-): void {
+export function recordPatAuditLog(c: Context<AppEnv>, input: RecordPatAuditLogInput): void {
   persistAuditLogRow(c, "recordPatAuditLog", input);
 }
 
@@ -176,7 +169,7 @@ export type RecordWorkspaceDataEventInput = {
  */
 export function recordWorkspaceDataEvent(
   c: Context<AppEnv>,
-  input: RecordWorkspaceDataEventInput,
+  input: RecordWorkspaceDataEventInput
 ): void {
   persistAuditLogRow(c, "recordWorkspaceDataEvent", {
     apiTokenId: c.get("apiToken")?.id ?? null,

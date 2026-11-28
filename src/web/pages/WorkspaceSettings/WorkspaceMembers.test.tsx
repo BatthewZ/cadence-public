@@ -30,9 +30,8 @@ beforeAll(() => {
 // ---------------------------------------------------------------------------
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -115,7 +114,7 @@ vi.mock("@/web/hooks/use-permissions", () => ({
   }),
 }));
 
-import { api,ApiError } from "@/web/lib/api/client";
+import { api, ApiError } from "@/web/lib/api/client";
 
 const mockGet = api.get as ReturnType<typeof vi.fn>;
 const mockPost = api.post as ReturnType<typeof vi.fn>;
@@ -157,9 +156,7 @@ function getDropdownTriggers(): HTMLElement[] {
   return screen
     .queryAllByRole("button")
     .filter(
-      (btn) =>
-        btn.getAttribute("aria-haspopup") === "menu" &&
-        btn.textContent?.trim() === "...",
+      (btn) => btn.getAttribute("aria-haspopup") === "menu" && btn.textContent?.trim() === "..."
     );
 }
 
@@ -189,7 +186,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     // Target column headers within the thead
@@ -214,7 +211,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -248,7 +245,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -277,7 +274,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -303,10 +300,10 @@ describe("WorkspaceMembers", () => {
     await user.click(sendButton);
 
     await waitFor(() => {
-      expect(mockPost).toHaveBeenCalledWith(
-        "/api/workspaces/ws-1/invitations",
-        { email: "new@t.co", role: "member" },
-      );
+      expect(mockPost).toHaveBeenCalledWith("/api/workspaces/ws-1/invitations", {
+        email: "new@t.co",
+        role: "member",
+      });
     });
 
     expect(mockToast).toHaveBeenCalledWith("Invitation sent.", { variant: "success" });
@@ -322,7 +319,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -362,7 +359,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -390,9 +387,7 @@ describe("WorkspaceMembers", () => {
     await user.selectOptions(roleSelect, "admin");
 
     // Click Update Role (wrapped in waitFor because Dialog useEffect must run to set open attribute)
-    const updateButton = await waitFor(() =>
-      screen.getByRole("button", { name: /update role/i }),
-    );
+    const updateButton = await waitFor(() => screen.getByRole("button", { name: /update role/i }));
     await user.click(updateButton);
 
     // `user-2`, NOT `member-2`. The member row carries both a
@@ -404,10 +399,9 @@ describe("WorkspaceMembers", () => {
     // catches it: both ids are non-null strings, the mocked client accepts
     // anything, and the page's own success path still ran.
     await waitFor(() => {
-      expect(mockPatch).toHaveBeenCalledWith(
-        "/api/workspaces/ws-1/members/user-2",
-        { role: "admin" },
-      );
+      expect(mockPatch).toHaveBeenCalledWith("/api/workspaces/ws-1/members/user-2", {
+        role: "admin",
+      });
     });
 
     expect(mockToast).toHaveBeenCalledWith("Role updated.", { variant: "success" });
@@ -423,7 +417,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -450,7 +444,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -476,9 +470,10 @@ describe("WorkspaceMembers", () => {
     // The email is part of the confirmation because display names are not
     // unique — removal is destructive (it deletes the member's project and team
     // grants) and the name alone can identify the wrong row.
-    const confirmText = Array.from(document.querySelectorAll("dialog[open]"))
-      .find((d) => d.textContent?.includes("Remove Member"))!
-      .textContent ?? "";
+    const confirmText =
+      Array.from(document.querySelectorAll("dialog[open]")).find((d) =>
+        d.textContent?.includes("Remove Member")
+      )!.textContent ?? "";
     expect(confirmText).toContain("Bob");
     expect(confirmText).toContain("bob@test.com");
 
@@ -487,7 +482,7 @@ describe("WorkspaceMembers", () => {
     // the dialog element directly and search within it.
     const dialogs = document.querySelectorAll("dialog[open]");
     const confirmDialog = Array.from(dialogs).find((d) =>
-      d.textContent?.includes("Remove Member"),
+      d.textContent?.includes("Remove Member")
     )!;
     expect(confirmDialog).not.toBeUndefined();
 
@@ -499,9 +494,7 @@ describe("WorkspaceMembers", () => {
     // `user-2`, not the `workspace_member` row id — see the role-change test.
     // Removal was 404-ing for the same reason.
     await waitFor(() => {
-      expect(mockDelete).toHaveBeenCalledWith(
-        "/api/workspaces/ws-1/members/user-2",
-      );
+      expect(mockDelete).toHaveBeenCalledWith("/api/workspaces/ws-1/members/user-2");
     });
 
     expect(mockToast).toHaveBeenCalledWith("Member removed.", { variant: "success" });
@@ -518,7 +511,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -558,7 +551,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -574,7 +567,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -582,7 +575,7 @@ describe("WorkspaceMembers", () => {
     });
 
     expect(
-      screen.getByText("Invite members to your workspace to start collaborating."),
+      screen.getByText("Invite members to your workspace to start collaborating.")
     ).toBeInTheDocument();
   });
 
@@ -591,7 +584,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -608,7 +601,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -644,7 +637,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -655,9 +648,7 @@ describe("WorkspaceMembers", () => {
     await user.click(revokeButton);
 
     await waitFor(() => {
-      expect(mockDelete).toHaveBeenCalledWith(
-        "/api/workspaces/ws-1/invitations/inv-1",
-      );
+      expect(mockDelete).toHaveBeenCalledWith("/api/workspaces/ws-1/invitations/inv-1");
     });
 
     expect(mockToast).toHaveBeenCalledWith("Invitation revoked.", { variant: "success" });
@@ -702,7 +693,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -718,14 +709,12 @@ describe("WorkspaceMembers", () => {
     await renderAndClickCopy();
 
     await waitFor(() => {
-      expect(mockGet).toHaveBeenCalledWith(
-        "/api/workspaces/ws-1/invitations/inv-1/link",
-      );
+      expect(mockGet).toHaveBeenCalledWith("/api/workspaces/ws-1/invitations/inv-1/link");
     });
 
     expect(await screen.findByText("Copied")).toBeInTheDocument();
     await expect(window.navigator.clipboard.readText()).resolves.toBe(
-      "https://cadence.test/invite/tok-123",
+      "https://cadence.test/invite/tok-123"
     );
   });
 
@@ -734,15 +723,11 @@ describe("WorkspaceMembers", () => {
     // is denied. Swallowing that would leave the admin with no link at all —
     // the one thing this control exists to provide.
     mockPendingInvitation();
-    vi.spyOn(navigator.clipboard, "writeText").mockRejectedValue(
-      new Error("clipboard blocked"),
-    );
+    vi.spyOn(navigator.clipboard, "writeText").mockRejectedValue(new Error("clipboard blocked"));
 
     await renderAndClickCopy();
 
-    const fallback = await screen.findByLabelText(
-      "Invite link for pending@example.com",
-    );
+    const fallback = await screen.findByLabelText("Invite link for pending@example.com");
     expect(fallback).toHaveValue("https://cadence.test/invite/tok-123");
     expect(screen.queryByText("Copied")).toBeNull();
   });
@@ -771,16 +756,14 @@ describe("WorkspaceMembers", () => {
     // Collapsing all of them into "Failed to remove member." told the admin
     // only that something broke, so the natural next step was to retry the
     // identical action and fail identically.
-    mockDelete.mockRejectedValue(
-      new ApiError(403, "Only the workspace owner can remove an admin"),
-    );
+    mockDelete.mockRejectedValue(new ApiError(403, "Only the workspace owner can remove an admin"));
 
     const Wrapper = createWrapper();
     const user = userEvent.setup();
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -792,7 +775,7 @@ describe("WorkspaceMembers", () => {
 
     const confirmDialog = await waitFor(() => {
       const found = Array.from(document.querySelectorAll("dialog[open]")).find((d) =>
-        d.textContent?.includes("Remove Member"),
+        d.textContent?.includes("Remove Member")
       );
       expect(found).not.toBeUndefined();
       return found as HTMLElement;
@@ -800,15 +783,11 @@ describe("WorkspaceMembers", () => {
     await user.click(within(confirmDialog).getByText("Remove", { selector: "button" }));
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(
-        "Only the workspace owner can remove an admin",
-        { variant: "error" },
-      );
+      expect(mockToast).toHaveBeenCalledWith("Only the workspace owner can remove an admin", {
+        variant: "error",
+      });
     });
-    expect(mockToast).not.toHaveBeenCalledWith(
-      "Failed to remove member.",
-      expect.anything(),
-    );
+    expect(mockToast).not.toHaveBeenCalledWith("Failed to remove member.", expect.anything());
   }, 15_000);
 
   it("falls back to a generic message when the failure carries no server text", async () => {
@@ -821,7 +800,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -833,7 +812,7 @@ describe("WorkspaceMembers", () => {
 
     const confirmDialog = await waitFor(() => {
       const found = Array.from(document.querySelectorAll("dialog[open]")).find((d) =>
-        d.textContent?.includes("Remove Member"),
+        d.textContent?.includes("Remove Member")
       );
       expect(found).not.toBeUndefined();
       return found as HTMLElement;
@@ -865,7 +844,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -896,7 +875,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -905,9 +884,7 @@ describe("WorkspaceMembers", () => {
 
     await user.click(screen.getByLabelText("Actions for Charlie"));
 
-    expect(
-      await screen.findByRole("menuitem", { name: /change role/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("menuitem", { name: /change role/i })).toBeInTheDocument();
     expect(screen.getByRole("menuitem", { name: /remove/i })).toBeInTheDocument();
   }, 15_000);
 
@@ -920,7 +897,7 @@ describe("WorkspaceMembers", () => {
     render(
       <Wrapper>
         <WorkspaceMembers />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -936,8 +913,6 @@ describe("WorkspaceMembers", () => {
       return el!;
     });
 
-    expect(
-      Array.from(roleSelect.options).map((o) => o.value),
-    ).toEqual(["admin", "member"]);
+    expect(Array.from(roleSelect.options).map((o) => o.value)).toEqual(["admin", "member"]);
   }, 15_000);
 });

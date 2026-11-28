@@ -37,7 +37,7 @@ vi.mock("@/web/lib/api/client", () => {
   class ApiError extends Error {
     constructor(
       public status: number,
-      message: string,
+      message: string
     ) {
       super(message);
       this.name = "ApiError";
@@ -158,7 +158,7 @@ function renderPage() {
   render(
     <Wrapper>
       <WorkspaceData />
-    </Wrapper>,
+    </Wrapper>
   );
   return { user };
 }
@@ -215,7 +215,7 @@ describe("WorkspaceData", () => {
 
     expect(screen.getByRole("link", { name: "Download workspace (JSON)" })).toHaveAttribute(
       "href",
-      "/api/workspaces/ws-1/export",
+      "/api/workspaces/ws-1/export"
     );
   });
 
@@ -225,13 +225,13 @@ describe("WorkspaceData", () => {
     await user.click(screen.getByLabelText("Include activity history"));
     expect(screen.getByRole("link", { name: "Download workspace (JSON)" })).toHaveAttribute(
       "href",
-      "/api/workspaces/ws-1/export?includeActivity=true",
+      "/api/workspaces/ws-1/export?includeActivity=true"
     );
 
     await user.click(screen.getByLabelText("Include activity history"));
     expect(screen.getByRole("link", { name: "Download workspace (JSON)" })).toHaveAttribute(
       "href",
-      "/api/workspaces/ws-1/export",
+      "/api/workspaces/ws-1/export"
     );
   });
 
@@ -239,7 +239,7 @@ describe("WorkspaceData", () => {
     renderPage();
 
     expect(
-      screen.getByText(/Attachments are referenced by URL in the export manifest/),
+      screen.getByText(/Attachments are referenced by URL in the export manifest/)
     ).toBeInTheDocument();
     expect(screen.getByText(/Export tasks as CSV from each project/)).toBeInTheDocument();
   });
@@ -290,7 +290,7 @@ describe("WorkspaceData", () => {
 
     // Warnings
     expect(
-      screen.getByText("2 recurrence parents were not found in the file and were cleared."),
+      screen.getByText("2 recurrence parents were not found in the file and were cleared.")
     ).toBeInTheDocument();
   });
 
@@ -308,7 +308,7 @@ describe("WorkspaceData", () => {
     mockPost.mockImplementation((path) =>
       path.includes("dryRun=true")
         ? Promise.resolve(previewFixture)
-        : Promise.resolve(resultFixture),
+        : Promise.resolve(resultFixture)
     );
     const { user } = renderPage();
     const file = jsonFile();
@@ -333,13 +333,11 @@ describe("WorkspaceData", () => {
 
     // Report: rollback summary, created counts, failed project with error
     expect(
-      await screen.findByText("Imported 1 project; 1 failed and was rolled back."),
+      await screen.findByText("Imported 1 project; 1 failed and was rolled back.")
     ).toBeInTheDocument();
     expect(rowFor("Tasks")).toHaveTextContent("20");
     expect(screen.getByText("Roadmap")).toBeInTheDocument();
-    expect(
-      screen.getByText("UNIQUE constraint failed: task_group.position"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("UNIQUE constraint failed: task_group.position")).toBeInTheDocument();
 
     // Reset path returns to the upload state
     await user.click(screen.getByRole("button", { name: "Import another file" }));
@@ -357,7 +355,7 @@ describe("WorkspaceData", () => {
     selectFile(oversizeFile());
 
     expect(
-      await screen.findByText("File is too large — the limit is 20.0 MB."),
+      await screen.findByText("File is too large — the limit is 20.0 MB.")
     ).toBeInTheDocument();
     expect(mockPost).not.toHaveBeenCalled();
   });
@@ -368,7 +366,7 @@ describe("WorkspaceData", () => {
     selectFile(new File(["hi"], "notes.txt", { type: "text/plain" }));
 
     expect(
-      await screen.findByText("That doesn't look like a .json export file."),
+      await screen.findByText("That doesn't look like a .json export file.")
     ).toBeInTheDocument();
     expect(mockPost).not.toHaveBeenCalled();
   });
@@ -379,14 +377,14 @@ describe("WorkspaceData", () => {
 
   it("shows the server's message in an alert on a 400 response", async () => {
     mockPost.mockRejectedValue(
-      new ApiError(400, "Invalid file: projects[0].name must not be empty"),
+      new ApiError(400, "Invalid file: projects[0].name must not be empty")
     );
     renderPage();
 
     selectFile(jsonFile());
 
     expect(
-      await screen.findByText("Invalid file: projects[0].name must not be empty"),
+      await screen.findByText("Invalid file: projects[0].name must not be empty")
     ).toBeInTheDocument();
     // No preview was produced, so the confirm button stays disabled
     expect(screen.getByRole("button", { name: "Import" })).toBeDisabled();
@@ -399,7 +397,7 @@ describe("WorkspaceData", () => {
     selectFile(jsonFile());
 
     expect(
-      await screen.findByText("That file is too large to import — the limit is 20.0 MB."),
+      await screen.findByText("That file is too large to import — the limit is 20.0 MB.")
     ).toBeInTheDocument();
   });
 
@@ -413,19 +411,19 @@ describe("WorkspaceData", () => {
 
     // Page-level explanation
     expect(
-      screen.getByText(/Only workspace owners and admins can export or import/),
+      screen.getByText(/Only workspace owners and admins can export or import/)
     ).toBeInTheDocument();
 
     // Export: the download is a disabled button, not a live link
     expect(
-      screen.queryByRole("link", { name: "Download workspace (JSON)" }),
+      screen.queryByRole("link", { name: "Download workspace (JSON)" })
     ).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Download workspace (JSON)" })).toBeDisabled();
     expect(screen.getByLabelText("Include activity history")).toBeDisabled();
 
     // Import: explanatory line, dead file input, disabled confirm
     expect(
-      screen.getByText("Importing data requires the owner or admin role in this workspace."),
+      screen.getByText("Importing data requires the owner or admin role in this workspace.")
     ).toBeInTheDocument();
     expect(document.querySelector<HTMLInputElement>('input[type="file"]')).toBeDisabled();
     expect(screen.getByRole("button", { name: "Import" })).toBeDisabled();

@@ -31,7 +31,6 @@ export function isUnavailableOffline(query: {
   error: unknown;
 }): boolean {
   return (
-    query.data === undefined &&
-    (query.fetchStatus === "paused" || isOfflineError(query.error))
+    query.data === undefined && (query.fetchStatus === "paused" || isOfflineError(query.error))
   );
 }

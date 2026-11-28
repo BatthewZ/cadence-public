@@ -122,9 +122,7 @@ describe("validateBody", () => {
 
     expect(res.status).toBe(400);
     const body = await res.json<ValidationErrorBody>();
-    const cityError = body.details.find(
-      (d) => d.path === "user.address.city"
-    );
+    const cityError = body.details.find((d) => d.path === "user.address.city");
     expect(cityError).toBeDefined();
     expect(typeof cityError?.message).toBe("string");
   });

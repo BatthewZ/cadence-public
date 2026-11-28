@@ -57,10 +57,7 @@
 
 import type { Context } from "hono";
 
-import type {
-  ImportPreview,
-  ImportResult,
-} from "../../../shared/schemas/workspace-import";
+import type { ImportPreview, ImportResult } from "../../../shared/schemas/workspace-import";
 import type { AppEnv } from "../../env";
 import { recordWorkspaceDataEvent } from "../../lib/audit-log";
 import { errorResponse } from "../../lib/error-response";
@@ -96,7 +93,7 @@ export async function importWorkspaceData(c: Context<AppEnv>) {
     return errorResponse(
       c,
       'Expected a multipart/form-data upload with a "file" field containing the export file.',
-      400,
+      400
     );
   }
 
@@ -105,7 +102,7 @@ export async function importWorkspaceData(c: Context<AppEnv>) {
     return errorResponse(
       c,
       'No file provided. Upload the export file in a "file" form field.',
-      400,
+      400
     );
   }
 
@@ -120,12 +117,9 @@ export async function importWorkspaceData(c: Context<AppEnv>) {
     // `errors` lines are user-facing by contract and returned verbatim —
     // they are how a user locates the offending value in a large file.
     const status = parsed.reason === "too-large" ? 413 : 400;
-    return errorResponse(
-      c,
-      parsed.errors[0] ?? "The import file could not be processed.",
-      status,
-      { errors: parsed.errors },
-    );
+    return errorResponse(c, parsed.errors[0] ?? "The import file could not be processed.", status, {
+      errors: parsed.errors,
+    });
   }
 
   // Each imported project costs ~5-20 D1 subrequests (sequential FK-ordered

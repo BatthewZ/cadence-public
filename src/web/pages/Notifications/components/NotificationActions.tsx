@@ -25,7 +25,7 @@ export interface NotificationActionsContext {
 
 export function renderNotificationActions(
   n: Notification,
-  ctx: NotificationActionsContext,
+  ctx: NotificationActionsContext
 ): ReactNode | undefined {
   const {
     pendingInvitationIds,
@@ -88,9 +88,7 @@ export function renderNotificationActions(
           className="notification-action-btn"
           onClick={() => {
             markRead(n);
-            void navigate(
-              `/w/${slug}/projects/${n.projectId}/board?task=${n.taskId}`,
-            );
+            void navigate(`/w/${slug}/projects/${n.projectId}/board?task=${n.taskId}`);
           }}
         >
           View task
@@ -101,11 +99,7 @@ export function renderNotificationActions(
   }
 
   // Project member added — View project button
-  if (
-    n.type === "project_member_added" &&
-    n.projectId &&
-    n.workspaceId
-  ) {
+  if (n.type === "project_member_added" && n.projectId && n.workspaceId) {
     const slug = slugMap.get(n.workspaceId);
     if (slug) {
       return (

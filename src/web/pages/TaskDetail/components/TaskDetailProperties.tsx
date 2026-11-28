@@ -193,9 +193,7 @@ export function TaskDetailProperties({
             value={task.assigneeId ?? null}
             members={members}
             onSelect={(userId) => {
-              const member = userId
-                ? members.find((m) => m.userId === userId)
-                : undefined;
+              const member = userId ? members.find((m) => m.userId === userId) : undefined;
               onPatch({
                 assigneeId: userId,
                 assigneeName: member?.user.name ?? undefined,

@@ -14,6 +14,6 @@
 export { EditableMarkdown } from "./EditableMarkdown";
 export { Markdown } from "./Markdown";
 export { MarkdownEditor } from "./MarkdownEditor";
-export { type MarkdownCommand,MarkdownToolbar } from "./MarkdownToolbar";
-export { type MdInline, type MdNode,parseMarkdown } from "./parse";
+export { type MarkdownCommand, MarkdownToolbar } from "./MarkdownToolbar";
+export { type MdInline, type MdNode, parseMarkdown } from "./parse";
 export { type MdSelection } from "./transforms";

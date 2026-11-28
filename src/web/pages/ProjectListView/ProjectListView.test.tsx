@@ -74,7 +74,8 @@ class IntersectionObserverStub {
   unobserve() {}
   disconnect() {}
 }
-globalThis.IntersectionObserver = IntersectionObserverStub as unknown as typeof IntersectionObserver;
+globalThis.IntersectionObserver =
+  IntersectionObserverStub as unknown as typeof IntersectionObserver;
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,
@@ -115,7 +116,10 @@ function makeTaskGroup(overrides: Partial<TaskGroup> & { id: string; name: strin
   };
 }
 
-function setupProjectMock(tasks: Task[], taskGroups: TaskGroup[] = [makeTaskGroup({ id: "group-1", name: "To Do" })]) {
+function setupProjectMock(
+  tasks: Task[],
+  taskGroups: TaskGroup[] = [makeTaskGroup({ id: "group-1", name: "To Do" })]
+) {
   mockUseProject.mockReturnValue({
     project: { id: "proj-1", name: "Test Project", status: "active", workspaceId: "ws-1" },
     members: [],
@@ -180,7 +184,7 @@ function renderComponent() {
   return render(
     <Wrapper>
       <ProjectListView />
-    </Wrapper>,
+    </Wrapper>
   );
 }
 
@@ -202,9 +206,7 @@ describe("ProjectListView", () => {
   // -------------------------------------------------------------------------
   describe("renders DataTable with task columns", () => {
     it("displays column headers for Title, Group, Assigned to, Priority, Status, Due Date", () => {
-      setupProjectMock([
-        makeTask({ id: "t-1", title: "First task" }),
-      ]);
+      setupProjectMock([makeTask({ id: "t-1", title: "First task" })]);
       renderComponent();
 
       expect(screen.getByText("Title")).toBeInTheDocument();
@@ -252,9 +254,7 @@ describe("ProjectListView", () => {
     });
 
     it("shows assignee name and avatar when task has an assignee", () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "Assigned task", assigneeId: "user-1" }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Assigned task", assigneeId: "user-1" })];
       setupProjectMock(tasks);
       renderComponent();
 
@@ -262,9 +262,7 @@ describe("ProjectListView", () => {
     });
 
     it('shows "Unassigned" when task has no assignee', () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "No assignee task", assigneeId: null }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "No assignee task", assigneeId: null })];
       setupProjectMock(tasks);
       renderComponent();
 
@@ -272,9 +270,7 @@ describe("ProjectListView", () => {
     });
 
     it("shows dash when task has no group", () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "No group task", taskGroupId: "nonexistent" }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "No group task", taskGroupId: "nonexistent" })];
       setupProjectMock(tasks, []);
       renderComponent();
 
@@ -288,9 +284,7 @@ describe("ProjectListView", () => {
     });
 
     it("shows dash for due date when task has no due date", () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "No due date task", dueDate: null }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "No due date task", dueDate: null })];
       setupProjectMock(tasks);
       renderComponent();
 
@@ -313,9 +307,7 @@ describe("ProjectListView", () => {
     });
 
     it('shows "No matching tasks" when search yields no results', () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "Build feature" }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Build feature" })];
       setupProjectMock(tasks);
       renderComponent();
 
@@ -388,9 +380,7 @@ describe("ProjectListView", () => {
     });
 
     it("search is case-insensitive", () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "Important Task" }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Important Task" })];
       setupProjectMock(tasks);
       renderComponent();
 
@@ -468,9 +458,7 @@ describe("ProjectListView", () => {
 
     it("hides bulk action bar when selection is cleared", async () => {
       const user = userEvent.setup();
-      const tasks = [
-        makeTask({ id: "t-1", title: "Task One" }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Task One" })];
       setupProjectMock(tasks);
       renderComponent();
 
@@ -513,9 +501,7 @@ describe("ProjectListView", () => {
   // -------------------------------------------------------------------------
   describe("status indicators", () => {
     it('shows "Done" status with success styling for completed tasks', () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "Completed task", completed: true }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Completed task", completed: true })];
       setupProjectMock(tasks);
       renderComponent();
 
@@ -527,9 +513,7 @@ describe("ProjectListView", () => {
     });
 
     it('shows "Active" status with muted styling for incomplete tasks', () => {
-      const tasks = [
-        makeTask({ id: "t-1", title: "Active task", completed: false }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "Active task", completed: false })];
       setupProjectMock(tasks);
       renderComponent();
 
@@ -669,9 +653,7 @@ describe("ProjectListView", () => {
 
     it("row selection is unaffected by filter clicks", async () => {
       const user = userEvent.setup();
-      const tasks = [
-        makeTask({ id: "t-1", title: "High task", priority: "high" }),
-      ];
+      const tasks = [makeTask({ id: "t-1", title: "High task", priority: "high" })];
       setupProjectMock(tasks);
       renderComponent();
 

@@ -29,9 +29,7 @@ export function ProjectFilter({
   }, [projects, search]);
 
   function toggle(id: string) {
-    const next = selected.includes(id)
-      ? selected.filter((p) => p !== id)
-      : [...selected, id];
+    const next = selected.includes(id) ? selected.filter((p) => p !== id) : [...selected, id];
     onChange(next);
   }
 
@@ -66,16 +64,17 @@ export function ProjectFilter({
         )}
         <div className="task-filter-bar__popover-list">
           {loading ? (
-            <Text variant="body-3" color="muted">Loading…</Text>
+            <Text variant="body-3" color="muted">
+              Loading…
+            </Text>
           ) : filtered.length === 0 ? (
-            <Text variant="body-3" color="muted">No projects found</Text>
+            <Text variant="body-3" color="muted">
+              No projects found
+            </Text>
           ) : (
             filtered.map((p) => (
               <label key={p.id} className="task-filter-bar__option">
-                <Checkbox
-                  checked={selected.includes(p.id)}
-                  onChange={() => toggle(p.id)}
-                />
+                <Checkbox checked={selected.includes(p.id)} onChange={() => toggle(p.id)} />
                 <span className="truncate">{p.name}</span>
               </label>
             ))

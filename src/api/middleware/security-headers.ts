@@ -52,11 +52,7 @@ function isHtml(response: Response): boolean {
 
 /** Returns true for paths that serve the interactive API documentation UI (Scalar). */
 function isDocsPath(path: string): boolean {
-  return (
-    path === "/api/docs" ||
-    path.startsWith("/api/docs/") ||
-    path === "/api/openapi.json"
-  );
+  return path === "/api/docs" || path.startsWith("/api/docs/") || path === "/api/openapi.json";
 }
 
 const DOCS_CSP = [
@@ -76,10 +72,7 @@ export const securityHeadersMiddleware = createMiddleware(async (c, next) => {
   for (const [key, value] of Object.entries(SHARED_HEADERS)) {
     c.header(key, value);
   }
-  c.header(
-    "Content-Security-Policy",
-    isDocsPath(c.req.path) ? DOCS_CSP : API_CSP,
-  );
+  c.header("Content-Security-Policy", isDocsPath(c.req.path) ? DOCS_CSP : API_CSP);
 });
 
 /**
@@ -96,13 +89,12 @@ export const securityHeadersMiddleware = createMiddleware(async (c, next) => {
  * The SPA CSP differs from the API CSP: it allows the inline FOUC prevention
  * script via 'unsafe-inline' in script-src.
  */
-export function withSpaSecurityHeaders(
-  response: Response,
-  requestPath: string
-): Response {
+export function withSpaSecurityHeaders(response: Response, requestPath: string): Response {
   const isAsset = requestPath.startsWith("/assets/");
   const missingAsset = isAsset && isHtml(response);
-  const headers = new Headers(missingAsset ? { "Content-Type": "text/plain; charset=utf-8" } : response.headers);
+  const headers = new Headers(
+    missingAsset ? { "Content-Type": "text/plain; charset=utf-8" } : response.headers
+  );
   for (const [key, value] of Object.entries(SHARED_HEADERS)) {
     headers.set(key, value);
   }

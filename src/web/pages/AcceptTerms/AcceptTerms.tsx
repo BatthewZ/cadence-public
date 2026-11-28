@@ -56,8 +56,7 @@ export function AcceptTerms() {
           </Text>
 
           <Text variant="body-2" color="secondary" className="text-center">
-            We've added Terms of Service and a Privacy Policy. Please review
-            them before continuing.
+            We've added Terms of Service and a Privacy Policy. Please review them before continuing.
           </Text>
 
           <Stack gap="r4">
@@ -66,20 +65,10 @@ export function AcceptTerms() {
             </Text>
 
             <div className="flex flex-col gap-r5">
-              <Link
-                to="/terms"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link"
-              >
+              <Link to="/terms" target="_blank" rel="noopener noreferrer" className="link">
                 Terms of Service
               </Link>
-              <Link
-                to="/privacy"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="link"
-              >
+              <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="link">
                 Privacy Policy
               </Link>
             </div>

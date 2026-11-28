@@ -180,7 +180,11 @@ export function TaskGroupsTab({
     }
     qc.setQueryData<{ tasks: Task[] }>(tasksKey, (old) =>
       old
-        ? { tasks: old.tasks.map((t) => (t.taskGroupId === group.id ? { ...t, taskGroupId: target } : t)) }
+        ? {
+            tasks: old.tasks.map((t) =>
+              t.taskGroupId === group.id ? { ...t, taskGroupId: target } : t
+            ),
+          }
         : old
     );
     setDeleteDialogOpen(false);
@@ -200,7 +204,8 @@ export function TaskGroupsTab({
       }
     } catch (err) {
       addTaskGroup(group);
-      if (previousTargetCount !== undefined) updateTaskGroup(target, { taskCount: previousTargetCount });
+      if (previousTargetCount !== undefined)
+        updateTaskGroup(target, { taskCount: previousTargetCount });
       if (previousTasks) qc.setQueryData(tasksKey, previousTasks);
       toast(apiErrorMessage(err, "Failed to delete task group."), { variant: "error" });
     }

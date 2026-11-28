@@ -96,9 +96,7 @@ function ProjectsGrid({
   }
 
   // Build a lookup from dashboard stats to enrich workspace projects with task counts
-  const statsMap = new Map(
-    (dashboardProjects ?? []).map((p) => [p.id, p]),
-  );
+  const statsMap = new Map((dashboardProjects ?? []).map((p) => [p.id, p]));
 
   const enrichedProjects: WorkspaceProject[] = projects.map((p) => {
     const stats = statsMap.get(p.id);

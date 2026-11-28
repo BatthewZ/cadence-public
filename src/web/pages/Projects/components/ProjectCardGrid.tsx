@@ -14,12 +14,7 @@ import {
 } from "lucide-react";
 
 import { Row, Stack } from "@/web/components/layout";
-import {
-  Badge,
-  Card,
-  IconButton,
-  Text,
-} from "@/web/components/ui";
+import { Badge, Card, IconButton, Text } from "@/web/components/ui";
 import { DropdownMenu } from "@/web/components/ui/DropdownMenu";
 import { IconDisplay } from "@/web/components/ui/IconDisplay";
 import type { WorkspaceProject } from "@/web/contexts/WorkspaceContext";
@@ -51,7 +46,7 @@ export function ProjectCardGrid({
     projectId: string,
     status: "active" | "completed" | "archived",
     successMessage: string,
-    failureMessage: string,
+    failureMessage: string
   ) => void;
   onDeleteProject: (project: WorkspaceProject) => void;
   onDuplicateProject: (project: WorkspaceProject) => void;
@@ -135,14 +130,28 @@ export function ProjectCardGrid({
                     <DropdownMenu.Item
                       index={4}
                       icon={<CheckCircle2 size={14} />}
-                      onSelect={() => void onChangeProjectStatus(project.id, "completed", "Project marked as completed", "Failed to complete project")}
+                      onSelect={() =>
+                        void onChangeProjectStatus(
+                          project.id,
+                          "completed",
+                          "Project marked as completed",
+                          "Failed to complete project"
+                        )
+                      }
                     >
                       Mark as completed
                     </DropdownMenu.Item>
                     <DropdownMenu.Item
                       index={5}
                       icon={<Archive size={14} />}
-                      onSelect={() => void onChangeProjectStatus(project.id, "archived", "Project archived", "Failed to archive project")}
+                      onSelect={() =>
+                        void onChangeProjectStatus(
+                          project.id,
+                          "archived",
+                          "Project archived",
+                          "Failed to archive project"
+                        )
+                      }
                     >
                       Archive project
                     </DropdownMenu.Item>
@@ -153,14 +162,28 @@ export function ProjectCardGrid({
                     <DropdownMenu.Item
                       index={4}
                       icon={<RotateCcw size={14} />}
-                      onSelect={() => void onChangeProjectStatus(project.id, "active", "Project restored", "Failed to restore project")}
+                      onSelect={() =>
+                        void onChangeProjectStatus(
+                          project.id,
+                          "active",
+                          "Project restored",
+                          "Failed to restore project"
+                        )
+                      }
                     >
                       Reopen project
                     </DropdownMenu.Item>
                     <DropdownMenu.Item
                       index={5}
                       icon={<Archive size={14} />}
-                      onSelect={() => void onChangeProjectStatus(project.id, "archived", "Project archived", "Failed to archive project")}
+                      onSelect={() =>
+                        void onChangeProjectStatus(
+                          project.id,
+                          "archived",
+                          "Project archived",
+                          "Failed to archive project"
+                        )
+                      }
                     >
                       Archive project
                     </DropdownMenu.Item>
@@ -170,7 +193,14 @@ export function ProjectCardGrid({
                   <DropdownMenu.Item
                     index={4}
                     icon={<ArchiveRestore size={14} />}
-                    onSelect={() => void onChangeProjectStatus(project.id, "active", "Project restored", "Failed to restore project")}
+                    onSelect={() =>
+                      void onChangeProjectStatus(
+                        project.id,
+                        "active",
+                        "Project restored",
+                        "Failed to restore project"
+                      )
+                    }
                   >
                     Restore project
                   </DropdownMenu.Item>
@@ -192,10 +222,12 @@ export function ProjectCardGrid({
                 <IconDisplay name={project.icon} fallback={FolderKanban} size={24} />
               </span>
               <Stack gap="r6" className="min-w-0">
-                <Text variant="h5" className="truncate">{project.name}</Text>
+                <Text variant="h5" className="truncate">
+                  {project.name}
+                </Text>
                 <Text variant="body-3" color="muted">
-                  {project.taskCount} {project.taskCount === 1 ? "task" : "tasks"}{" "}
-                  &middot; {project.memberCount} {project.memberCount === 1 ? "member" : "members"}
+                  {project.taskCount} {project.taskCount === 1 ? "task" : "tasks"} &middot;{" "}
+                  {project.memberCount} {project.memberCount === 1 ? "member" : "members"}
                 </Text>
               </Stack>
             </Row>

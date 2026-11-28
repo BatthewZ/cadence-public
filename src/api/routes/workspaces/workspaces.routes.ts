@@ -61,7 +61,7 @@ import {
  * runtime behavior.
  */
 function asRouteHandler<R extends RouteConfig>(
-  fn: (c: Context<AppEnv>) => unknown,
+  fn: (c: Context<AppEnv>) => unknown
 ): RouteHandler<R, AppEnv> {
   return fn as unknown as RouteHandler<R, AppEnv>;
 }
@@ -116,7 +116,7 @@ const getWorkspaceRoute = createRoute({
   tags: ["Workspaces"],
   summary: "Get a workspace",
   description:
-    "Returns a single workspace with `memberCount` and its resolved `policy`. Caller must be a member.\n\n`policy` always arrives fully resolved — every toggle present, defaults already applied — so a client never needs its own copy of the defaults and never has to distinguish \"unset\" from \"off\".",
+    'Returns a single workspace with `memberCount` and its resolved `policy`. Caller must be a member.\n\n`policy` always arrives fully resolved — every toggle present, defaults already applied — so a client never needs its own copy of the defaults and never has to distinguish "unset" from "off".',
   security,
   middleware: [requireAuth, requireWorkspaceMember()],
   request: {
@@ -176,18 +176,13 @@ app.openapi(getWorkspaceRoute, asRouteHandler<typeof getWorkspaceRoute>(getWorks
 
 // Remaining (plain-Hono) routes — not yet documented in OpenAPI.
 
-app.post(
-  "/workspaces",
-  requireAuth,
-  validateBody(createWorkspaceSchema),
-  createWorkspace,
-);
+app.post("/workspaces", requireAuth, validateBody(createWorkspaceSchema), createWorkspace);
 
 app.get(
   "/workspaces/:workspaceId/freshness",
   requireAuth,
   requireWorkspaceMember(),
-  getWorkspaceFreshness,
+  getWorkspaceFreshness
 );
 
 // Workspace export — the most privileged READ in the API (full data
@@ -205,7 +200,7 @@ app.get(
     prefix: "workspace-export",
     keyFn: defaultRateLimitKey,
   }),
-  exportWorkspace,
+  exportWorkspace
 );
 
 // Workspace import — the write-side counterpart of export: a multipart
@@ -225,7 +220,7 @@ app.post(
     prefix: "workspace-import",
     keyFn: defaultRateLimitKey,
   }),
-  importWorkspaceData,
+  importWorkspaceData
 );
 
 app.patch(
@@ -233,36 +228,26 @@ app.patch(
   requireAuth,
   requireWorkspaceRole("owner", "admin"),
   validateBody(updateWorkspaceSchema),
-  updateWorkspace,
+  updateWorkspace
 );
 
-app.delete(
-  "/workspaces/:workspaceId",
-  requireAuth,
-  requireWorkspaceRole("owner"),
-  deleteWorkspace,
-);
+app.delete("/workspaces/:workspaceId", requireAuth, requireWorkspaceRole("owner"), deleteWorkspace);
 
-app.get(
-  "/workspaces/:workspaceId/members",
-  requireAuth,
-  requireWorkspaceMember(),
-  listMembers,
-);
+app.get("/workspaces/:workspaceId/members", requireAuth, requireWorkspaceMember(), listMembers);
 
 app.patch(
   "/workspaces/:workspaceId/members/:userId",
   requireAuth,
   requireWorkspaceRole("owner", "admin"),
   validateBody(updateMemberRoleSchema),
-  updateMemberRole,
+  updateMemberRole
 );
 
 app.delete(
   "/workspaces/:workspaceId/members/:userId",
   requireAuth,
   requireWorkspaceRole("owner", "admin"),
-  removeMember,
+  removeMember
 );
 
 export default app;

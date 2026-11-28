@@ -82,7 +82,8 @@ function wrap(db: IDBDatabase): OfflineDb {
     get: <T>(name: StoreName, key: IDBValidKey) =>
       promisify(store(name, "readonly").get(key)) as Promise<T | undefined>,
     getAll: <T>(name: StoreName) => promisify(store(name, "readonly").getAll()) as Promise<T[]>,
-    put: (name, value, key) => write(name, (s) => (key === undefined ? s.put(value) : s.put(value, key))),
+    put: (name, value, key) =>
+      write(name, (s) => (key === undefined ? s.put(value) : s.put(value, key))),
     add: (name, value) => write(name, (s) => s.add(value)),
     addAll: async (name, values) => {
       if (values.length === 0) return;

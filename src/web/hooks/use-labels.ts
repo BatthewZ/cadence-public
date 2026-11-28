@@ -27,7 +27,11 @@ export function useLabels(projectId: string, options?: { enabled?: boolean }) {
 type LabelsData = { labels: Label[] };
 
 /** A queued write's reply comes with the refresh after the queue drains, so it skips this one. */
-function invalidateLabelQueries(qc: QueryClient, projectId: string, result: WriteResult<unknown> | undefined) {
+function invalidateLabelQueries(
+  qc: QueryClient,
+  projectId: string,
+  result: WriteResult<unknown> | undefined
+) {
   if (result?.status === "queued") return;
   void qc.invalidateQueries({ queryKey: queryKeys.projects.labels(projectId) });
   void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(projectId) });
@@ -47,7 +51,8 @@ function taskCachesWithLabel(qc: QueryClient, projectId: string, labelId: string
   const entries: CacheEntry[] = [];
   const tasksKey = queryKeys.projects.tasks(projectId);
   const tasks = qc.getQueryData<{ tasks: Task[] }>(tasksKey);
-  if (tasks?.tasks.some((t) => t.labels?.some((l) => l.id === labelId))) entries.push([tasksKey, tasks]);
+  if (tasks?.tasks.some((t) => t.labels?.some((l) => l.id === labelId)))
+    entries.push([tasksKey, tasks]);
   for (const [key, data] of qc.getQueriesData<TaskDetailData>({ queryKey: ["tasks"] })) {
     if (data?.task?.labels?.some((l) => l.id === labelId)) entries.push([key, data]);
   }
@@ -71,7 +76,10 @@ function rewriteLabelInTaskCaches(
   for (const [key, data] of qc.getQueriesData<TaskDetailData>({ queryKey: ["tasks"] })) {
     const labels = data?.task?.labels;
     if (!data || !labels?.some((l) => l.id === labelId)) continue;
-    qc.setQueryData<TaskDetailData>(key, { ...data, task: { ...data.task, labels: rewrite(labels) } });
+    qc.setQueryData<TaskDetailData>(key, {
+      ...data,
+      task: { ...data.task, labels: rewrite(labels) },
+    });
   }
 }
 
@@ -183,7 +191,9 @@ export function useDeleteLabel(projectId: string) {
       qc.setQueryData<LabelsData>(labelsKey, (old) =>
         old ? { labels: old.labels.filter((l) => l.id !== labelId) } : old
       );
-      rewriteLabelInTaskCaches(qc, projectId, labelId, (labels) => removeLabelFromTask(labels, labelId));
+      rewriteLabelInTaskCaches(qc, projectId, labelId, (labels) =>
+        removeLabelFromTask(labels, labelId)
+      );
       return sendWrite({
         method: "DELETE",
         path: `/api/projects/${projectId}/labels/${labelId}`,

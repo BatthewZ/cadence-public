@@ -8,7 +8,7 @@ describe("MediaCard", () => {
     render(
       <MediaCard>
         <MediaCard.Image src="/photo.jpg" alt="A photo" />
-      </MediaCard>,
+      </MediaCard>
     );
     expect(screen.getByRole("article")).toBeInTheDocument();
   });
@@ -17,7 +17,7 @@ describe("MediaCard", () => {
     render(
       <MediaCard>
         <MediaCard.Image src="/photo.jpg" alt="Sunset" />
-      </MediaCard>,
+      </MediaCard>
     );
     const img = screen.getByRole("img", { name: "Sunset" });
     expect(img).toBeInTheDocument();
@@ -32,7 +32,7 @@ describe("MediaCard", () => {
           <h3>Card Title</h3>
           <p>Card description text</p>
         </MediaCard.Content>
-      </MediaCard>,
+      </MediaCard>
     );
     expect(screen.getByRole("heading", { level: 3, name: "Card Title" })).toBeInTheDocument();
     expect(screen.getByText("Card description text")).toBeInTheDocument();
@@ -42,7 +42,7 @@ describe("MediaCard", () => {
     const { container } = render(
       <MediaCard>
         <MediaCard.Image src="/photo.jpg" alt="Photo" />
-      </MediaCard>,
+      </MediaCard>
     );
     const imageContainer = container.querySelector(".media-card__image-container");
     expect(imageContainer?.className).toContain("media-card__image-container--portrait");
@@ -52,7 +52,7 @@ describe("MediaCard", () => {
     const { container } = render(
       <MediaCard orientation="landscape">
         <MediaCard.Image src="/photo.jpg" alt="Photo" />
-      </MediaCard>,
+      </MediaCard>
     );
     const imageContainer = container.querySelector(".media-card__image-container");
     expect(imageContainer?.className).toContain("media-card__image-container--landscape");
@@ -62,7 +62,7 @@ describe("MediaCard", () => {
     const { container } = render(
       <MediaCard orientation="square">
         <MediaCard.Image src="/photo.jpg" alt="Photo" />
-      </MediaCard>,
+      </MediaCard>
     );
     const imageContainer = container.querySelector(".media-card__image-container");
     expect(imageContainer?.className).toContain("media-card__image-container--square");
@@ -75,7 +75,7 @@ describe("MediaCard", () => {
         <MediaCard.Action>
           <button type="button">Play</button>
         </MediaCard.Action>
-      </MediaCard>,
+      </MediaCard>
     );
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
   });
@@ -85,7 +85,7 @@ describe("MediaCard", () => {
       <MediaCard>
         <MediaCard.Image src="/img.jpg" alt="Photo" />
         <MediaCard.Badge>New</MediaCard.Badge>
-      </MediaCard>,
+      </MediaCard>
     );
     expect(screen.getByText("New")).toBeInTheDocument();
   });
@@ -95,7 +95,7 @@ describe("MediaCard", () => {
       <MediaCard>
         <MediaCard.Image src="/img.jpg" alt="Photo" />
         <MediaCard.Overlay />
-      </MediaCard>,
+      </MediaCard>
     );
     const overlay = container.querySelector(".media-card__overlay");
     expect(overlay).toBeInTheDocument();
@@ -106,7 +106,7 @@ describe("MediaCard", () => {
     render(
       <MediaCard className="card-custom">
         <MediaCard.Image src="/img.jpg" alt="Photo" />
-      </MediaCard>,
+      </MediaCard>
     );
     const article = screen.getByRole("article");
     expect(article.className).toContain("card-custom");

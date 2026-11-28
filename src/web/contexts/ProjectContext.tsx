@@ -159,8 +159,7 @@ export interface ProjectContextValue {
 // Persist the context reference across Vite HMR updates so the
 // provider/consumer identity stays stable and useProject() doesn't throw.
 const hmrHot = (import.meta as unknown as Record<string, unknown>).hot as
-  | { data: Record<string, unknown> }
-  | undefined;
+  { data: Record<string, unknown> } | undefined;
 
 const ProjectContext: React.Context<ProjectContextValue | null> =
   (hmrHot?.data?.ProjectContext as React.Context<ProjectContextValue | null>) ??
@@ -184,14 +183,18 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
   // WorkspaceLayout) to decide whether freshness polling is needed. Reading
   // from cache avoids creating extra hook instances that would spawn
   // duplicate polling timers.
-  const workspaces = qc.getQueryData<{ workspaces: Array<{ id: string; memberCount?: number }> }>(queryKeys.workspaces.all);
-  const projectDetail = qc.getQueryData<{ project: { workspaceId: string } }>(queryKeys.projects.detail(projectId));
+  const workspaces = qc.getQueryData<{ workspaces: Array<{ id: string; memberCount?: number }> }>(
+    queryKeys.workspaces.all
+  );
+  const projectDetail = qc.getQueryData<{ project: { workspaceId: string } }>(
+    queryKeys.projects.detail(projectId)
+  );
   const wsId = projectDetail?.project.workspaceId ?? "";
   const wsMembers = qc.getQueryData<{ members: unknown[] }>(queryKeys.workspaces.members(wsId));
   const memberCount =
-    wsMembers?.members.length
-    ?? workspaces?.workspaces.find(w => w.id === wsId)?.memberCount
-    ?? 0;
+    wsMembers?.members.length ??
+    workspaces?.workspaces.find((w) => w.id === wsId)?.memberCount ??
+    0;
   const isMultiUser = memberCount > 1;
 
   // Only poll when the workspace has multiple members — if you're the sole
@@ -207,7 +210,16 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
 
   const { data: membersData } = useQuery({
     queryKey: queryKeys.projects.members(projectId),
-    queryFn: () => api.get<{ members: Array<{ id: string; userId: string; role: string; user: { id: string; name: string; email: string; image?: string }; addedAt: string }> }>(`/api/projects/${projectId}/members`),
+    queryFn: () =>
+      api.get<{
+        members: Array<{
+          id: string;
+          userId: string;
+          role: string;
+          user: { id: string; name: string; email: string; image?: string };
+          addedAt: string;
+        }>;
+      }>(`/api/projects/${projectId}/members`),
     staleTime: 5 * 60_000,
   });
 
@@ -223,85 +235,99 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
 
   // Optimistic helpers — write directly to the React Query cache.
   // No more local state overlays or useEffect sync.
-  const updateProject = useCallback((updates: Partial<Project>) => {
-    qc.setQueryData(
-      queryKeys.projects.detail(projectId),
-      (old: { project: Project } | undefined) =>
-        old ? { project: { ...old.project, ...updates } } : old,
-    );
-  }, [qc, projectId]);
+  const updateProject = useCallback(
+    (updates: Partial<Project>) => {
+      qc.setQueryData(
+        queryKeys.projects.detail(projectId),
+        (old: { project: Project } | undefined) =>
+          old ? { project: { ...old.project, ...updates } } : old
+      );
+    },
+    [qc, projectId]
+  );
 
-  const updateTask = useCallback((taskId: string, updates: Partial<Task>) => {
-    qc.setQueryData(
-      queryKeys.projects.tasks(projectId),
-      (old: { tasks: Task[] } | undefined) => {
+  const updateTask = useCallback(
+    (taskId: string, updates: Partial<Task>) => {
+      qc.setQueryData(queryKeys.projects.tasks(projectId), (old: { tasks: Task[] } | undefined) => {
         if (!old) return old;
         return { tasks: old.tasks.map((t) => (t.id === taskId ? { ...t, ...updates } : t)) };
-      },
-    );
-  }, [qc, projectId]);
+      });
+    },
+    [qc, projectId]
+  );
 
-  const addTask = useCallback((task: Task) => {
-    qc.setQueryData(
-      queryKeys.projects.tasks(projectId),
-      (old: { tasks: Task[] } | undefined) => {
+  const addTask = useCallback(
+    (task: Task) => {
+      qc.setQueryData(queryKeys.projects.tasks(projectId), (old: { tasks: Task[] } | undefined) => {
         if (!old) return { tasks: [task] };
         if (old.tasks.some((t) => t.id === task.id)) {
           return { tasks: old.tasks.map((t) => (t.id === task.id ? task : t)) };
         }
         return { tasks: [...old.tasks, task] };
-      },
-    );
-  }, [qc, projectId]);
+      });
+    },
+    [qc, projectId]
+  );
 
-  const removeTask = useCallback((taskId: string) => {
-    const removed = qc
-      .getQueryData<{ tasks: Task[] }>(queryKeys.projects.tasks(projectId))
-      ?.tasks.find((t) => t.id === taskId);
-    qc.setQueryData(
-      queryKeys.projects.tasks(projectId),
-      (old: { tasks: Task[] } | undefined) => {
+  const removeTask = useCallback(
+    (taskId: string) => {
+      const removed = qc
+        .getQueryData<{ tasks: Task[] }>(queryKeys.projects.tasks(projectId))
+        ?.tasks.find((t) => t.id === taskId);
+      qc.setQueryData(queryKeys.projects.tasks(projectId), (old: { tasks: Task[] } | undefined) => {
         if (!old) return old;
         return { tasks: old.tasks.filter((t) => t.id !== taskId) };
-      },
-    );
-    return () => {
-      if (removed) addTask(removed);
-    };
-  }, [qc, projectId, addTask]);
+      });
+      return () => {
+        if (removed) addTask(removed);
+      };
+    },
+    [qc, projectId, addTask]
+  );
 
-  const updateTaskGroup = useCallback((groupId: string, updates: Partial<TaskGroup>) => {
-    qc.setQueryData(
-      queryKeys.projects.taskGroups(projectId),
-      (old: { taskGroups: TaskGroup[] } | undefined) => {
-        if (!old) return old;
-        return { taskGroups: old.taskGroups.map((g) => (g.id === groupId ? { ...g, ...updates } : g)) };
-      },
-    );
-  }, [qc, projectId]);
-
-  const removeTaskGroup = useCallback((groupId: string) => {
-    qc.setQueryData(
-      queryKeys.projects.taskGroups(projectId),
-      (old: { taskGroups: TaskGroup[] } | undefined) => {
-        if (!old) return old;
-        return { taskGroups: old.taskGroups.filter((g) => g.id !== groupId) };
-      },
-    );
-  }, [qc, projectId]);
-
-  const addTaskGroup = useCallback((group: TaskGroup) => {
-    qc.setQueryData(
-      queryKeys.projects.taskGroups(projectId),
-      (old: { taskGroups: TaskGroup[] } | undefined) => {
-        if (!old) return { taskGroups: [group] };
-        if (old.taskGroups.some((g) => g.id === group.id)) {
-          return { taskGroups: old.taskGroups.map((g) => (g.id === group.id ? group : g)) };
+  const updateTaskGroup = useCallback(
+    (groupId: string, updates: Partial<TaskGroup>) => {
+      qc.setQueryData(
+        queryKeys.projects.taskGroups(projectId),
+        (old: { taskGroups: TaskGroup[] } | undefined) => {
+          if (!old) return old;
+          return {
+            taskGroups: old.taskGroups.map((g) => (g.id === groupId ? { ...g, ...updates } : g)),
+          };
         }
-        return { taskGroups: [...old.taskGroups, group] };
-      },
-    );
-  }, [qc, projectId]);
+      );
+    },
+    [qc, projectId]
+  );
+
+  const removeTaskGroup = useCallback(
+    (groupId: string) => {
+      qc.setQueryData(
+        queryKeys.projects.taskGroups(projectId),
+        (old: { taskGroups: TaskGroup[] } | undefined) => {
+          if (!old) return old;
+          return { taskGroups: old.taskGroups.filter((g) => g.id !== groupId) };
+        }
+      );
+    },
+    [qc, projectId]
+  );
+
+  const addTaskGroup = useCallback(
+    (group: TaskGroup) => {
+      qc.setQueryData(
+        queryKeys.projects.taskGroups(projectId),
+        (old: { taskGroups: TaskGroup[] } | undefined) => {
+          if (!old) return { taskGroups: [group] };
+          if (old.taskGroups.some((g) => g.id === group.id)) {
+            return { taskGroups: old.taskGroups.map((g) => (g.id === group.id ? group : g)) };
+          }
+          return { taskGroups: [...old.taskGroups, group] };
+        }
+      );
+    },
+    [qc, projectId]
+  );
 
   const refetchTasks = useCallback(() => {
     void qc.invalidateQueries({ queryKey: queryKeys.projects.tasks(projectId) });
@@ -329,7 +355,7 @@ export function ProjectProvider({ projectId, children }: ProjectProviderProps) {
         role: m.role as import("@/shared/types/roles").ProjectRole,
         joinedAt: m.addedAt,
       })),
-    [rawMembers],
+    [rawMembers]
   );
 
   if (isUnavailableOffline(projectQuery)) {

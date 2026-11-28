@@ -7,9 +7,8 @@ import { useFileUpload } from "./use-file-upload";
 
 // Mock the api client module
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -102,7 +101,7 @@ describe("useFileUpload", () => {
       mockPut.mockReturnValue(
         new Promise((resolve) => {
           resolveFn = resolve;
-        }),
+        })
       );
 
       const { result } = renderHook(() => useFileUpload());
@@ -135,7 +134,11 @@ describe("useFileUpload", () => {
       });
 
       expect(mockPut).toHaveBeenCalledTimes(1);
-      const [endpoint, formData, options] = mockPut.mock.calls[0] as [string, FormData, { signal: AbortSignal }];
+      const [endpoint, formData, options] = mockPut.mock.calls[0] as [
+        string,
+        FormData,
+        { signal: AbortSignal },
+      ];
       expect(endpoint).toBe("/api/upload");
       expect(formData).toBeInstanceOf(FormData);
       expect(formData.get("file")).toBe(file);

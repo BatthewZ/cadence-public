@@ -43,12 +43,7 @@ export class AnalyticsEngineSink implements TelemetrySink {
         case "webhook_delivery": {
           this.dataset.writeDataPoint({
             indexes: [event.type],
-            blobs: [
-              event.webhookId,
-              event.deliveryId,
-              event.event,
-              event.workspaceId,
-            ],
+            blobs: [event.webhookId, event.deliveryId, event.event, event.workspaceId],
             doubles: [
               event.success ? 1 : 0,
               event.statusCode ?? 0,
@@ -62,12 +57,7 @@ export class AnalyticsEngineSink implements TelemetrySink {
         case "webhook_retry": {
           this.dataset.writeDataPoint({
             indexes: [event.type],
-            blobs: [
-              event.webhookId,
-              event.deliveryId,
-              event.event,
-              event.workspaceId,
-            ],
+            blobs: [event.webhookId, event.deliveryId, event.event, event.workspaceId],
             doubles: [
               event.success ? 1 : 0,
               event.statusCode ?? 0,

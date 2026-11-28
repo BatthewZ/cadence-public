@@ -68,10 +68,7 @@ beforeAll(async () => {
     .prepare("UPDATE project SET description = ? WHERE id = ?")
     .bind("Handles alpha workflows", project1Id)
     .run();
-  await d1
-    .prepare("UPDATE project SET icon = ? WHERE id = ?")
-    .bind("rocket", project1Id)
-    .run();
+  await d1.prepare("UPDATE project SET icon = ? WHERE id = ?").bind("rocket", project1Id).run();
   await seedProjectMember(d1, project1Id, TEST_USER_2.id, "member");
 
   // Project 2: "Beta Project" - TEST_USER_2 is NOT a member
@@ -83,10 +80,7 @@ beforeAll(async () => {
     .prepare("UPDATE project SET description = ? WHERE id = ?")
     .bind("Handles beta workflows", project2Id)
     .run();
-  await d1
-    .prepare("UPDATE project SET icon = ? WHERE id = ?")
-    .bind("star", project2Id)
-    .run();
+  await d1.prepare("UPDATE project SET icon = ? WHERE id = ?").bind("star", project2Id).run();
 
   // Task groups
   taskGroup1Id = await seedTaskGroup(d1, project1Id);
@@ -146,7 +140,7 @@ function buildApp(auth: ReturnType<typeof ownerAuth>) {
     "/workspaces/:workspaceId/search",
     auth,
     validateQuery(searchQuerySchema),
-    workspaceSearch,
+    workspaceSearch
   );
   return app;
 }
@@ -160,7 +154,7 @@ describe("workspaceSearch", () => {
     const app = buildApp(ownerAuth());
     const res = await app.request(
       `/workspaces/${workspaceId}/search?q=bug`,
-      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=bug`),
+      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=bug`)
     );
 
     expect(res.status).toBe(200);
@@ -179,7 +173,7 @@ describe("workspaceSearch", () => {
     const app = buildApp(memberAuth());
     const res = await app.request(
       `/workspaces/${workspaceId}/search?q=bug`,
-      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=bug`),
+      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=bug`)
     );
 
     expect(res.status).toBe(200);
@@ -198,7 +192,7 @@ describe("workspaceSearch", () => {
     const app = buildApp(ownerAuth());
     const res = await app.request(
       `/workspaces/${workspaceId}/search?q=Alpha`,
-      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=Alpha`),
+      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=Alpha`)
     );
 
     expect(res.status).toBe(200);
@@ -216,10 +210,7 @@ describe("workspaceSearch", () => {
     const app = buildApp(ownerAuth());
     const res = await app.request(
       `/workspaces/${workspaceId}/search?q=beta workflows`,
-      jsonRequest(
-        "GET",
-        `/workspaces/${workspaceId}/search?q=beta workflows`,
-      ),
+      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=beta workflows`)
     );
 
     expect(res.status).toBe(200);
@@ -236,7 +227,7 @@ describe("workspaceSearch", () => {
     const app = buildApp(ownerAuth());
     const res = await app.request(
       `/workspaces/${workspaceId}/search?q=Implement`,
-      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=Implement`),
+      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=Implement`)
     );
 
     expect(res.status).toBe(200);
@@ -255,7 +246,7 @@ describe("workspaceSearch", () => {
     const app = buildApp(ownerAuth());
     const res = await app.request(
       `/workspaces/${workspaceId}/search?q=alpha-related`,
-      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=alpha-related`),
+      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=alpha-related`)
     );
 
     expect(res.status).toBe(200);
@@ -273,7 +264,7 @@ describe("workspaceSearch", () => {
     const app = buildApp(ownerAuth());
     const res = await app.request(
       `/workspaces/${workspaceId}/search?q=bug&limit=1`,
-      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=bug&limit=1`),
+      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=bug&limit=1`)
     );
 
     expect(res.status).toBe(200);
@@ -290,10 +281,7 @@ describe("workspaceSearch", () => {
     const app = buildApp(ownerAuth());
     const res = await app.request(
       `/workspaces/${workspaceId}/search?q=zzzznonexistent`,
-      jsonRequest(
-        "GET",
-        `/workspaces/${workspaceId}/search?q=zzzznonexistent`,
-      ),
+      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=zzzznonexistent`)
     );
 
     expect(res.status).toBe(200);
@@ -319,10 +307,7 @@ describe("workspaceSearch", () => {
     // characters appear in the query string.
     const res = await app.request(
       `/workspaces/${workspaceId}/search?q=${encodeURIComponent("100%")}`,
-      jsonRequest(
-        "GET",
-        `/workspaces/${workspaceId}/search?q=${encodeURIComponent("100%")}`,
-      ),
+      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=${encodeURIComponent("100%")}`)
     );
 
     expect(res.status).toBe(200);
@@ -338,7 +323,7 @@ describe("workspaceSearch", () => {
     // Searching with underscores should also not error
     const res2 = await app.request(
       `/workspaces/${workspaceId}/search?q=done_task`,
-      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=done_task`),
+      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=done_task`)
     );
 
     expect(res2.status).toBe(200);
@@ -354,7 +339,7 @@ describe("workspaceSearch", () => {
     const app = buildApp(ownerAuth());
     const res = await app.request(
       `/workspaces/${workspaceId}/search?q=alpha bug`,
-      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=alpha bug`),
+      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=alpha bug`)
     );
 
     expect(res.status).toBe(200);
@@ -378,7 +363,7 @@ describe("workspaceSearch", () => {
     const app = buildApp(memberAuth());
     const res = await app.request(
       `/workspaces/${workspaceId}/search?q=Beta`,
-      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=Beta`),
+      jsonRequest("GET", `/workspaces/${workspaceId}/search?q=Beta`)
     );
 
     expect(res.status).toBe(200);

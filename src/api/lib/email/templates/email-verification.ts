@@ -1,8 +1,10 @@
 import { escapeHtml } from "./utils";
 
-export function emailVerificationEmail(options: {
-  url: string;
-}): { subject: string; html: string; text: string } {
+export function emailVerificationEmail(options: { url: string }): {
+  subject: string;
+  html: string;
+  text: string;
+} {
   const { url } = options;
   const safeUrl = escapeHtml(url);
 

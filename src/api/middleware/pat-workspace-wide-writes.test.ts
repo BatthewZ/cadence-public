@@ -48,8 +48,8 @@ import type { EmailMessage, EmailSendResult } from "../lib/email/types";
 
 // Member removal fires a webhook whose delivery path builds an email service.
 // Stub it so the real handler logic runs without touching SMTP.
-const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<EmailSendResult>>(
-  () => Promise.resolve({ id: "test-email-id" }),
+const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<EmailSendResult>>(() =>
+  Promise.resolve({ id: "test-email-id" })
 );
 vi.mock("../lib/email", () => ({
   createEmailService: vi.fn(() => ({ send: mockEmailSend })),
@@ -110,10 +110,7 @@ function pat(workspaceId: string, overrides: Partial<ApiToken>): ApiToken {
  */
 function appWith(token: ApiToken | null) {
   const app = new Hono<AppEnv>();
-  app.use(
-    "*",
-    fakeAuth(d1, TEST_USER, { apiToken: token, requestId: "pat-ws-wide-test" }),
-  );
+  app.use("*", fakeAuth(d1, TEST_USER, { apiToken: token, requestId: "pat-ws-wide-test" }));
   app.route("/", workspaceRoutes);
   return app;
 }
@@ -157,16 +154,18 @@ const all = (workspaceId: string) => pat(workspaceId, { id: "tok_all" });
 /** Count rows so a refusal can be checked against state, not just status. */
 async function counts(workspaceId: string) {
   const one = async (sql: string, ...binds: string[]) =>
-    ((await d1.prepare(sql).bind(...binds).first<{ n: number }>())?.n ?? 0);
+    (
+      await d1
+        .prepare(sql)
+        .bind(...binds)
+        .first<{ n: number }>()
+    )?.n ?? 0;
   return {
     workspaces: await one("SELECT COUNT(*) AS n FROM workspace WHERE id = ?", workspaceId),
-    projects: await one(
-      "SELECT COUNT(*) AS n FROM project WHERE workspaceId = ?",
-      workspaceId,
-    ),
+    projects: await one("SELECT COUNT(*) AS n FROM project WHERE workspaceId = ?", workspaceId),
     tasks: await one(
       "SELECT COUNT(*) AS n FROM task WHERE projectId IN (SELECT id FROM project WHERE workspaceId = ?)",
-      workspaceId,
+      workspaceId
     ),
   };
 }
@@ -175,10 +174,9 @@ describe("DELETE /workspaces/:workspaceId", () => {
   it("refuses a project-narrowed token, destroying nothing", async () => {
     const { workspaceId, selected } = await seedFixture("del-narrow");
 
-    const res = await appWith(narrow(workspaceId, selected)).request(
-      `/workspaces/${workspaceId}`,
-      { method: "DELETE" },
-    );
+    const res = await appWith(narrow(workspaceId, selected)).request(`/workspaces/${workspaceId}`, {
+      method: "DELETE",
+    });
 
     expect(res.status).toBe(403);
     // The point of the finding: export already refused this token, while this
@@ -225,17 +223,22 @@ describe("DELETE /workspaces/:workspaceId/members/:userId", () => {
   /** The member's project rows across the WHOLE workspace, plus membership. */
   async function memberRows(workspaceId: string) {
     const one = async (sql: string, ...binds: string[]) =>
-      ((await d1.prepare(sql).bind(...binds).first<{ n: number }>())?.n ?? 0);
+      (
+        await d1
+          .prepare(sql)
+          .bind(...binds)
+          .first<{ n: number }>()
+      )?.n ?? 0;
     return {
       workspaceMember: await one(
         "SELECT COUNT(*) AS n FROM workspace_member WHERE workspaceId = ? AND userId = ?",
         workspaceId,
-        TEST_USER_2.id,
+        TEST_USER_2.id
       ),
       projectMember: await one(
         "SELECT COUNT(*) AS n FROM project_member WHERE userId = ? AND projectId IN (SELECT id FROM project WHERE workspaceId = ?)",
         TEST_USER_2.id,
-        workspaceId,
+        workspaceId
       ),
     };
   }
@@ -245,7 +248,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId", () => {
 
     const res = await appWith(narrow(workspaceId, selected)).request(
       `/workspaces/${workspaceId}/members/${TEST_USER_2.id}`,
-      { method: "DELETE" },
+      { method: "DELETE" }
     );
 
     expect(res.status).toBe(403);
@@ -264,7 +267,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId", () => {
 
     const res = await appWith(all(workspaceId)).request(
       `/workspaces/${workspaceId}/members/${TEST_USER_2.id}`,
-      { method: "DELETE" },
+      { method: "DELETE" }
     );
 
     expect(res.status).toBe(200);
@@ -279,7 +282,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId", () => {
 
     const res = await appWith(null).request(
       `/workspaces/${workspaceId}/members/${TEST_USER_2.id}`,
-      { method: "DELETE" },
+      { method: "DELETE" }
     );
 
     expect(res.status).toBe(200);

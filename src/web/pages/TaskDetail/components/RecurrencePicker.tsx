@@ -46,9 +46,7 @@ type MonthlyMode = "dayOfMonth" | "nthWeekday";
 /* ------------------------------------------------------------------ */
 
 function getFrequencyUnit(frequency: RecurrenceRule["frequency"], interval: number): string {
-  return interval === 1
-    ? FREQUENCY_UNIT_SINGULAR[frequency]
-    : FREQUENCY_UNIT_PLURAL[frequency];
+  return interval === 1 ? FREQUENCY_UNIT_SINGULAR[frequency] : FREQUENCY_UNIT_PLURAL[frequency];
 }
 
 function clampInterval(value: number): number {
@@ -88,14 +86,14 @@ export function RecurrencePicker({
       const base: RecurrenceRule = value ?? { frequency: "daily", interval: 1 };
       onSelect({ ...base, ...patch });
     },
-    [value, onSelect],
+    [value, onSelect]
   );
 
   const handleFrequencyChange = useCallback(
     (frequency: RecurrenceRule["frequency"]) => {
       onSelect(buildDefaultRule(frequency));
     },
-    [onSelect],
+    [onSelect]
   );
 
   const handleIntervalChange = useCallback(
@@ -104,7 +102,7 @@ export function RecurrencePicker({
       if (Number.isNaN(parsed)) return;
       updateRule({ interval: clampInterval(parsed) });
     },
-    [updateRule],
+    [updateRule]
   );
 
   const handleDayOfWeekToggle = useCallback(
@@ -115,7 +113,7 @@ export function RecurrencePicker({
         : [...current, day].sort((a, b) => a - b);
       updateRule({ daysOfWeek: next.length > 0 ? next : undefined });
     },
-    [value, updateRule],
+    [value, updateRule]
   );
 
   const handleMonthlyModeChange = useCallback(
@@ -129,7 +127,7 @@ export function RecurrencePicker({
         });
       }
     },
-    [value, updateRule],
+    [value, updateRule]
   );
 
   const handleDayOfMonthChange = useCallback(
@@ -138,7 +136,7 @@ export function RecurrencePicker({
       if (Number.isNaN(parsed)) return;
       updateRule({ dayOfMonth: clampDayOfMonth(parsed) });
     },
-    [updateRule],
+    [updateRule]
   );
 
   const handleNthChange = useCallback(
@@ -147,7 +145,7 @@ export function RecurrencePicker({
       if (Number.isNaN(n)) return;
       updateRule({ nthWeekday: { n, day: value?.nthWeekday?.day ?? 1 } });
     },
-    [value, updateRule],
+    [value, updateRule]
   );
 
   const handleNthDayChange = useCallback(
@@ -156,14 +154,14 @@ export function RecurrencePicker({
       if (Number.isNaN(day)) return;
       updateRule({ nthWeekday: { n: value?.nthWeekday?.n ?? 1, day } });
     },
-    [value, updateRule],
+    [value, updateRule]
   );
 
   const handleEndDateChange = useCallback(
     (raw: string) => {
       updateRule({ endDate: raw || undefined });
     },
-    [updateRule],
+    [updateRule]
   );
 
   const handleRemove = useCallback(() => {
@@ -203,7 +201,7 @@ export function RecurrencePicker({
                 "border border-transparent transition-colors duration-fast",
                 frequency === freq
                   ? "bg-accent-subtle text-accent border-accent/30"
-                  : "bg-surface-1 text-fg-secondary hover:bg-surface-2",
+                  : "bg-surface-1 text-fg-secondary hover:bg-surface-2"
               )}
               onClick={() => handleFrequencyChange(freq)}
             >
@@ -249,7 +247,7 @@ export function RecurrencePicker({
                       "border border-transparent transition-colors duration-fast",
                       isSelected
                         ? "bg-accent-subtle text-accent border-accent/30"
-                        : "bg-surface-1 text-fg-secondary hover:bg-surface-2",
+                        : "bg-surface-1 text-fg-secondary hover:bg-surface-2"
                     )}
                     onClick={() => handleDayOfWeekToggle(idx)}
                   >
@@ -273,7 +271,7 @@ export function RecurrencePicker({
                   "border border-transparent transition-colors duration-fast",
                   monthlyMode === "dayOfMonth"
                     ? "bg-accent-subtle text-accent border-accent/30"
-                    : "bg-surface-1 text-fg-secondary hover:bg-surface-2",
+                    : "bg-surface-1 text-fg-secondary hover:bg-surface-2"
                 )}
                 onClick={() => handleMonthlyModeChange("dayOfMonth")}
               >
@@ -286,7 +284,7 @@ export function RecurrencePicker({
                   "border border-transparent transition-colors duration-fast",
                   monthlyMode === "nthWeekday"
                     ? "bg-accent-subtle text-accent border-accent/30"
-                    : "bg-surface-1 text-fg-secondary hover:bg-surface-2",
+                    : "bg-surface-1 text-fg-secondary hover:bg-surface-2"
                 )}
                 onClick={() => handleMonthlyModeChange("nthWeekday")}
               >
@@ -320,7 +318,7 @@ export function RecurrencePicker({
                     "px-2 py-1 rounded-md text-body-3",
                     "bg-surface-0 border border-border-strong text-fg-primary",
                     "focus:outline-none focus:ring-2 focus:ring-border-focus",
-                    "cursor-pointer",
+                    "cursor-pointer"
                   )}
                 >
                   {ORDINAL_LABELS.map((label, idx) => (
@@ -336,7 +334,7 @@ export function RecurrencePicker({
                     "px-2 py-1 rounded-md text-body-3",
                     "bg-surface-0 border border-border-strong text-fg-primary",
                     "focus:outline-none focus:ring-2 focus:ring-border-focus",
-                    "cursor-pointer",
+                    "cursor-pointer"
                   )}
                 >
                   {DAY_NAMES_FULL.map((name, idx) => (
@@ -368,7 +366,7 @@ export function RecurrencePicker({
                   type="button"
                   className={cn(
                     "shrink-0 p-0.5 rounded text-fg-muted hover:text-fg-primary hover:bg-surface-2",
-                    "transition-colors duration-fast cursor-pointer",
+                    "transition-colors duration-fast cursor-pointer"
                   )}
                   onClick={() => handleEndDateChange("")}
                   title="Clear end date"

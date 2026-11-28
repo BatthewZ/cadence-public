@@ -3,10 +3,7 @@ import { Hono } from "hono";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ApiToken } from "../../../db/schema";
-import {
-  acceptInvitationSchema,
-  createInvitationSchema,
-} from "../../../shared/schemas/invitation";
+import { acceptInvitationSchema, createInvitationSchema } from "../../../shared/schemas/invitation";
 import type { AppBindings, AppEnv } from "../../env";
 import type { EmailMessage, EmailSendResult } from "../../lib/email/types";
 import { rejectPatAuth } from "../../middleware/authorize";
@@ -36,8 +33,8 @@ import {
  * audit finding 03 describes (a fully written template that nothing imports).
  * Stubbing gives the assertion something that can actually fail.
  */
-const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<EmailSendResult>>(
-  () => Promise.resolve({ id: "test-email-id" }),
+const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<EmailSendResult>>(() =>
+  Promise.resolve({ id: "test-email-id" })
 );
 vi.mock("../../lib/email", () => ({
   createEmailService: vi.fn(() => ({ send: mockEmailSend })),
@@ -98,12 +95,12 @@ describe("createInvitation", () => {
       "/*",
       fakeAuth(d1, user, {
         workspaceMembership: { id: "wm-1", role: "owner" },
-      }),
+      })
     );
     app.post(
       "/workspaces/:workspaceId/invitations",
       validateBody(createInvitationSchema),
-      createInvitation,
+      createInvitation
     );
     return app;
   }
@@ -176,9 +173,7 @@ describe("createInvitation", () => {
 
     expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe(
-      "A pending invitation already exists for this email",
-    );
+    expect(body.error).toBe("A pending invitation already exists for this email");
   });
 
   it("returns 400 when the user is already a workspace member", async () => {
@@ -247,7 +242,7 @@ describe("listInvitations", () => {
       "/*",
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-1", role: "owner" },
-      }),
+      })
     );
     app.get("/workspaces/:workspaceId/invitations", listInvitations);
     return app;
@@ -255,11 +250,7 @@ describe("listInvitations", () => {
 
   it("returns only pending invitations for the workspace", async () => {
     const app = buildApp();
-    const res = await app.request(
-      `/workspaces/${listWsId}/invitations`,
-      undefined,
-      env,
-    );
+    const res = await app.request(`/workspaces/${listWsId}/invitations`, undefined, env);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ invitations: Array<{ email: string; status: string }> }>();
@@ -276,11 +267,7 @@ describe("listInvitations", () => {
       name: "Empty WS",
     });
     const app = buildApp();
-    const res = await app.request(
-      `/workspaces/${emptyWsId}/invitations`,
-      undefined,
-      env,
-    );
+    const res = await app.request(`/workspaces/${emptyWsId}/invitations`, undefined, env);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ invitations: Array<unknown> }>();
@@ -299,12 +286,9 @@ describe("revokeInvitation", () => {
       "/*",
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-1", role: "owner" },
-      }),
+      })
     );
-    app.delete(
-      "/workspaces/:workspaceId/invitations/:id",
-      revokeInvitation,
-    );
+    app.delete("/workspaces/:workspaceId/invitations/:id", revokeInvitation);
     return app;
   }
 
@@ -317,10 +301,7 @@ describe("revokeInvitation", () => {
       invitedBy: TEST_USER.id,
     });
     const app = buildApp();
-    const req = jsonRequest(
-      "DELETE",
-      `/workspaces/${revokeWsId}/invitations/${invId}`,
-    );
+    const req = jsonRequest("DELETE", `/workspaces/${revokeWsId}/invitations/${invId}`);
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(200);
@@ -337,10 +318,7 @@ describe("revokeInvitation", () => {
 
   it("returns 404 for a nonexistent invitation", async () => {
     const app = buildApp();
-    const req = jsonRequest(
-      "DELETE",
-      `/workspaces/${workspaceId}/invitations/nonexistent-id`,
-    );
+    const req = jsonRequest("DELETE", `/workspaces/${workspaceId}/invitations/nonexistent-id`);
     const res = await app.request(req, undefined, env);
 
     expect(res.status).toBe(404);
@@ -395,11 +373,14 @@ describe("listMyPendingInvitations", () => {
     const res = await app.request("/invitations/pending", undefined, env);
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ invitations: Array<{ workspace?: { id: string; name: string }; invitedBy?: { id: string; name: string } }> }>();
+    const body = await res.json<{
+      invitations: Array<{
+        workspace?: { id: string; name: string };
+        invitedBy?: { id: string; name: string };
+      }>;
+    }>();
     // Should have at least the one pending invitation sent to TEST_USER_2
-    const matchingInvs = body.invitations.filter(
-      (inv) => inv.workspace?.id === myPendingWsId,
-    );
+    const matchingInvs = body.invitations.filter((inv) => inv.workspace?.id === myPendingWsId);
     expect(matchingInvs.length).toBe(1);
     expect(matchingInvs[0].workspace?.name).toBe("My Pending WS");
     expect(matchingInvs[0].invitedBy?.id).toBe(TEST_USER.id);
@@ -447,14 +428,16 @@ describe("getInvitation", () => {
 
   it("returns invitation details by token", async () => {
     const app = buildApp();
-    const res = await app.request(
-      `/invitations/${knownToken}`,
-      undefined,
-      env,
-    );
+    const res = await app.request(`/invitations/${knownToken}`, undefined, env);
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ invitation: { email: string; workspace?: { id: string; name: string }; invitedBy?: { id: string } } }>();
+    const body = await res.json<{
+      invitation: {
+        email: string;
+        workspace?: { id: string; name: string };
+        invitedBy?: { id: string };
+      };
+    }>();
     expect(body.invitation).toBeDefined();
     expect(body.invitation.email).toBe("get-inv@example.com");
     expect(body.invitation.workspace?.id).toBe(getInvWsId);
@@ -464,11 +447,7 @@ describe("getInvitation", () => {
 
   it("returns 404 for an invalid token", async () => {
     const app = buildApp();
-    const res = await app.request(
-      "/invitations/nonexistent-token",
-      undefined,
-      env,
-    );
+    const res = await app.request("/invitations/nonexistent-token", undefined, env);
 
     expect(res.status).toBe(404);
     const body = await res.json<{ error: string }>();
@@ -487,11 +466,7 @@ describe("getInvitation", () => {
       status: "accepted",
     });
     const app = buildApp();
-    const res = await app.request(
-      `/invitations/${acceptedToken}`,
-      undefined,
-      env,
-    );
+    const res = await app.request(`/invitations/${acceptedToken}`, undefined, env);
 
     expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
@@ -510,11 +485,7 @@ describe("getInvitation", () => {
       status: "revoked",
     });
     const app = buildApp();
-    const res = await app.request(
-      `/invitations/${revokedToken}`,
-      undefined,
-      env,
-    );
+    const res = await app.request(`/invitations/${revokedToken}`, undefined, env);
 
     expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
@@ -527,17 +498,15 @@ describe("getInvitation", () => {
     app.get(
       "/invitations/:token",
       rateLimit({ max: 10, windowSeconds: 60, prefix: "invitation-lookup-test" }),
-      getInvitation,
+      getInvitation
     );
 
-    const res = await app.request(
-      `/invitations/${knownToken}`,
-      undefined,
-      env,
-    );
+    const res = await app.request(`/invitations/${knownToken}`, undefined, env);
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ invitation: { email: string; workspace?: { id: string; name: string } } }>();
+    const body = await res.json<{
+      invitation: { email: string; workspace?: { id: string; name: string } };
+    }>();
     expect(body.invitation).toBeDefined();
     expect(body.invitation.email).toBe("get-inv@example.com");
     expect(body.invitation.workspace?.id).toBe(getInvWsId);
@@ -555,11 +524,7 @@ describe("acceptInvitation", () => {
   function buildApp(user: typeof TEST_USER | typeof TEST_USER_2) {
     const app = new Hono<AppEnv>();
     app.use("/*", fakeAuth(d1, user));
-    app.post(
-      "/invitations/accept",
-      validateBody(acceptInvitationSchema),
-      acceptInvitation,
-    );
+    app.post("/invitations/accept", validateBody(acceptInvitationSchema), acceptInvitation);
     return app;
   }
 
@@ -589,9 +554,7 @@ describe("acceptInvitation", () => {
 
     // Verify workspace membership was created
     const membership = await d1
-      .prepare(
-        "SELECT userId, role FROM workspace_member WHERE workspaceId = ? AND userId = ?",
-      )
+      .prepare("SELECT userId, role FROM workspace_member WHERE workspaceId = ? AND userId = ?")
       .bind(acceptWsId, TEST_USER_2.id)
       .first<{ userId: string; role: string }>();
     expect(membership).toBeDefined();
@@ -676,9 +639,7 @@ describe("acceptInvitation", () => {
 
     expect(res.status).toBe(403);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe(
-      "This invitation was sent to a different email address",
-    );
+    expect(body.error).toBe("This invitation was sent to a different email address");
   });
 
   it("returns 400 when user is already a workspace member", async () => {
@@ -714,9 +675,7 @@ describe("acceptInvitation", () => {
     const body = await res.json<{ error: string; details: Array<{ message: string }> }>();
     expect(body.error).toBe("Validation failed");
     expect(
-      body.details.some((d) =>
-        d.message.includes("Provide exactly one of token or invitationId"),
-      ),
+      body.details.some((d) => d.message.includes("Provide exactly one of token or invitationId"))
     ).toBe(true);
   });
 });
@@ -744,14 +703,11 @@ describe("createInvitation — email delivery", () => {
 
   function buildApp() {
     const app = new Hono<AppEnv>();
-    app.use(
-      "/*",
-      fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }),
-    );
+    app.use("/*", fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }));
     app.post(
       "/workspaces/:workspaceId/invitations",
       validateBody(createInvitationSchema),
-      createInvitation,
+      createInvitation
     );
     return app;
   }
@@ -804,9 +760,7 @@ describe("createInvitation — email delivery", () => {
     // …and the in-app notification is still created alongside it.
     await vi.waitFor(async () => {
       const notification = await d1
-        .prepare(
-          "SELECT type FROM notification WHERE userId = ? AND type = 'invitation_received'",
-        )
+        .prepare("SELECT type FROM notification WHERE userId = ? AND type = 'invitation_received'")
         .bind(TEST_USER_2.id)
         .first<{ type: string }>();
       expect(notification?.type).toBe("invitation_received");
@@ -860,17 +814,10 @@ describe("invitation tokens are not disclosed by list endpoints", () => {
 
   it("listInvitations returns no token field and never leaks the value", async () => {
     const app = new Hono<AppEnv>();
-    app.use(
-      "/*",
-      fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }),
-    );
+    app.use("/*", fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }));
     app.get("/workspaces/:workspaceId/invitations", listInvitations);
 
-    const res = await app.request(
-      `/workspaces/${secretWsId}/invitations`,
-      undefined,
-      env,
-    );
+    const res = await app.request(`/workspaces/${secretWsId}/invitations`, undefined, env);
     expect(res.status).toBe(200);
 
     const raw = await res.text();
@@ -934,7 +881,7 @@ describe("getInvitationLink", () => {
       fakeAuth(d1, TEST_USER, {
         workspaceMembership: { id: "wm-1", role: "owner" },
         apiToken,
-      }),
+      })
     );
     app.use("/*", rejectPatAuth());
     app.get("/workspaces/:workspaceId/invitations/:id/link", getInvitationLink);
@@ -965,7 +912,7 @@ describe("getInvitationLink", () => {
     const res = await buildApp().request(
       `/workspaces/${linkWsId}/invitations/link-pending-inv/link`,
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(200);
@@ -993,7 +940,7 @@ describe("getInvitationLink", () => {
     const res = await buildApp(fakeReadOnlyPat()).request(
       `/workspaces/${linkWsId}/invitations/link-pat-inv/link`,
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(403);
@@ -1006,7 +953,7 @@ describe("getInvitationLink", () => {
     const res = await buildApp().request(
       `/workspaces/${linkWsId}/invitations/link-pat-inv/link`,
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(200);
@@ -1029,7 +976,7 @@ describe("getInvitationLink", () => {
     const res = await buildApp().request(
       `/workspaces/${linkWsId}/invitations/link-foreign-inv/link`,
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(404);
@@ -1048,7 +995,7 @@ describe("getInvitationLink", () => {
     const res = await buildApp().request(
       `/workspaces/${linkWsId}/invitations/link-revoked-inv/link`,
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(400);
@@ -1068,7 +1015,7 @@ describe("getInvitationLink", () => {
     const res = await buildApp().request(
       `/workspaces/${linkWsId}/invitations/link-expired-inv/link`,
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(400);
@@ -1101,15 +1048,17 @@ describe("acceptInvitation by invitationId", () => {
   function buildApp(user: TestUserFixture) {
     const app = new Hono<AppEnv>();
     app.use("/*", fakeAuth(d1, user));
-    app.post(
-      "/invitations/accept",
-      validateBody(acceptInvitationSchema),
-      acceptInvitation,
-    );
+    app.post("/invitations/accept", validateBody(acceptInvitationSchema), acceptInvitation);
     return app;
   }
 
-  async function seedPendingInvite(opts: { id: string; wsName: string; email?: string; status?: string; expiresAt?: Date }) {
+  async function seedPendingInvite(opts: {
+    id: string;
+    wsName: string;
+    email?: string;
+    status?: string;
+    expiresAt?: Date;
+  }) {
     const wsId = await seedWorkspace(d1, TEST_USER.id, { name: opts.wsName });
     await seedInvitation(d1, wsId, {
       id: opts.id,
@@ -1129,7 +1078,7 @@ describe("acceptInvitation by invitationId", () => {
     const res = await buildApp(TEST_USER_2).request(
       jsonRequest("POST", "/invitations/accept", { invitationId: "byid-happy" }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(200);
@@ -1159,7 +1108,7 @@ describe("acceptInvitation by invitationId", () => {
     const res = await buildApp(ATTACKER_USER).request(
       jsonRequest("POST", "/invitations/accept", { invitationId: "byid-hijack" }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(403);
@@ -1189,7 +1138,7 @@ describe("acceptInvitation by invitationId", () => {
     const res = await buildApp(TEST_USER).request(
       jsonRequest("POST", "/invitations/accept", { invitationId: "byid-owner" }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(403);
@@ -1204,7 +1153,7 @@ describe("acceptInvitation by invitationId", () => {
     const res = await buildApp(TEST_USER_2).request(
       jsonRequest("POST", "/invitations/accept", { invitationId: "no-such-invitation" }),
       undefined,
-      env,
+      env
     );
     expect(res.status).toBe(404);
   });
@@ -1219,7 +1168,7 @@ describe("acceptInvitation by invitationId", () => {
     const res = await buildApp(TEST_USER_2).request(
       jsonRequest("POST", "/invitations/accept", { invitationId: "byid-revoked" }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(409);
@@ -1240,7 +1189,7 @@ describe("acceptInvitation by invitationId", () => {
     const res = await buildApp(TEST_USER_2).request(
       jsonRequest("POST", "/invitations/accept", { invitationId: "byid-accepted" }),
       undefined,
-      env,
+      env
     );
     expect(res.status).toBe(409);
   });
@@ -1255,7 +1204,7 @@ describe("acceptInvitation by invitationId", () => {
     const res = await buildApp(TEST_USER_2).request(
       jsonRequest("POST", "/invitations/accept", { invitationId: "byid-expired" }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(400);
@@ -1277,7 +1226,7 @@ describe("acceptInvitation by invitationId", () => {
         token: "byid-both-token",
       }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(400);
@@ -1296,7 +1245,7 @@ describe("acceptInvitation by invitationId", () => {
     const res = await buildApp(TEST_USER_2).request(
       jsonRequest("POST", "/invitations/accept", { token: "byid-token-path-token" }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(200);
@@ -1317,7 +1266,7 @@ describe("acceptInvitation by invitationId", () => {
     const res = await buildApp(TEST_USER_2).request(
       jsonRequest("POST", "/invitations/accept", { invitationId: "byid-case" }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(200);
@@ -1370,7 +1319,7 @@ describe("createInvitation — invited email is normalised", () => {
     app.post(
       "/workspaces/:workspaceId/invitations",
       validateBody(createInvitationSchema),
-      createInvitation,
+      createInvitation
     );
     app.get("/invitations/pending", listMyPendingInvitations);
     return app;
@@ -1382,7 +1331,7 @@ describe("createInvitation — invited email is normalised", () => {
         email: "  Mixed.Case@Example.COM  ",
       }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(201);
@@ -1413,7 +1362,7 @@ describe("createInvitation — invited email is normalised", () => {
         email: "Casey@Example.com",
       }),
       undefined,
-      env,
+      env
     );
     expect(res.status).toBe(201);
 
@@ -1421,9 +1370,7 @@ describe("createInvitation — invited email is normalised", () => {
     // recipient rather than by call index so the assertion states the property
     // it cares about and cannot be perturbed by unrelated deferred sends.
     await vi.waitFor(() =>
-      expect(mockEmailSend.mock.calls.map((call) => call[0].to)).toContain(
-        "casey@example.com",
-      ),
+      expect(mockEmailSend.mock.calls.map((call) => call[0].to)).toContain("casey@example.com")
     );
 
     // The in-app notification is the half that used to vanish entirely: the
@@ -1432,7 +1379,7 @@ describe("createInvitation — invited email is normalised", () => {
     await vi.waitFor(async () => {
       const notification = await d1
         .prepare(
-          "SELECT type, workspaceId FROM notification WHERE userId = ? AND type = 'invitation_received'",
+          "SELECT type, workspaceId FROM notification WHERE userId = ? AND type = 'invitation_received'"
         )
         .bind(CASE_USER.id)
         .first<{ type: string; workspaceId: string }>();
@@ -1446,16 +1393,14 @@ describe("createInvitation — invited email is normalised", () => {
     const res = await buildApp(CASE_USER).request(
       new Request("http://localhost/invitations/pending"),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(200);
     const body = await res.json<{
       invitations: Array<{ workspace: { id: string } | null }>;
     }>();
-    expect(
-      body.invitations.some((inv) => inv.workspace?.id === normWsId),
-    ).toBe(true);
+    expect(body.invitations.some((inv) => inv.workspace?.id === normWsId)).toBe(true);
   });
 
   it("treats a case-variant duplicate as a duplicate", async () => {
@@ -1468,17 +1413,17 @@ describe("createInvitation — invited email is normalised", () => {
         email: "CASEY@EXAMPLE.COM",
       }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(400);
     expect((await res.json<{ error: string }>()).error).toBe(
-      "A pending invitation already exists for this email",
+      "A pending invitation already exists for this email"
     );
 
     const count = await d1
       .prepare(
-        "SELECT COUNT(*) AS n FROM invitation WHERE workspaceId = ? AND email = 'casey@example.com' AND status = 'pending'",
+        "SELECT COUNT(*) AS n FROM invitation WHERE workspaceId = ? AND email = 'casey@example.com' AND status = 'pending'"
       )
       .bind(normWsId)
       .first<{ n: number }>();
@@ -1487,9 +1432,7 @@ describe("createInvitation — invited email is normalised", () => {
     // No second email either — a rejected duplicate must not still spend a
     // send against the invitee's mailbox. Scoped to the recipient rather than
     // "never called", so the assertion survives an unrelated deferred send.
-    expect(mockEmailSend.mock.calls.map((call) => call[0].to)).not.toContain(
-      "casey@example.com",
-    );
+    expect(mockEmailSend.mock.calls.map((call) => call[0].to)).not.toContain("casey@example.com");
   });
 
   it("matches a folded invitation against a session whose address is not folded", async () => {
@@ -1520,7 +1463,7 @@ describe("createInvitation — invited email is normalised", () => {
     const res = await app.request(
       jsonRequest("POST", "/invitations/accept", { token: "fold-accept-token" }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(200);
@@ -1549,7 +1492,7 @@ describe("createInvitation — sender address", () => {
     app.post(
       "/workspaces/:workspaceId/invitations",
       validateBody(createInvitationSchema),
-      createInvitation,
+      createInvitation
     );
     return app;
   }
@@ -1569,7 +1512,7 @@ describe("createInvitation — sender address", () => {
         email: "no-from-configured@example.com",
       }),
       undefined,
-      envWithoutFrom,
+      envWithoutFrom
     );
     expect(res.status).toBe(201);
 
@@ -1585,7 +1528,7 @@ describe("createInvitation — sender address", () => {
         email: "from-configured@example.com",
       }),
       undefined,
-      env,
+      env
     );
     expect(res.status).toBe(201);
 
@@ -1622,7 +1565,7 @@ describe("createInvitation — granting the admin role", () => {
     app.post(
       "/workspaces/:workspaceId/invitations",
       validateBody(createInvitationSchema),
-      createInvitation,
+      createInvitation
     );
     return app;
   }
@@ -1634,12 +1577,12 @@ describe("createInvitation — granting the admin role", () => {
         role: "admin",
       }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(403);
     expect((await res.json<{ error: string }>()).error).toBe(
-      "Only the workspace owner can invite someone as an admin",
+      "Only the workspace owner can invite someone as an admin"
     );
 
     // Post-conditions are the point: a 403 that still wrote the row, or still
@@ -1660,7 +1603,7 @@ describe("createInvitation — granting the admin role", () => {
         email: "plain-member@example.com",
       }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(201);
@@ -1678,7 +1621,7 @@ describe("createInvitation — granting the admin role", () => {
         role: "admin",
       }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(201);
@@ -1700,12 +1643,12 @@ describe("createInvitation — granting the admin role", () => {
         role: "admin",
       }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(403);
     expect((await res.json<{ error: string }>()).error).toBe(
-      "Only the workspace owner can invite someone as an admin",
+      "Only the workspace owner can invite someone as an admin"
     );
   });
 });
@@ -1740,7 +1683,7 @@ describe("createInvitation — rate limit", () => {
         keyFn: defaultRateLimitKey,
       }),
       validateBody(createInvitationSchema),
-      createInvitation,
+      createInvitation
     );
 
     const statuses: number[] = [];
@@ -1750,7 +1693,7 @@ describe("createInvitation — rate limit", () => {
           email: `flood-${i}@example.com`,
         }),
         undefined,
-        env,
+        env
       );
       statuses.push(res.status);
     }
@@ -1824,9 +1767,9 @@ describe("acceptInvitation — concurrency", () => {
         app.request(
           jsonRequest("POST", "/invitations/accept", { token: "race-token" }),
           undefined,
-          env,
-        ),
-      ),
+          env
+        )
+      )
     );
     const statuses = responses.map((r) => r.status);
 
@@ -1838,9 +1781,7 @@ describe("acceptInvitation — concurrency", () => {
 
     // Exactly one membership, and the invitation is consumed exactly once.
     const count = await d1
-      .prepare(
-        "SELECT COUNT(*) AS n FROM workspace_member WHERE workspaceId = ? AND userId = ?",
-      )
+      .prepare("SELECT COUNT(*) AS n FROM workspace_member WHERE workspaceId = ? AND userId = ?")
       .bind(raceWsId, TEST_USER_2.id)
       .first<{ n: number }>();
     expect(count?.n).toBe(1);
@@ -1869,7 +1810,7 @@ describe("acceptInvitation — concurrency", () => {
     const res = await buildApp(TEST_USER_2).request(
       jsonRequest("POST", "/invitations/accept", { token: "revoked-race-token" }),
       undefined,
-      env,
+      env
     );
 
     expect(res.status).toBe(409);
@@ -1924,12 +1865,8 @@ describe("acceptInvitation — two invitations, one workspace, accepted at once"
 
     const responses = await Promise.all(
       ["double-inv-a-token", "double-inv-b-token"].map(async (token) =>
-        app.request(
-          jsonRequest("POST", "/invitations/accept", { token }),
-          undefined,
-          env,
-        ),
-      ),
+        app.request(jsonRequest("POST", "/invitations/accept", { token }), undefined, env)
+      )
     );
     const statuses = responses.map((r) => r.status);
 
@@ -1940,9 +1877,7 @@ describe("acceptInvitation — two invitations, one workspace, accepted at once"
     // Exactly one membership — the unique index was always going to guarantee
     // this; what changed is that the caller is told about it honestly.
     const count = await d1
-      .prepare(
-        "SELECT COUNT(*) AS n FROM workspace_member WHERE workspaceId = ? AND userId = ?",
-      )
+      .prepare("SELECT COUNT(*) AS n FROM workspace_member WHERE workspaceId = ? AND userId = ?")
       .bind(wsId, TEST_USER_2.id)
       .first<{ n: number }>();
     expect(count?.n).toBe(1);

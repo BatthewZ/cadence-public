@@ -10,8 +10,18 @@ import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
 import { requireParam } from "../../../lib/params";
 import { retryOnPositionConflict } from "../../../lib/position-conflict";
-import { buildTaskEventData, dispatchWebhook, resolveRecurringTaskEnrichment, resolveTaskEnrichment } from "../../../lib/webhook-payloads";
-import { logRecurringInstanceCreated, removeUntouchedRecurringInstance, type SpawnedTaskData, spawnNextRecurringInstance } from "../helpers/spawn-recurring-instance";
+import {
+  buildTaskEventData,
+  dispatchWebhook,
+  resolveRecurringTaskEnrichment,
+  resolveTaskEnrichment,
+} from "../../../lib/webhook-payloads";
+import {
+  logRecurringInstanceCreated,
+  removeUntouchedRecurringInstance,
+  type SpawnedTaskData,
+  spawnNextRecurringInstance,
+} from "../helpers/spawn-recurring-instance";
 import { type ActivityEntry, logActivityBatch } from "../log-activity";
 
 // ---------------------------------------------------------------------------
@@ -23,11 +33,7 @@ export async function completeTask(c: Context<AppEnv>) {
   const user = c.get("user")!;
   const taskId = requireParam(c, "taskId");
 
-  const [foundTask] = await db
-    .select()
-    .from(task)
-    .where(eq(task.id, taskId))
-    .limit(1);
+  const [foundTask] = await db.select().from(task).where(eq(task.id, taskId)).limit(1);
 
   if (!foundTask) {
     return errorResponse(c, "Task not found", 404);
@@ -43,12 +49,7 @@ export async function completeTask(c: Context<AppEnv>) {
   const [completionGroup] = await db
     .select()
     .from(taskGroup)
-    .where(
-      and(
-        eq(taskGroup.projectId, foundTask.projectId),
-        eq(taskGroup.isCompletionGroup, true),
-      ),
-    )
+    .where(and(eq(taskGroup.projectId, foundTask.projectId), eq(taskGroup.isCompletionGroup, true)))
     .orderBy(asc(taskGroup.position), asc(taskGroup.id))
     .limit(1);
 
@@ -88,11 +89,7 @@ export async function completeTask(c: Context<AppEnv>) {
           .where(eq(task.id, taskId))
           .returning();
       })
-    : await db
-        .update(task)
-        .set(baseUpdateData)
-        .where(eq(task.id, taskId))
-        .returning();
+    : await db.update(task).set(baseUpdateData).where(eq(task.id, taskId)).returning();
 
   // Spawn next recurring instance if applicable.
   // Uses pre-completion taskGroupId so the new instance goes to the original group.
@@ -113,12 +110,14 @@ export async function completeTask(c: Context<AppEnv>) {
     const completeApiTokenId = c.get("apiToken")?.id ?? null;
 
     deferWork(c, async () => {
-      const activities: ActivityEntry[] = [{
-        taskId,
-        actorId: user.id,
-        action: "completed",
-        apiTokenId: completeApiTokenId,
-      }];
+      const activities: ActivityEntry[] = [
+        {
+          taskId,
+          actorId: user.id,
+          action: "completed",
+          apiTokenId: completeApiTokenId,
+        },
+      ];
 
       if (movingToCompletion) {
         const [oldGroup] = await db
@@ -146,9 +145,9 @@ export async function completeTask(c: Context<AppEnv>) {
       // otherwise keep leaking it to them on every completion. Re-checking
       // costs one read on an already-deferred path.
       if (
-        assigneeId
-        && assigneeId !== user.id
-        && await canUserBeAssigned(db, projectId, assigneeId)
+        assigneeId &&
+        assigneeId !== user.id &&
+        (await canUserBeAssigned(db, projectId, assigneeId))
       ) {
         await createNotification(db, {
           userId: assigneeId,
@@ -186,7 +185,13 @@ export async function completeTask(c: Context<AppEnv>) {
   if (nextRecurringTask) {
     const recurEnrichment = await resolveRecurringTaskEnrichment(db, nextRecurringTask);
     dispatchWebhook(c, foundTask.projectId, [
-      { event: "task.created", data: buildTaskEventData(nextRecurringTask as Parameters<typeof buildTaskEventData>[0], recurEnrichment) },
+      {
+        event: "task.created",
+        data: buildTaskEventData(
+          nextRecurringTask as Parameters<typeof buildTaskEventData>[0],
+          recurEnrichment
+        ),
+      },
     ]);
   }
 
@@ -198,11 +203,7 @@ export async function uncompleteTask(c: Context<AppEnv>) {
   const user = c.get("user")!;
   const taskId = requireParam(c, "taskId");
 
-  const [foundTask] = await db
-    .select()
-    .from(task)
-    .where(eq(task.id, taskId))
-    .limit(1);
+  const [foundTask] = await db.select().from(task).where(eq(task.id, taskId)).limit(1);
 
   if (!foundTask) {
     return errorResponse(c, "Task not found", 404);
@@ -238,10 +239,7 @@ export async function uncompleteTask(c: Context<AppEnv>) {
       .select()
       .from(taskGroup)
       .where(
-        and(
-          eq(taskGroup.projectId, foundTask.projectId),
-          eq(taskGroup.isCompletionGroup, false),
-        ),
+        and(eq(taskGroup.projectId, foundTask.projectId), eq(taskGroup.isCompletionGroup, false))
       )
       .orderBy(asc(taskGroup.position), asc(taskGroup.id))
       .limit(1);
@@ -278,11 +276,7 @@ export async function uncompleteTask(c: Context<AppEnv>) {
           .where(eq(task.id, taskId))
           .returning();
       })
-    : await db
-        .update(task)
-        .set(baseUpdateData)
-        .where(eq(task.id, taskId))
-        .returning();
+    : await db.update(task).set(baseUpdateData).where(eq(task.id, taskId)).returning();
 
   const removedRecurringTaskId = await removeUntouchedRecurringInstance(c, taskId);
 

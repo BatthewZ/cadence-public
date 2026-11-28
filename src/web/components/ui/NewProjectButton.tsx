@@ -1,10 +1,7 @@
 import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { Button } from "@/web/components/ui/Button";
 import { Tooltip } from "@/web/components/ui/Tooltip";
-import {
-  PROJECT_CREATION_DENIED_HINT,
-  useWorkspacePermissions,
-} from "@/web/hooks/use-permissions";
+import { PROJECT_CREATION_DENIED_HINT, useWorkspacePermissions } from "@/web/hooks/use-permissions";
 
 interface NewProjectButtonProps {
   /** Opens the create-project dialog. Never fires while creation is refused. */

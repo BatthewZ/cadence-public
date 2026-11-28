@@ -87,7 +87,7 @@ export const validationErrorResponseSchema = z
       z.object({
         path: z.string(),
         message: z.string(),
-      }),
+      })
     ),
   })
   .openapi("ValidationErrorResponse");

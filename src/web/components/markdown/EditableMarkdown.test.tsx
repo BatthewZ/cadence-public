@@ -47,9 +47,7 @@ function ControlledEditable(props: {
 describe("EditableMarkdown", () => {
   it("renders the markdown in view mode", () => {
     render(<ControlledEditable initial="# Title" />);
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Title" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1, name: "Title" })).toBeInTheDocument();
   });
 
   it("shows the muted placeholder when the value is empty", () => {
@@ -67,9 +65,7 @@ describe("EditableMarkdown", () => {
 
     // Still in view mode: no textarea/Save appeared.
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Save" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
   });
 
   it("enters edit mode on click, revealing Save and Cancel", async () => {
@@ -97,9 +93,7 @@ describe("EditableMarkdown", () => {
 
   it("Save passes the edited string to onSave and returns to view mode", async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn<(next: string) => Promise<void>>(() =>
-      Promise.resolve(),
-    );
+    const onSave = vi.fn<(next: string) => Promise<void>>(() => Promise.resolve());
     render(<ControlledEditable initial="hello" onSave={onSave} />);
 
     await user.click(screen.getByRole("button", { name: "Edit description" }));
@@ -117,9 +111,7 @@ describe("EditableMarkdown", () => {
 
   it("Cancel discards the draft and shows the original value", async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn<(next: string) => Promise<void>>(() =>
-      Promise.resolve(),
-    );
+    const onSave = vi.fn<(next: string) => Promise<void>>(() => Promise.resolve());
     render(<ControlledEditable initial="original" onSave={onSave} />);
 
     await user.click(screen.getByRole("button", { name: "Edit description" }));
@@ -135,9 +127,7 @@ describe("EditableMarkdown", () => {
 
   it("Esc cancels edit mode without saving", async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn<(next: string) => Promise<void>>(() =>
-      Promise.resolve(),
-    );
+    const onSave = vi.fn<(next: string) => Promise<void>>(() => Promise.resolve());
     render(<ControlledEditable initial="keep me" onSave={onSave} />);
 
     await user.click(screen.getByRole("button", { name: "Edit description" }));
@@ -152,9 +142,7 @@ describe("EditableMarkdown", () => {
 
   it("Ctrl/Cmd+Enter saves the draft", async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn<(next: string) => Promise<void>>(() =>
-      Promise.resolve(),
-    );
+    const onSave = vi.fn<(next: string) => Promise<void>>(() => Promise.resolve());
     render(<ControlledEditable initial="start" onSave={onSave} />);
 
     await user.click(screen.getByRole("button", { name: "Edit description" }));
@@ -171,14 +159,12 @@ describe("EditableMarkdown", () => {
 
   it("keeps edit mode open when focus leaves the textarea (no blur-to-save)", async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn<(next: string) => Promise<void>>(() =>
-      Promise.resolve(),
-    );
+    const onSave = vi.fn<(next: string) => Promise<void>>(() => Promise.resolve());
     render(
       <div>
         <ControlledEditable initial="hello" onSave={onSave} />
         <button type="button">Elsewhere</button>
-      </div>,
+      </div>
     );
 
     await user.click(screen.getByRole("button", { name: "Edit description" }));
@@ -196,9 +182,7 @@ describe("EditableMarkdown", () => {
 
   it("stays in edit mode with the draft intact when onSave rejects", async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn<(next: string) => Promise<void>>(() =>
-      Promise.reject(new Error("boom")),
-    );
+    const onSave = vi.fn<(next: string) => Promise<void>>(() => Promise.reject(new Error("boom")));
     render(<ControlledEditable initial="hello" onSave={onSave} />);
 
     await user.click(screen.getByRole("button", { name: "Edit description" }));
@@ -217,23 +201,15 @@ describe("EditableMarkdown", () => {
 
   it("readOnly renders inert prose with no edit affordance", async () => {
     const user = userEvent.setup();
-    const onSave = vi.fn<(next: string) => Promise<void>>(() =>
-      Promise.resolve(),
-    );
-    render(
-      <ControlledEditable initial="read only text" readOnly onSave={onSave} />,
-    );
+    const onSave = vi.fn<(next: string) => Promise<void>>(() => Promise.resolve());
+    render(<ControlledEditable initial="read only text" readOnly onSave={onSave} />);
 
     expect(screen.getByText("read only text")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Edit description" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit description" })).not.toBeInTheDocument();
 
     // Clicking the prose does nothing.
     await user.click(screen.getByText("read only text"));
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Save" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save" })).not.toBeInTheDocument();
   });
 });

@@ -81,20 +81,13 @@ export function defaultRateLimitKey(c: Context<AppEnv>): string {
   return `ip:${getClientIp(c)}`;
 }
 
-function setRateLimitHeaders(
-  c: Context<AppEnv>,
-  max: number,
-  remaining: number,
-  resetAt: number
-) {
+function setRateLimitHeaders(c: Context<AppEnv>, max: number, remaining: number, resetAt: number) {
   c.header("X-RateLimit-Limit", String(max));
   c.header("X-RateLimit-Remaining", String(remaining));
   c.header("X-RateLimit-Reset", String(Math.ceil(resetAt / 1000)));
 }
 
-export function rateLimit(
-  options: RateLimitOptions
-): MiddlewareHandler<AppEnv> {
+export function rateLimit(options: RateLimitOptions): MiddlewareHandler<AppEnv> {
   const { max, windowSeconds, prefix = "rl" } = options;
   const keyFn = options.keyFn ?? getClientIp;
   const store = new Map<string, RateLimitEntry>();
@@ -164,9 +157,7 @@ type RateLimitPatAwareOptions = {
  * once PAT auth lands in Batch 3 — until then the PAT branch simply remains
  * dormant because nothing populates `c.get("apiToken")`.
  */
-export function rateLimitPatAware(
-  options: RateLimitPatAwareOptions
-): MiddlewareHandler<AppEnv> {
+export function rateLimitPatAware(options: RateLimitPatAwareOptions): MiddlewareHandler<AppEnv> {
   const { cookieMax, patMax, windowSeconds, prefix = "rl-pat-aware" } = options;
 
   const cookieLimiter = rateLimit({

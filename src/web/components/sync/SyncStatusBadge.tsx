@@ -169,7 +169,11 @@ export function SyncStatusBadge() {
                       className="flex items-start justify-between gap-r5"
                     >
                       <div className="flex min-w-0 flex-col gap-r6">
-                        <Text variant="body-3" className="truncate leading-snug" title={write.label}>
+                        <Text
+                          variant="body-3"
+                          className="truncate leading-snug"
+                          title={write.label}
+                        >
                           {write.label}
                         </Text>
                         <Text variant="body-3" color="muted" className="leading-snug">

@@ -5,10 +5,7 @@ import {
   DueDateFilter,
   type DueDateFilterValue,
 } from "@/web/components/project/filters/DueDateFilter";
-import {
-  LabelFilter,
-  type LabelFilterOption,
-} from "@/web/components/project/filters/LabelFilter";
+import { LabelFilter, type LabelFilterOption } from "@/web/components/project/filters/LabelFilter";
 import { PriorityFilter } from "@/web/components/project/filters/PriorityFilter";
 import { Text } from "@/web/components/ui/Text";
 import { FILTER_NONE } from "@/web/hooks/use-task-filters";
@@ -142,9 +139,7 @@ export function MyTasksFilterBar({
    * exists only inside this popover contract and is split back out by the
    * owner's `onLabelsChange` before anything touches the URL.
    */
-  const labelSelected = noLabel
-    ? [...selectedLabelNames, FILTER_NONE]
-    : selectedLabelNames;
+  const labelSelected = noLabel ? [...selectedLabelNames, FILTER_NONE] : selectedLabelNames;
 
   return (
     <div className="task-filter-bar">
@@ -163,27 +158,16 @@ export function MyTasksFilterBar({
           projectsSelected={projectsSelected}
           loading={taskGroupsLoading}
         />
-        <PriorityFilter
-          selected={selectedPriorities}
-          onChange={onPrioritiesChange}
-        />
+        <PriorityFilter selected={selectedPriorities} onChange={onPrioritiesChange} />
         <DueDateFilter
           from={dueDateFrom}
           to={dueDateTo}
           noDueDate={noDueDate}
           onChange={onDueDateChange}
         />
-        <LabelFilter
-          options={labelOptions}
-          selected={labelSelected}
-          onChange={onLabelsChange}
-        />
+        <LabelFilter options={labelOptions} selected={labelSelected} onChange={onLabelsChange} />
         {hasActiveFilters && (
-          <button
-            type="button"
-            className="task-filter-bar__clear"
-            onClick={onClearAll}
-          >
+          <button type="button" className="task-filter-bar__clear" onClick={onClearAll}>
             Clear filters
           </button>
         )}
@@ -199,9 +183,7 @@ export function MyTasksFilterBar({
                 <button
                   type="button"
                   aria-label={`Remove project filter ${p?.name ?? id}`}
-                  onClick={() =>
-                    onProjectsChange(selectedProjectIds.filter((x) => x !== id))
-                  }
+                  onClick={() => onProjectsChange(selectedProjectIds.filter((x) => x !== id))}
                 >
                   <X size={12} />
                 </button>
@@ -214,12 +196,7 @@ export function MyTasksFilterBar({
               <span key={`group-${id}`} className="task-filter-bar__chip">
                 {g ? (
                   <>
-                    <Text
-                      as="span"
-                      variant="body-3"
-                      color="muted"
-                      className="mr-1"
-                    >
+                    <Text as="span" variant="body-3" color="muted" className="mr-1">
                       {g.projectName} /
                     </Text>
                     {g.name}
@@ -230,11 +207,7 @@ export function MyTasksFilterBar({
                 <button
                   type="button"
                   aria-label={`Remove column filter ${g?.name ?? id}`}
-                  onClick={() =>
-                    onTaskGroupsChange(
-                      selectedTaskGroupIds.filter((x) => x !== id),
-                    )
-                  }
+                  onClick={() => onTaskGroupsChange(selectedTaskGroupIds.filter((x) => x !== id))}
                 >
                   <X size={12} />
                 </button>
@@ -247,11 +220,7 @@ export function MyTasksFilterBar({
               <button
                 type="button"
                 aria-label={`Remove priority filter ${priority}`}
-                onClick={() =>
-                  onPrioritiesChange(
-                    selectedPriorities.filter((p) => p !== priority),
-                  )
-                }
+                onClick={() => onPrioritiesChange(selectedPriorities.filter((p) => p !== priority))}
               >
                 <X size={12} />
               </button>
@@ -321,11 +290,8 @@ export function MyTasksFilterBar({
                   onClick={() =>
                     onLabelsChange(
                       noLabel
-                        ? [
-                            ...selectedLabelNames.filter((n) => n !== name),
-                            FILTER_NONE,
-                          ]
-                        : selectedLabelNames.filter((n) => n !== name),
+                        ? [...selectedLabelNames.filter((n) => n !== name), FILTER_NONE]
+                        : selectedLabelNames.filter((n) => n !== name)
                     )
                   }
                 >

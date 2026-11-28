@@ -17,9 +17,10 @@ export function SettingsNav({ basePath }: { basePath: string }) {
     <nav className="flex gap-1 border-b border-border-default -mx-r3 px-r3 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
       {TABS.map((tab) => {
         const to = basePath + tab.path;
-        const isActive = tab.path === ""
-          ? pathname === basePath || pathname === basePath + "/"
-          : pathname.startsWith(to);
+        const isActive =
+          tab.path === ""
+            ? pathname === basePath || pathname === basePath + "/"
+            : pathname.startsWith(to);
 
         return (
           <Link

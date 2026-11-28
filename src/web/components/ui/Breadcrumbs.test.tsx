@@ -14,7 +14,7 @@ describe("Breadcrumbs", () => {
     renderWithRouter(
       <Breadcrumbs>
         <Breadcrumbs.Item>Home</Breadcrumbs.Item>
-      </Breadcrumbs>,
+      </Breadcrumbs>
     );
     const nav = screen.getByRole("navigation", { name: "Breadcrumb" });
     expect(nav).toBeInTheDocument();
@@ -27,14 +27,12 @@ describe("Breadcrumbs", () => {
         <Breadcrumbs.Item href="/">Home</Breadcrumbs.Item>
         <Breadcrumbs.Item href="/products">Products</Breadcrumbs.Item>
         <Breadcrumbs.Item current>Widget</Breadcrumbs.Item>
-      </Breadcrumbs>,
+      </Breadcrumbs>
     );
     const separators = container.querySelectorAll("[aria-hidden='true']");
     expect(separators.length).toBeGreaterThanOrEqual(2);
     // Default separator is a ChevronRight SVG icon, not text
-    const hasSvg = Array.from(separators).some(
-      (el) => el.querySelector("svg") !== null,
-    );
+    const hasSvg = Array.from(separators).some((el) => el.querySelector("svg") !== null);
     expect(hasSvg).toBe(true);
   });
 
@@ -43,7 +41,7 @@ describe("Breadcrumbs", () => {
       <Breadcrumbs separator="›">
         <Breadcrumbs.Item href="/">Home</Breadcrumbs.Item>
         <Breadcrumbs.Item current>Page</Breadcrumbs.Item>
-      </Breadcrumbs>,
+      </Breadcrumbs>
     );
     const separators = container.querySelectorAll("[aria-hidden='true']");
     const texts = Array.from(separators).map((el) => el.textContent);
@@ -54,7 +52,7 @@ describe("Breadcrumbs", () => {
     renderWithRouter(
       <Breadcrumbs>
         <Breadcrumbs.Item href="/home">Home</Breadcrumbs.Item>
-      </Breadcrumbs>,
+      </Breadcrumbs>
     );
     const link = screen.getByRole("link", { name: "Home" });
     expect(link).toBeInTheDocument();
@@ -65,7 +63,7 @@ describe("Breadcrumbs", () => {
     renderWithRouter(
       <Breadcrumbs>
         <Breadcrumbs.Item current>Current Page</Breadcrumbs.Item>
-      </Breadcrumbs>,
+      </Breadcrumbs>
     );
     const current = screen.getByText("Current Page");
     expect(current).toHaveAttribute("aria-current", "page");
@@ -76,7 +74,7 @@ describe("Breadcrumbs", () => {
     renderWithRouter(
       <Breadcrumbs>
         <Breadcrumbs.Item>Plain</Breadcrumbs.Item>
-      </Breadcrumbs>,
+      </Breadcrumbs>
     );
     const plain = screen.getByText("Plain");
     expect(plain.tagName).toBe("SPAN");
@@ -91,11 +89,9 @@ describe("Breadcrumbs", () => {
         <Breadcrumbs.Item href="/c">C</Breadcrumbs.Item>
         <Breadcrumbs.Item href="/d">D</Breadcrumbs.Item>
         <Breadcrumbs.Item current>E</Breadcrumbs.Item>
-      </Breadcrumbs>,
+      </Breadcrumbs>
     );
-    expect(
-      screen.getByRole("button", { name: "Show more breadcrumbs" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show more breadcrumbs" })).toBeInTheDocument();
   });
 
   it("ellipsis button has correct aria-label", () => {
@@ -104,7 +100,7 @@ describe("Breadcrumbs", () => {
         <Breadcrumbs.Item href="/a">A</Breadcrumbs.Item>
         <Breadcrumbs.Item href="/b">B</Breadcrumbs.Item>
         <Breadcrumbs.Item current>C</Breadcrumbs.Item>
-      </Breadcrumbs>,
+      </Breadcrumbs>
     );
     const ellipsis = screen.getByRole("button", {
       name: "Show more breadcrumbs",
@@ -120,7 +116,7 @@ describe("Breadcrumbs", () => {
         <Breadcrumbs.Item href="/b">B</Breadcrumbs.Item>
         <Breadcrumbs.Item href="/c">C</Breadcrumbs.Item>
         <Breadcrumbs.Item current>D</Breadcrumbs.Item>
-      </Breadcrumbs>,
+      </Breadcrumbs>
     );
     const ellipsis = screen.getByRole("button", {
       name: "Show more breadcrumbs",
@@ -131,16 +127,12 @@ describe("Breadcrumbs", () => {
     expect(screen.getByText("B")).toBeInTheDocument();
     expect(screen.getByText("C")).toBeInTheDocument();
     expect(screen.getByText("D")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: "Show more breadcrumbs" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show more breadcrumbs" })).not.toBeInTheDocument();
   });
 
   it("throws when Item is used outside root", () => {
     const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(() =>
-      renderWithRouter(<Breadcrumbs.Item>Orphan</Breadcrumbs.Item>),
-    ).toThrow();
+    expect(() => renderWithRouter(<Breadcrumbs.Item>Orphan</Breadcrumbs.Item>)).toThrow();
     spy.mockRestore();
   });
 });

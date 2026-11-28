@@ -172,7 +172,7 @@ describe("parseICS — line unfolding", () => {
     const { events, warnings } = parseICS(text);
     expect(warnings).toEqual([]);
     expect(events[0].summary).toBe(
-      "A meeting with an extremely long title that a conforming generator folded at the 75 octet boundary mid-word",
+      "A meeting with an extremely long title that a conforming generator folded at the 75 octet boundary mid-word"
     );
   });
 
@@ -204,7 +204,7 @@ describe("parseICS — line unfolding", () => {
     const { events, warnings } = parseICS(text);
     expect(warnings).toEqual([]);
     expect(events[0].description).toBe(
-      "Escaped comma split across a fold right here\\, and the text continues",
+      "Escaped comma split across a fold right here\\, and the text continues"
     );
   });
 
@@ -261,12 +261,7 @@ describe("parseICS — TEXT unescaping", () => {
 
 describe("parseICS — date handling", () => {
   it("accepts bare YYYYMMDD dates without a VALUE=DATE parameter", () => {
-    const text = crlf([
-      "BEGIN:VEVENT",
-      "DTSTART:20260102",
-      "SUMMARY:Bare date",
-      "END:VEVENT",
-    ]);
+    const text = crlf(["BEGIN:VEVENT", "DTSTART:20260102", "SUMMARY:Bare date", "END:VEVENT"]);
     const { events, warnings } = parseICS(text);
     expect(warnings).toEqual([]);
     expect(events[0]).toMatchObject({ startDate: "2026-01-02", endDate: "2026-01-02" });
@@ -391,32 +386,19 @@ describe("parseICS — date handling", () => {
 
 describe("parseICS — defaults and leniency", () => {
   it('missing SUMMARY → "(untitled event)"', () => {
-    const text = crlf([
-      "BEGIN:VEVENT",
-      "DTSTART;VALUE=DATE:20260310",
-      "END:VEVENT",
-    ]);
+    const text = crlf(["BEGIN:VEVENT", "DTSTART;VALUE=DATE:20260310", "END:VEVENT"]);
     const { events } = parseICS(text);
     expect(events[0].summary).toBe("(untitled event)");
   });
 
   it('blank SUMMARY → "(untitled event)"', () => {
-    const text = crlf([
-      "BEGIN:VEVENT",
-      "DTSTART;VALUE=DATE:20260310",
-      "SUMMARY:",
-      "END:VEVENT",
-    ]);
+    const text = crlf(["BEGIN:VEVENT", "DTSTART;VALUE=DATE:20260310", "SUMMARY:", "END:VEVENT"]);
     const { events } = parseICS(text);
     expect(events[0].summary).toBe("(untitled event)");
   });
 
   it("event with no DTSTART imports without dates", () => {
-    const text = crlf([
-      "BEGIN:VEVENT",
-      "SUMMARY:Dateless task",
-      "END:VEVENT",
-    ]);
+    const text = crlf(["BEGIN:VEVENT", "SUMMARY:Dateless task", "END:VEVENT"]);
     const { events, warnings } = parseICS(text);
     expect(warnings).toEqual([]);
     expect(events).toHaveLength(1);

@@ -77,7 +77,7 @@ describe("AnalyticsEngineSink", () => {
       expect(writeDataPoint).toHaveBeenCalledWith(
         expect.objectContaining({
           blobs: ["POST", "/api/auth/login", "req-456", "", ""],
-        }),
+        })
       );
     });
 
@@ -99,7 +99,7 @@ describe("AnalyticsEngineSink", () => {
       expect(writeDataPoint).toHaveBeenCalledWith(
         expect.objectContaining({
           blobs: ["GET", "/api/health", "req-789", "", ""],
-        }),
+        })
       );
     });
   });
@@ -300,9 +300,7 @@ describe("AnalyticsEngineSink", () => {
         throw new Error("Analytics Engine unavailable");
       });
 
-      const errorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const sink = new AnalyticsEngineSink(dataset);
 
       expect(() => {
@@ -319,7 +317,7 @@ describe("AnalyticsEngineSink", () => {
       expect(errorSpy).toHaveBeenCalledOnce();
       expect(errorSpy).toHaveBeenCalledWith(
         "[telemetry] Failed to write data point:",
-        expect.any(Error),
+        expect.any(Error)
       );
 
       errorSpy.mockRestore();
@@ -331,9 +329,7 @@ describe("AnalyticsEngineSink", () => {
         throw new Error("boom");
       });
 
-      const errorSpy = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
+      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const sink = new AnalyticsEngineSink(dataset);
 
       expect(() => {

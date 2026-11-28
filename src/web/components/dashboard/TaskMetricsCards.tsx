@@ -28,14 +28,9 @@ interface TaskMetricsCardsProps {
  * cards (Active Projects, Total Cost) while keeping the common cards
  * as a single source of truth.
  */
-function TaskMetricsCards({
-  taskCounts,
-  extraCards,
-  gridClassName,
-}: TaskMetricsCardsProps) {
+function TaskMetricsCards({ taskCounts, extraCards, gridClassName }: TaskMetricsCardsProps) {
   const { activeCount, completedCount, totalCount } = taskCounts;
-  const completionRate =
-    totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
     <div className={gridClassName}>
@@ -64,12 +59,7 @@ function TaskMetricsCards({
           <TrendingUp size={16} />
         </StatCard.Icon>
         <StatCard.Label>Completion Rate</StatCard.Label>
-        <StatCard.Value
-          animateValue
-          from={0}
-          to={completionRate}
-          format={(v) => `${v}%`}
-        >
+        <StatCard.Value animateValue from={0} to={completionRate} format={(v) => `${v}%`}>
           {completionRate}%
         </StatCard.Value>
       </StatCard>

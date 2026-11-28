@@ -11,10 +11,7 @@ export function DashboardSkeleton() {
   return (
     <Stack gap="r3">
       {/* Stat cards skeleton */}
-      <SkeletonStatGrid
-        count={3}
-        gridClassName="grid grid-cols-1 gap-r4 sm:grid-cols-3"
-      />
+      <SkeletonStatGrid count={3} gridClassName="grid grid-cols-1 gap-r4 sm:grid-cols-3" />
 
       {/* Main grid skeleton */}
       <div className="grid grid-cols-1 gap-r4 md:grid-cols-3">

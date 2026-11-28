@@ -25,7 +25,7 @@ export function CompactDropZone({
       const files = Array.from(e.dataTransfer.files);
       if (files.length > 0) onFilesSelected(files);
     },
-    [disabled, onFilesSelected],
+    [disabled, onFilesSelected]
   );
 
   const handleClick = useCallback(() => {

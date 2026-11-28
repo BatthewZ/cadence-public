@@ -36,7 +36,6 @@ interface InvitationInput {
   role: WorkspaceRole;
 }
 
-
 export default function WorkspaceMembers() {
   const { workspace, members } = useWorkspace();
   useDocumentTitle(`${workspace.name} — Members`);
@@ -60,15 +59,14 @@ export default function WorkspaceMembers() {
    * `.userId` from the thing it is acting on, and the confirmation can name the
    * member fully.
    */
-  const [memberPendingRemoval, setMemberPendingRemoval] = useState<WorkspaceMember | null>(
-    null,
-  );
+  const [memberPendingRemoval, setMemberPendingRemoval] = useState<WorkspaceMember | null>(null);
   const [removing, setRemoving] = useState(false);
   const [copyingLinkId, setCopyingLinkId] = useState<string | null>(null);
   const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
-  const [copyFallbackUrl, setCopyFallbackUrl] = useState<
-    { invitationId: string; url: string } | null
-  >(null);
+  const [copyFallbackUrl, setCopyFallbackUrl] = useState<{
+    invitationId: string;
+    url: string;
+  } | null>(null);
 
   // `useWorkspace()` throws when there is no workspace, so `workspace` is
   // non-nullable here — no optional chain or `?? ""` fallback to write.
@@ -77,14 +75,19 @@ export default function WorkspaceMembers() {
 
   const invitationsQuery = useQuery({
     queryKey: queryKeys.workspaces.invitations(workspaceId),
-    queryFn: () => api.get<{ invitations: Invitation[] }>(`/api/workspaces/${workspaceId}/invitations`),
+    queryFn: () =>
+      api.get<{ invitations: Invitation[] }>(`/api/workspaces/${workspaceId}/invitations`),
     staleTime: 5 * 60_000,
   });
   const { data: invitationsData, isLoading: invitationsLoading } = invitationsQuery;
   const onlineOnly = useOnlineOnly();
   const invitations = invitationsData?.invitations ?? [];
 
-  const { mutateAsync: sendInvitation, isPending: inviting, error: inviteErrorObj } = useMutation({
+  const {
+    mutateAsync: sendInvitation,
+    isPending: inviting,
+    error: inviteErrorObj,
+  } = useMutation({
     mutationFn: (input: InvitationInput) =>
       api.post<unknown>(`/api/workspaces/${workspaceId}/invitations`, input),
     onSuccess: () => {
@@ -148,7 +151,7 @@ export default function WorkspaceMembers() {
     setCopyingLinkId(invitationId);
     try {
       const { url } = await api.get<{ url: string }>(
-        `/api/workspaces/${workspaceId}/invitations/${invitationId}/link`,
+        `/api/workspaces/${workspaceId}/invitations/${invitationId}/link`
       );
       try {
         await navigator.clipboard.writeText(url);
@@ -236,9 +239,7 @@ export default function WorkspaceMembers() {
     setRemoving(true);
     try {
       // `.userId`, not `.id` — the endpoint is keyed by user, not by row.
-      await api.delete(
-        `/api/workspaces/${workspaceId}/members/${memberPendingRemoval.userId}`,
-      );
+      await api.delete(`/api/workspaces/${workspaceId}/members/${memberPendingRemoval.userId}`);
       toast("Member removed.", { variant: "success" });
       setMemberPendingRemoval(null);
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.members(workspaceId) });
@@ -253,7 +254,9 @@ export default function WorkspaceMembers() {
     <Container size="lg">
       <Stack gap="r3" className="py-r2">
         <Breadcrumbs>
-          <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>{workspace.name}</Breadcrumbs.Item>
+          <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>
+            {workspace.name}
+          </Breadcrumbs.Item>
           <Breadcrumbs.Item href={`/w/${workspace.slug}/settings`}>Settings</Breadcrumbs.Item>
           <Breadcrumbs.Item current>Members</Breadcrumbs.Item>
         </Breadcrumbs>
@@ -284,20 +287,20 @@ export default function WorkspaceMembers() {
           `false` — `useWorkspace()` throws rather than returning a nullish
           workspace — so it described a state this table can never be in.
         */}
-        <DataTable
-          data={members}
-          columns={columns}
-          rowKey={(row) => row.id}
-        />
+        <DataTable data={members} columns={columns} rowKey={(row) => row.id} />
 
         <Divider />
 
         <Text variant="h4">Pending Invitations</Text>
 
         {isUnavailableOffline(invitationsQuery) ? (
-          <Text variant="body-2" color="muted">Pending invitations will load when you&rsquo;re back online.</Text>
+          <Text variant="body-2" color="muted">
+            Pending invitations will load when you&rsquo;re back online.
+          </Text>
         ) : invitationsLoading ? (
-          <Text variant="body-2" color="muted">Loading invitations...</Text>
+          <Text variant="body-2" color="muted">
+            Loading invitations...
+          </Text>
         ) : !invitations || invitations.length === 0 ? (
           <EmptyState size="sm">
             <EmptyStateTitle>No pending invitations</EmptyStateTitle>
@@ -316,7 +319,10 @@ export default function WorkspaceMembers() {
                       {ROLE_LABELS[invitation.role]}
                     </Badge>
                     <Text variant="body-3" color="muted">
-                      Sent {invitation.createdAt ? new Date(invitation.createdAt).toLocaleDateString() : "—"}
+                      Sent{" "}
+                      {invitation.createdAt
+                        ? new Date(invitation.createdAt).toLocaleDateString()
+                        : "—"}
                     </Text>
                   </Row>
                   {canManageWorkspace && (

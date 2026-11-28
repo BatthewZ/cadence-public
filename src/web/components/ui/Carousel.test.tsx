@@ -35,7 +35,7 @@ describe("Carousel", () => {
           <Carousel.Item>Slide 2</Carousel.Item>
           <Carousel.Item>Slide 3</Carousel.Item>
         </Carousel.Track>
-      </Carousel>,
+      </Carousel>
     );
 
     expect(screen.getByText("Slide 1")).toBeInTheDocument();
@@ -49,7 +49,7 @@ describe("Carousel", () => {
         <Carousel.Track>
           <Carousel.Item>Slide 1</Carousel.Item>
         </Carousel.Track>
-      </Carousel>,
+      </Carousel>
     );
 
     const root = getCarouselRoot();
@@ -63,7 +63,7 @@ describe("Carousel", () => {
           <Carousel.Item>Slide 1</Carousel.Item>
           <Carousel.Item>Slide 2</Carousel.Item>
         </Carousel.Track>
-      </Carousel>,
+      </Carousel>
     );
 
     const slides = screen.getAllByRole("group");
@@ -79,7 +79,7 @@ describe("Carousel", () => {
         <Carousel.Track>
           <Carousel.Item>Slide 1</Carousel.Item>
         </Carousel.Track>
-      </Carousel>,
+      </Carousel>
     );
 
     expect(screen.getByRole("button", { name: "Previous" })).toBeInTheDocument();
@@ -94,7 +94,7 @@ describe("Carousel", () => {
           <Carousel.Item>Slide 1</Carousel.Item>
           <Carousel.Item>Slide 2</Carousel.Item>
         </Carousel.Track>
-      </Carousel>,
+      </Carousel>
     );
 
     const track = screen.getByRole("region", { name: "Carousel items" });
@@ -104,9 +104,7 @@ describe("Carousel", () => {
     await user.click(screen.getByRole("button", { name: "Next" }));
 
     expect(scrollBySpy).toHaveBeenCalledOnce();
-    expect(scrollBySpy).toHaveBeenCalledWith(
-      expect.objectContaining({ behavior: "smooth" }),
-    );
+    expect(scrollBySpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: "smooth" }));
   });
 
   it("Previous button calls scrollBy on the track", async () => {
@@ -117,7 +115,7 @@ describe("Carousel", () => {
           <Carousel.Item>Slide 1</Carousel.Item>
           <Carousel.Item>Slide 2</Carousel.Item>
         </Carousel.Track>
-      </Carousel>,
+      </Carousel>
     );
 
     const track = screen.getByRole("region", { name: "Carousel items" });
@@ -127,9 +125,7 @@ describe("Carousel", () => {
     await user.click(screen.getByRole("button", { name: "Previous" }));
 
     expect(scrollBySpy).toHaveBeenCalledOnce();
-    expect(scrollBySpy).toHaveBeenCalledWith(
-      expect.objectContaining({ behavior: "smooth" }),
-    );
+    expect(scrollBySpy).toHaveBeenCalledWith(expect.objectContaining({ behavior: "smooth" }));
   });
 
   it("renders title when provided", () => {
@@ -138,7 +134,7 @@ describe("Carousel", () => {
         <Carousel.Track>
           <Carousel.Item>Slide 1</Carousel.Item>
         </Carousel.Track>
-      </Carousel>,
+      </Carousel>
     );
 
     expect(screen.getByText("Featured items")).toBeInTheDocument();
@@ -150,7 +146,7 @@ describe("Carousel", () => {
         <Carousel.Track>
           <Carousel.Item>Slide 1</Carousel.Item>
         </Carousel.Track>
-      </Carousel>,
+      </Carousel>
     );
 
     const titleEl = screen.getByText("Featured items");
@@ -164,7 +160,7 @@ describe("Carousel", () => {
         <Carousel.Track>
           <Carousel.Item>Slide 1</Carousel.Item>
         </Carousel.Track>
-      </Carousel>,
+      </Carousel>
     );
 
     const root = getCarouselRoot();
@@ -177,7 +173,7 @@ describe("Carousel", () => {
         <Carousel.Track>
           <Carousel.Item>Slide 1</Carousel.Item>
         </Carousel.Track>
-      </Carousel>,
+      </Carousel>
     );
 
     expect(screen.getByRole("region", { name: "Carousel items" })).toBeInTheDocument();
@@ -191,7 +187,7 @@ describe("Carousel", () => {
           <Carousel.Item>Slide 1</Carousel.Item>
           <Carousel.Item>Slide 2</Carousel.Item>
         </Carousel.Track>
-      </Carousel>,
+      </Carousel>
     );
 
     const track = screen.getByRole("region", { name: "Carousel items" });

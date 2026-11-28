@@ -110,9 +110,7 @@ export function WebhookDetailView({ hook }: { hook: UseWorkspaceWebhooksReturn }
                       {wh.active ? "Active" : "Disabled"}
                     </Badge>
                     {wh.consecutiveFailures > 0 && (
-                      <Badge variant="warning">
-                        {wh.consecutiveFailures} consecutive failures
-                      </Badge>
+                      <Badge variant="warning">{wh.consecutiveFailures} consecutive failures</Badge>
                     )}
                   </Row>
                 </Row>
@@ -134,7 +132,7 @@ export function WebhookDetailView({ hook }: { hook: UseWorkspaceWebhooksReturn }
                     </Text>
                     <Text variant="body-2" className="mt-r6">
                       {wh.projectId
-                        ? projectName(projects, wh.projectId) ?? "Specific project"
+                        ? (projectName(projects, wh.projectId) ?? "Specific project")
                         : "All projects"}
                     </Text>
                   </div>
@@ -195,9 +193,7 @@ export function WebhookDetailView({ hook }: { hook: UseWorkspaceWebhooksReturn }
                 </Row>
 
                 {/* Test result inline */}
-                {testResult && (
-                  <TestResultDisplay testResult={testResult} />
-                )}
+                {testResult && <TestResultDisplay testResult={testResult} />}
               </Stack>
             </Card>
 

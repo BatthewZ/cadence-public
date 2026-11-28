@@ -1,10 +1,4 @@
-import {
-  index,
-  integer,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import type { TeamRole } from "../../shared/types/roles";
 import { user } from "./auth";
@@ -22,7 +16,7 @@ export const team = sqliteTable(
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
   },
-  (table) => [index("team_workspace_idx").on(table.workspaceId)],
+  (table) => [index("team_workspace_idx").on(table.workspaceId)]
 );
 
 export const teamMember = sqliteTable(
@@ -39,10 +33,7 @@ export const teamMember = sqliteTable(
     joinedAt: integer("joinedAt", { mode: "timestamp" }).notNull(),
   },
   (table) => [
-    uniqueIndex("team_member_team_user_unique").on(
-      table.teamId,
-      table.userId,
-    ),
+    uniqueIndex("team_member_team_user_unique").on(table.teamId, table.userId),
     index("team_member_user_idx").on(table.userId),
-  ],
+  ]
 );

@@ -39,14 +39,17 @@ export async function getProjectFreshness(c: Context<AppEnv>) {
   const db = c.get("db");
 
   const [projectResult, tasksResult, taskGroupsResult] = await db.batch([
-    db.select({ updatedAt: project.updatedAt })
+    db
+      .select({ updatedAt: project.updatedAt })
       .from(project)
       .where(eq(project.id, projectId))
       .limit(1),
-    db.select({ max: sql<number>`MAX(${task.updatedAt})`, count: count() })
+    db
+      .select({ max: sql<number>`MAX(${task.updatedAt})`, count: count() })
       .from(task)
       .where(eq(task.projectId, projectId)),
-    db.select({ max: sql<number>`MAX(${taskGroup.updatedAt})`, count: count() })
+    db
+      .select({ max: sql<number>`MAX(${taskGroup.updatedAt})`, count: count() })
       .from(taskGroup)
       .where(eq(taskGroup.projectId, projectId)),
   ] as const);

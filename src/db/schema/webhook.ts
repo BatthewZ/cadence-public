@@ -26,7 +26,7 @@ export const webhook = sqliteTable(
     index("webhook_workspace_idx").on(table.workspaceId),
     index("webhook_workspace_active_idx").on(table.workspaceId, table.active),
     index("webhook_project_idx").on(table.projectId),
-  ],
+  ]
 );
 
 export const webhookDelivery = sqliteTable(
@@ -48,13 +48,7 @@ export const webhookDelivery = sqliteTable(
     lastAttemptAt: integer("lastAttemptAt", { mode: "timestamp" }).notNull(),
   },
   (table) => [
-    index("webhook_delivery_webhook_created_idx").on(
-      table.webhookId,
-      table.createdAt,
-    ),
-    index("webhook_delivery_success_retry_idx").on(
-      table.success,
-      table.nextRetryAt,
-    ),
-  ],
+    index("webhook_delivery_webhook_created_idx").on(table.webhookId, table.createdAt),
+    index("webhook_delivery_success_retry_idx").on(table.success, table.nextRetryAt),
+  ]
 );

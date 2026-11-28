@@ -22,9 +22,8 @@ vi.mock("react-router-dom", async () => {
 });
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -56,7 +55,11 @@ const mockRefetchProjects = vi.fn();
 const mockWorkspaceContextValue = {
   workspace: { id: "ws-1", name: "Test Workspace", slug: "test" },
   members: [
-    { userId: "user-1", user: { id: "user-1", name: "Alice", email: "alice@test.com" }, role: "owner" },
+    {
+      userId: "user-1",
+      user: { id: "user-1", name: "Alice", email: "alice@test.com" },
+      role: "owner",
+    },
   ],
   teams: [],
   projects: [] as WorkspaceProject[],
@@ -68,7 +71,7 @@ const mockWorkspaceContextValue = {
 
 vi.mock("@/web/contexts/WorkspaceContext", async () => {
   const actual = await vi.importActual<typeof import("@/web/contexts/WorkspaceContext")>(
-    "@/web/contexts/WorkspaceContext",
+    "@/web/contexts/WorkspaceContext"
   );
   return {
     ...actual,
@@ -135,7 +138,8 @@ class IntersectionObserverStub {
   unobserve() {}
   disconnect() {}
 }
-globalThis.IntersectionObserver = IntersectionObserverStub as unknown as typeof IntersectionObserver;
+globalThis.IntersectionObserver =
+  IntersectionObserverStub as unknown as typeof IntersectionObserver;
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,
@@ -192,7 +196,7 @@ function renderProjectList(projects: WorkspaceProject[] = []) {
   render(
     <Wrapper>
       <ProjectList />
-    </Wrapper>,
+    </Wrapper>
   );
   return { user };
 }
@@ -299,7 +303,7 @@ describe("ProjectList", () => {
 
       expect(screen.getByText("No projects yet")).toBeInTheDocument();
       expect(
-        screen.getByText("Create your first project to start tracking tasks"),
+        screen.getByText("Create your first project to start tracking tasks")
       ).toBeInTheDocument();
     });
 
@@ -518,7 +522,7 @@ describe("ProjectList", () => {
       // Confirmation dialog should appear with the warning text
       await waitFor(() => {
         expect(
-          screen.getByText(/This will permanently delete all tasks and data/),
+          screen.getByText(/This will permanently delete all tasks and data/)
         ).toBeInTheDocument();
       });
       // The project name appears in both the card and the dialog <strong> tag
@@ -538,13 +542,13 @@ describe("ProjectList", () => {
       // Wait for confirmation dialog
       await waitFor(() => {
         expect(
-          screen.getByText(/This will permanently delete all tasks and data/),
+          screen.getByText(/This will permanently delete all tasks and data/)
         ).toBeInTheDocument();
       });
 
       // Click confirm button in the dialog (waitFor needed for dialog useEffect to set open attribute)
       const confirmBtn = await waitFor(() =>
-        screen.getByRole("button", { name: "Delete Project" }),
+        screen.getByRole("button", { name: "Delete Project" })
       );
       await user.click(confirmBtn);
 
@@ -566,14 +570,12 @@ describe("ProjectList", () => {
       // Wait for the confirmation dialog warning text
       await waitFor(() => {
         expect(
-          screen.getByText(/This will permanently delete all tasks and data/),
+          screen.getByText(/This will permanently delete all tasks and data/)
         ).toBeInTheDocument();
       });
 
       // Click Cancel (waitFor needed for dialog useEffect to set open attribute)
-      const cancelBtn = await waitFor(() =>
-        screen.getByRole("button", { name: "Cancel" }),
-      );
+      const cancelBtn = await waitFor(() => screen.getByRole("button", { name: "Cancel" }));
       await user.click(cancelBtn);
 
       expect(mockDelete).not.toHaveBeenCalled();
@@ -591,13 +593,11 @@ describe("ProjectList", () => {
 
       await waitFor(() => {
         expect(
-          screen.getByText(/This will permanently delete all tasks and data/),
+          screen.getByText(/This will permanently delete all tasks and data/)
         ).toBeInTheDocument();
       });
 
-      const deleteBtn = await waitFor(() =>
-        screen.getByRole("button", { name: "Delete Project" }),
-      );
+      const deleteBtn = await waitFor(() => screen.getByRole("button", { name: "Delete Project" }));
       await user.click(deleteBtn);
 
       await waitFor(() => {
@@ -646,9 +646,7 @@ describe("ProjectList", () => {
       await user.clear(input);
       await user.type(input, "New Name");
 
-      const renameBtn = await waitFor(() =>
-        screen.getByRole("button", { name: "Rename" }),
-      );
+      const renameBtn = await waitFor(() => screen.getByRole("button", { name: "Rename" }));
       await user.click(renameBtn);
 
       await waitFor(() => {

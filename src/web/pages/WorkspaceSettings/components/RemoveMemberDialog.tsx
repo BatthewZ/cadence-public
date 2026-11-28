@@ -36,7 +36,14 @@ export function RemoveMemberDialog({
       confirmingLabel="Removing..."
       confirming={removing}
     >
-      Remove <strong>{memberName}</strong>{memberEmail ? <> (<span className="break-all">{memberEmail}</span>)</> : null} from <strong>{workspaceName}</strong>? They will lose access to all projects and tasks.
+      Remove <strong>{memberName}</strong>
+      {memberEmail ? (
+        <>
+          {" "}
+          (<span className="break-all">{memberEmail}</span>)
+        </>
+      ) : null}{" "}
+      from <strong>{workspaceName}</strong>? They will lose access to all projects and tasks.
     </ConfirmDialog>
   );
 }

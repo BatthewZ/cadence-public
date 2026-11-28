@@ -79,7 +79,7 @@ describe("generateKeyBetween", () => {
 
   it("inserts between adjacent items correctly", () => {
     const a = generateKeyBetween(null, null); // "a0"
-    const b = generateKeyBetween(a, null);    // something > "a0"
+    const b = generateKeyBetween(a, null); // something > "a0"
 
     const between = generateKeyBetween(a, b);
     expect(between > a).toBe(true);

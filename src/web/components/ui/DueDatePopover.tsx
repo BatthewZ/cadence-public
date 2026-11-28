@@ -53,9 +53,7 @@ export function DueDatePopover({
         {trigger ?? (
           <Button variant="ghost" size="sm">
             <Calendar size={14} />
-            <span className="hidden sm:inline ml-1">
-              {formattedDate ?? "Due date"}
-            </span>
+            <span className="hidden sm:inline ml-1">{formattedDate ?? "Due date"}</span>
           </Button>
         )}
       </Popover.Trigger>

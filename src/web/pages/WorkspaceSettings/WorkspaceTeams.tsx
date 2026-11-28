@@ -62,7 +62,11 @@ export default function WorkspaceTeams() {
     staleTime: 5 * 60_000,
   });
 
-  const { mutateAsync: createTeam, isPending: creating, error: createErrorObj } = useMutation({
+  const {
+    mutateAsync: createTeam,
+    isPending: creating,
+    error: createErrorObj,
+  } = useMutation({
     mutationFn: (input: CreateTeamInput) =>
       api.post<unknown>(`/api/workspaces/${workspaceId}/teams`, input),
     onSuccess: () => {
@@ -71,7 +75,11 @@ export default function WorkspaceTeams() {
   });
   const createError = createErrorObj?.message ?? null;
 
-  const { mutateAsync: updateTeam, isPending: updating, error: updateErrorObj } = useMutation({
+  const {
+    mutateAsync: updateTeam,
+    isPending: updating,
+    error: updateErrorObj,
+  } = useMutation({
     mutationFn: (input: UpdateTeamInput) =>
       api.patch<unknown>(`/api/workspaces/${workspaceId}/teams/${selectedTeam?.id ?? ""}`, input),
     onMutate: async (input) => {
@@ -81,8 +89,14 @@ export default function WorkspaceTeams() {
       if (selectedTeam) {
         qc.setQueryData<{ teams: WorkspaceTeam[] }>(key, (old) =>
           old
-            ? { teams: old.teams.map((t) => (t.id === selectedTeam.id ? { ...t, name: input.name, description: input.description } : t)) }
-            : old,
+            ? {
+                teams: old.teams.map((t) =>
+                  t.id === selectedTeam.id
+                    ? { ...t, name: input.name, description: input.description }
+                    : t
+                ),
+              }
+            : old
         );
       }
       return { previousTeams };
@@ -95,7 +109,9 @@ export default function WorkspaceTeams() {
     onSettled: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.teams(workspaceId) });
       if (selectedTeam) {
-        void qc.invalidateQueries({ queryKey: queryKeys.workspaces.teamDetail(workspaceId, selectedTeam.id) });
+        void qc.invalidateQueries({
+          queryKey: queryKeys.workspaces.teamDetail(workspaceId, selectedTeam.id),
+        });
       }
     },
   });
@@ -187,7 +203,9 @@ export default function WorkspaceTeams() {
       setAddMemberDialogOpen(false);
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.teams(workspaceId) });
       if (selectedTeam) {
-        void qc.invalidateQueries({ queryKey: queryKeys.workspaces.teamDetail(workspaceId, selectedTeam.id) });
+        void qc.invalidateQueries({
+          queryKey: queryKeys.workspaces.teamDetail(workspaceId, selectedTeam.id),
+        });
       }
       setSelectedTeam(null);
     } catch {
@@ -199,7 +217,9 @@ export default function WorkspaceTeams() {
     <Container size="lg">
       <Stack gap="r3" className="py-r2">
         <Breadcrumbs>
-          <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>{workspace.name}</Breadcrumbs.Item>
+          <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>
+            {workspace.name}
+          </Breadcrumbs.Item>
           <Breadcrumbs.Item href={`/w/${workspace.slug}/settings`}>Settings</Breadcrumbs.Item>
           <Breadcrumbs.Item current>Teams</Breadcrumbs.Item>
         </Breadcrumbs>

@@ -10,12 +10,23 @@ import { task, taskGroup } from "../../../db/schema/task";
 import { webhook } from "../../../db/schema/webhook";
 import { workspaceMember } from "../../../db/schema/workspace";
 import { generateKeyBetween, generateNKeysBetween } from "../../../shared/lib/fractional-index";
-import { addProjectMemberSchema, createProjectSchema, duplicateProjectSchema, reorderProjectSchema, updateProjectMemberRoleSchema, updateProjectSchema } from "../../../shared/schemas/project";
+import {
+  addProjectMemberSchema,
+  createProjectSchema,
+  duplicateProjectSchema,
+  reorderProjectSchema,
+  updateProjectMemberRoleSchema,
+  updateProjectSchema,
+} from "../../../shared/schemas/project";
 import type { ProjectRole } from "../../../shared/types/roles";
 import type { AppEnv } from "../../env";
 import { resolveProjectAccess } from "../../lib/access";
 import type { CoverSourceUpdate } from "../../lib/cover-image";
-import { handleApplyUnsplashCover, handleDeleteCover, handleUploadCover } from "../../lib/cover-image";
+import {
+  handleApplyUnsplashCover,
+  handleDeleteCover,
+  handleUploadCover,
+} from "../../lib/cover-image";
 import { deferWork } from "../../lib/defer";
 import { errorResponse } from "../../lib/error-response";
 import { createNotification } from "../../lib/notifications";
@@ -49,17 +60,14 @@ import { tokenProjectScopeFilter } from "../../middleware/authorize";
 async function selectWorkspaceMemberIds(
   db: Database,
   workspaceId: string,
-  userIds: string[],
+  userIds: string[]
 ): Promise<Set<string>> {
   if (userIds.length === 0) return new Set();
   const rows = await db
     .select({ userId: workspaceMember.userId })
     .from(workspaceMember)
     .where(
-      and(
-        eq(workspaceMember.workspaceId, workspaceId),
-        inArray(workspaceMember.userId, userIds),
-      ),
+      and(eq(workspaceMember.workspaceId, workspaceId), inArray(workspaceMember.userId, userIds))
     );
   return new Set(rows.map((r) => r.userId));
 }
@@ -133,13 +141,16 @@ export async function createProject(c: Context<AppEnv>) {
         isCompletionGroup: g.isCompletionGroup,
         createdAt: now,
         updatedAt: now,
-      })),
+      }))
     ),
   ] as const);
 
   // Non-blocking webhook dispatch for project.created
   fireWebhookEvent(db, () => c.executionCtx, { workspaceId, actorId: user.id, projectId }, [
-    { event: "project.created", data: buildProjectEventData(newProject as Parameters<typeof buildProjectEventData>[0]) },
+    {
+      event: "project.created",
+      data: buildProjectEventData(newProject as Parameters<typeof buildProjectEventData>[0]),
+    },
   ]);
 
   return c.json({ project: newProject }, 201);
@@ -173,7 +184,7 @@ export async function listProjects(c: Context<AppEnv>) {
   const isElevated = membership.role === "owner" || membership.role === "admin";
   const inWorkspace = and(
     eq(project.workspaceId, workspaceId),
-    tokenProjectScopeFilter(c, project.id),
+    tokenProjectScopeFilter(c, project.id)
   );
 
   // For non-elevated members, restrict to projects they belong to
@@ -188,27 +199,25 @@ export async function listProjects(c: Context<AppEnv>) {
         .from(project)
         .innerJoin(
           projectMember,
-          and(
-            eq(projectMember.projectId, project.id),
-            eq(projectMember.userId, user.id),
-          ),
+          and(eq(projectMember.projectId, project.id), eq(projectMember.userId, user.id))
         )
         .where(inWorkspace)
         .orderBy(...projectPositionOrder);
 
   // Lazy backfill: assign positions to projects that don't have one yet
-  const unpositioned = projects.filter(p => !p.position);
+  const unpositioned = projects.filter((p) => !p.position);
   if (unpositioned.length > 0) {
-    const positioned = projects.filter(p => p.position);
-    const lastPosition = positioned.length > 0
-      ? positioned.sort((a, b) => (a.position! > b.position! ? 1 : -1)).at(-1)!.position
-      : null;
+    const positioned = projects.filter((p) => p.position);
+    const lastPosition =
+      positioned.length > 0
+        ? positioned.sort((a, b) => (a.position! > b.position! ? 1 : -1)).at(-1)!.position
+        : null;
     unpositioned.sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
     const newPositions = generateNKeysBetween(lastPosition, null, unpositioned.length);
     const updates = unpositioned.map((p, i) =>
       db.update(project).set({ position: newPositions[i] }).where(eq(project.id, p.id))
     );
-    await db.batch(updates as [typeof updates[0], ...typeof updates]);
+    await db.batch(updates as [(typeof updates)[0], ...typeof updates]);
     for (let i = 0; i < unpositioned.length; i++) {
       Object.assign(unpositioned[i], { position: newPositions[i] });
     }
@@ -228,9 +237,7 @@ export async function listProjects(c: Context<AppEnv>) {
         count: count(),
       })
       .from(projectMember)
-      .where(
-        sql`${projectMember.projectId} IN ${projectIds}`,
-      )
+      .where(sql`${projectMember.projectId} IN ${projectIds}`)
       .groupBy(projectMember.projectId),
     db
       .select({
@@ -238,18 +245,12 @@ export async function listProjects(c: Context<AppEnv>) {
         count: count(),
       })
       .from(taskGroup)
-      .where(
-        sql`${taskGroup.projectId} IN ${projectIds}`,
-      )
+      .where(sql`${taskGroup.projectId} IN ${projectIds}`)
       .groupBy(taskGroup.projectId),
   ] as const);
 
-  const memberCountMap = new Map(
-    memberCounts.map((mc) => [mc.projectId, mc.count]),
-  );
-  const taskCountMap = new Map(
-    taskCounts.map((tc) => [tc.projectId, tc.count]),
-  );
+  const memberCountMap = new Map(memberCounts.map((mc) => [mc.projectId, mc.count]));
+  const taskCountMap = new Map(taskCounts.map((tc) => [tc.projectId, tc.count]));
 
   const enrichedProjects = projects.map((p) => ({
     ...p,
@@ -264,11 +265,7 @@ export async function getProject(c: Context<AppEnv>) {
   const projectId = requireParam(c, "projectId");
   const db = c.get("db");
 
-  const [found] = await db
-    .select()
-    .from(project)
-    .where(eq(project.id, projectId))
-    .limit(1);
+  const [found] = await db.select().from(project).where(eq(project.id, projectId)).limit(1);
 
   if (!found) {
     return errorResponse(c, "Project not found", 404);
@@ -286,11 +283,7 @@ export async function updateProject(c: Context<AppEnv>) {
   const now = new Date();
 
   // Capture pre-update state for webhook change detection
-  const [beforeUpdate] = await db
-    .select()
-    .from(project)
-    .where(eq(project.id, projectId))
-    .limit(1);
+  const [beforeUpdate] = await db.select().from(project).where(eq(project.id, projectId)).limit(1);
 
   // Field-by-field rather than `...body`: a blind spread makes the set of
   // writable columns invisible at the write site, which is how `coverImageKey`
@@ -335,14 +328,26 @@ export async function updateProject(c: Context<AppEnv>) {
   if (beforeUpdate) {
     const workspaceId = updated.workspaceId;
     const data = buildProjectEventData(updated);
-    const changes = computeChanges(beforeUpdate, updated, ["name", "description", "status", "icon", "budget", "autoAssignCreator"]);
+    const changes = computeChanges(beforeUpdate, updated, [
+      "name",
+      "description",
+      "status",
+      "icon",
+      "budget",
+      "autoAssignCreator",
+    ]);
     const webhookEvents: Parameters<typeof fireWebhookEvent>[3] = [
       { event: "project.updated", data, changes },
     ];
     if (beforeUpdate.status !== "archived" && updated.status === "archived") {
       webhookEvents.push({ event: "project.archived", data });
     }
-    fireWebhookEvent(db, () => c.executionCtx, { workspaceId, actorId: user.id, projectId }, webhookEvents);
+    fireWebhookEvent(
+      db,
+      () => c.executionCtx,
+      { workspaceId, actorId: user.id, projectId },
+      webhookEvents
+    );
 
     // Archiving a project makes its project-scoped webhooks obsolete — delete them.
     // Workspace-scoped webhooks still receive the project.archived event above.
@@ -359,11 +364,7 @@ export async function deleteProject(c: Context<AppEnv>) {
   const projectId = requireParam(c, "projectId");
   const db = c.get("db");
 
-  const [found] = await db
-    .select()
-    .from(project)
-    .where(eq(project.id, projectId))
-    .limit(1);
+  const [found] = await db.select().from(project).where(eq(project.id, projectId)).limit(1);
 
   if (!found) {
     return errorResponse(c, "Project not found", 404);
@@ -377,9 +378,12 @@ export async function deleteProject(c: Context<AppEnv>) {
   ] as const);
 
   // Non-blocking webhook dispatch for project.deleted (using pre-deletion data)
-  fireWebhookEvent(db, () => c.executionCtx, { workspaceId: found.workspaceId, actorId: user.id, projectId }, [
-    { event: "project.deleted", data: buildProjectEventData(found) },
-  ]);
+  fireWebhookEvent(
+    db,
+    () => c.executionCtx,
+    { workspaceId: found.workspaceId, actorId: user.id, projectId },
+    [{ event: "project.deleted", data: buildProjectEventData(found) }]
+  );
 
   return c.json({ ok: true });
 }
@@ -430,9 +434,8 @@ export async function duplicateProject(c: Context<AppEnv>) {
   // Truncate name so "name (copy)" fits within 100 chars
   const suffix = " (copy)";
   const maxBaseLength = 100 - suffix.length;
-  const baseName = source.name.length > maxBaseLength
-    ? source.name.slice(0, maxBaseLength)
-    : source.name;
+  const baseName =
+    source.name.length > maxBaseLength ? source.name.slice(0, maxBaseLength) : source.name;
 
   const newProject = {
     id: newProjectId,
@@ -453,7 +456,13 @@ export async function duplicateProject(c: Context<AppEnv>) {
   };
 
   // Build member records — duplicating user is always admin
-  const memberRecords: { id: string; projectId: string; userId: string; role: ProjectRole; addedAt: Date }[] = [];
+  const memberRecords: {
+    id: string;
+    projectId: string;
+    userId: string;
+    role: ProjectRole;
+    addedAt: Date;
+  }[] = [];
 
   // Source members who were dropped because they are no longer workspace
   // members. Returned to the caller so the omission is visible (see below).
@@ -485,7 +494,7 @@ export async function duplicateProject(c: Context<AppEnv>) {
     const workspaceMemberIds = await selectWorkspaceMemberIds(
       db,
       source.workspaceId,
-      sourceMembers.map((m) => m.userId),
+      sourceMembers.map((m) => m.userId)
     );
 
     for (const m of sourceMembers) {
@@ -544,9 +553,17 @@ export async function duplicateProject(c: Context<AppEnv>) {
   await db.batch(batchOps as [BatchItem<"sqlite">, ...BatchItem<"sqlite">[]]);
 
   // Non-blocking webhook dispatch for project.created
-  fireWebhookEvent(db, () => c.executionCtx, { workspaceId: source.workspaceId, actorId: user.id, projectId: newProjectId }, [
-    { event: "project.created", data: buildProjectEventData(newProject as Parameters<typeof buildProjectEventData>[0]) },
-  ]);
+  fireWebhookEvent(
+    db,
+    () => c.executionCtx,
+    { workspaceId: source.workspaceId, actorId: user.id, projectId: newProjectId },
+    [
+      {
+        event: "project.created",
+        data: buildProjectEventData(newProject as Parameters<typeof buildProjectEventData>[0]),
+      },
+    ]
+  );
 
   // `skippedMemberIds` is always present (empty on a clean duplicate) so clients
   // can branch on `.length` without probing for the field. It exists so dropping
@@ -588,9 +605,14 @@ export async function addMember(c: Context<AppEnv>) {
 
   // Fetch project + check existing membership in a single round-trip
   const [projResult, existingResult] = await db.batch([
-    db.select({ name: project.name, workspaceId: project.workspaceId })
-      .from(project).where(eq(project.id, projectId)).limit(1),
-    db.select().from(projectMember)
+    db
+      .select({ name: project.name, workspaceId: project.workspaceId })
+      .from(project)
+      .where(eq(project.id, projectId))
+      .limit(1),
+    db
+      .select()
+      .from(projectMember)
       .where(and(eq(projectMember.projectId, projectId), eq(projectMember.userId, body.userId)))
       .limit(1),
   ] as const);
@@ -628,20 +650,30 @@ export async function addMember(c: Context<AppEnv>) {
   ] as const);
 
   // Defer notification — runs after response is sent
-  deferWork(c, () => createNotification(db, {
-    userId: body.userId,
-    type: "project_member_added",
-    title: `You were added to project "${proj.name}"`,
-    actorId: user.id,
-    workspaceId: proj.workspaceId,
-    projectId,
-  }));
+  deferWork(c, () =>
+    createNotification(db, {
+      userId: body.userId,
+      type: "project_member_added",
+      title: `You were added to project "${proj.name}"`,
+      actorId: user.id,
+      workspaceId: proj.workspaceId,
+      projectId,
+    })
+  );
 
   // Non-blocking webhook dispatch for project.member_added
   const addedUser = await resolveUser(db, body.userId);
-  fireWebhookEvent(db, () => c.executionCtx, { workspaceId: proj.workspaceId, actorId: user.id, projectId }, [
-    { event: "project.member_added", data: buildMemberEventData({ userId: body.userId, projectId }, body.role, addedUser) },
-  ]);
+  fireWebhookEvent(
+    db,
+    () => c.executionCtx,
+    { workspaceId: proj.workspaceId, actorId: user.id, projectId },
+    [
+      {
+        event: "project.member_added",
+        data: buildMemberEventData({ userId: body.userId, projectId }, body.role, addedUser),
+      },
+    ]
+  );
 
   return c.json({ member }, 201);
 }
@@ -702,8 +734,7 @@ export async function updateMemberRole(c: Context<AppEnv>) {
   // the middleware from turning this into an open endpoint. Same instinct as the
   // workspace handler's leading `if (!actor)` — a decision this consequential
   // must not depend on a mount elsewhere in the file.
-  const access =
-    c.get("projectAccess") ?? (await resolveProjectAccess(db, projectId, actor.id));
+  const access = c.get("projectAccess") ?? (await resolveProjectAccess(db, projectId, actor.id));
   if (!access || access.role !== "admin") {
     return errorResponse(c, "Forbidden", 403);
   }
@@ -718,12 +749,7 @@ export async function updateMemberRole(c: Context<AppEnv>) {
     db
       .select()
       .from(projectMember)
-      .where(
-        and(
-          eq(projectMember.projectId, projectId),
-          eq(projectMember.userId, targetUserId),
-        ),
-      )
+      .where(and(eq(projectMember.projectId, projectId), eq(projectMember.userId, targetUserId)))
       .limit(1),
     db
       .select({ workspaceId: project.workspaceId })
@@ -766,8 +792,8 @@ export async function updateMemberRole(c: Context<AppEnv>) {
       and(
         eq(projectMember.projectId, projectId),
         eq(projectMember.userId, targetUserId),
-        eq(projectMember.role, oldRole),
-      ),
+        eq(projectMember.role, oldRole)
+      )
     )
     .returning();
 
@@ -775,22 +801,28 @@ export async function updateMemberRole(c: Context<AppEnv>) {
     return errorResponse(
       c,
       "This member's role changed while you were editing. Please retry.",
-      409,
+      409
     );
   }
 
-  await db
-    .update(project)
-    .set({ updatedAt: new Date() })
-    .where(eq(project.id, projectId));
+  await db.update(project).set({ updatedAt: new Date() }).where(eq(project.id, projectId));
 
   // Non-blocking webhook dispatch for project.member_role_changed
   const proj = projResult[0];
   if (proj) {
     const roleChangedUser = await resolveUser(db, targetUserId);
-    fireWebhookEvent(db, () => c.executionCtx, { workspaceId: proj.workspaceId, actorId: actor.id, projectId }, [
-      { event: "project.member_role_changed", data: buildMemberEventData({ userId: targetUserId, projectId }, role, roleChangedUser), changes: { role: { from: oldRole, to: role } } },
-    ]);
+    fireWebhookEvent(
+      db,
+      () => c.executionCtx,
+      { workspaceId: proj.workspaceId, actorId: actor.id, projectId },
+      [
+        {
+          event: "project.member_role_changed",
+          data: buildMemberEventData({ userId: targetUserId, projectId }, role, roleChangedUser),
+          changes: { role: { from: oldRole, to: role } },
+        },
+      ]
+    );
   }
 
   return c.json({ member: updated });
@@ -806,12 +838,7 @@ export async function removeMember(c: Context<AppEnv>) {
     db
       .select()
       .from(projectMember)
-      .where(
-        and(
-          eq(projectMember.projectId, projectId),
-          eq(projectMember.userId, userId),
-        ),
-      )
+      .where(and(eq(projectMember.projectId, projectId), eq(projectMember.userId, userId)))
       .limit(1),
     db
       .select({ workspaceId: project.workspaceId })
@@ -828,12 +855,9 @@ export async function removeMember(c: Context<AppEnv>) {
 
   const now = new Date();
   await db.batch([
-    db.delete(projectMember).where(
-      and(
-        eq(projectMember.projectId, projectId),
-        eq(projectMember.userId, userId),
-      ),
-    ),
+    db
+      .delete(projectMember)
+      .where(and(eq(projectMember.projectId, projectId), eq(projectMember.userId, userId))),
     db.update(project).set({ updatedAt: now }).where(eq(project.id, projectId)),
   ] as const);
 
@@ -841,9 +865,17 @@ export async function removeMember(c: Context<AppEnv>) {
   const proj = projResult[0];
   if (proj) {
     const removedUser = await resolveUser(db, userId);
-    fireWebhookEvent(db, () => c.executionCtx, { workspaceId: proj.workspaceId, actorId: actor.id, projectId }, [
-      { event: "project.member_removed", data: buildMemberEventData({ userId, projectId }, member.role, removedUser) },
-    ]);
+    fireWebhookEvent(
+      db,
+      () => c.executionCtx,
+      { workspaceId: proj.workspaceId, actorId: actor.id, projectId },
+      [
+        {
+          event: "project.member_removed",
+          data: buildMemberEventData({ userId, projectId }, member.role, removedUser),
+        },
+      ]
+    );
   }
 
   return c.json({ ok: true });
@@ -880,7 +912,7 @@ async function writeProjectCover(
   db: Database,
   projectId: string,
   cover: CoverSourceUpdate,
-  updatedAt: Date,
+  updatedAt: Date
 ) {
   await db
     .update(project)

@@ -27,9 +27,7 @@ import { queryKeys } from "@/web/lib/query-keys";
 
 vi.mock("@/web/lib/api/client", async () => {
   const actual =
-    await vi.importActual<typeof import("@/web/lib/api/client")>(
-      "@/web/lib/api/client",
-    );
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -70,7 +68,7 @@ function wrapper({ children }: { children: ReactNode }) {
 /** Keys passed to invalidateQueries, flattened for readable assertions. */
 function invalidatedKeys(): string[] {
   return invalidateSpy.mock.calls.map((call: unknown[]) =>
-    JSON.stringify((call[0] as { queryKey: unknown } | undefined)?.queryKey),
+    JSON.stringify((call[0] as { queryKey: unknown } | undefined)?.queryKey)
   );
 }
 
@@ -161,9 +159,7 @@ describe("useProjectFreshness", () => {
 
     it("polls the project freshness endpoint when multi-member", async () => {
       await mountWithBaseline();
-      expect(mockGet).toHaveBeenCalledWith(
-        `/api/projects/${PROJECT_ID}/freshness`,
-      );
+      expect(mockGet).toHaveBeenCalledWith(`/api/projects/${PROJECT_ID}/freshness`);
     });
 
     it("jitters the poll interval around the documented 1.5s base", async () => {
@@ -196,9 +192,7 @@ describe("useProjectFreshness", () => {
       await nextPoll({ project: 100, tasks: 999, taskGroups: 300 });
 
       const keys = invalidatedKeys();
-      expect(keys).toContain(
-        JSON.stringify(queryKeys.projects.tasks(PROJECT_ID)),
-      );
+      expect(keys).toContain(JSON.stringify(queryKeys.projects.tasks(PROJECT_ID)));
       // The regression guard: without this the open panel never refetches.
       expect(keys).toContain(JSON.stringify(queryKeys.tasks.all));
     });
@@ -208,12 +202,8 @@ describe("useProjectFreshness", () => {
       await nextPoll({ project: 100, tasks: 999, taskGroups: 300 });
 
       const keys = invalidatedKeys();
-      expect(keys).not.toContain(
-        JSON.stringify(queryKeys.projects.detail(PROJECT_ID)),
-      );
-      expect(keys).not.toContain(
-        JSON.stringify(queryKeys.projects.taskGroups(PROJECT_ID)),
-      );
+      expect(keys).not.toContain(JSON.stringify(queryKeys.projects.detail(PROJECT_ID)));
+      expect(keys).not.toContain(JSON.stringify(queryKeys.projects.taskGroups(PROJECT_ID)));
     });
 
     it("keeps firing across consecutive changes", async () => {
@@ -232,15 +222,9 @@ describe("useProjectFreshness", () => {
       await nextPoll({ project: 999, tasks: 200, taskGroups: 300 });
 
       const keys = invalidatedKeys();
-      expect(keys).toContain(
-        JSON.stringify(queryKeys.projects.detail(PROJECT_ID)),
-      );
-      expect(keys).toContain(
-        JSON.stringify(queryKeys.projects.members(PROJECT_ID)),
-      );
-      expect(keys).toContain(
-        JSON.stringify(queryKeys.projects.labels(PROJECT_ID)),
-      );
+      expect(keys).toContain(JSON.stringify(queryKeys.projects.detail(PROJECT_ID)));
+      expect(keys).toContain(JSON.stringify(queryKeys.projects.members(PROJECT_ID)));
+      expect(keys).toContain(JSON.stringify(queryKeys.projects.labels(PROJECT_ID)));
     });
   });
 
@@ -250,7 +234,7 @@ describe("useProjectFreshness", () => {
       await nextPoll({ project: 100, tasks: 200, taskGroups: 999 });
 
       expect(invalidatedKeys()).toContain(
-        JSON.stringify(queryKeys.projects.taskGroups(PROJECT_ID)),
+        JSON.stringify(queryKeys.projects.taskGroups(PROJECT_ID))
       );
     });
   });
@@ -258,9 +242,7 @@ describe("useProjectFreshness", () => {
   describe("self-mutation suppression", () => {
     it("skips invalidation while the tracker is suppressing", async () => {
       await mountWithBaseline();
-      (
-        freshnessTracker.shouldInvalidate as ReturnType<typeof vi.fn>
-      ).mockReturnValue(false);
+      (freshnessTracker.shouldInvalidate as ReturnType<typeof vi.fn>).mockReturnValue(false);
 
       await nextPoll({ project: 999, tasks: 999, taskGroups: 999 });
       expect(invalidatedKeys()).toEqual([]);
@@ -268,14 +250,10 @@ describe("useProjectFreshness", () => {
 
     it("still advances the baseline so the change is not replayed later", async () => {
       await mountWithBaseline();
-      (
-        freshnessTracker.shouldInvalidate as ReturnType<typeof vi.fn>
-      ).mockReturnValue(false);
+      (freshnessTracker.shouldInvalidate as ReturnType<typeof vi.fn>).mockReturnValue(false);
       await nextPoll({ project: 100, tasks: 999, taskGroups: 300 });
 
-      (
-        freshnessTracker.shouldInvalidate as ReturnType<typeof vi.fn>
-      ).mockReturnValue(true);
+      (freshnessTracker.shouldInvalidate as ReturnType<typeof vi.fn>).mockReturnValue(true);
       await nextPoll({ project: 100, tasks: 999, taskGroups: 300 });
 
       expect(invalidatedKeys()).toEqual([]);
@@ -295,17 +273,33 @@ describe("useProjectFreshness", () => {
       poll({ project: 100, tasks: 500, taskGroups: 300, taskCount: 4, taskGroupCount: 3 });
       await mountWithBaseline();
 
-      await nextPoll({ project: 100, tasks: 500, taskGroups: 300, taskCount: 3, taskGroupCount: 3 });
+      await nextPoll({
+        project: 100,
+        tasks: 500,
+        taskGroups: 300,
+        taskCount: 3,
+        taskGroupCount: 3,
+      });
       expect(invalidatedKeys()).toContain(JSON.stringify(queryKeys.projects.tasks(PROJECT_ID)));
-      expect(invalidatedKeys()).not.toContain(JSON.stringify(queryKeys.projects.taskGroups(PROJECT_ID)));
+      expect(invalidatedKeys()).not.toContain(
+        JSON.stringify(queryKeys.projects.taskGroups(PROJECT_ID))
+      );
     });
 
     it("invalidates task groups when the last-updated group is deleted", async () => {
       poll({ project: 100, tasks: 500, taskGroups: 300, taskCount: 4, taskGroupCount: 3 });
       await mountWithBaseline();
 
-      await nextPoll({ project: 100, tasks: 500, taskGroups: 200, taskCount: 4, taskGroupCount: 2 });
-      expect(invalidatedKeys()).toContain(JSON.stringify(queryKeys.projects.taskGroups(PROJECT_ID)));
+      await nextPoll({
+        project: 100,
+        tasks: 500,
+        taskGroups: 200,
+        taskCount: 4,
+        taskGroupCount: 2,
+      });
+      expect(invalidatedKeys()).toContain(
+        JSON.stringify(queryKeys.projects.taskGroups(PROJECT_ID))
+      );
     });
 
     it("invalidates once a null becomes a real timestamp", async () => {

@@ -9,9 +9,7 @@ import type { AppEnv } from "../../env";
 
 export type WebhookRow = typeof webhook.$inferSelect;
 
-type ValidateUrlResult =
-  | { valid: true }
-  | { valid: false; error: string };
+type ValidateUrlResult = { valid: true } | { valid: false; error: string };
 
 // ---------------------------------------------------------------------------
 // generateWebhookSecret
@@ -48,13 +46,7 @@ const PRIVATE_IPV4_PATTERNS = [
   /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // 100.64.0.0/10 — CGNAT
 ];
 
-const BLOCKED_HOSTNAMES = new Set([
-  "localhost",
-  "127.0.0.1",
-  "::1",
-  "0.0.0.0",
-  "::",
-]);
+const BLOCKED_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1", "0.0.0.0", "::"]);
 
 /**
  * Try to canonicalise a hostname that looks like an IPv4 address into
@@ -180,8 +172,12 @@ function isBlockedIPv6(hostname: string): { blocked: true; reason: string } | { 
     const high = parseInt(mappedHex[1], 16);
     const low = parseInt(mappedHex[2], 16);
     if (
-      !Number.isFinite(high) || !Number.isFinite(low) ||
-      high < 0 || high > 0xffff || low < 0 || low > 0xffff
+      !Number.isFinite(high) ||
+      !Number.isFinite(low) ||
+      high < 0 ||
+      high > 0xffff ||
+      low < 0 ||
+      low > 0xffff
     ) {
       return { blocked: true, reason: "URL contains a malformed IPv4-mapped IPv6 address" };
     }
@@ -202,7 +198,9 @@ function isBlockedIPv6(hostname: string): { blocked: true; reason: string } | { 
   return { blocked: false };
 }
 
-function ipv4PrivateCheck(canonicalIpv4: string): { blocked: true; reason: string } | { blocked: false } {
+function ipv4PrivateCheck(
+  canonicalIpv4: string
+): { blocked: true; reason: string } | { blocked: false } {
   for (const pattern of PRIVATE_IPV4_PATTERNS) {
     if (pattern.test(canonicalIpv4)) {
       return { blocked: true, reason: "URL must not point to a private or reserved IP address" };
@@ -237,7 +235,7 @@ function ipv4PrivateCheck(canonicalIpv4: string): { blocked: true; reason: strin
  */
 export function validateWebhookUrl(
   url: string,
-  opts?: { allowInsecure?: boolean },
+  opts?: { allowInsecure?: boolean }
 ): ValidateUrlResult {
   let parsed: URL;
   try {
@@ -339,11 +337,12 @@ export function isDevMode(c: Context<AppEnv>): boolean {
  * to avoid accidental leakage through list/detail endpoints.
  */
 export function omitSecret<T extends Record<string, unknown> & { secret: string }>(
-  row: T,
+  row: T
 ): Omit<T, "secret"> {
-  return Object.fromEntries(
-    Object.entries(row).filter(([key]) => key !== "secret"),
-  ) as Omit<T, "secret">;
+  return Object.fromEntries(Object.entries(row).filter(([key]) => key !== "secret")) as Omit<
+    T,
+    "secret"
+  >;
 }
 
 // ---------------------------------------------------------------------------
@@ -363,7 +362,7 @@ export async function signPayload(payload: string, secret: string): Promise<stri
     encoder.encode(secret),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"],
+    ["sign"]
   );
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
   return Array.from(new Uint8Array(signature))

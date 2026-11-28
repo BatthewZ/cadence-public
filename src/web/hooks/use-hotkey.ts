@@ -20,7 +20,7 @@ function isInputElement(target: EventTarget | null): boolean {
 export function useHotkey(
   key: string,
   handler: () => void,
-  options?: { ctrlOrMeta?: boolean; enabled?: boolean },
+  options?: { ctrlOrMeta?: boolean; enabled?: boolean }
 ): void {
   useEffect(() => {
     const enabled = options?.enabled ?? true;
@@ -65,7 +65,9 @@ export function useChordIndicator(): string | null {
   useEffect(() => {
     const listener = (p: string | null) => setPrefix(p);
     chordListeners.add(listener);
-    return () => { chordListeners.delete(listener); };
+    return () => {
+      chordListeners.delete(listener);
+    };
   }, []);
 
   return prefix;
@@ -83,7 +85,7 @@ export function useHotkeyChord(
   firstKey: string,
   secondKey: string,
   handler: () => void,
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean }
 ): void {
   useEffect(() => {
     const enabled = options?.enabled ?? true;

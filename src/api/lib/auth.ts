@@ -174,9 +174,7 @@ export function createAuth(env: AppBindings) {
             .select({ id: schema.project.id })
             .from(schema.project)
             .where(inArray(schema.project.workspaceId, workspaceIds));
-          await db
-            .delete(schema.task)
-            .where(inArray(schema.task.projectId, projectIds));
+          await db.delete(schema.task).where(inArray(schema.task.projectId, projectIds));
         },
       },
     },

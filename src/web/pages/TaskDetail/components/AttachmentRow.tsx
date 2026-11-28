@@ -94,9 +94,7 @@ export function AttachmentRow({
         </div>
       )}
 
-      {isOptimistic && (
-        <Loader2 size={16} className="shrink-0 animate-spin text-fg-muted" />
-      )}
+      {isOptimistic && <Loader2 size={16} className="shrink-0 animate-spin text-fg-muted" />}
     </div>
   );
 }

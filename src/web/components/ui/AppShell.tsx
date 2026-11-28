@@ -139,7 +139,9 @@ const AppShellRoot = forwardRef<HTMLDivElement, AppShellRootProps>(function AppS
 
 const AppShellNavbar = forwardRef<HTMLElement, ComponentPropsWithRef<"header">>(
   function AppShellNavbar({ className, ...props }, ref) {
-    return <header ref={ref} className={cn("app-shell-navbar", className)} role="banner" {...props} />;
+    return (
+      <header ref={ref} className={cn("app-shell-navbar", className)} role="banner" {...props} />
+    );
   }
 );
 
@@ -204,65 +206,62 @@ const AppShellToggle = forwardRef<HTMLButtonElement, Omit<ComponentPropsWithRef<
 
 type AppShellSidebarProps = Omit<ComponentPropsWithRef<"aside">, "role">;
 
-const AppShellSidebar = forwardRef<HTMLElement, AppShellSidebarProps>(
-  function AppShellSidebar({ className, children, ...props }, forwardedRef) {
-    const { open, setOpen, collapsed, isMobile, sidebarId } = useAppShell();
-    const sidebarRef = useRef<HTMLElement>(null);
-    const merged = useMemo(() => mergeRefs(forwardedRef, sidebarRef), [forwardedRef, sidebarRef]);
+const AppShellSidebar = forwardRef<HTMLElement, AppShellSidebarProps>(function AppShellSidebar(
+  { className, children, ...props },
+  forwardedRef
+) {
+  const { open, setOpen, collapsed, isMobile, sidebarId } = useAppShell();
+  const sidebarRef = useRef<HTMLElement>(null);
+  const merged = useMemo(() => mergeRefs(forwardedRef, sidebarRef), [forwardedRef, sidebarRef]);
 
-    useClickOutside(sidebarRef, () => setOpen(false), isMobile && open);
-    useFocusTrap(sidebarRef, isMobile && open);
+  useClickOutside(sidebarRef, () => setOpen(false), isMobile && open);
+  useFocusTrap(sidebarRef, isMobile && open);
 
-    useEffect(() => {
-      if (!isMobile || !open) return;
-      const handleEscape = (e: KeyboardEvent) => {
-        if (e.key === "Escape") setOpen(false);
-      };
-      document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
-    }, [isMobile, open, setOpen]);
+  useEffect(() => {
+    if (!isMobile || !open) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isMobile, open, setOpen]);
 
-    // Mobile: render in portal
-    if (isMobile) {
-      if (!open) return null;
-      return (
-        <Portal>
-          <div
-            className="app-shell-scrim"
-            aria-hidden="true"
-            onClick={() => setOpen(false)}
-          />
-          <aside
-            ref={merged}
-            id={sidebarId}
-            role="navigation"
-            aria-label="Main navigation"
-            aria-modal="true"
-            className={cn("app-shell-sidebar-mobile", className)}
-            {...props}
-          >
-            {children}
-          </aside>
-        </Portal>
-      );
-    }
-
-    // Desktop: inline sidebar
+  // Mobile: render in portal
+  if (isMobile) {
+    if (!open) return null;
     return (
-      <aside
-        ref={merged}
-        id={sidebarId}
-        role="navigation"
-        aria-label="Main navigation"
-        data-collapsed={collapsed || undefined}
-        className={cn("app-shell-sidebar", className)}
-        {...props}
-      >
-        {children}
-      </aside>
+      <Portal>
+        <div className="app-shell-scrim" aria-hidden="true" onClick={() => setOpen(false)} />
+        <aside
+          ref={merged}
+          id={sidebarId}
+          role="navigation"
+          aria-label="Main navigation"
+          aria-modal="true"
+          className={cn("app-shell-sidebar-mobile", className)}
+          {...props}
+        >
+          {children}
+        </aside>
+      </Portal>
     );
   }
-);
+
+  // Desktop: inline sidebar
+  return (
+    <aside
+      ref={merged}
+      id={sidebarId}
+      role="navigation"
+      aria-label="Main navigation"
+      data-collapsed={collapsed || undefined}
+      className={cn("app-shell-sidebar", className)}
+      {...props}
+    >
+      {children}
+    </aside>
+  );
+});
 
 /* ─── SidebarSection ─── */
 
@@ -299,7 +298,9 @@ const AppShellSidebarLink = forwardRef<HTMLAnchorElement, SidebarLinkProps>(
 
     const isActive = end
       ? pathname === to
-      : to === "/" ? pathname === "/" : pathname === to || pathname.startsWith(to + "/");
+      : to === "/"
+        ? pathname === "/"
+        : pathname === to || pathname.startsWith(to + "/");
     const showCollapsed = collapsed && !isMobile;
 
     // Derive an accessible label: prefer explicit `label` prop, fall back to
@@ -333,11 +334,12 @@ const AppShellSidebarLink = forwardRef<HTMLAnchorElement, SidebarLinkProps>(
 
 /* ─── Main ─── */
 
-const AppShellMain = forwardRef<HTMLDivElement, ComponentPropsWithRef<"div">>(
-  function AppShellMain({ className, ...props }, ref) {
-    return <div ref={ref} className={cn("app-shell-main", className)} {...props} />;
-  }
-);
+const AppShellMain = forwardRef<HTMLDivElement, ComponentPropsWithRef<"div">>(function AppShellMain(
+  { className, ...props },
+  ref
+) {
+  return <div ref={ref} className={cn("app-shell-main", className)} {...props} />;
+});
 
 /* ─── Export ─── */
 

@@ -7,10 +7,7 @@ import { invitation } from "../../db/schema/invitation";
 import { project } from "../../db/schema/project";
 import { task, taskGroup } from "../../db/schema/task";
 import { workspace } from "../../db/schema/workspace";
-import type {
-  WebhookEventType,
-  WebhookPayloadEnvelope,
-} from "../../shared/types/webhook";
+import type { WebhookEventType, WebhookPayloadEnvelope } from "../../shared/types/webhook";
 import type { AppEnv } from "../env";
 import type { TelemetrySink } from "./telemetry/types";
 import { dispatchWebhookEvent } from "./webhooks";
@@ -50,7 +47,7 @@ export function buildWebhookPayload(
   event: WebhookEventType,
   context: WebhookContext,
   data: Record<string, unknown>,
-  changes?: Record<string, { from: unknown; to: unknown }>,
+  changes?: Record<string, { from: unknown; to: unknown }>
 ): WebhookPayloadEnvelope {
   return {
     id: "", // filled in by dispatch with deliveryId
@@ -82,7 +79,7 @@ export function buildWebhookPayload(
 export function computeChanges<T extends Record<string, unknown>>(
   before: T,
   after: T,
-  fields: (keyof T & string)[],
+  fields: (keyof T & string)[]
 ): Record<string, { from: unknown; to: unknown }> | undefined {
   const changes: Record<string, { from: unknown; to: unknown }> = {};
   let hasChanges = false;
@@ -138,7 +135,7 @@ export interface WebhookTaskGroup {
  */
 export async function resolveUser(
   db: Database,
-  userId: string | null,
+  userId: string | null
 ): Promise<WebhookUser | null> {
   if (!userId) return null;
   const [row] = await db
@@ -156,7 +153,7 @@ export async function resolveUser(
  */
 export async function resolveTaskGroup(
   db: Database,
-  groupId: string | null,
+  groupId: string | null
 ): Promise<WebhookTaskGroup | null> {
   if (!groupId) return null;
   const [row] = await db
@@ -182,7 +179,7 @@ export interface TaskEventEnrichment {
  */
 export async function resolveTaskEnrichment(
   db: Database,
-  taskRow: { assigneeId: string | null; completedBy: string | null; taskGroupId: string },
+  taskRow: { assigneeId: string | null; completedBy: string | null; taskGroupId: string }
 ): Promise<TaskEventEnrichment> {
   const [assignee, completedByUser, taskGroupInfo] = await Promise.all([
     resolveUser(db, taskRow.assigneeId),
@@ -200,7 +197,7 @@ export async function resolveTaskEnrichment(
  */
 export async function resolveRecurringTaskEnrichment(
   db: Database,
-  spawnedTask: Record<string, unknown>,
+  spawnedTask: Record<string, unknown>
 ): Promise<TaskEventEnrichment> {
   return resolveTaskEnrichment(db, {
     assigneeId: (spawnedTask.assigneeId as string) ?? null,
@@ -221,7 +218,7 @@ export async function resolveRecurringTaskEnrichment(
  */
 export function buildTaskEventData(
   taskRow: TaskRow,
-  enrichment?: TaskEventEnrichment | null,
+  enrichment?: TaskEventEnrichment | null
 ): Record<string, unknown> {
   return {
     id: taskRow.id,
@@ -258,9 +255,7 @@ export function buildTaskEventData(
 /**
  * Extract the webhook-relevant fields from a project row.
  */
-export function buildProjectEventData(
-  projectRow: ProjectRow,
-): Record<string, unknown> {
+export function buildProjectEventData(projectRow: ProjectRow): Record<string, unknown> {
   return {
     id: projectRow.id,
     workspaceId: projectRow.workspaceId,
@@ -277,9 +272,7 @@ export function buildProjectEventData(
 /**
  * Extract the webhook-relevant fields from an invitation row.
  */
-export function buildInvitationEventData(
-  invitationRow: InvitationRow,
-): Record<string, unknown> {
+export function buildInvitationEventData(invitationRow: InvitationRow): Record<string, unknown> {
   return {
     id: invitationRow.id,
     workspaceId: invitationRow.workspaceId,
@@ -303,7 +296,7 @@ export function buildInvitationEventData(
 export function buildMemberEventData(
   member: { userId: string; workspaceId?: string; projectId?: string },
   role?: string,
-  userInfo?: WebhookUser | null,
+  userInfo?: WebhookUser | null
 ): Record<string, unknown> {
   const data: Record<string, unknown> = {
     userId: member.userId,
@@ -339,7 +332,7 @@ export function buildMemberEventData(
 export function detectAdditionalEvents(
   event: WebhookEventType,
   before: Record<string, unknown>,
-  after: Record<string, unknown>,
+  after: Record<string, unknown>
 ): WebhookEventType[] {
   if (event !== "task.updated") {
     return [];
@@ -392,7 +385,7 @@ export function detectAdditionalEvents(
  */
 export async function fetchWebhookContext(
   db: Database,
-  opts: FetchWebhookContextOpts,
+  opts: FetchWebhookContextOpts
 ): Promise<WebhookContext> {
   // Fire workspace + actor queries in parallel; project is conditional
   const queries: [
@@ -438,14 +431,10 @@ export async function fetchWebhookContext(
   const [ws, actor, proj] = await Promise.all(queries);
 
   if (!ws) {
-    throw new Error(
-      `fetchWebhookContext: workspace "${opts.workspaceId}" not found`,
-    );
+    throw new Error(`fetchWebhookContext: workspace "${opts.workspaceId}" not found`);
   }
   if (!actor) {
-    throw new Error(
-      `fetchWebhookContext: actor (user) "${opts.actorId}" not found`,
-    );
+    throw new Error(`fetchWebhookContext: actor (user) "${opts.actorId}" not found`);
   }
 
   return {
@@ -478,7 +467,7 @@ export function fireWebhookEvent(
   getExecutionCtx: () => ExecutionContext,
   contextOpts: FetchWebhookContextOpts,
   events: WebhookEventDescriptor[],
-  sink?: TelemetrySink,
+  sink?: TelemetrySink
 ): void {
   let ctx: ExecutionContext;
   try {
@@ -487,7 +476,12 @@ export function fireWebhookEvent(
     // No ExecutionContext available (e.g. test environment) — skip webhook dispatch silently
     return;
   }
-  console.log("[webhooks] Dispatching events:", events.map(e => e.event).join(", "), "for workspace:", contextOpts.workspaceId);
+  console.log(
+    "[webhooks] Dispatching events:",
+    events.map((e) => e.event).join(", "),
+    "for workspace:",
+    contextOpts.workspaceId
+  );
   ctx.waitUntil(
     fetchWebhookContext(db, contextOpts)
       .then((context) =>
@@ -501,12 +495,12 @@ export function fireWebhookEvent(
               event,
               payload,
               contextOpts.projectId,
-              sink,
+              sink
             );
-          }),
-        ),
+          })
+        )
       )
-      .catch((err) => console.error("[webhooks] dispatch failed:", err)),
+      .catch((err) => console.error("[webhooks] dispatch failed:", err))
   );
 }
 
@@ -518,7 +512,7 @@ export function fireWebhookEvent(
 export function dispatchWebhook(
   c: Context<AppEnv>,
   projectId: string,
-  events: WebhookEventDescriptor[],
+  events: WebhookEventDescriptor[]
 ): void {
   const workspaceId = c.get("currentProject")?.workspaceId;
   if (!workspaceId) return;

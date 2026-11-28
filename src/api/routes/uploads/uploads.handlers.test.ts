@@ -62,7 +62,7 @@ function splitStatements(sql: string): string[] {
     .filter(
       (s) =>
         s.length > 0 &&
-        !s.split("\n").every((line) => line.trim().startsWith("--") || line.trim() === ""),
+        !s.split("\n").every((line) => line.trim().startsWith("--") || line.trim() === "")
     );
 }
 
@@ -75,7 +75,7 @@ beforeAll(async () => {
   });
 
   d1 = await mf.getD1Database("DB");
-  storage = await mf.getR2Bucket("STORAGE") as unknown as R2Bucket;
+  storage = (await mf.getR2Bucket("STORAGE")) as unknown as R2Bucket;
 
   // Apply all migrations
   const files = fs
@@ -110,14 +110,15 @@ afterAll(async () => {
  */
 function authWithStorage(
   user: typeof TEST_USER | typeof TEST_USER_2 = TEST_USER,
-  storageOverride?: R2Bucket  ,
+  storageOverride?: R2Bucket
 ): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     if (!c.env) {
       (c as unknown as { env: Record<string, unknown> }).env = {};
     }
     (c.env as Record<string, unknown>).DB = d1;
-    (c.env as Record<string, unknown>).STORAGE = storageOverride !== undefined ? storageOverride : storage;
+    (c.env as Record<string, unknown>).STORAGE =
+      storageOverride !== undefined ? storageOverride : storage;
 
     c.set("db", createDb(d1));
     c.set("user", user as never);
@@ -149,11 +150,7 @@ const MAGIC_BYTES: Record<string, number[]> = {
   "image/webp": [0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50],
 };
 
-function createTestFile(
-  name: string,
-  type: string,
-  sizeBytes: number,
-): File {
+function createTestFile(name: string, type: string, sizeBytes: number): File {
   const buffer = new Uint8Array(Math.max(sizeBytes, 16));
   const magic = MAGIC_BYTES[type];
   if (magic) {
@@ -178,10 +175,7 @@ describe("uploadAvatar", () => {
   beforeEach(async () => {
     await d1.prepare("DELETE FROM upload").run();
     // Reset user image to null
-    await d1
-      .prepare("UPDATE user SET image = NULL WHERE id = ?")
-      .bind(TEST_USER.id)
-      .run();
+    await d1.prepare("UPDATE user SET image = NULL WHERE id = ?").bind(TEST_USER.id).run();
     // Clear all R2 objects
     const listed = await storage.list();
     for (const obj of listed.objects) {
@@ -197,7 +191,9 @@ describe("uploadAvatar", () => {
     const res = await app.request(avatarRequest(file));
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ upload: { id: string; url: string; filename: string; mimeType: string; size: number } }>();
+    const body = await res.json<{
+      upload: { id: string; url: string; filename: string; mimeType: string; size: number };
+    }>();
 
     expect(body.upload).toBeDefined();
     expect(body.upload.id).toBeTruthy();
@@ -260,10 +256,7 @@ describe("uploadAvatar", () => {
     expect(newRecord).toBeTruthy();
 
     // Old upload record should be deleted
-    const oldRecord = await d1
-      .prepare("SELECT * FROM upload WHERE id = ?")
-      .bind(firstId)
-      .first();
+    const oldRecord = await d1.prepare("SELECT * FROM upload WHERE id = ?").bind(firstId).first();
     expect(oldRecord).toBeNull();
 
     // Old R2 object should be deleted
@@ -343,22 +336,30 @@ describe("uploadAvatar", () => {
   it("returns 503 when storage is not configured", async () => {
     const app = new Hono<AppEnv>();
     // Pass undefined for storage to simulate missing STORAGE env
-    app.put("/users/me/avatar", authWithStorage(TEST_USER, undefined as unknown as R2Bucket), uploadAvatar);
+    app.put(
+      "/users/me/avatar",
+      authWithStorage(TEST_USER, undefined as unknown as R2Bucket),
+      uploadAvatar
+    );
 
     // We need to explicitly set STORAGE to undefined/falsy
     const appNoStorage = new Hono<AppEnv>();
-    appNoStorage.put("/users/me/avatar", async (c, next) => {
-      if (!c.env) {
-        (c as unknown as { env: Record<string, unknown> }).env = {};
-      }
-      (c.env as Record<string, unknown>).DB = d1;
-      // Deliberately do NOT set STORAGE
-      c.set("db", createDb(d1));
-      c.set("user", TEST_USER as never);
-      c.set("session", null);
-      c.set("requestId", "test-request-id");
-      await next();
-    }, uploadAvatar);
+    appNoStorage.put(
+      "/users/me/avatar",
+      async (c, next) => {
+        if (!c.env) {
+          (c as unknown as { env: Record<string, unknown> }).env = {};
+        }
+        (c.env as Record<string, unknown>).DB = d1;
+        // Deliberately do NOT set STORAGE
+        c.set("db", createDb(d1));
+        c.set("user", TEST_USER as never);
+        c.set("session", null);
+        c.set("requestId", "test-request-id");
+        await next();
+      },
+      uploadAvatar
+    );
 
     const file = createTestFile("avatar.jpg", "image/jpeg", 1024);
     const res = await appNoStorage.request(avatarRequest(file));
@@ -373,23 +374,34 @@ describe("uploadAvatar", () => {
     const conflictId = "conflict-upload-id";
     await d1
       .prepare(
-        "INSERT INTO upload (id, userId, key, filename, mimeType, size, purpose, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO upload (id, userId, key, filename, mimeType, size, purpose, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
       )
-      .bind(conflictId, TEST_USER.id, "avatar/test/conflict.jpg", "conflict.jpg", "image/jpeg", 100, "avatar", Math.floor(Date.now() / 1000))
+      .bind(
+        conflictId,
+        TEST_USER.id,
+        "avatar/test/conflict.jpg",
+        "conflict.jpg",
+        "image/jpeg",
+        100,
+        "avatar",
+        Math.floor(Date.now() / 1000)
+      )
       .run();
 
     // Mock crypto.randomUUID: first call is for generateObjectKey, second for the upload record ID
     const originalRandomUUID = crypto.randomUUID.bind(crypto);
     let callCount = 0;
-    vi.spyOn(crypto, "randomUUID").mockImplementation((): `${string}-${string}-${string}-${string}-${string}` => {
-      callCount++;
-      if (callCount === 2) {
-        // This is the upload record ID — return the conflicting ID
-        return conflictId as `${string}-${string}-${string}-${string}-${string}`;
+    vi.spyOn(crypto, "randomUUID").mockImplementation(
+      (): `${string}-${string}-${string}-${string}-${string}` => {
+        callCount++;
+        if (callCount === 2) {
+          // This is the upload record ID — return the conflicting ID
+          return conflictId as `${string}-${string}-${string}-${string}-${string}`;
+        }
+        // For generateObjectKey and any other calls, use a unique value
+        return originalRandomUUID();
       }
-      // For generateObjectKey and any other calls, use a unique value
-      return originalRandomUUID();
-    });
+    );
 
     const app = new Hono<AppEnv>();
     app.put("/users/me/avatar", authWithStorage(), uploadAvatar);
@@ -406,9 +418,7 @@ describe("uploadAvatar", () => {
     const listed = await storage.list();
     // The pre-existing conflict record's key "avatar/test/conflict.jpg" was never in R2,
     // and the new upload's R2 object should have been cleaned up
-    const newUploadObjects = listed.objects.filter(
-      (o) => o.key !== "avatar/test/conflict.jpg",
-    );
+    const newUploadObjects = listed.objects.filter((o) => o.key !== "avatar/test/conflict.jpg");
     expect(newUploadObjects.length).toBe(0);
   });
 });
@@ -477,12 +487,12 @@ describe("serveUpload", () => {
     key: string,
     purpose: string,
     mimeType: string,
-    size: number,
+    size: number
   ): Promise<string> {
     const id = crypto.randomUUID();
     await d1
       .prepare(
-        "INSERT INTO upload (id, userId, key, filename, mimeType, size, purpose, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO upload (id, userId, key, filename, mimeType, size, purpose, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
       )
       .bind(
         id,
@@ -492,7 +502,7 @@ describe("serveUpload", () => {
         mimeType,
         size,
         purpose,
-        Math.floor(Date.now() / 1000),
+        Math.floor(Date.now() / 1000)
       )
       .run();
     return id;
@@ -521,15 +531,13 @@ describe("serveUpload", () => {
         if (apiToken) c.set("apiToken", apiToken);
         await next();
       },
-      serveUpload,
+      serveUpload
     );
     return app;
   }
 
   function get(user: TestUserFixture | null, key: string, apiToken?: ApiToken) {
-    return serveApp(user, apiToken).request(
-      new Request(`http://localhost/uploads/${key}`),
-    );
+    return serveApp(user, apiToken).request(new Request(`http://localhost/uploads/${key}`));
   }
 
   /** Post-condition: the exact bytes arrived. */
@@ -615,12 +623,10 @@ describe("serveUpload", () => {
       attachmentKey,
       "task-attachment",
       "text/plain",
-      secretBytes.byteLength,
+      secretBytes.byteLength
     );
     await d1
-      .prepare(
-        "INSERT INTO task_attachment (id, taskId, uploadId, createdAt) VALUES (?, ?, ?, ?)",
-      )
+      .prepare("INSERT INTO task_attachment (id, taskId, uploadId, createdAt) VALUES (?, ?, ?, ?)")
       .bind(crypto.randomUUID(), taskA, attachmentUploadId, Math.floor(Date.now() / 1000))
       .run();
 
@@ -638,12 +644,7 @@ describe("serveUpload", () => {
     await storage.put(projectCoverKey, coverBytes, {
       httpMetadata: { contentType: "image/png" },
     });
-    await insertUploadRow(
-      projectCoverKey,
-      "project-cover",
-      "image/png",
-      coverBytes.byteLength,
-    );
+    await insertUploadRow(projectCoverKey, "project-cover", "image/png", coverBytes.byteLength);
     await d1
       .prepare("UPDATE project SET cover_image_key = ? WHERE id = ?")
       .bind(projectCoverKey, projectA)
@@ -691,12 +692,7 @@ describe("serveUpload", () => {
     await storage.put(contestedTaskCoverKey, secretBytes, {
       httpMetadata: { contentType: "image/png" },
     });
-    await insertUploadRow(
-      contestedTaskCoverKey,
-      "task-cover",
-      "image/png",
-      secretBytes.byteLength,
-    );
+    await insertUploadRow(contestedTaskCoverKey, "task-cover", "image/png", secretBytes.byteLength);
     await d1
       .prepare("UPDATE task SET cover_image_key = ? WHERE id IN (?, ?)")
       .bind(contestedTaskCoverKey, taskA2, taskB)
@@ -710,7 +706,7 @@ describe("serveUpload", () => {
       contestedProjectCoverKey,
       "project-cover",
       "image/png",
-      secretBytes.byteLength,
+      secretBytes.byteLength
     );
     await d1
       .prepare("UPDATE project SET cover_image_key = ? WHERE id IN (?, ?)")
@@ -727,7 +723,7 @@ describe("serveUpload", () => {
       undecidableTaskCoverKey,
       "task-cover",
       "image/png",
-      secretBytes.byteLength,
+      secretBytes.byteLength
     );
     // taskB2/taskB3 — NOT taskB, which already claims contestedTaskCoverKey.
     // Reusing it would silently overwrite that claim and leave the contested
@@ -780,16 +776,12 @@ describe("serveUpload", () => {
 
   it("marks a task attachment private, not public, in Cache-Control", async () => {
     const res = await get(MEMBER, attachmentKey);
-    expect(res.headers.get("Cache-Control")).toBe(
-      "private, max-age=31536000, immutable",
-    );
+    expect(res.headers.get("Cache-Control")).toBe("private, max-age=31536000, immutable");
   });
 
   it("still forces download for non-image attachments", async () => {
     const res = await get(MEMBER, attachmentKey);
-    expect(res.headers.get("Content-Disposition")).toBe(
-      'attachment; filename="payroll.txt"',
-    );
+    expect(res.headers.get("Content-Disposition")).toBe('attachment; filename="payroll.txt"');
   });
 
   // --- task-cover -----------------------------------------------------------
@@ -815,9 +807,7 @@ describe("serveUpload", () => {
 
   it("marks a task cover private in Cache-Control", async () => {
     const res = await get(MEMBER, taskCoverKey);
-    expect(res.headers.get("Cache-Control")).toBe(
-      "private, max-age=31536000, immutable",
-    );
+    expect(res.headers.get("Cache-Control")).toBe("private, max-age=31536000, immutable");
   });
 
   // --- project-cover --------------------------------------------------------
@@ -840,9 +830,7 @@ describe("serveUpload", () => {
 
   it("marks a project cover private in Cache-Control", async () => {
     const res = await get(MEMBER, projectCoverKey);
-    expect(res.headers.get("Cache-Control")).toBe(
-      "private, max-age=31536000, immutable",
-    );
+    expect(res.headers.get("Cache-Control")).toBe("private, max-age=31536000, immutable");
   });
 
   // --- avatar (deliberately readable by any signed-in user) -----------------
@@ -852,9 +840,7 @@ describe("serveUpload", () => {
     // viewer can already see. Breaking this breaks every profile image.
     const res = await get(STRANGER, ownerAvatarKey);
     await expectBytes(res, avatarBytes);
-    expect(res.headers.get("Cache-Control")).toBe(
-      "public, max-age=31536000, immutable",
-    );
+    expect(res.headers.get("Cache-Control")).toBe("public, max-age=31536000, immutable");
   });
 
   it("returns the same 404 for a missing avatar", async () => {
@@ -935,13 +921,17 @@ describe("serveUpload", () => {
 
   it("returns 503 when storage is not configured", async () => {
     const app = new Hono<AppEnv>();
-    app.get("/uploads/:purpose/:userId/:filename", async (c, next) => {
-      if (!c.env) {
-        (c as unknown as { env: Record<string, unknown> }).env = {};
-      }
-      // No STORAGE set
-      await next();
-    }, serveUpload);
+    app.get(
+      "/uploads/:purpose/:userId/:filename",
+      async (c, next) => {
+        if (!c.env) {
+          (c as unknown as { env: Record<string, unknown> }).env = {};
+        }
+        // No STORAGE set
+        await next();
+      },
+      serveUpload
+    );
 
     const req = new Request(`http://localhost/uploads/${ownerAvatarKey}`);
     const res = await app.request(req);
@@ -976,7 +966,7 @@ describe("deleteUpload", () => {
     });
     await d1
       .prepare(
-        "INSERT INTO upload (id, userId, key, filename, mimeType, size, purpose, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO upload (id, userId, key, filename, mimeType, size, purpose, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
       )
       .bind(
         ownedUploadId,
@@ -986,7 +976,7 @@ describe("deleteUpload", () => {
         "image/jpeg",
         3,
         "avatar",
-        Math.floor(Date.now() / 1000),
+        Math.floor(Date.now() / 1000)
       )
       .run();
   });
@@ -1063,18 +1053,22 @@ describe("deleteUpload", () => {
 
   it("returns 503 when storage is not configured", async () => {
     const app = new Hono<AppEnv>();
-    app.delete("/uploads/:id", async (c, next) => {
-      if (!c.env) {
-        (c as unknown as { env: Record<string, unknown> }).env = {};
-      }
-      (c.env as Record<string, unknown>).DB = d1;
-      // No STORAGE set
-      c.set("db", createDb(d1));
-      c.set("user", TEST_USER as never);
-      c.set("session", null);
-      c.set("requestId", "test-request-id");
-      await next();
-    }, deleteUpload);
+    app.delete(
+      "/uploads/:id",
+      async (c, next) => {
+        if (!c.env) {
+          (c as unknown as { env: Record<string, unknown> }).env = {};
+        }
+        (c.env as Record<string, unknown>).DB = d1;
+        // No STORAGE set
+        c.set("db", createDb(d1));
+        c.set("user", TEST_USER as never);
+        c.set("session", null);
+        c.set("requestId", "test-request-id");
+        await next();
+      },
+      deleteUpload
+    );
 
     const req = new Request(`http://localhost/uploads/${ownedUploadId}`, {
       method: "DELETE",

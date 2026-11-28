@@ -95,7 +95,7 @@ export const auditLog = sqliteTable(
     index("audit_log_token_idx").on(table.apiTokenId, table.createdAt),
     index("audit_log_resource_idx").on(table.resourceType, table.resourceId),
     index("audit_log_actor_idx").on(table.actorUserId, table.createdAt),
-  ],
+  ]
 );
 
 export type AuditLog = typeof auditLog.$inferSelect;

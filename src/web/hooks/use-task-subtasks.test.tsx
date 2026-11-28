@@ -12,9 +12,8 @@ import { useLocalTask } from "./use-local-task";
 import { useTaskSubtasks } from "./use-task-subtasks";
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -54,20 +53,27 @@ async function setup() {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
-  const { result } = renderHook(() => {
-    // As in the views: the server copy is the detail query's data, so writes to it flow back.
-    const { data } = useQuery<{ task: TaskDetail }>({ queryKey: DETAIL_KEY, queryFn: () => new Promise(() => {}), enabled: false });
-    const { localTask, setLocalTask } = useLocalTask(TASK_ID, data?.task);
-    const subtasks = useTaskSubtasks({
-      taskId: TASK_ID,
-      localTask,
-      setLocalTask,
-      updateTaskInContext,
-      invalidateTaskQueries,
-      toast,
-    });
-    return { localTask, ...subtasks };
-  }, { wrapper });
+  const { result } = renderHook(
+    () => {
+      // As in the views: the server copy is the detail query's data, so writes to it flow back.
+      const { data } = useQuery<{ task: TaskDetail }>({
+        queryKey: DETAIL_KEY,
+        queryFn: () => new Promise(() => {}),
+        enabled: false,
+      });
+      const { localTask, setLocalTask } = useLocalTask(TASK_ID, data?.task);
+      const subtasks = useTaskSubtasks({
+        taskId: TASK_ID,
+        localTask,
+        setLocalTask,
+        updateTaskInContext,
+        invalidateTaskQueries,
+        toast,
+      });
+      return { localTask, ...subtasks };
+    },
+    { wrapper }
+  );
   // The working copy is adopted from the query in a microtask (useTaskServerSync).
   await act(async () => {});
   const saved = () => queryClient.getQueryData<{ task: TaskDetail }>(DETAIL_KEY)?.task.subtasks;
@@ -108,10 +114,15 @@ describe("useTaskSubtasks", () => {
       title: "Write tests",
     });
     expect(mockSendWrite).toHaveBeenCalledWith(
-      expect.objectContaining({ label: "Add subtask “Write tests”" }),
+      expect.objectContaining({ label: "Add subtask “Write tests”" })
     );
 
-    const serverRow: Subtask = { id: NEW_ID, title: "Write tests", completed: false, position: "a1" };
+    const serverRow: Subtask = {
+      id: NEW_ID,
+      title: "Write tests",
+      completed: false,
+      position: "a1",
+    };
     await act(async () => {
       resolvePost({ subtask: serverRow });
       await pending;
@@ -126,7 +137,10 @@ describe("useTaskSubtasks", () => {
 
     await addSubtask(result, "Offline subtask");
 
-    expect(result.current.localTask?.subtasks.map((s) => s.title)).toEqual(["Draft", "Offline subtask"]);
+    expect(result.current.localTask?.subtasks.map((s) => s.title)).toEqual([
+      "Draft",
+      "Offline subtask",
+    ]);
     expect(invalidateTaskQueries).not.toHaveBeenCalled();
     expect(toast).not.toHaveBeenCalled();
   });
@@ -139,7 +153,10 @@ describe("useTaskSubtasks", () => {
 
     expect(result.current.localTask?.subtasks).toEqual([existing]);
     // Back to the one subtask it started with, not one below.
-    expect(updateTaskInContext).toHaveBeenLastCalledWith(TASK_ID, { subtaskCount: 1, subtaskCompletedCount: 0 });
+    expect(updateTaskInContext).toHaveBeenLastCalledWith(TASK_ID, {
+      subtaskCount: 1,
+      subtaskCompletedCount: 0,
+    });
     expect(toast).toHaveBeenCalledWith("Failed to add subtask", { variant: "error" });
   });
 
@@ -189,11 +206,17 @@ describe("useTaskSubtasks", () => {
     await act(async () => {
       await result.current.handleSubtaskToggle(existing);
     });
-    expect(updateTaskInContext).toHaveBeenLastCalledWith(TASK_ID, { subtaskCount: 3, subtaskCompletedCount: 1 });
+    expect(updateTaskInContext).toHaveBeenLastCalledWith(TASK_ID, {
+      subtaskCount: 3,
+      subtaskCompletedCount: 1,
+    });
 
     await act(async () => {
       await result.current.handleDeleteSubtask("s-1");
     });
-    expect(updateTaskInContext).toHaveBeenLastCalledWith(TASK_ID, { subtaskCount: 2, subtaskCompletedCount: 0 });
+    expect(updateTaskInContext).toHaveBeenLastCalledWith(TASK_ID, {
+      subtaskCount: 2,
+      subtaskCompletedCount: 0,
+    });
   });
 });

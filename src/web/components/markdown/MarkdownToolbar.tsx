@@ -100,11 +100,7 @@ export function MarkdownToolbar(props: {
   };
 
   return (
-    <div
-      className="flex flex-wrap items-center gap-r6"
-      role="toolbar"
-      aria-label="Formatting"
-    >
+    <div className="flex flex-wrap items-center gap-r6" role="toolbar" aria-label="Formatting">
       {BUTTON_GROUPS.map((group, groupIndex) => (
         <div key={group[0].label} className="flex items-center gap-r6">
           {groupIndex > 0 && (

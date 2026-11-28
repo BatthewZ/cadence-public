@@ -1,9 +1,10 @@
 import { escapeHtml } from "./utils";
 
-export function passwordResetEmail(options: {
-  url: string;
-  expiresInMinutes?: number;
-}): { subject: string; html: string; text: string } {
+export function passwordResetEmail(options: { url: string; expiresInMinutes?: number }): {
+  subject: string;
+  html: string;
+  text: string;
+} {
   const { url, expiresInMinutes = 60 } = options;
   const safeUrl = escapeHtml(url);
 

@@ -342,21 +342,19 @@ describe("workspaceExportSchema envelope", () => {
 
   it("rejects a wrong format literal (foreign file fails the FIRST check, by name)", () => {
     expect(
-      workspaceExportSchema.safeParse({ ...makeFixture(), format: "trello.board" }).success,
+      workspaceExportSchema.safeParse({ ...makeFixture(), format: "trello.board" }).success
     ).toBe(false);
-    expect(
-      workspaceExportSchema.safeParse({ ...makeFixture(), format: "" }).success,
-    ).toBe(false);
+    expect(workspaceExportSchema.safeParse({ ...makeFixture(), format: "" }).success).toBe(false);
   });
 
   it("rejects a wrong or string-typed formatVersion", () => {
-    expect(
-      workspaceExportSchema.safeParse({ ...makeFixture(), formatVersion: 2 }).success,
-    ).toBe(false);
+    expect(workspaceExportSchema.safeParse({ ...makeFixture(), formatVersion: 2 }).success).toBe(
+      false
+    );
     // "1" (string) must not coerce — version comparison is exact.
-    expect(
-      workspaceExportSchema.safeParse({ ...makeFixture(), formatVersion: "1" }).success,
-    ).toBe(false);
+    expect(workspaceExportSchema.safeParse({ ...makeFixture(), formatVersion: "1" }).success).toBe(
+      false
+    );
   });
 
   it("pins the format constants the spec documents", () => {
@@ -367,7 +365,7 @@ describe("workspaceExportSchema envelope", () => {
 
   it("requires exportedBy to be an email (the portable user key, not a ref)", () => {
     expect(
-      workspaceExportSchema.safeParse({ ...makeFixture(), exportedBy: "user-1" }).success,
+      workspaceExportSchema.safeParse({ ...makeFixture(), exportedBy: "user-1" }).success
     ).toBe(false);
   });
 });
@@ -410,7 +408,7 @@ describe("secret exclusion (strictObject)", () => {
       workspaceExportSchema.safeParse({
         ...makeFixture(),
         webhooks: [{ ...makeWebhook(), consecutiveFailures: 3 }],
-      }).success,
+      }).success
     ).toBe(false);
   });
 });
@@ -446,9 +444,7 @@ describe("exportTaskSchema", () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      expect(result.error.issues.map((i) => i.message)).toContain(
-        DATE_RANGE_ERROR.startAfterDue,
-      );
+      expect(result.error.issues.map((i) => i.message)).toContain(DATE_RANGE_ERROR.startAfterDue);
     }
   });
 
@@ -458,14 +454,14 @@ describe("exportTaskSchema", () => {
         ...makeMinimalTask(),
         startDate: "2026-03-05T00:00:00.000Z",
         dueDate: "2026-03-05T00:00:00.000Z",
-      }).success,
+      }).success
     ).toBe(true);
     expect(
       exportTaskSchema.safeParse({
         ...makeMinimalTask(),
         startDate: "2026-03-01T00:00:00.000Z",
         dueDate: "2026-03-05T00:00:00.000Z",
-      }).success,
+      }).success
     ).toBe(true);
   });
 
@@ -477,22 +473,24 @@ describe("exportTaskSchema", () => {
     const fixture = makeFixture();
     const project = makeProject();
     project.tasks = [
-      { ...makeMinimalTask(), startDate: "2026-03-06T00:00:00.000Z", dueDate: "2026-03-05T00:00:00.000Z" },
+      {
+        ...makeMinimalTask(),
+        startDate: "2026-03-06T00:00:00.000Z",
+        dueDate: "2026-03-05T00:00:00.000Z",
+      },
     ];
     fixture.projects = [project];
     expect(workspaceExportSchema.safeParse(fixture).success).toBe(false);
   });
 
   it("rejects priorities outside the shared TASK_PRIORITIES enum", () => {
-    expect(
-      exportTaskSchema.safeParse({ ...makeMinimalTask(), priority: "critical" }).success,
-    ).toBe(false);
+    expect(exportTaskSchema.safeParse({ ...makeMinimalTask(), priority: "critical" }).success).toBe(
+      false
+    );
   });
 
   it("rejects an empty-string sourceUid (null is the absent value)", () => {
-    expect(
-      exportTaskSchema.safeParse({ ...makeMinimalTask(), sourceUid: "" }).success,
-    ).toBe(false);
+    expect(exportTaskSchema.safeParse({ ...makeMinimalTask(), sourceUid: "" }).success).toBe(false);
   });
 
   it("rejects negative cost (cents are non-negative, mirroring create/update)", () => {
@@ -530,8 +528,7 @@ describe("exportTaskSchema", () => {
     // Same fixture-drift guard: `url` must exist for its omission to mean anything.
     expect(url).toEqual(expect.any(String));
     expect(
-      exportTaskSchema.safeParse({ ...makeMinimalTask(), coverUnsplash: brokenCover })
-        .success,
+      exportTaskSchema.safeParse({ ...makeMinimalTask(), coverUnsplash: brokenCover }).success
     ).toBe(false);
   });
 
@@ -540,7 +537,7 @@ describe("exportTaskSchema", () => {
       exportTaskSchema.safeParse({
         ...makeMinimalTask(),
         coverUnsplash: { ...makeCoverUnsplash(), rawUrl: "not-a-url" },
-      }).success,
+      }).success
     ).toBe(false);
   });
 });
@@ -552,24 +549,23 @@ describe("exportTaskSchema", () => {
 describe("ISO timestamp convention", () => {
   it("rejects DB epoch integers — the endpoints must convert, the format never leaks storage", () => {
     expect(
-      exportTaskSchema.safeParse({ ...makeMinimalTask(), createdAt: 1_736_935_200_000 }).success,
+      exportTaskSchema.safeParse({ ...makeMinimalTask(), createdAt: 1_736_935_200_000 }).success
     ).toBe(false);
   });
 
   it("rejects bare YYYY-MM-DD dates and zone-less datetimes (ambiguous instants)", () => {
     expect(
-      exportTaskSchema.safeParse({ ...makeMinimalTask(), createdAt: "2026-01-10" }).success,
+      exportTaskSchema.safeParse({ ...makeMinimalTask(), createdAt: "2026-01-10" }).success
     ).toBe(false);
     expect(
-      exportTaskSchema.safeParse({ ...makeMinimalTask(), createdAt: "2026-01-10T00:00:00" })
-        .success,
+      exportTaskSchema.safeParse({ ...makeMinimalTask(), createdAt: "2026-01-10T00:00:00" }).success
     ).toBe(false);
   });
 
   it("accepts an explicit timezone offset (hand-repaired or third-party files)", () => {
     expect(
       exportTaskSchema.safeParse({ ...makeMinimalTask(), createdAt: "2026-01-10T05:30:00+05:30" })
-        .success,
+        .success
     ).toBe(true);
   });
 });
@@ -606,7 +602,7 @@ describe("importDocumentSchema / ImportDocument", () => {
     const project = makeProject();
     project.tasks = [{ ...makeMinimalTask(), title: "" }];
     expect(
-      importDocumentSchema.safeParse({ users: makeUsers(), projects: [project] }).success,
+      importDocumentSchema.safeParse({ users: makeUsers(), projects: [project] }).success
     ).toBe(false);
   });
 });
@@ -687,19 +683,19 @@ describe("import preview/result schemas", () => {
       importPreviewSchema.safeParse({
         ...makePreview(),
         counts: { ...counts, tasks: -1 },
-      }).success,
+      }).success
     ).toBe(false);
     expect(
       importPreviewSchema.safeParse({
         ...makePreview(),
         counts: { ...counts, tasks: 1.5 },
-      }).success,
+      }).success
     ).toBe(false);
   });
 
   it("rejects unknown sourceFormat values (UI badge depends on the sniffed kind)", () => {
-    expect(
-      importPreviewSchema.safeParse({ ...makePreview(), sourceFormat: "asana" }).success,
-    ).toBe(false);
+    expect(importPreviewSchema.safeParse({ ...makePreview(), sourceFormat: "asana" }).success).toBe(
+      false
+    );
   });
 });

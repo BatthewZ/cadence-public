@@ -49,11 +49,12 @@ export function ThemeGrid({
               transition-all duration-fast cursor-pointer
               hover:shadow-md hover:-translate-y-0.5
               focus-visible:outline-2 focus-visible:outline-accent focus-visible:outline-offset-2
-              ${isActive
-                ? "border-accent bg-accent-subtle shadow-sm"
-                : isHighlighted
-                  ? "border-accent/40 bg-surface-0"
-                  : "border-border-default bg-surface-0 hover:border-accent/30"
+              ${
+                isActive
+                  ? "border-accent bg-accent-subtle shadow-sm"
+                  : isHighlighted
+                    ? "border-accent/40 bg-surface-0"
+                    : "border-border-default bg-surface-0 hover:border-accent/30"
               }
             `}
           >
@@ -63,11 +64,7 @@ export function ThemeGrid({
               aria-hidden="true"
             >
               {THEME_PALETTES[t].map((color, ci) => (
-                <span
-                  key={ci}
-                  className="flex-1 h-full"
-                  style={{ backgroundColor: color }}
-                />
+                <span key={ci} className="flex-1 h-full" style={{ backgroundColor: color }} />
               ))}
             </div>
             <Text

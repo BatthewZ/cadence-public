@@ -28,7 +28,7 @@ export async function isResetCooldownActive(
   db: Database,
   userId: string,
   cooldownSeconds = COOLDOWN_SECONDS,
-  bufferSeconds = BUFFER_SECONDS,
+  bufferSeconds = BUFFER_SECONDS
 ): Promise<boolean> {
   const cooldownStart = new Date(Date.now() - cooldownSeconds * 1000);
   const recentBuffer = new Date(Date.now() - bufferSeconds * 1000);
@@ -41,8 +41,8 @@ export async function isResetCooldownActive(
         eq(schema.verification.value, userId),
         like(schema.verification.identifier, "reset-password:%"),
         gt(schema.verification.createdAt, cooldownStart),
-        lt(schema.verification.createdAt, recentBuffer),
-      ),
+        lt(schema.verification.createdAt, recentBuffer)
+      )
     )
     .limit(1);
 

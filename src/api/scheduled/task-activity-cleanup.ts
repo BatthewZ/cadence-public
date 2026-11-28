@@ -48,9 +48,7 @@ export async function cleanupTaskActivity(db: Database): Promise<number> {
   // Policy 1: Delete activity records older than 90 days
   // ---------------------------------------------------------------------------
   try {
-    const cutoff = new Date(
-      Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000,
-    );
+    const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
 
     let batchDeleted: number;
     do {
@@ -63,23 +61,18 @@ export async function cleanupTaskActivity(db: Database): Promise<number> {
       if (oldRows.length === 0) break;
 
       const idsToDelete = oldRows.map((r) => r.id);
-      await db
-        .delete(taskActivity)
-        .where(
-          sql`${taskActivity.id} IN (${sql.join(
-            idsToDelete.map((id) => sql`${id}`),
-            sql`, `,
-          )})`,
-        );
+      await db.delete(taskActivity).where(
+        sql`${taskActivity.id} IN (${sql.join(
+          idsToDelete.map((id) => sql`${id}`),
+          sql`, `
+        )})`
+      );
 
       batchDeleted = oldRows.length;
       totalDeleted += batchDeleted;
     } while (batchDeleted === DELETE_BATCH_SIZE);
   } catch (error) {
-    console.error(
-      "[task-activity-cleanup] Failed to delete old activity records",
-      error,
-    );
+    console.error("[task-activity-cleanup] Failed to delete old activity records", error);
   }
 
   // ---------------------------------------------------------------------------
@@ -119,35 +112,25 @@ export async function cleanupTaskActivity(db: Database): Promise<number> {
         const excessRows = await db
           .select({ id: taskActivity.id })
           .from(taskActivity)
-          .where(
-            and(
-              sql`${taskActivity.taskId} = ${taskId}`,
-              lt(taskActivity.createdAt, cutoff),
-            ),
-          )
+          .where(and(sql`${taskActivity.taskId} = ${taskId}`, lt(taskActivity.createdAt, cutoff)))
           .limit(DELETE_BATCH_SIZE);
 
         if (excessRows.length === 0) break;
 
         const idsToDelete = excessRows.map((r) => r.id);
-        await db
-          .delete(taskActivity)
-          .where(
-            sql`${taskActivity.id} IN (${sql.join(
-              idsToDelete.map((id) => sql`${id}`),
-              sql`, `,
-            )})`,
-          );
+        await db.delete(taskActivity).where(
+          sql`${taskActivity.id} IN (${sql.join(
+            idsToDelete.map((id) => sql`${id}`),
+            sql`, `
+          )})`
+        );
 
         batchDeleted = excessRows.length;
         totalDeleted += batchDeleted;
       } while (batchDeleted === DELETE_BATCH_SIZE);
     }
   } catch (error) {
-    console.error(
-      "[task-activity-cleanup] Failed to enforce per-task activity cap",
-      error,
-    );
+    console.error("[task-activity-cleanup] Failed to enforce per-task activity cap", error);
   }
 
   return totalDeleted;

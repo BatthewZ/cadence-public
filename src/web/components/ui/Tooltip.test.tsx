@@ -9,7 +9,7 @@ describe("Tooltip", () => {
     render(
       <Tooltip content="Tooltip text">
         <button>Hover me</button>
-      </Tooltip>,
+      </Tooltip>
     );
 
     expect(screen.getByRole("button", { name: "Hover me" })).toBeInTheDocument();
@@ -19,7 +19,7 @@ describe("Tooltip", () => {
     render(
       <Tooltip content="Tooltip text">
         <button>Hover me</button>
-      </Tooltip>,
+      </Tooltip>
     );
 
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
@@ -31,7 +31,7 @@ describe("Tooltip", () => {
     render(
       <Tooltip content="Tooltip text" delay={0}>
         <button>Hover me</button>
-      </Tooltip>,
+      </Tooltip>
     );
 
     await user.hover(screen.getByRole("button", { name: "Hover me" }));
@@ -45,7 +45,7 @@ describe("Tooltip", () => {
     render(
       <Tooltip content="Tooltip text" delay={0}>
         <button>Hover me</button>
-      </Tooltip>,
+      </Tooltip>
     );
 
     await user.hover(screen.getByRole("button", { name: "Hover me" }));
@@ -63,7 +63,7 @@ describe("Tooltip", () => {
     render(
       <Tooltip content="Tooltip text" delay={0}>
         <button>Hover me</button>
-      </Tooltip>,
+      </Tooltip>
     );
 
     await user.tab();
@@ -77,7 +77,7 @@ describe("Tooltip", () => {
     render(
       <Tooltip content="Tooltip text" delay={0}>
         <button>Hover me</button>
-      </Tooltip>,
+      </Tooltip>
     );
 
     await user.hover(screen.getByRole("button", { name: "Hover me" }));
@@ -95,7 +95,7 @@ describe("Tooltip", () => {
     render(
       <Tooltip content="Tooltip text" delay={0}>
         <button>Hover me</button>
-      </Tooltip>,
+      </Tooltip>
     );
 
     await user.hover(screen.getByRole("button", { name: "Hover me" }));
@@ -109,7 +109,7 @@ describe("Tooltip", () => {
     render(
       <Tooltip content="Tooltip text" delay={0}>
         <button>Hover me</button>
-      </Tooltip>,
+      </Tooltip>
     );
 
     const trigger = screen.getByRole("button", { name: "Hover me" });

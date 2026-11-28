@@ -13,10 +13,7 @@ import type { AppEnv } from "../env";
  * work is executed inline so that tests can still assert on side-effects like
  * activity logs and notifications.
  */
-export function deferWork(
-  c: Context<AppEnv>,
-  work: () => Promise<unknown>,
-): void {
+export function deferWork(c: Context<AppEnv>, work: () => Promise<unknown>): void {
   let ctx: ExecutionContext;
   try {
     ctx = c.executionCtx;

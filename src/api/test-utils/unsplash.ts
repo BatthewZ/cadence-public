@@ -23,17 +23,14 @@ export function sampleUnsplashPayload(id = "photo-1"): UnsplashCoverPayload {
     user: {
       name: "Jane Smith",
       username: "janesmith",
-      profileUrl:
-        "https://unsplash.com/@janesmith?utm_source=cadence-test&utm_medium=referral",
+      profileUrl: "https://unsplash.com/@janesmith?utm_source=cadence-test&utm_medium=referral",
     },
   };
 }
 
 /** Minimal fake PNG File used to exercise the R2 cover-upload path. */
 export function fakeCoverPngFile(): File {
-  const bytes = new Uint8Array([
-    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x01,
-  ]);
+  const bytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x01]);
   return new File([bytes], "cover.png", { type: "image/png" });
 }
 

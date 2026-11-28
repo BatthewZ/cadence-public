@@ -7,12 +7,17 @@ import type { Task } from "@/web/contexts/ProjectContext";
 import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 
-import { type Label, useAssignLabel, useCreateLabel, useDeleteLabel, useUpdateLabel } from "./use-labels";
+import {
+  type Label,
+  useAssignLabel,
+  useCreateLabel,
+  useDeleteLabel,
+  useUpdateLabel,
+} from "./use-labels";
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -97,12 +102,20 @@ describe("use-labels offline writes", () => {
         id: NEW_ID,
         name: "Docs",
         color: "#3b82f6",
-      }),
+      })
     );
     expect(labelsIn(queryClient)?.map((l) => l.id)).toEqual([bug.id, NEW_ID]);
 
     await act(async () => {
-      resolvePost({ label: { id: NEW_ID, projectId: PROJECT_ID, name: "Docs", color: "#3b82f6", createdAt: "x" } });
+      resolvePost({
+        label: {
+          id: NEW_ID,
+          projectId: PROJECT_ID,
+          name: "Docs",
+          color: "#3b82f6",
+          createdAt: "x",
+        },
+      });
       await pending;
     });
     // The server row has no taskCount; the merge keeps the optimistic one.
@@ -115,7 +128,9 @@ describe("use-labels offline writes", () => {
     const { result } = renderHook(() => useCreateLabel(PROJECT_ID), { wrapper: Wrapper });
 
     await act(async () => {
-      await expect(result.current.mutateAsync({ name: "Docs", color: "#3b82f6" })).rejects.toThrow("409");
+      await expect(result.current.mutateAsync({ name: "Docs", color: "#3b82f6" })).rejects.toThrow(
+        "409"
+      );
     });
 
     expect(labelsIn(queryClient)).toEqual([bug]);
@@ -146,7 +161,9 @@ describe("use-labels offline writes", () => {
       await result.current.mutateAsync(bug.id);
     });
 
-    expect(mockSendWrite).toHaveBeenCalledWith(expect.objectContaining({ label: "Delete label “Bug”" }));
+    expect(mockSendWrite).toHaveBeenCalledWith(
+      expect.objectContaining({ label: "Delete label “Bug”" })
+    );
     expect(labelsIn(queryClient)).toEqual([]);
     expect(taskLabelsIn(queryClient)).toEqual({ list: [], detail: [] });
     expect(invalidateSpy).not.toHaveBeenCalled();
@@ -176,7 +193,7 @@ describe("use-labels offline writes", () => {
     });
 
     expect(mockSendWrite).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "PATCH", label: "Recolor label “Bug”" }),
+      expect.objectContaining({ method: "PATCH", label: "Recolor label “Bug”" })
     );
   });
 });
@@ -200,9 +217,16 @@ describe("useAssignLabel rollback", () => {
     });
     await vi.waitFor(() => expect(taskLabelsIn(queryClient).detail).toHaveLength(2));
     // Meanwhile: the detail view renames the task, and another card is edited.
-    queryClient.setQueryData<{ task: Task }>(DETAIL_KEY, (old) => old && { task: { ...old.task, title: "Renamed" } });
-    queryClient.setQueryData<{ tasks: Task[] }>(TASKS_KEY, (old) =>
-      old && { tasks: old.tasks.map((t) => (t.id === "t-2" ? { ...t, title: "Other, edited" } : t)) },
+    queryClient.setQueryData<{ task: Task }>(
+      DETAIL_KEY,
+      (old) => old && { task: { ...old.task, title: "Renamed" } }
+    );
+    queryClient.setQueryData<{ tasks: Task[] }>(
+      TASKS_KEY,
+      (old) =>
+        old && {
+          tasks: old.tasks.map((t) => (t.id === "t-2" ? { ...t, title: "Other, edited" } : t)),
+        }
     );
 
     await act(async () => {
@@ -211,9 +235,13 @@ describe("useAssignLabel rollback", () => {
     });
 
     expect(taskLabelsIn(queryClient)).toEqual({ list: [bugInfo], detail: [bugInfo] });
-    expect(labelsIn(queryClient)?.map((l) => [l.id, l.taskCount])).toEqual([["l-bug", 1], ["l-docs", 0]]);
+    expect(labelsIn(queryClient)?.map((l) => [l.id, l.taskCount])).toEqual([
+      ["l-bug", 1],
+      ["l-docs", 0],
+    ]);
     expect(queryClient.getQueryData<{ task: Task }>(DETAIL_KEY)?.task.title).toBe("Renamed");
-    expect(queryClient.getQueryData<{ tasks: Task[] }>(TASKS_KEY)?.tasks[1].title).toBe("Other, edited");
+    expect(queryClient.getQueryData<{ tasks: Task[] }>(TASKS_KEY)?.tasks[1].title).toBe(
+      "Other, edited"
+    );
   });
 });
-

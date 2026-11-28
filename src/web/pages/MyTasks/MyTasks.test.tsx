@@ -12,9 +12,8 @@ import MyTasks from "./MyTasks";
 // ---------------------------------------------------------------------------
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -60,10 +59,20 @@ vi.mock("@/web/hooks/use-reduced-motion", () => ({
 // Mock TaskDetailDialog so we can verify it opens without rendering the full
 // dialog tree (which pulls in many heavy dependencies like dnd-kit, file upload, etc.)
 vi.mock("@/web/components/ui/TaskDetailDialog", () => ({
-  TaskDetailDialog: ({ taskId, open, onClose }: { taskId: string; open: boolean; onClose: () => void }) =>
+  TaskDetailDialog: ({
+    taskId,
+    open,
+    onClose,
+  }: {
+    taskId: string;
+    open: boolean;
+    onClose: () => void;
+  }) =>
     open ? (
       <div data-testid="task-detail-dialog" data-task-id={taskId}>
-        <button type="button" onClick={onClose}>Close dialog</button>
+        <button type="button" onClick={onClose}>
+          Close dialog
+        </button>
       </div>
     ) : null,
 }));
@@ -187,7 +196,7 @@ interface MockLookupData {
 function setupMockGet(
   tasks: MyTaskRaw[],
   nextCursor: string | null = null,
-  lookups: MockLookupData = {},
+  lookups: MockLookupData = {}
 ) {
   mockGet.mockImplementation((url: string): unknown => {
     if (url.includes("/api/workspaces/") && url.includes("/dashboard/my-tasks")) {
@@ -276,7 +285,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -304,7 +313,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -342,7 +351,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       // Wait for task titles to appear
@@ -378,7 +387,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -404,7 +413,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       // Wait for data to load so tabs render with counts
@@ -429,7 +438,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -438,23 +447,19 @@ describe("MyTasks", () => {
       });
 
       // Verify the API call includes period=week (the default tab)
-      expect(mockGet).toHaveBeenCalledWith(
-        expect.stringContaining("period=week"),
-      );
+      expect(mockGet).toHaveBeenCalledWith(expect.stringContaining("period=week"));
     });
 
     it("clicking 'All' tab refetches without period param and shows all tasks", async () => {
       const user = userEvent.setup();
-      const tasks = [
-        makeTask({ id: "t1", title: "Task Alpha", dueDate: futureDateStr() }),
-      ];
+      const tasks = [makeTask({ id: "t1", title: "Task Alpha", dueDate: futureDateStr() })];
       setupMockGet(tasks);
 
       const Wrapper = createWrapper();
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -468,7 +473,7 @@ describe("MyTasks", () => {
       await waitFor(() => {
         const calls = mockGet.mock.calls.map((c: unknown[]) => c[0] as string);
         const allTabCall = calls.find(
-          (url: string) => url.includes("/dashboard/my-tasks") && !url.includes("period="),
+          (url: string) => url.includes("/dashboard/my-tasks") && !url.includes("period=")
         );
         expect(allTabCall).toBeDefined();
       });
@@ -488,7 +493,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       // Wait for initial data load
@@ -521,7 +526,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -552,7 +557,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -570,7 +575,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -590,7 +595,10 @@ describe("MyTasks", () => {
         if (url.includes("/dashboard/my-tasks")) {
           callCount++;
           if (callCount === 1) {
-            return Promise.resolve({ tasks: page1Tasks, nextCursor: "cursor-1" } as MyTasksResponse);
+            return Promise.resolve({
+              tasks: page1Tasks,
+              nextCursor: "cursor-1",
+            } as MyTasksResponse);
           }
           return Promise.resolve({ tasks: page2Tasks, nextCursor: null } as MyTasksResponse);
         }
@@ -601,7 +609,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -619,8 +627,8 @@ describe("MyTasks", () => {
       expect(screen.getByText("Page 1 task")).toBeInTheDocument();
 
       // The second call should include the cursor
-      const secondCall = mockGet.mock.calls.find(
-        (c: unknown[]) => (c[0] as string).includes("cursor=cursor-1"),
+      const secondCall = mockGet.mock.calls.find((c: unknown[]) =>
+        (c[0] as string).includes("cursor=cursor-1")
       );
       expect(secondCall).toBeDefined();
     });
@@ -640,7 +648,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -666,7 +674,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -705,7 +713,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -721,7 +729,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -742,7 +750,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       // Default "This Week" tab shows all 3 from the API
@@ -771,7 +779,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -809,7 +817,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -834,7 +842,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -857,7 +865,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -887,7 +895,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -914,7 +922,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -942,7 +950,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       await waitFor(() => {
@@ -969,7 +977,7 @@ describe("MyTasks", () => {
       render(
         <Wrapper>
           <MyTasks />
-        </Wrapper>,
+        </Wrapper>
       );
 
       // Breadcrumb navigation has aria-label="Breadcrumb"
@@ -1026,7 +1034,7 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
 
         await waitFor(() => {
@@ -1056,7 +1064,7 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
 
         await waitFor(() => {
@@ -1076,7 +1084,7 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
 
         await waitFor(() => {
@@ -1100,7 +1108,7 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
         await waitFor(() => {
           expect(screen.getByText("Row item")).toBeInTheDocument();
@@ -1129,7 +1137,7 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
         await waitFor(() => {
           expect(screen.getByText("Row item")).toBeInTheDocument();
@@ -1157,7 +1165,7 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
         await waitFor(() => {
           expect(screen.getByText("Row item")).toBeInTheDocument();
@@ -1180,7 +1188,7 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
         await waitFor(() => {
           expect(screen.getByText("Row item")).toBeInTheDocument();
@@ -1219,7 +1227,7 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
         await waitFor(() => {
           expect(screen.getByText("Row item")).toBeInTheDocument();
@@ -1240,15 +1248,13 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
         await waitFor(() => {
           expect(screen.getByText("Row item")).toBeInTheDocument();
         });
 
-        await user.click(
-          screen.getByRole("button", { name: "Remove priority filter urgent" }),
-        );
+        await user.click(screen.getByRole("button", { name: "Remove priority filter urgent" }));
 
         await waitFor(() => {
           expect(lastMyTasksParams().get("priority")).toBe("high");
@@ -1267,15 +1273,13 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
         await waitFor(() => {
           expect(screen.getByText("Row item")).toBeInTheDocument();
         });
 
-        await user.click(
-          screen.getByRole("button", { name: "Remove due date filter" }),
-        );
+        await user.click(screen.getByRole("button", { name: "Remove due date filter" }));
 
         // Regression: a per-key remover would resurrect one bound (stale
         // closure, last write wins) — both must vanish together, while the
@@ -1299,15 +1303,13 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
         await waitFor(() => {
           expect(screen.getByText("Row item")).toBeInTheDocument();
         });
 
-        await user.click(
-          screen.getByRole("button", { name: "Remove no due date filter" }),
-        );
+        await user.click(screen.getByRole("button", { name: "Remove no due date filter" }));
 
         await waitFor(() => {
           const params = lastMyTasksParams();
@@ -1325,15 +1327,13 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
         await waitFor(() => {
           expect(screen.getByText("Row item")).toBeInTheDocument();
         });
 
-        await user.click(
-          screen.getByRole("button", { name: "Remove no label filter" }),
-        );
+        await user.click(screen.getByRole("button", { name: "Remove no label filter" }));
 
         // Absence OR-composes with names within the dimension: dropping the
         // absence flag must not take the real label selection with it.
@@ -1354,15 +1354,13 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
         await waitFor(() => {
           expect(screen.getByText("Row item")).toBeInTheDocument();
         });
 
-        await user.click(
-          screen.getByRole("button", { name: "Remove label filter Bug" }),
-        );
+        await user.click(screen.getByRole("button", { name: "Remove label filter Bug" }));
 
         await waitFor(() => {
           const params = lastMyTasksParams();
@@ -1388,7 +1386,7 @@ describe("MyTasks", () => {
         render(
           <Wrapper>
             <MyTasks />
-          </Wrapper>,
+          </Wrapper>
         );
         await waitFor(() => {
           expect(screen.getByText("Row item")).toBeInTheDocument();

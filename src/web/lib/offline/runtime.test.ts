@@ -65,7 +65,10 @@ let start: MockInstance<Outbox["start"]>;
 
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
-  vi.stubGlobal("fetch", vi.fn(() => Promise.reject(new TypeError("Failed to fetch"))));
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => Promise.reject(new TypeError("Failed to fetch")))
+  );
   gates.persist = null;
   gates.stops = [];
   gates.barriers = [];

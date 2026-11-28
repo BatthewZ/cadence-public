@@ -48,14 +48,14 @@ app.put(
   "/users/me/avatar",
   requireAuth,
   rateLimit({ max: 10, windowSeconds: 60, prefix: "avatar-upload", keyFn: defaultRateLimitKey }),
-  uploadAvatar,
+  uploadAvatar
 );
 
 app.get(
   "/uploads/:purpose/:userId/:filename",
   requireAuth,
   rateLimit({ max: 100, windowSeconds: 60, prefix: "file-serve", keyFn: defaultRateLimitKey }),
-  serveUpload,
+  serveUpload
 );
 
 app.delete("/uploads/:id", requireAuth, deleteUpload);

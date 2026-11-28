@@ -8,7 +8,7 @@ import type { Context } from "hono";
  */
 export function parseCursorParams(
   c: Context,
-  opts: { defaultLimit: number; maxLimit: number },
+  opts: { defaultLimit: number; maxLimit: number }
 ): { limit: number; cursor: string | undefined } {
   const limitParam = c.req.query("limit");
   const limit = limitParam
@@ -34,7 +34,7 @@ export function parseCursorDate(cursor: string | undefined): Date | null {
 export function computeNextCursor<T>(
   items: T[],
   limit: number,
-  getDate: (item: T) => Date | string,
+  getDate: (item: T) => Date | string
 ): string | null {
   if (items.length < limit) return null;
   const raw = getDate(items[items.length - 1]);
@@ -71,7 +71,7 @@ export function compoundCursorCondition(
   compound: { date: Date; id: string },
   dateColumn: Column,
   idColumn: Column,
-  direction: "asc" | "desc",
+  direction: "asc" | "desc"
 ): SQL {
   const cmp = direction === "asc" ? gt : lt;
   const dateCond = cmp(dateColumn, compound.date);
@@ -90,7 +90,7 @@ export function computeCompoundNextCursor<T>(
   items: T[],
   limit: number,
   getDate: (item: T) => Date | string,
-  getId: (item: T) => string,
+  getId: (item: T) => string
 ): string | null {
   if (items.length < limit) return null;
   const last = items[items.length - 1];

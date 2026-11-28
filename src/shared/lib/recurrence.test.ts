@@ -628,11 +628,7 @@ describe("computeNextStartDate", () => {
 
   it("year-boundary subtraction: next start rolls back into the previous year", () => {
     // 5-day span ending Jan 2 → start must land in the previous December.
-    const nextStart = computeNextStartDate(
-      utc("2026-01-02"),
-      utc("2025-12-22"),
-      utc("2025-12-27"),
-    );
+    const nextStart = computeNextStartDate(utc("2026-01-02"), utc("2025-12-22"), utc("2025-12-27"));
     expect(fmt(nextStart)).toBe("2025-12-28");
   });
 
@@ -665,7 +661,7 @@ describe("computeNextStartDate", () => {
       const nextStart = computeNextStartDate(
         utc("2025-03-31"),
         utc("2025-03-24"),
-        utc("2025-03-26"),
+        utc("2025-03-26")
       );
       expect(fmt(nextStart)).toBe("2025-03-29");
     });
@@ -682,21 +678,15 @@ describe("formatRecurrenceRule", () => {
   // -------------------------------------------------------------------------
   describe("daily", () => {
     it('formats interval=1 as "Every day"', () => {
-      expect(formatRecurrenceRule({ frequency: "daily", interval: 1 })).toBe(
-        "Every day",
-      );
+      expect(formatRecurrenceRule({ frequency: "daily", interval: 1 })).toBe("Every day");
     });
 
     it('formats interval=2 as "Every 2 days"', () => {
-      expect(formatRecurrenceRule({ frequency: "daily", interval: 2 })).toBe(
-        "Every 2 days",
-      );
+      expect(formatRecurrenceRule({ frequency: "daily", interval: 2 })).toBe("Every 2 days");
     });
 
     it('formats interval=7 as "Every 7 days"', () => {
-      expect(formatRecurrenceRule({ frequency: "daily", interval: 7 })).toBe(
-        "Every 7 days",
-      );
+      expect(formatRecurrenceRule({ frequency: "daily", interval: 7 })).toBe("Every 7 days");
     });
   });
 
@@ -705,15 +695,11 @@ describe("formatRecurrenceRule", () => {
   // -------------------------------------------------------------------------
   describe("weekly", () => {
     it('formats interval=1 with no days as "Every week"', () => {
-      expect(formatRecurrenceRule({ frequency: "weekly", interval: 1 })).toBe(
-        "Every week",
-      );
+      expect(formatRecurrenceRule({ frequency: "weekly", interval: 1 })).toBe("Every week");
     });
 
     it('formats interval=2 with no days as "Every 2 weeks"', () => {
-      expect(formatRecurrenceRule({ frequency: "weekly", interval: 2 })).toBe(
-        "Every 2 weeks",
-      );
+      expect(formatRecurrenceRule({ frequency: "weekly", interval: 2 })).toBe("Every 2 weeks");
     });
 
     it("formats single day", () => {
@@ -722,7 +708,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "weekly",
           interval: 1,
           daysOfWeek: [1],
-        }),
+        })
       ).toBe("Every week on Mon");
     });
 
@@ -732,7 +718,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "weekly",
           interval: 1,
           daysOfWeek: [1, 3, 5],
-        }),
+        })
       ).toBe("Every week on Mon, Wed, Fri");
     });
 
@@ -742,7 +728,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "weekly",
           interval: 1,
           daysOfWeek: [5, 1, 3],
-        }),
+        })
       ).toBe("Every week on Mon, Wed, Fri");
     });
 
@@ -752,7 +738,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "weekly",
           interval: 1,
           daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
-        }),
+        })
       ).toBe("Every week on Sun, Mon, Tue, Wed, Thu, Fri, Sat");
     });
 
@@ -762,7 +748,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "weekly",
           interval: 2,
           daysOfWeek: [1, 3, 5],
-        }),
+        })
       ).toBe("Every 2 weeks on Mon, Wed, Fri");
     });
 
@@ -772,7 +758,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "weekly",
           interval: 1,
           daysOfWeek: [0, 6],
-        }),
+        })
       ).toBe("Every week on Sun, Sat");
     });
   });
@@ -782,15 +768,11 @@ describe("formatRecurrenceRule", () => {
   // -------------------------------------------------------------------------
   describe("monthly", () => {
     it('formats plain monthly as "Every month"', () => {
-      expect(formatRecurrenceRule({ frequency: "monthly", interval: 1 })).toBe(
-        "Every month",
-      );
+      expect(formatRecurrenceRule({ frequency: "monthly", interval: 1 })).toBe("Every month");
     });
 
     it('formats interval=2 as "Every 2 months"', () => {
-      expect(formatRecurrenceRule({ frequency: "monthly", interval: 2 })).toBe(
-        "Every 2 months",
-      );
+      expect(formatRecurrenceRule({ frequency: "monthly", interval: 2 })).toBe("Every 2 months");
     });
 
     it("formats dayOfMonth with ordinal suffix (1st)", () => {
@@ -799,7 +781,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           dayOfMonth: 1,
-        }),
+        })
       ).toBe("Every month on the 1st");
     });
 
@@ -809,7 +791,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           dayOfMonth: 2,
-        }),
+        })
       ).toBe("Every month on the 2nd");
     });
 
@@ -819,7 +801,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           dayOfMonth: 3,
-        }),
+        })
       ).toBe("Every month on the 3rd");
     });
 
@@ -829,7 +811,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           dayOfMonth: 4,
-        }),
+        })
       ).toBe("Every month on the 4th");
     });
 
@@ -839,7 +821,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           dayOfMonth: 11,
-        }),
+        })
       ).toBe("Every month on the 11th");
     });
 
@@ -849,7 +831,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           dayOfMonth: 12,
-        }),
+        })
       ).toBe("Every month on the 12th");
     });
 
@@ -859,7 +841,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           dayOfMonth: 13,
-        }),
+        })
       ).toBe("Every month on the 13th");
     });
 
@@ -869,7 +851,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           dayOfMonth: 21,
-        }),
+        })
       ).toBe("Every month on the 21st");
     });
 
@@ -879,7 +861,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           dayOfMonth: 31,
-        }),
+        })
       ).toBe("Every month on the 31st");
     });
 
@@ -889,7 +871,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 3,
           dayOfMonth: 15,
-        }),
+        })
       ).toBe("Every 3 months on the 15th");
     });
 
@@ -899,7 +881,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           nthWeekday: { n: 1, day: 1 },
-        }),
+        })
       ).toBe("Every month on the 1st Mon");
     });
 
@@ -909,7 +891,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           nthWeekday: { n: 2, day: 2 },
-        }),
+        })
       ).toBe("Every month on the 2nd Tue");
     });
 
@@ -919,7 +901,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           nthWeekday: { n: 3, day: 5 },
-        }),
+        })
       ).toBe("Every month on the 3rd Fri");
     });
 
@@ -929,7 +911,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 1,
           nthWeekday: { n: 4, day: 4 },
-        }),
+        })
       ).toBe("Every month on the 4th Thu");
     });
 
@@ -939,7 +921,7 @@ describe("formatRecurrenceRule", () => {
           frequency: "monthly",
           interval: 2,
           nthWeekday: { n: 1, day: 1 },
-        }),
+        })
       ).toBe("Every 2 months on the 1st Mon");
     });
   });
@@ -949,21 +931,15 @@ describe("formatRecurrenceRule", () => {
   // -------------------------------------------------------------------------
   describe("yearly", () => {
     it('formats interval=1 as "Every year"', () => {
-      expect(formatRecurrenceRule({ frequency: "yearly", interval: 1 })).toBe(
-        "Every year",
-      );
+      expect(formatRecurrenceRule({ frequency: "yearly", interval: 1 })).toBe("Every year");
     });
 
     it('formats interval=2 as "Every 2 years"', () => {
-      expect(formatRecurrenceRule({ frequency: "yearly", interval: 2 })).toBe(
-        "Every 2 years",
-      );
+      expect(formatRecurrenceRule({ frequency: "yearly", interval: 2 })).toBe("Every 2 years");
     });
 
     it('formats interval=5 as "Every 5 years"', () => {
-      expect(formatRecurrenceRule({ frequency: "yearly", interval: 5 })).toBe(
-        "Every 5 years",
-      );
+      expect(formatRecurrenceRule({ frequency: "yearly", interval: 5 })).toBe("Every 5 years");
     });
   });
 });

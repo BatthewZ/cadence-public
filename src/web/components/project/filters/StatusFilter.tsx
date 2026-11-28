@@ -1,18 +1,10 @@
-import {
-  CheckCircle2,
-} from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 import { Popover } from "@/web/components/ui/Popover";
 import { Text } from "@/web/components/ui/Text";
-import {
-  type UseTaskFiltersReturn,
-} from "@/web/hooks/use-task-filters";
+import { type UseTaskFiltersReturn } from "@/web/hooks/use-task-filters";
 
-export function StatusFilter({
-  filtersReturn,
-}: {
-  filtersReturn: UseTaskFiltersReturn;
-}) {
+export function StatusFilter({ filtersReturn }: { filtersReturn: UseTaskFiltersReturn }) {
   const { filters, setFilter } = filtersReturn;
   const isActive = filters.completed !== null;
 
@@ -36,18 +28,18 @@ export function StatusFilter({
           Filter by status
         </Text>
         <div className="task-filter-bar__popover-list">
-          {([
-            { label: "All tasks", value: null },
-            { label: "Active only", value: false },
-            { label: "Completed only", value: true },
-          ] as const).map((option) => (
+          {(
+            [
+              { label: "All tasks", value: null },
+              { label: "Active only", value: false },
+              { label: "Completed only", value: true },
+            ] as const
+          ).map((option) => (
             <button
               key={String(option.value)}
               type="button"
               className={`task-filter-bar__option task-filter-bar__option--button ${
-                filters.completed === option.value
-                  ? "task-filter-bar__option--selected"
-                  : ""
+                filters.completed === option.value ? "task-filter-bar__option--selected" : ""
               }`}
               onClick={() => set(option.value)}
             >

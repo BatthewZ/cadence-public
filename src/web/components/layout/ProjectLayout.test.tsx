@@ -52,9 +52,7 @@ vi.mock("@/web/contexts/ProjectContext", () => ({
   useProject: () => ({
     project: { id: "proj-1", name: "Test Project", status: "active", workspaceId: "ws-1" },
     members: [],
-    taskGroups: [
-      { id: "g-todo", name: "To Do", isCompletionGroup: false, position: "a0" },
-    ],
+    taskGroups: [{ id: "g-todo", name: "To Do", isCompletionGroup: false, position: "a0" }],
     tasks: mockTasks,
     tasksError: null,
     taskGroupsError: null,
@@ -186,7 +184,7 @@ function renderLayout(tab: string) {
           <Route path="/w/:slug/projects/:projectId/*" element={<ProjectLayout />} />
         </Routes>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -210,11 +208,9 @@ describe("ProjectLayout calendar menu", () => {
     await user.click(screen.getByRole("button", MENU_TRIGGER));
 
     expect(
-      await screen.findByRole("menuitem", { name: "Export calendar (.ics)" }),
+      await screen.findByRole("menuitem", { name: "Export calendar (.ics)" })
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("menuitem", { name: "Import calendar (.ics)…" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Import calendar (.ics)…" })).toBeInTheDocument();
   });
 
   it.each(["list", "timeline", "calendar"])("renders the menu on the %s tab", (tab) => {
@@ -228,7 +224,7 @@ describe("ProjectLayout calendar menu", () => {
       renderLayout(tab);
       expect(screen.queryByRole("button", MENU_TRIGGER)).not.toBeInTheDocument();
       expect(screen.queryByTestId("task-filter-bar")).not.toBeInTheDocument();
-    },
+    }
   );
 
   it("hides the import item AND the dialog for viewers, but keeps export", async () => {
@@ -239,10 +235,10 @@ describe("ProjectLayout calendar menu", () => {
     await user.click(screen.getByRole("button", MENU_TRIGGER));
 
     expect(
-      await screen.findByRole("menuitem", { name: "Export calendar (.ics)" }),
+      await screen.findByRole("menuitem", { name: "Export calendar (.ics)" })
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("menuitem", { name: "Import calendar (.ics)…" }),
+      screen.queryByRole("menuitem", { name: "Import calendar (.ics)…" })
     ).not.toBeInTheDocument();
     // The dialog isn't even mounted for viewers.
     expect(screen.queryByText("Import calendar")).not.toBeInTheDocument();
@@ -253,9 +249,7 @@ describe("ProjectLayout calendar menu", () => {
     renderLayout("board");
 
     await user.click(screen.getByRole("button", MENU_TRIGGER));
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Export calendar (.ics)" }),
-    );
+    await user.click(await screen.findByRole("menuitem", { name: "Export calendar (.ics)" }));
 
     expect(mockDownload).toHaveBeenCalledWith("Test Project", mockTasks);
     // A download happened (count 1) → no toast needed.
@@ -268,14 +262,11 @@ describe("ProjectLayout calendar menu", () => {
     renderLayout("board");
 
     await user.click(screen.getByRole("button", MENU_TRIGGER));
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Export calendar (.ics)" }),
-    );
+    await user.click(await screen.findByRole("menuitem", { name: "Export calendar (.ics)" }));
 
-    expect(mockToast).toHaveBeenCalledWith(
-      "This project has no tasks with dates to export.",
-      { variant: "info" },
-    );
+    expect(mockToast).toHaveBeenCalledWith("This project has no tasks with dates to export.", {
+      variant: "info",
+    });
   });
 
   it("import item opens the real ImportIcsDialog", async () => {
@@ -283,9 +274,7 @@ describe("ProjectLayout calendar menu", () => {
     renderLayout("board");
 
     await user.click(screen.getByRole("button", MENU_TRIGGER));
-    await user.click(
-      await screen.findByRole("menuitem", { name: "Import calendar (.ics)…" }),
-    );
+    await user.click(await screen.findByRole("menuitem", { name: "Import calendar (.ics)…" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveAttribute("open");

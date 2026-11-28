@@ -59,7 +59,7 @@ async function writeTaskCover(
   db: Database,
   taskId: string,
   cover: CoverSourceUpdate,
-  updatedAt: Date,
+  updatedAt: Date
 ) {
   await db
     .update(task)

@@ -31,10 +31,7 @@ export function useInvitationActions() {
    */
   const acceptMutation = useMutation({
     mutationFn: (invitationId: string) =>
-      api.post<{ ok: boolean; workspaceId: string }>(
-        "/api/invitations/accept",
-        { invitationId },
-      ),
+      api.post<{ ok: boolean; workspaceId: string }>("/api/invitations/accept", { invitationId }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.workspaces.all });
       void qc.invalidateQueries({ queryKey: queryKeys.invitations.pending });
@@ -98,11 +95,9 @@ export function useInvitationActions() {
       (old: { invitations: { id: string }[] } | undefined) =>
         old
           ? {
-              invitations: old.invitations.filter(
-                (i) => i.id !== invitationId,
-              ),
+              invitations: old.invitations.filter((i) => i.id !== invitationId),
             }
-          : old,
+          : old
     );
     // Also invalidate notification list so the invitation notification reflects
     // the dismissed state consistently

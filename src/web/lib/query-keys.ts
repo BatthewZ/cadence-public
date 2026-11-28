@@ -9,8 +9,7 @@ export const queryKeys = {
     teamDetail: (workspaceId: string, teamId: string) =>
       ["workspaces", workspaceId, "teams", teamId] as const,
     dashboard: (id: string) => ["workspaces", id, "dashboard"] as const,
-    dashboardMyTasksPrefix: (id: string) =>
-      ["workspaces", id, "dashboard", "my-tasks"] as const,
+    dashboardMyTasksPrefix: (id: string) => ["workspaces", id, "dashboard", "my-tasks"] as const,
     /**
      * The trailing segment is a normalized OBJECT, not a joined string like
      * the project/task-group segments. Those segments hold nanoid lists, so
@@ -36,7 +35,7 @@ export const queryKeys = {
         noDueDate?: boolean;
         labelNames?: readonly string[];
         noLabel?: boolean;
-      },
+      }
     ) =>
       [
         "workspaces",
@@ -61,14 +60,11 @@ export const queryKeys = {
     labels: (id: string) => ["workspaces", id, "labels"] as const,
     dashboardMyTasksPreview: (id: string) =>
       ["workspaces", id, "dashboard", "my-tasks-preview"] as const,
-    dashboardUpcoming: (id: string) =>
-      ["workspaces", id, "dashboard", "upcoming"] as const,
+    dashboardUpcoming: (id: string) => ["workspaces", id, "dashboard", "upcoming"] as const,
     activity: (id: string) => ["workspaces", id, "activity"] as const,
-    search: (id: string, query: string) =>
-      ["workspaces", id, "search", query] as const,
+    search: (id: string, query: string) => ["workspaces", id, "search", query] as const,
     webhooks: (id: string) => ["workspaces", id, "webhooks"] as const,
-    webhookDetail: (wsId: string, whId: string) =>
-      ["workspaces", wsId, "webhooks", whId] as const,
+    webhookDetail: (wsId: string, whId: string) => ["workspaces", wsId, "webhooks", whId] as const,
     /**
      * Per-user calendar-feed status for a workspace. The cache only ever
      * holds `{ exists, createdAt, lastUsedAt }` metadata — never the feed
@@ -122,8 +118,7 @@ export const queryKeys = {
   },
   notifications: {
     all: ["notifications"] as const,
-    list: (filters?: { unreadOnly?: boolean }) =>
-      ["notifications", "list", filters] as const,
+    list: (filters?: { unreadOnly?: boolean }) => ["notifications", "list", filters] as const,
     unreadCount: ["notifications", "unread-count"] as const,
   },
   freshness: {

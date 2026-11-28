@@ -360,10 +360,7 @@ function findClose(src: string, from: number, marker: "**" | "_" | "*"): number 
  * href is captured RAW — protocol safety is the renderer's job, not the
  * parser's — so a `javascript:` URL still produces a link node here.
  */
-function parseLink(
-  src: string,
-  start: number
-): { node: MdInline; next: number } | null {
+function parseLink(src: string, start: number): { node: MdInline; next: number } | null {
   // Find the matching `]`, allowing escaped/balanced text is out of scope; a
   // bare `]` closes the label.
   const labelEnd = src.indexOf("]", start + 1);

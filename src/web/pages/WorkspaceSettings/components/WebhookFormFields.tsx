@@ -120,10 +120,7 @@ export function WebhookFormFields({
         <Field>
           <Label>Status</Label>
           <label className="flex items-center gap-r5 cursor-pointer">
-            <Checkbox
-              checked={active}
-              onChange={(e) => onActiveChange(e.target.checked)}
-            />
+            <Checkbox checked={active} onChange={(e) => onActiveChange(e.target.checked)} />
             <Text variant="body-2" as="span">
               {active ? "Active" : "Disabled"}
             </Text>

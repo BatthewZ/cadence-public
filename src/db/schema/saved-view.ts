@@ -1,10 +1,4 @@
-import {
-  index,
-  integer,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import type { SavedViewState } from "../../shared/schemas/saved-view";
 import { user } from "./auth";
@@ -43,7 +37,7 @@ export const savedView = sqliteTable(
     uniqueIndex("saved_view_project_creator_name_idx").on(
       table.projectId,
       table.creatorId,
-      table.name,
+      table.name
     ),
-  ],
+  ]
 );

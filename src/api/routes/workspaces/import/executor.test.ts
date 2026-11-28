@@ -249,21 +249,21 @@ describe("import executor (Miniflare D1)", () => {
         // because two instances disagreed on email casing.
         makeUser("u-member", TEST_USER_2.email.toUpperCase()),
         makeUser("u-stranger", "stranger@example.com", "Stray Stranger"),
-      ],
+      ]
     );
 
     const report = await executeImport(db, workspaceId, TEST_USER.id, doc);
 
     const tasks = await db.select().from(task);
     expect(mustFind(tasks, (t) => t.title === "Assigned", "assigned task").assigneeId).toBe(
-      TEST_USER_2.id,
+      TEST_USER_2.id
     );
     const orphanAssignee = mustFind(tasks, (t) => t.title === "Orphan assignee", "orphan task");
     expect(orphanAssignee.assigneeId).toBeNull();
     const orphanCompleter = mustFind(
       tasks,
       (t) => t.title === "Orphan completer",
-      "orphan completer",
+      "orphan completer"
     );
     expect(orphanCompleter.completedBy).toBeNull();
     expect(orphanCompleter.completed).toBe(true); // the FACT survives, the ref doesn't
@@ -292,7 +292,7 @@ describe("import executor (Miniflare D1)", () => {
           tasks: [makeTask("g1", { title: "Probe", assigneeRef: "u1" })],
         }),
       ],
-      [makeUser("u1", TEST_USER_2.email, TEST_USER_2.name)],
+      [makeUser("u1", TEST_USER_2.email, TEST_USER_2.name)]
     );
 
     const report = await executeImport(db, workspaceId, TEST_USER.id, doc);
@@ -343,7 +343,7 @@ describe("import executor (Miniflare D1)", () => {
         makeUser("me", TEST_USER.email),
         makeUser("them", TEST_USER_2.email),
         makeUser("ghost", "ghost@example.com"),
-      ],
+      ]
     );
 
     await executeImport(db, workspaceId, TEST_USER.id, doc);
@@ -351,10 +351,10 @@ describe("import executor (Miniflare D1)", () => {
     const members = await db.select().from(projectMember);
     expect(members).toHaveLength(2);
     expect(mustFind(members, (m) => m.userId === TEST_USER.id, "importer membership").role).toBe(
-      "admin",
+      "admin"
     );
     expect(mustFind(members, (m) => m.userId === TEST_USER_2.id, "member membership").role).toBe(
-      "member",
+      "member"
     );
   });
 
@@ -363,9 +363,7 @@ describe("import executor (Miniflare D1)", () => {
     const doc = makeDoc([
       makeProject({
         taskGroups: [makeGroup({ id: "g1" })],
-        tasks: Array.from({ length: taskCount }, (_, i) =>
-          makeTask("g1", { title: `Task ${i}` }),
-        ),
+        tasks: Array.from({ length: taskCount }, (_, i) => makeTask("g1", { title: `Task ${i}` })),
       }),
     ]);
 
@@ -467,7 +465,9 @@ describe("import executor (Miniflare D1)", () => {
     // Preview and execute share the repair pass — the warnings a user
     // confirms in the dry run are the warnings the commit acts on.
     const preview = await previewImport(db, workspaceId, doc);
-    expect(preview.warnings.some((w) => w.includes("Orphan recurrence") && w.includes("recurrence"))).toBe(true);
+    expect(
+      preview.warnings.some((w) => w.includes("Orphan recurrence") && w.includes("recurrence"))
+    ).toBe(true);
     expect(preview.warnings.some((w) => w.includes("label"))).toBe(true);
 
     const report = await executeImport(db, workspaceId, TEST_USER.id, doc);
@@ -503,7 +503,7 @@ describe("import executor (Miniflare D1)", () => {
         }),
         makeProject({ taskGroups: [makeGroup({ id: "g3" })], tasks: [makeTask("g3", {})] }),
       ],
-      [makeUser("u1", "nobody@example.com")],
+      [makeUser("u1", "nobody@example.com")]
     );
 
     const preview = await previewImport(db, workspaceId, doc);

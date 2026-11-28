@@ -55,11 +55,7 @@ const TableRoot = forwardRef<HTMLDivElement, TableProps>(function Table(
   return (
     <TableContext.Provider value={{ density, striped }}>
       <div ref={ref} className={cn("table-wrapper", className)} {...props}>
-        <table
-          className={cn("table", stickyHeader && "table--sticky-header")}
-        >
-          {children}
-        </table>
+        <table className={cn("table", stickyHeader && "table--sticky-header")}>{children}</table>
       </div>
     </TableContext.Provider>
   );
@@ -71,12 +67,13 @@ const TableRoot = forwardRef<HTMLDivElement, TableProps>(function Table(
 
 type TableHeadProps = ComponentPropsWithRef<"thead">;
 
-const TableHead = forwardRef<HTMLTableSectionElement, TableHeadProps>(
-  function TableHead({ className, ...props }, ref) {
-    useTableContext();
-    return <thead ref={ref} className={cn("table-head", className)} {...props} />;
-  }
-);
+const TableHead = forwardRef<HTMLTableSectionElement, TableHeadProps>(function TableHead(
+  { className, ...props },
+  ref
+) {
+  useTableContext();
+  return <thead ref={ref} className={cn("table-head", className)} {...props} />;
+});
 
 /* ------------------------------------------------------------------ */
 /*  Table.Body                                                         */
@@ -84,12 +81,13 @@ const TableHead = forwardRef<HTMLTableSectionElement, TableHeadProps>(
 
 type TableBodyProps = ComponentPropsWithRef<"tbody">;
 
-const TableBody = forwardRef<HTMLTableSectionElement, TableBodyProps>(
-  function TableBody({ className, ...props }, ref) {
-    useTableContext();
-    return <tbody ref={ref} className={cn("table-body", className)} {...props} />;
-  }
-);
+const TableBody = forwardRef<HTMLTableSectionElement, TableBodyProps>(function TableBody(
+  { className, ...props },
+  ref
+) {
+  useTableContext();
+  return <tbody ref={ref} className={cn("table-body", className)} {...props} />;
+});
 
 /* ------------------------------------------------------------------ */
 /*  Table.Row                                                          */
@@ -99,23 +97,24 @@ type TableRowProps = {
   selected?: boolean;
 } & ComponentPropsWithRef<"tr">;
 
-const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
-  function TableRow({ selected = false, className, ...props }, ref) {
-    const { striped } = useTableContext();
-    return (
-      <tr
-        ref={ref}
-        className={cn(
-          "table-row",
-          selected && "table-row--selected",
-          striped && "table-row--striped",
-          className
-        )}
-        {...props}
-      />
-    );
-  }
-);
+const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(function TableRow(
+  { selected = false, className, ...props },
+  ref
+) {
+  const { striped } = useTableContext();
+  return (
+    <tr
+      ref={ref}
+      className={cn(
+        "table-row",
+        selected && "table-row--selected",
+        striped && "table-row--striped",
+        className
+      )}
+      {...props}
+    />
+  );
+});
 
 /* ------------------------------------------------------------------ */
 /*  Table.HeaderCell                                                   */
@@ -133,7 +132,8 @@ const TableHeaderCell = forwardRef<HTMLTableCellElement, TableHeaderCellProps>(
 
     let sortIcon: ReactNode = null;
     if (sortable) {
-      const Icon = sortDirection === "asc" ? ArrowUp : sortDirection === "desc" ? ArrowDown : ArrowUpDown;
+      const Icon =
+        sortDirection === "asc" ? ArrowUp : sortDirection === "desc" ? ArrowDown : ArrowUpDown;
       const modifier = sortDirection ? "active" : "muted";
       sortIcon = (
         <span className={`table-header-cell__sort-icon table-header-cell__sort-icon--${modifier}`}>
@@ -187,18 +187,15 @@ const TableHeaderCell = forwardRef<HTMLTableCellElement, TableHeaderCellProps>(
 
 type TableCellProps = ComponentPropsWithRef<"td">;
 
-const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
-  function TableCell({ className, ...props }, ref) {
-    const { density } = useTableContext();
-    return (
-      <td
-        ref={ref}
-        className={cn("table-cell", densityClassMap[density], className)}
-        {...props}
-      />
-    );
-  }
-);
+const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(function TableCell(
+  { className, ...props },
+  ref
+) {
+  const { density } = useTableContext();
+  return (
+    <td ref={ref} className={cn("table-cell", densityClassMap[density], className)} {...props} />
+  );
+});
 
 /* ------------------------------------------------------------------ */
 /*  Compound export                                                    */

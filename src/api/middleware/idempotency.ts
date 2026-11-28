@@ -25,7 +25,11 @@ function toHex(buffer: ArrayBuffer): string {
 }
 
 /** SHA-256 over `method \n path \n body`, so any change to what the key names is a mismatch. */
-async function fingerprintRequest(method: string, path: string, body: ArrayBuffer): Promise<string> {
+async function fingerprintRequest(
+  method: string,
+  path: string,
+  body: ArrayBuffer
+): Promise<string> {
   const head = new TextEncoder().encode(`${method}\n${path}\n`);
   const bytes = new Uint8Array(head.byteLength + body.byteLength);
   bytes.set(head, 0);
@@ -79,10 +83,10 @@ export const idempotency = createMiddleware<AppEnv>(async (c, next) => {
   const user = c.get("user");
   const method = c.req.method.toUpperCase();
   if (
-    key === undefined
-    || !user
-    || !MUTATION_METHODS.has(method)
-    || c.req.path.startsWith("/api/auth/")
+    key === undefined ||
+    !user ||
+    !MUTATION_METHODS.has(method) ||
+    c.req.path.startsWith("/api/auth/")
   ) {
     await next();
     return;
@@ -92,7 +96,7 @@ export const idempotency = createMiddleware<AppEnv>(async (c, next) => {
     return errorResponse(
       c,
       `${IDEMPOTENCY_KEY_HEADER} must be 1-255 characters of A-Z, a-z, 0-9, "_" or "-"`,
-      400,
+      400
     );
   }
 
@@ -107,7 +111,16 @@ export const idempotency = createMiddleware<AppEnv>(async (c, next) => {
 
   const claimed = await db
     .insert(idempotencyKey)
-    .values({ userId: user.id, key, method, path, fingerprint, status: null, responseBody: null, createdAt: now })
+    .values({
+      userId: user.id,
+      key,
+      method,
+      path,
+      fingerprint,
+      status: null,
+      responseBody: null,
+      createdAt: now,
+    })
     .onConflictDoNothing()
     .returning({ key: idempotencyKey.key });
 
@@ -121,7 +134,7 @@ export const idempotency = createMiddleware<AppEnv>(async (c, next) => {
         c,
         "This Idempotency-Key was already used for a different request",
         422,
-        { code: WRITE_ERROR_CODES.idempotencyMismatch },
+        { code: WRITE_ERROR_CODES.idempotencyMismatch }
       );
     }
 
@@ -139,7 +152,13 @@ export const idempotency = createMiddleware<AppEnv>(async (c, next) => {
     const takenOver = await db
       .update(idempotencyKey)
       .set({ createdAt: now })
-      .where(and(thisKey, isNull(idempotencyKey.status), eq(idempotencyKey.createdAt, existing.createdAt)))
+      .where(
+        and(
+          thisKey,
+          isNull(idempotencyKey.status),
+          eq(idempotencyKey.createdAt, existing.createdAt)
+        )
+      )
       .returning({ key: idempotencyKey.key });
     if (takenOver.length === 0) return inProgressResponse(c);
   }
@@ -149,7 +168,8 @@ export const idempotency = createMiddleware<AppEnv>(async (c, next) => {
     await next();
 
     const res = c.res;
-    const isJson = res.headers.get("Content-Type")?.toLowerCase().startsWith("application/json") ?? false;
+    const isJson =
+      res.headers.get("Content-Type")?.toLowerCase().startsWith("application/json") ?? false;
     if (res.status >= 200 && res.status < 300 && isJson) {
       const body = await readCappedText(res.clone(), IDEMPOTENCY_MAX_STORED_BODY_BYTES);
       if (body !== null) {

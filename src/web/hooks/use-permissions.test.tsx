@@ -72,7 +72,7 @@ describe("useProjectPermissions", () => {
 
   it("uses the direct project role of a plain workspace member", () => {
     const { result } = renderHook(() =>
-      useProjectPermissions([{ userId: "user-2", role: "member" }]),
+      useProjectPermissions([{ userId: "user-2", role: "member" }])
     );
 
     expect(result.current.projectRole).toBe("member");
@@ -82,7 +82,7 @@ describe("useProjectPermissions", () => {
 
   it("gives a project viewer read-only access", () => {
     const { result } = renderHook(() =>
-      useProjectPermissions([{ userId: "user-2", role: "viewer" }]),
+      useProjectPermissions([{ userId: "user-2", role: "viewer" }])
     );
 
     expect(result.current.canViewProject).toBe(true);
@@ -99,7 +99,7 @@ describe("useProjectPermissions", () => {
     mockWorkspaceMembers.value = [OWNER];
 
     const { result } = renderHook(() =>
-      useProjectPermissions([{ userId: "user-2", role: "admin" }]),
+      useProjectPermissions([{ userId: "user-2", role: "admin" }])
     );
 
     expect(result.current.workspaceRole).toBeNull();
@@ -111,7 +111,7 @@ describe("useProjectPermissions", () => {
 
   it("denies a user who is in the workspace but not in the project", () => {
     const { result } = renderHook(() =>
-      useProjectPermissions([{ userId: "user-9", role: "admin" }]),
+      useProjectPermissions([{ userId: "user-9", role: "admin" }])
     );
 
     expect(result.current.canViewProject).toBe(false);
@@ -125,7 +125,7 @@ describe("useProjectPermissions", () => {
     mockWorkspaceMembers.value = [];
 
     const { result } = renderHook(() =>
-      useProjectPermissions([{ userId: "user-2", role: "member" }]),
+      useProjectPermissions([{ userId: "user-2", role: "member" }])
     );
 
     expect(result.current.canViewProject).toBe(true);
@@ -152,16 +152,12 @@ describe("useProjectPermissions", () => {
     // Asserted as a pair on purpose: `isProjectAdmin === false` must hold in
     // BOTH states, so a test that only checked it would pass either way.
     mockWorkspaceMembers.value = [];
-    const loading = renderHook(() =>
-      useProjectPermissions([{ userId: "user-2", role: "admin" }]),
-    );
+    const loading = renderHook(() => useProjectPermissions([{ userId: "user-2", role: "admin" }]));
     expect(loading.result.current.isProjectAdmin).toBe(false);
     expect(loading.result.current.isResolved).toBe(false);
 
     mockWorkspaceMembers.value = [OWNER, PLAIN];
-    const resolved = renderHook(() =>
-      useProjectPermissions([{ userId: "user-2", role: "admin" }]),
-    );
+    const resolved = renderHook(() => useProjectPermissions([{ userId: "user-2", role: "admin" }]));
     expect(resolved.result.current.isProjectAdmin).toBe(true);
     expect(resolved.result.current.isResolved).toBe(true);
   });
@@ -169,7 +165,7 @@ describe("useProjectPermissions", () => {
   it("marks a genuine refusal as resolved, so the denier can act on it", () => {
     mockWorkspaceMembers.value = [OWNER, PLAIN];
     const { result } = renderHook(() =>
-      useProjectPermissions([{ userId: "user-2", role: "viewer" }]),
+      useProjectPermissions([{ userId: "user-2", role: "viewer" }])
     );
 
     expect(result.current.isProjectAdmin).toBe(false);
@@ -291,7 +287,7 @@ describe("useWorkspacePermissions — canCreateProject", () => {
     mockWorkspacePolicy.value = { allowMemberProjectCreation: false };
 
     const { result } = renderHook(() =>
-      useProjectPermissions([{ userId: "user-2", role: "admin" }]),
+      useProjectPermissions([{ userId: "user-2", role: "admin" }])
     );
 
     // `ProjectPermissions` extends `WorkspacePermissions`, and the Projects

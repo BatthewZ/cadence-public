@@ -37,13 +37,14 @@ export function TaskGroupFilter({
     const q = search.trim().toLowerCase();
     const filtered = q
       ? groups.filter(
-          (g) =>
-            g.name.toLowerCase().includes(q) ||
-            g.projectName.toLowerCase().includes(q),
+          (g) => g.name.toLowerCase().includes(q) || g.projectName.toLowerCase().includes(q)
         )
       : groups;
 
-    const byProject = new Map<string, { projectId: string; projectName: string; groups: WorkspaceTaskGroup[] }>();
+    const byProject = new Map<
+      string,
+      { projectId: string; projectName: string; groups: WorkspaceTaskGroup[] }
+    >();
     for (const g of filtered) {
       const entry = byProject.get(g.projectId) ?? {
         projectId: g.projectId,
@@ -57,9 +58,7 @@ export function TaskGroupFilter({
   }, [groups, search]);
 
   function toggle(id: string) {
-    const next = selected.includes(id)
-      ? selected.filter((g) => g !== id)
-      : [...selected, id];
+    const next = selected.includes(id) ? selected.filter((g) => g !== id) : [...selected, id];
     onChange(next);
   }
 
@@ -70,9 +69,7 @@ export function TaskGroupFilter({
           type="button"
           disabled={!projectsSelected}
           className={`task-filter-bar__trigger ${isActive ? "task-filter-bar__trigger--active" : ""}`}
-          title={
-            projectsSelected ? undefined : "Select one or more projects first"
-          }
+          title={projectsSelected ? undefined : "Select one or more projects first"}
         >
           <Columns3 size={14} />
           Column
@@ -98,26 +95,22 @@ export function TaskGroupFilter({
         )}
         <div className="task-filter-bar__popover-list">
           {loading ? (
-            <Text variant="body-3" color="muted">Loading…</Text>
+            <Text variant="body-3" color="muted">
+              Loading…
+            </Text>
           ) : grouped.length === 0 ? (
-            <Text variant="body-3" color="muted">No columns found</Text>
+            <Text variant="body-3" color="muted">
+              No columns found
+            </Text>
           ) : (
             grouped.map((section) => (
               <Fragment key={section.projectId}>
-                <Text
-                  variant="body-3"
-                  color="muted"
-                  weight="semibold"
-                  className="mt-1 px-2"
-                >
+                <Text variant="body-3" color="muted" weight="semibold" className="mt-1 px-2">
                   {section.projectName}
                 </Text>
                 {section.groups.map((g) => (
                   <label key={g.id} className="task-filter-bar__option">
-                    <Checkbox
-                      checked={selected.includes(g.id)}
-                      onChange={() => toggle(g.id)}
-                    />
+                    <Checkbox checked={selected.includes(g.id)} onChange={() => toggle(g.id)} />
                     <span className="truncate">{g.name}</span>
                   </label>
                 ))}

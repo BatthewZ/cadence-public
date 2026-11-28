@@ -8,7 +8,7 @@ describe("MasonryGrid", () => {
     const { container } = render(
       <MasonryGrid animate={false}>
         <MasonryGrid.Item>A</MasonryGrid.Item>
-      </MasonryGrid>,
+      </MasonryGrid>
     );
     expect(container.querySelector(".masonry-grid")).toBeInTheDocument();
   });
@@ -19,7 +19,7 @@ describe("MasonryGrid", () => {
         <MasonryGrid.Item>Item 1</MasonryGrid.Item>
         <MasonryGrid.Item>Item 2</MasonryGrid.Item>
         <MasonryGrid.Item>Item 3</MasonryGrid.Item>
-      </MasonryGrid>,
+      </MasonryGrid>
     );
     expect(screen.getByText("Item 1")).toBeInTheDocument();
     expect(screen.getByText("Item 2")).toBeInTheDocument();
@@ -30,7 +30,7 @@ describe("MasonryGrid", () => {
     const { container } = render(
       <MasonryGrid columns={{ sm: 2, md: 3, lg: 4 }} animate={false}>
         <MasonryGrid.Item>A</MasonryGrid.Item>
-      </MasonryGrid>,
+      </MasonryGrid>
     );
     const grid = container.querySelector(".masonry-grid");
     expect(grid?.className).toContain("masonry-grid--sm-2");
@@ -42,7 +42,7 @@ describe("MasonryGrid", () => {
     const { container } = render(
       <MasonryGrid columns={3} animate={false}>
         <MasonryGrid.Item>A</MasonryGrid.Item>
-      </MasonryGrid>,
+      </MasonryGrid>
     );
     const grid = container.querySelector(".masonry-grid");
     expect(grid?.className).toContain("masonry-grid--base-3");
@@ -52,7 +52,7 @@ describe("MasonryGrid", () => {
     const { container } = render(
       <MasonryGrid gap="1.5rem" animate={false}>
         <MasonryGrid.Item>A</MasonryGrid.Item>
-      </MasonryGrid>,
+      </MasonryGrid>
     );
     const grid = container.querySelector(".masonry-grid") as HTMLElement;
     expect(grid.style.getPropertyValue("--masonry-gap")).toBe("1.5rem");
@@ -62,7 +62,7 @@ describe("MasonryGrid", () => {
     const { container } = render(
       <MasonryGrid animate={false}>
         <MasonryGrid.Item>A</MasonryGrid.Item>
-      </MasonryGrid>,
+      </MasonryGrid>
     );
     const grid = container.querySelector(".masonry-grid") as HTMLElement;
     expect(grid.style.getPropertyValue("--masonry-gap")).toBe("");
@@ -72,7 +72,7 @@ describe("MasonryGrid", () => {
     const { container } = render(
       <MasonryGrid animate={false}>
         <MasonryGrid.Item>A</MasonryGrid.Item>
-      </MasonryGrid>,
+      </MasonryGrid>
     );
     expect(container.querySelector(".masonry-grid__item")).toBeInTheDocument();
   });
@@ -81,7 +81,7 @@ describe("MasonryGrid", () => {
     const { container } = render(
       <MasonryGrid className="custom-grid" animate={false}>
         <MasonryGrid.Item>A</MasonryGrid.Item>
-      </MasonryGrid>,
+      </MasonryGrid>
     );
     const grid = container.querySelector(".masonry-grid");
     expect(grid?.className).toContain("custom-grid");
@@ -91,7 +91,7 @@ describe("MasonryGrid", () => {
     const { container } = render(
       <MasonryGrid animate={false}>
         <MasonryGrid.Item className="item-extra">A</MasonryGrid.Item>
-      </MasonryGrid>,
+      </MasonryGrid>
     );
     const item = container.querySelector(".masonry-grid__item");
     expect(item?.className).toContain("item-extra");

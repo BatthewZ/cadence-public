@@ -25,7 +25,7 @@ function renderDialog(props: { open?: boolean; onClose?: () => void; className?:
       <Dialog open={open} onClose={onClose} {...rest}>
         <h2>Dialog Title</h2>
         <p>Dialog description text</p>
-      </Dialog>,
+      </Dialog>
     ),
   };
 }
@@ -78,7 +78,7 @@ describe("Dialog", () => {
     const { rerender } = render(
       <Dialog open={false} onClose={onClose}>
         <p>Content</p>
-      </Dialog>,
+      </Dialog>
     );
 
     const dialog = screen.getByRole("dialog", { hidden: true });
@@ -87,7 +87,7 @@ describe("Dialog", () => {
     rerender(
       <Dialog open={true} onClose={onClose}>
         <p>Content</p>
-      </Dialog>,
+      </Dialog>
     );
 
     expect(dialog).toHaveAttribute("open");
@@ -95,7 +95,7 @@ describe("Dialog", () => {
     rerender(
       <Dialog open={false} onClose={onClose}>
         <p>Content</p>
-      </Dialog>,
+      </Dialog>
     );
 
     expect(dialog).not.toHaveAttribute("open");
@@ -107,7 +107,7 @@ describe("Dialog", () => {
         <h2>My Title</h2>
         <p>Some description</p>
         <button>Close</button>
-      </Dialog>,
+      </Dialog>
     );
 
     expect(screen.getByRole("heading", { name: "My Title" })).toBeInTheDocument();

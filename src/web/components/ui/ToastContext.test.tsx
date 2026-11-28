@@ -1,6 +1,6 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach,describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DISMISS_ANIMATION_MS, ToastProvider, useToast } from "./ToastContext";
 
@@ -18,20 +18,10 @@ function TestHarness() {
       >
         Add toast
       </button>
-      <button
-        onClick={() =>
-          toast("Success toast", { variant: "success", title: "Done" })
-        }
-      >
+      <button onClick={() => toast("Success toast", { variant: "success", title: "Done" })}>
         Add success toast
       </button>
-      <button
-        onClick={() =>
-          toast("Short toast", { duration: 1000 })
-        }
-      >
-        Add short toast
-      </button>
+      <button onClick={() => toast("Short toast", { duration: 1000 })}>Add short toast</button>
       <button
         onClick={() => {
           const id = document.body.dataset.lastToastId;
@@ -48,7 +38,7 @@ function renderWithProvider() {
   return render(
     <ToastProvider>
       <TestHarness />
-    </ToastProvider>,
+    </ToastProvider>
   );
 }
 

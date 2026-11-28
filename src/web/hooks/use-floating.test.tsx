@@ -58,9 +58,7 @@ describe("useFloating", () => {
   it("passes open and onOpenChange to floating-ui", () => {
     const onOpenChange = vi.fn();
 
-    const { result } = renderHook(() =>
-      useFloating({ open: true, onOpenChange }),
-    );
+    const { result } = renderHook(() => useFloating({ open: true, onOpenChange }));
 
     expect(result.current.context).toBeDefined();
     expect(result.current.context.open).toBe(true);

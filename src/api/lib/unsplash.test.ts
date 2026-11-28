@@ -37,8 +37,7 @@ const rawPhoto: RawUnsplashPhoto = {
     self: "https://api.unsplash.com/photos/abc123",
     html: "https://unsplash.com/photos/abc123",
     download: "https://unsplash.com/photos/abc123/download",
-    download_location:
-      "https://api.unsplash.com/photos/abc123/download?ixid=XXX",
+    download_location: "https://api.unsplash.com/photos/abc123/download?ixid=XXX",
   },
   user: {
     username: "janesmith",
@@ -56,10 +55,7 @@ describe("appendUtm", () => {
   });
 
   it("appends UTM params using `&` when the URL already has a query string", () => {
-    const result = appendUtm(
-      "https://unsplash.com/photos/abc?ixid=deadbeef",
-      "cadence",
-    );
+    const result = appendUtm("https://unsplash.com/photos/abc?ixid=deadbeef", "cadence");
     expect(result).toContain("ixid=deadbeef");
     expect(result).toContain("utm_source=cadence");
     expect(result).toContain("utm_medium=referral");
@@ -88,14 +84,12 @@ describe("toCoverPayload", () => {
     expect(payload.height).toBe(3000);
     expect(payload.photoUrl).toContain("utm_source=cadence");
     expect(payload.photoUrl).toContain("utm_medium=referral");
-    expect(payload.photoUrl.startsWith("https://unsplash.com/photos/abc123?")).toBe(
-      true,
-    );
+    expect(payload.photoUrl.startsWith("https://unsplash.com/photos/abc123?")).toBe(true);
     expect(payload.downloadLocation).toBe(rawPhoto.links.download_location);
     expect(payload.user.name).toBe("Jane Smith");
     expect(payload.user.username).toBe("janesmith");
     expect(payload.user.profileUrl).toBe(
-      "https://unsplash.com/@janesmith?utm_source=cadence&utm_medium=referral",
+      "https://unsplash.com/@janesmith?utm_source=cadence&utm_medium=referral"
     );
   });
 
@@ -175,43 +169,33 @@ describe("UnsplashService.trackDownload", () => {
     expect(service).not.toBeNull();
 
     await expect(
-      service!.trackDownload(
-        "https://api.unsplash.com/photos/abc/download?ixid=xxx",
-      ),
+      service!.trackDownload("https://api.unsplash.com/photos/abc/download?ixid=xxx")
     ).resolves.toBeUndefined();
 
     expect(console.error).toHaveBeenCalled();
   });
 
   it("swallows non-OK responses and does not throw", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValue(new Response("forbidden", { status: 403 }));
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response("forbidden", { status: 403 }));
     const service = createUnsplashService({
       UNSPLASH_ACCESS_KEY: "test-key",
     } as AppBindings);
 
     await expect(
-      service!.trackDownload(
-        "https://api.unsplash.com/photos/abc/download?ixid=xxx",
-      ),
+      service!.trackDownload("https://api.unsplash.com/photos/abc/download?ixid=xxx")
     ).resolves.toBeUndefined();
 
     expect(console.error).toHaveBeenCalled();
   });
 
   it("completes normally on OK response", async () => {
-    globalThis.fetch = vi
-      .fn()
-      .mockResolvedValue(new Response(JSON.stringify({ url: "ok" })));
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ url: "ok" })));
     const service = createUnsplashService({
       UNSPLASH_ACCESS_KEY: "test-key",
     } as AppBindings);
 
     await expect(
-      service!.trackDownload(
-        "https://api.unsplash.com/photos/abc/download?ixid=xxx",
-      ),
+      service!.trackDownload("https://api.unsplash.com/photos/abc/download?ixid=xxx")
     ).resolves.toBeUndefined();
     expect(console.error).not.toHaveBeenCalled();
   });

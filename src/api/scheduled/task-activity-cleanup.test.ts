@@ -110,7 +110,7 @@ describe("cleanupTaskActivity", () => {
       promises.push(
         seedTaskActivity(d1, taskId, TEST_USER.id, {
           createdAt: new Date(base - i * 1000), // spread across seconds
-        }),
+        })
       );
     }
     await Promise.all(promises);
@@ -129,7 +129,7 @@ describe("cleanupTaskActivity", () => {
       promises.push(
         seedTaskActivity(d1, taskId, TEST_USER.id, {
           createdAt: new Date(base - i * 1000),
-        }),
+        })
       );
     }
     // Task 2: 10 records (under cap)
@@ -137,7 +137,7 @@ describe("cleanupTaskActivity", () => {
       promises.push(
         seedTaskActivity(d1, taskId2, TEST_USER.id, {
           createdAt: new Date(base - i * 1000),
-        }),
+        })
       );
     }
     await Promise.all(promises);
@@ -160,7 +160,7 @@ describe("cleanupTaskActivity", () => {
       promises.push(
         seedTaskActivity(d1, taskId, TEST_USER.id, {
           createdAt: daysAgo(91),
-        }),
+        })
       );
     }
     await Promise.all(promises);
@@ -179,14 +179,14 @@ describe("cleanupTaskActivity", () => {
       promises.push(
         seedTaskActivity(d1, taskId, TEST_USER.id, {
           createdAt: daysAgo(91),
-        }),
+        })
       );
     }
     for (let i = 0; i < 400; i++) {
       promises.push(
         seedTaskActivity(d1, taskId, TEST_USER.id, {
           createdAt: new Date(base - i * 1000),
-        }),
+        })
       );
     }
     await Promise.all(promises);

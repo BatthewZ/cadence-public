@@ -18,11 +18,7 @@ interface TeamMember {
   count: number;
 }
 
-export function TeamWorkloadSection({
-  tasksPerMember,
-}: {
-  tasksPerMember: TeamMember[];
-}) {
+export function TeamWorkloadSection({ tasksPerMember }: { tasksPerMember: TeamMember[] }) {
   const sorted = [...tasksPerMember].sort((a, b) => b.count - a.count);
   const maxCount = sorted.length > 0 ? sorted[0].count : 1;
 
@@ -49,11 +45,7 @@ export function TeamWorkloadSection({
                 <Stack key={member.id} gap="r6">
                   <Row justify="between" align="center">
                     <Row gap="r5" align="center">
-                      <Avatar
-                        size="xs"
-                        name={member.name}
-                        src={member.image ?? undefined}
-                      />
+                      <Avatar size="xs" name={member.name} src={member.image ?? undefined} />
                       <Text variant="body-2">{member.name}</Text>
                     </Row>
                     <Text variant="body-3" color="muted">

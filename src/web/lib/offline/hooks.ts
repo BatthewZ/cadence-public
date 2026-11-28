@@ -24,7 +24,10 @@ const OFF: SyncStatus = {
 };
 
 /** Keeps `attach` subscribed to whichever outbox is active, re-attaching each time the runtime changes. */
-function followActiveOutbox(attach: (outbox: Outbox) => () => void, onRuntimeChange?: () => void): () => void {
+function followActiveOutbox(
+  attach: (outbox: Outbox) => () => void,
+  onRuntimeChange?: () => void
+): () => void {
   const attachActive = () => {
     const outbox = activeOutbox();
     return outbox ? attach(outbox) : undefined;

@@ -11,7 +11,7 @@ function renderPopover(props: Record<string, unknown> = {}) {
       <Popover.Content>
         <p>Popover body content</p>
       </Popover.Content>
-    </Popover>,
+    </Popover>
   );
 }
 
@@ -64,7 +64,7 @@ describe("Popover", () => {
 
     expect(screen.getByRole("button", { name: "Toggle popover" })).toHaveAttribute(
       "aria-expanded",
-      "false",
+      "false"
     );
   });
 
@@ -84,7 +84,7 @@ describe("Popover", () => {
 
     expect(screen.getByRole("button", { name: "Toggle popover" })).toHaveAttribute(
       "aria-haspopup",
-      "dialog",
+      "dialog"
     );
   });
 
@@ -95,7 +95,7 @@ describe("Popover", () => {
         <Popover.Content>
           <p>Popover body content</p>
         </Popover.Content>
-      </Popover>,
+      </Popover>
     );
 
     expect(screen.queryByText("Popover body content")).not.toBeInTheDocument();
@@ -106,7 +106,7 @@ describe("Popover", () => {
         <Popover.Content>
           <p>Popover body content</p>
         </Popover.Content>
-      </Popover>,
+      </Popover>
     );
 
     expect(screen.getByText("Popover body content")).toBeInTheDocument();
@@ -122,7 +122,7 @@ describe("Popover", () => {
         <Popover.Content>
           <p>Popover body content</p>
         </Popover.Content>
-      </Popover>,
+      </Popover>
     );
 
     await user.click(screen.getByRole("button", { name: "Toggle popover" }));

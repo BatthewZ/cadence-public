@@ -49,11 +49,7 @@ export function ProfileSection() {
       <Stack gap="r4">
         <Text variant="h5">Profile</Text>
 
-        <AvatarUpload
-          src={session?.user?.image}
-          name={session?.user?.name ?? ""}
-          size="xl"
-        />
+        <AvatarUpload src={session?.user?.image} name={session?.user?.name ?? ""} size="xl" />
 
         <form onSubmit={(e) => void handleSubmit(e)}>
           <Stack gap="r4">

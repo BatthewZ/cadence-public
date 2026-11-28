@@ -16,32 +16,28 @@ import { formatTokenAttribution } from "./activity";
  */
 describe("formatTokenAttribution", () => {
   it("returns '(via <name>)' when both apiTokenId and tokenName are present", () => {
-    expect(
-      formatTokenAttribution({ apiTokenId: "tok_1", tokenName: "Slackbot" }),
-    ).toBe("(via Slackbot)");
+    expect(formatTokenAttribution({ apiTokenId: "tok_1", tokenName: "Slackbot" })).toBe(
+      "(via Slackbot)"
+    );
   });
 
   it("returns '(via deleted token)' when apiTokenId is set but tokenName is null", () => {
-    expect(
-      formatTokenAttribution({ apiTokenId: "tok_1", tokenName: null }),
-    ).toBe("(via deleted token)");
+    expect(formatTokenAttribution({ apiTokenId: "tok_1", tokenName: null })).toBe(
+      "(via deleted token)"
+    );
   });
 
   it("returns '(via deleted token)' when tokenName is empty/whitespace", () => {
-    expect(
-      formatTokenAttribution({ apiTokenId: "tok_1", tokenName: "   " }),
-    ).toBe("(via deleted token)");
+    expect(formatTokenAttribution({ apiTokenId: "tok_1", tokenName: "   " })).toBe(
+      "(via deleted token)"
+    );
   });
 
   it("returns null when apiTokenId is missing (cookie auth)", () => {
-    expect(
-      formatTokenAttribution({ apiTokenId: null, tokenName: null }),
-    ).toBeNull();
+    expect(formatTokenAttribution({ apiTokenId: null, tokenName: null })).toBeNull();
   });
 
   it("returns null when apiTokenId is undefined (cookie auth)", () => {
-    expect(
-      formatTokenAttribution({ tokenName: "Stale" }),
-    ).toBeNull();
+    expect(formatTokenAttribution({ tokenName: "Stale" })).toBeNull();
   });
 });

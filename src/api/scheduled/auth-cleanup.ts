@@ -23,7 +23,7 @@ async function batchDeleteExpired(
   table: SQLiteTable,
   idColumn: SQLiteColumn,
   expiresAtColumn: SQLiteColumn,
-  label: string,
+  label: string
 ): Promise<number> {
   let totalDeleted = 0;
 
@@ -41,14 +41,12 @@ async function batchDeleteExpired(
       if (expiredRows.length === 0) break;
 
       const idsToDelete = expiredRows.map((r) => r.id);
-      await db
-        .delete(table)
-        .where(
-          sql`${idColumn} IN (${sql.join(
-            idsToDelete.map((id) => sql`${id}`),
-            sql`, `,
-          )})`,
-        );
+      await db.delete(table).where(
+        sql`${idColumn} IN (${sql.join(
+          idsToDelete.map((id) => sql`${id}`),
+          sql`, `
+        )})`
+      );
 
       batchDeleted = expiredRows.length;
       totalDeleted += batchDeleted;
@@ -75,19 +73,13 @@ async function batchDeleteExpired(
  * @returns Total number of expired auth records deleted.
  */
 export async function cleanupAuthTables(db: Database): Promise<number> {
-  const sessions = await batchDeleteExpired(
-    db,
-    session,
-    session.id,
-    session.expiresAt,
-    "sessions",
-  );
+  const sessions = await batchDeleteExpired(db, session, session.id, session.expiresAt, "sessions");
   const verifications = await batchDeleteExpired(
     db,
     verification,
     verification.id,
     verification.expiresAt,
-    "verification tokens",
+    "verification tokens"
   );
   return sessions + verifications;
 }

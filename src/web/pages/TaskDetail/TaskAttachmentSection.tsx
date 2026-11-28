@@ -44,7 +44,11 @@ type TaskAttachmentSectionProps = {
 // Main Component
 // ---------------------------------------------------------------------------
 
-export function TaskAttachmentSection({ taskId, projectId, readOnly = false }: TaskAttachmentSectionProps) {
+export function TaskAttachmentSection({
+  taskId,
+  projectId,
+  readOnly = false,
+}: TaskAttachmentSectionProps) {
   const qc = useQueryClient();
   const { toast } = useToast();
   const { attachments, isLoading, isError } = useTaskAttachments(taskId);
@@ -54,19 +58,14 @@ export function TaskAttachmentSection({ taskId, projectId, readOnly = false }: T
   // is also rendered in TaskDetailDialog outside a ProjectProvider.
   const updateAttachmentCount = useCallback(
     (count: number) => {
-      qc.setQueryData<{ tasks: Task[] }>(
-        queryKeys.projects.tasks(projectId),
-        (old) => {
-          if (!old) return old;
-          return {
-            tasks: old.tasks.map((t) =>
-              t.id === taskId ? { ...t, attachmentCount: count } : t,
-            ),
-          };
-        },
-      );
+      qc.setQueryData<{ tasks: Task[] }>(queryKeys.projects.tasks(projectId), (old) => {
+        if (!old) return old;
+        return {
+          tasks: old.tasks.map((t) => (t.id === taskId ? { ...t, attachmentCount: count } : t)),
+        };
+      });
     },
-    [qc, projectId, taskId],
+    [qc, projectId, taskId]
   );
 
   const [deleteTarget, setDeleteTarget] = useState<Attachment | null>(null);
@@ -76,7 +75,7 @@ export function TaskAttachmentSection({ taskId, projectId, readOnly = false }: T
 
   const imageAttachments = useMemo(
     () => attachments.filter((a) => isImageType(a.mimeType) && !a.id.startsWith("optimistic-")),
-    [attachments],
+    [attachments]
   );
 
   // ----- Upload flow -----
@@ -119,7 +118,7 @@ export function TaskAttachmentSection({ taskId, projectId, readOnly = false }: T
           formData.append("file", file);
           const result = await api.post<{ attachment: Attachment }>(
             `/api/tasks/${taskId}/attachments`,
-            formData,
+            formData
           );
 
           // Replace optimistic with server data
@@ -136,7 +135,7 @@ export function TaskAttachmentSection({ taskId, projectId, readOnly = false }: T
         }
       }
     },
-    [attachments.length, taskId, projectId, qc, toast, updateAttachmentCount],
+    [attachments.length, taskId, projectId, qc, toast, updateAttachmentCount]
   );
 
   // ----- Delete flow -----
@@ -169,7 +168,7 @@ export function TaskAttachmentSection({ taskId, projectId, readOnly = false }: T
       const idx = imageAttachments.findIndex((a) => a.id === attachment.id);
       if (idx >= 0) setLightboxIndex(idx);
     },
-    [imageAttachments],
+    [imageAttachments]
   );
 
   // ----- Render -----

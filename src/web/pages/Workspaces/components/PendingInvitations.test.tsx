@@ -5,9 +5,8 @@ import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -43,7 +42,7 @@ function renderPendingInvitations() {
   render(
     <Wrapper>
       <PendingInvitations />
-    </Wrapper>,
+    </Wrapper>
   );
   return { user };
 }

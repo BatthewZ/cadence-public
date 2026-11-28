@@ -18,11 +18,7 @@ import type { AppEnv } from "../../env";
 import { errorResponse, throwWithContext } from "../../lib/error-response";
 import { requireParam, requireParams } from "../../lib/params";
 import { validJson } from "../../lib/validated";
-import {
-  buildMemberEventData,
-  fireWebhookEvent,
-  resolveUser,
-} from "../../lib/webhook-payloads";
+import { buildMemberEventData, fireWebhookEvent, resolveUser } from "../../lib/webhook-payloads";
 import { mayGrantAdmin, outranks } from "../../lib/workspace-roles";
 import {
   enforceTokenWorkspaceWideAccess,
@@ -61,10 +57,7 @@ export async function createWorkspace(c: Context<AppEnv>) {
       }),
     ] as const);
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message.toLowerCase().includes("unique")
-    ) {
+    if (error instanceof Error && error.message.toLowerCase().includes("unique")) {
       return errorResponse(c, DUPLICATE_SLUG_ERROR, 409);
     }
     throwWithContext(error, "createWorkspace");
@@ -123,7 +116,7 @@ export async function listWorkspaces(c: Context<AppEnv>) {
       })
       .from(workspaceMember)
       .where(
-        sql`${workspaceMember.workspaceId} IN (SELECT ${workspaceMember.workspaceId} FROM ${workspaceMember} WHERE ${workspaceMember.userId} = ${user.id})`,
+        sql`${workspaceMember.workspaceId} IN (SELECT ${workspaceMember.workspaceId} FROM ${workspaceMember} WHERE ${workspaceMember.userId} = ${user.id})`
       )
       .groupBy(workspaceMember.workspaceId),
   ] as const);
@@ -132,9 +125,7 @@ export async function listWorkspaces(c: Context<AppEnv>) {
     return c.json({ workspaces: [] });
   }
 
-  const memberCountMap = new Map(
-    memberCounts.map((mc) => [mc.workspaceId, mc.count]),
-  );
+  const memberCountMap = new Map(memberCounts.map((mc) => [mc.workspaceId, mc.count]));
 
   const workspaces = results.map((r) => ({
     ...r,
@@ -150,11 +141,7 @@ export async function getWorkspace(c: Context<AppEnv>) {
 
   // Batch workspace fetch + member count in a single DB round-trip
   const [workspaceResult, memberCountResult] = await db.batch([
-    db
-      .select()
-      .from(workspace)
-      .where(eq(workspace.id, workspaceId))
-      .limit(1),
+    db.select().from(workspace).where(eq(workspace.id, workspaceId)).limit(1),
     db
       .select({ count: count() })
       .from(workspaceMember)
@@ -222,10 +209,7 @@ export async function updateWorkspace(c: Context<AppEnv>) {
       .returning();
     updated = row;
   } catch (error) {
-    if (
-      error instanceof Error &&
-      error.message.toLowerCase().includes("unique")
-    ) {
+    if (error instanceof Error && error.message.toLowerCase().includes("unique")) {
       return errorResponse(c, DUPLICATE_SLUG_ERROR, 409);
     }
     throwWithContext(error, "updateWorkspace");
@@ -338,7 +322,7 @@ async function loadActorAndTarget(
   db: Database,
   workspaceId: string,
   actorUserId: string,
-  targetUserId: string,
+  targetUserId: string
 ): Promise<{
   actor: { userId: string; role: WorkspaceRole } | undefined;
   target: { userId: string; role: WorkspaceRole } | undefined;
@@ -349,8 +333,8 @@ async function loadActorAndTarget(
     .where(
       and(
         eq(workspaceMember.workspaceId, workspaceId),
-        inArray(workspaceMember.userId, [actorUserId, targetUserId]),
-      ),
+        inArray(workspaceMember.userId, [actorUserId, targetUserId])
+      )
     );
 
   return {
@@ -365,12 +349,7 @@ export async function updateMemberRole(c: Context<AppEnv>) {
   const { role } = validJson(c, updateMemberRoleSchema);
   const actingUser = c.get("user")!;
 
-  const { actor, target } = await loadActorAndTarget(
-    db,
-    workspaceId,
-    actingUser.id,
-    targetUserId,
-  );
+  const { actor, target } = await loadActorAndTarget(db, workspaceId, actingUser.id, targetUserId);
 
   // Fail closed FIRST, before any branch that could describe the target. A
   // caller with no membership row must learn nothing about this workspace's
@@ -399,7 +378,7 @@ export async function updateMemberRole(c: Context<AppEnv>) {
       target.role === "admin"
         ? "Only the workspace owner can change an admin's role"
         : "You do not have permission to change this member's role",
-      403,
+      403
     );
   }
 
@@ -418,11 +397,7 @@ export async function updateMemberRole(c: Context<AppEnv>) {
   // may not touch an admin at all. Checked here, every caller is told the rule
   // that is really stopping them.
   if (role === "admin" && !mayGrantAdmin(actor)) {
-    return errorResponse(
-      c,
-      "Only the workspace owner can grant the admin role",
-      403,
-    );
+    return errorResponse(c, "Only the workspace owner can grant the admin role", 403);
   }
 
   const oldRole = target.role;
@@ -440,8 +415,8 @@ export async function updateMemberRole(c: Context<AppEnv>) {
       and(
         eq(workspaceMember.workspaceId, workspaceId),
         eq(workspaceMember.userId, targetUserId),
-        eq(workspaceMember.role, oldRole),
-      ),
+        eq(workspaceMember.role, oldRole)
+      )
     )
     .returning();
 
@@ -449,14 +424,18 @@ export async function updateMemberRole(c: Context<AppEnv>) {
     return errorResponse(
       c,
       "This member's role changed while you were editing. Please retry.",
-      409,
+      409
     );
   }
 
   // Non-blocking webhook dispatch for workspace.member_role_changed
   const roleChangedUser = await resolveUser(db, targetUserId);
   fireWebhookEvent(db, () => c.executionCtx, { workspaceId, actorId: actingUser.id }, [
-    { event: "workspace.member_role_changed", data: buildMemberEventData({ userId: targetUserId, workspaceId }, role, roleChangedUser), changes: { role: { from: oldRole, to: role } } },
+    {
+      event: "workspace.member_role_changed",
+      data: buildMemberEventData({ userId: targetUserId, workspaceId }, role, roleChangedUser),
+      changes: { role: { from: oldRole, to: role } },
+    },
   ]);
 
   return c.json({ member: updated });
@@ -513,12 +492,7 @@ export async function removeMember(c: Context<AppEnv>) {
   const denied = enforceTokenWorkspaceWideAccess(c);
   if (denied) return denied;
 
-  const { actor, target } = await loadActorAndTarget(
-    db,
-    workspaceId,
-    currentUser.id,
-    targetUserId,
-  );
+  const { actor, target } = await loadActorAndTarget(db, workspaceId, currentUser.id, targetUserId);
 
   // Fail closed FIRST — a caller with no membership row must learn nothing
   // about this workspace's roster, not even which account owns it. See the
@@ -553,7 +527,7 @@ export async function removeMember(c: Context<AppEnv>) {
       target.role === "admin"
         ? "Only the workspace owner can remove an admin"
         : "You do not have permission to remove this member",
-      403,
+      403
     );
   }
 
@@ -595,9 +569,9 @@ export async function removeMember(c: Context<AppEnv>) {
         and(
           eq(workspaceMember.workspaceId, workspaceId),
           eq(workspaceMember.userId, targetUserId),
-          eq(workspaceMember.role, target.role),
-        ),
-      ),
+          eq(workspaceMember.role, target.role)
+        )
+      )
   );
 
   const [, , removedRows] = await db.batch([
@@ -607,8 +581,8 @@ export async function removeMember(c: Context<AppEnv>) {
         and(
           eq(projectMember.userId, targetUserId),
           inArray(projectMember.projectId, workspaceProjectIds),
-          roleUnchanged,
-        ),
+          roleUnchanged
+        )
       ),
     db
       .delete(teamMember)
@@ -616,8 +590,8 @@ export async function removeMember(c: Context<AppEnv>) {
         and(
           eq(teamMember.userId, targetUserId),
           inArray(teamMember.teamId, workspaceTeamIds),
-          roleUnchanged,
-        ),
+          roleUnchanged
+        )
       ),
     db
       .delete(workspaceMember)
@@ -625,8 +599,8 @@ export async function removeMember(c: Context<AppEnv>) {
         and(
           eq(workspaceMember.workspaceId, workspaceId),
           eq(workspaceMember.userId, targetUserId),
-          eq(workspaceMember.role, target.role),
-        ),
+          eq(workspaceMember.role, target.role)
+        )
       )
       .returning({ id: workspaceMember.id }),
   ] as const);
@@ -638,14 +612,17 @@ export async function removeMember(c: Context<AppEnv>) {
     return errorResponse(
       c,
       "This member's role changed while you were removing them. Please retry.",
-      409,
+      409
     );
   }
 
   // Non-blocking webhook dispatch for workspace.member_removed
   const removedUser = await resolveUser(db, targetUserId);
   fireWebhookEvent(db, () => c.executionCtx, { workspaceId, actorId: currentUser.id }, [
-    { event: "workspace.member_removed", data: buildMemberEventData({ userId: targetUserId, workspaceId }, target.role, removedUser) },
+    {
+      event: "workspace.member_removed",
+      data: buildMemberEventData({ userId: targetUserId, workspaceId }, target.role, removedUser),
+    },
   ]);
 
   return c.json({ ok: true });

@@ -72,11 +72,7 @@ interface UploadCoverOptions {
    * Both fields are always supplied; callers MUST write them as-is to preserve
    * the XOR invariant documented at the top of this file.
    */
-  setEntityCover: (
-    db: Database,
-    cover: CoverSourceUpdate,
-    updatedAt: Date,
-  ) => Promise<void>;
+  setEntityCover: (db: Database, cover: CoverSourceUpdate, updatedAt: Date) => Promise<void>;
 }
 
 interface DeleteCoverOptions {
@@ -88,11 +84,7 @@ interface DeleteCoverOptions {
    * Persist both cover-source fields on the entity (always null for a delete).
    * See XOR invariant at the top of this file.
    */
-  setEntityCover: (
-    db: Database,
-    cover: CoverSourceUpdate,
-    updatedAt: Date,
-  ) => Promise<void>;
+  setEntityCover: (db: Database, cover: CoverSourceUpdate, updatedAt: Date) => Promise<void>;
   /** Label used in log messages, e.g. "project" or "task" */
   entityLabel: string;
 }
@@ -106,11 +98,7 @@ interface ApplyUnsplashCoverOptions {
    * Persist both cover-source fields on the entity.
    * See XOR invariant at the top of this file.
    */
-  setEntityCover: (
-    db: Database,
-    cover: CoverSourceUpdate,
-    updatedAt: Date,
-  ) => Promise<void>;
+  setEntityCover: (db: Database, cover: CoverSourceUpdate, updatedAt: Date) => Promise<void>;
 }
 
 /**
@@ -199,16 +187,28 @@ export async function handleUploadCover(c: Context<AppEnv>, opts: UploadCoverOpt
     await opts.setEntityCover(db, { coverImageKey: key, coverUnsplash: null }, now);
   } catch (error) {
     // Clean up orphaned R2 object and any partially-inserted upload record
-    await deleteObject(storage, key).catch((err) => console.error(`Failed to clean up orphaned R2 object for ${opts.purpose}:`, err));
-    await db.delete(upload).where(eq(upload.id, id)).catch((err) => console.error(`Failed to clean up orphaned upload record for ${opts.purpose}:`, err));
+    await deleteObject(storage, key).catch((err) =>
+      console.error(`Failed to clean up orphaned R2 object for ${opts.purpose}:`, err)
+    );
+    await db
+      .delete(upload)
+      .where(eq(upload.id, id))
+      .catch((err) =>
+        console.error(`Failed to clean up orphaned upload record for ${opts.purpose}:`, err)
+      );
     console.error(`Failed to save ${opts.purpose} upload record:`, error);
     return errorResponse(c, "Failed to save upload", 500);
   }
 
   // Clean up old cover AFTER new one is fully saved
   if (oldUploadRecord) {
-    await deleteObject(storage, oldUploadRecord.key).catch((err) => console.error(`Failed to delete old ${opts.purpose} R2 object:`, err));
-    await db.delete(upload).where(eq(upload.id, oldUploadRecord.id)).catch((err) => console.error(`Failed to delete old ${opts.purpose} upload record:`, err));
+    await deleteObject(storage, oldUploadRecord.key).catch((err) =>
+      console.error(`Failed to delete old ${opts.purpose} R2 object:`, err)
+    );
+    await db
+      .delete(upload)
+      .where(eq(upload.id, oldUploadRecord.id))
+      .catch((err) => console.error(`Failed to delete old ${opts.purpose} upload record:`, err));
   }
 
   return c.json({
@@ -241,7 +241,7 @@ export async function handleUploadCover(c: Context<AppEnv>, opts: UploadCoverOpt
  */
 export async function handleApplyUnsplashCover(
   c: Context<AppEnv>,
-  opts: ApplyUnsplashCoverOptions,
+  opts: ApplyUnsplashCoverOptions
 ) {
   const storage = c.env.STORAGE;
   // We only hard-require STORAGE when there's an R2 artifact to clean up.
@@ -280,11 +280,7 @@ export async function handleApplyUnsplashCover(
   // Atomic DB write — flip both columns together to preserve the XOR invariant.
   const now = new Date();
   try {
-    await opts.setEntityCover(
-      db,
-      { coverImageKey: null, coverUnsplash: payload },
-      now,
-    );
+    await opts.setEntityCover(db, { coverImageKey: null, coverUnsplash: payload }, now);
   } catch (error) {
     console.error(`Failed to apply Unsplash cover for ${opts.purpose}:`, error);
     return errorResponse(c, "Failed to apply cover", 500);
@@ -294,14 +290,12 @@ export async function handleApplyUnsplashCover(
   // but non-fatal — the entity already points at the new Unsplash payload.
   if (oldUploadRecord && storage) {
     await deleteObject(storage, oldUploadRecord.key).catch((err) =>
-      console.error(`Failed to delete old ${opts.purpose} R2 object:`, err),
+      console.error(`Failed to delete old ${opts.purpose} R2 object:`, err)
     );
     await db
       .delete(upload)
       .where(eq(upload.id, oldUploadRecord.id))
-      .catch((err) =>
-        console.error(`Failed to delete old ${opts.purpose} upload record:`, err),
-      );
+      .catch((err) => console.error(`Failed to delete old ${opts.purpose} upload record:`, err));
   }
 
   // Fire the download-tracking GET outside the request lifecycle via
@@ -347,11 +341,7 @@ export async function handleDeleteCover(c: Context<AppEnv>, opts: DeleteCoverOpt
 
   // Clear both cover columns on the entity first (authoritative write).
   const now = new Date();
-  await opts.setEntityCover(
-    db,
-    { coverImageKey: null, coverUnsplash: null },
-    now,
-  );
+  await opts.setEntityCover(db, { coverImageKey: null, coverUnsplash: null }, now);
 
   // Delete the R2 object + upload record if a local upload existed. If only
   // an Unsplash cover was set there's nothing else to clean up.

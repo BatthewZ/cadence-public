@@ -80,8 +80,7 @@ export default function ProjectCalendar() {
   const { filteredTasks } = useTaskFilters(tasks);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const month =
-    parseMonthParam(searchParams.get("month")) ?? currentMonthParts();
+  const month = parseMonthParam(searchParams.get("month")) ?? currentMonthParts();
 
   /**
    * Step the visible month by `delta`. The anchor month is re-read from the
@@ -95,27 +94,23 @@ export default function ProjectCalendar() {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
-          const anchor =
-            parseMonthParam(next.get("month")) ?? currentMonthParts();
+          const anchor = parseMonthParam(next.get("month")) ?? currentMonthParts();
           // Anchored on day 1, so addMonths' day-clamping never engages and
           // repeated stepping lands on every month exactly once.
-          const moved = addMonths(
-            new Date(anchor.year, anchor.monthIndex, 1),
-            delta,
-          );
+          const moved = addMonths(new Date(anchor.year, anchor.monthIndex, 1), delta);
           next.set(
             "month",
             formatMonthParam({
               year: moved.getFullYear(),
               monthIndex: moved.getMonth(),
-            }),
+            })
           );
           return next;
         },
-        { replace: true },
+        { replace: true }
       );
     },
-    [setSearchParams],
+    [setSearchParams]
   );
 
   /** "Today" deletes `month` (absent param = current month) — see URL contract. */
@@ -126,7 +121,7 @@ export default function ProjectCalendar() {
         next.delete("month");
         return next;
       },
-      { replace: true },
+      { replace: true }
     );
   }, [setSearchParams]);
 
@@ -143,31 +138,26 @@ export default function ProjectCalendar() {
           next.set("task", task.id);
           return next;
         },
-        { replace: false },
+        { replace: false }
       );
     },
-    [setSearchParams],
+    [setSearchParams]
   );
 
   const weeks = useMemo(
     () => buildMonthGrid(month.year, month.monthIndex),
-    [month.year, month.monthIndex],
+    [month.year, month.monthIndex]
   );
 
   // `Task` structurally satisfies `CalendarTask`, and `placeTasks` returns
   // the same object references, so no adapter layer is needed (single source
   // of truth — clicking a segment hands back the full task).
-  const layouts = useMemo(
-    () => placeTasks(weeks, filteredTasks),
-    [weeks, filteredTasks],
-  );
+  const layouts = useMemo(() => placeTasks(weeks, filteredTasks), [weeks, filteredTasks]);
 
   // Tint span bars with their task group's color so the calendar speaks the
   // same color language as the board columns.
   const colorByTaskId = useMemo(() => {
-    const colorByGroupId = new Map(
-      taskGroups.map((group) => [group.id, group.color]),
-    );
+    const colorByGroupId = new Map(taskGroups.map((group) => [group.id, group.color]));
     const map = new Map<string, string>();
     for (const task of filteredTasks) {
       const color = colorByGroupId.get(task.taskGroupId);
@@ -185,19 +175,13 @@ export default function ProjectCalendar() {
   }
 
   if (tasksError) {
-    return (
-      <QueryErrorRetry
-        message="Failed to load calendar data."
-        onRetry={refetchTasks}
-      />
-    );
+    return <QueryErrorRetry message="Failed to load calendar data." onRetry={refetchTasks} />;
   }
 
-  const monthLabel = new Date(
-    month.year,
-    month.monthIndex,
-    1,
-  ).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const monthLabel = new Date(month.year, month.monthIndex, 1).toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <Stack gap="r3">
@@ -207,19 +191,13 @@ export default function ProjectCalendar() {
           <Button variant="ghost" size="sm" onClick={handleToday}>
             Today
           </Button>
-          <IconButton
-            aria-label="Previous month"
-            onClick={() => handleMonthStep(-1)}
-          >
+          <IconButton aria-label="Previous month" onClick={() => handleMonthStep(-1)}>
             <ChevronLeft size={16} />
           </IconButton>
           <Text variant="h5" className="min-w-[9rem] text-center">
             {monthLabel}
           </Text>
-          <IconButton
-            aria-label="Next month"
-            onClick={() => handleMonthStep(1)}
-          >
+          <IconButton aria-label="Next month" onClick={() => handleMonthStep(1)}>
             <ChevronRight size={16} />
           </IconButton>
         </Row>

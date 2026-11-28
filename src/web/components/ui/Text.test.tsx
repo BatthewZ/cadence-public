@@ -98,7 +98,11 @@ describe("Text", () => {
   });
 
   it("passes through additional HTML attributes", () => {
-    render(<Text data-testid="custom-text" id="my-text">Attrs</Text>);
+    render(
+      <Text data-testid="custom-text" id="my-text">
+        Attrs
+      </Text>
+    );
     const el = screen.getByTestId("custom-text");
     expect(el.id).toBe("my-text");
   });

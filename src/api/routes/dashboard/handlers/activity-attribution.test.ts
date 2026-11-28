@@ -135,7 +135,7 @@ function projectApp() {
     fakeAuth(d1, TEST_USER, {
       projectAccess: { role: "admin", source: "workspace" },
       currentProject: { id: PROJECT_ID, workspaceId: WORKSPACE_ID },
-    }),
+    })
   );
   app.get("/projects/:projectId/activity", projectActivity);
   return app;
@@ -147,12 +147,12 @@ function workspaceApp() {
     "/*",
     fakeAuth(d1, TEST_USER, {
       workspaceMembership: { id: "wm-attr", role: "owner" },
-    }),
+    })
   );
   app.get(
     "/workspaces/:workspaceId/activity",
     validateQuery(workspaceActivityQuerySchema),
-    workspaceActivity,
+    workspaceActivity
   );
   return app;
 }

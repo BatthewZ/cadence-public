@@ -164,7 +164,7 @@ function patchApp(user: TestUserFixture) {
     "/comments/:commentId",
     fakeAuth(d1, user),
     validateBody(updateCommentSchema),
-    updateComment,
+    updateComment
   );
   return app;
 }
@@ -268,7 +268,7 @@ describe("deleteComment authorization", () => {
     // stale project row was enough to delete before the fix.
     const { taskId, commentId } = await seedTaskWithComment(
       EX_WORKSPACE_USER.id,
-      "ex-workspace author",
+      "ex-workspace author"
     );
     const updatedAtBefore = await readTaskUpdatedAt(taskId);
 
@@ -290,7 +290,7 @@ describe("deleteComment authorization", () => {
     // longer entitled to this project.
     const { taskId, commentId } = await seedTaskWithComment(
       EX_PROJECT_USER.id,
-      "ex-project author",
+      "ex-project author"
     );
     const updatedAtBefore = await readTaskUpdatedAt(taskId);
 
@@ -356,7 +356,7 @@ describe("deleteComment PAT workspace binding", () => {
 
     const res = await deleteAppWithToken(TEST_USER, pat({ workspaceId })).request(
       `/comments/${commentId}`,
-      { method: "DELETE" },
+      { method: "DELETE" }
     );
 
     expect(res.status).toBe(200);
@@ -369,7 +369,7 @@ describe("deleteComment PAT workspace binding", () => {
 
     const res = await deleteAppWithToken(
       TEST_USER,
-      pat({ workspaceId: "some-other-workspace-id" }),
+      pat({ workspaceId: "some-other-workspace-id" })
     ).request(`/comments/${commentId}`, { method: "DELETE" });
 
     expect(res.status).toBe(403);
@@ -388,7 +388,7 @@ describe("updateComment authorization", () => {
     // cannot drift apart again from the other direction.
     const { taskId, commentId } = await seedTaskWithComment(
       EX_WORKSPACE_USER.id,
-      "ex-workspace author patch",
+      "ex-workspace author patch"
     );
     const updatedAtBefore = await readTaskUpdatedAt(taskId);
 
@@ -399,7 +399,7 @@ describe("updateComment authorization", () => {
 
     const res = await patchApp(EX_WORKSPACE_USER).request(
       `/comments/${commentId}`,
-      jsonRequest("PATCH", `/comments/${commentId}`, { body: "hijacked" }),
+      jsonRequest("PATCH", `/comments/${commentId}`, { body: "hijacked" })
     );
 
     expect(res.status).toBe(403);
@@ -410,7 +410,7 @@ describe("updateComment authorization", () => {
   it("denies an author who has been removed from the project", async () => {
     const { taskId, commentId } = await seedTaskWithComment(
       EX_PROJECT_USER.id,
-      "ex-project author patch",
+      "ex-project author patch"
     );
     const updatedAtBefore = await readTaskUpdatedAt(taskId);
 
@@ -418,7 +418,7 @@ describe("updateComment authorization", () => {
 
     const res = await patchApp(EX_PROJECT_USER).request(
       `/comments/${commentId}`,
-      jsonRequest("PATCH", `/comments/${commentId}`, { body: "hijacked" }),
+      jsonRequest("PATCH", `/comments/${commentId}`, { body: "hijacked" })
     );
 
     expect(res.status).toBe(403);

@@ -35,28 +35,19 @@ function toSec(d: Date): number {
   return Math.floor(d.getTime() / 1000);
 }
 
-async function insertVerification(
-  opts: {
-    identifier: string;
-    value: string;
-    createdAt: Date;
-    expiresAt: Date;
-  },
-) {
+async function insertVerification(opts: {
+  identifier: string;
+  value: string;
+  createdAt: Date;
+  expiresAt: Date;
+}) {
   const id = crypto.randomUUID();
   const now = new Date();
   await d1
     .prepare(
-      "INSERT INTO verification (id, identifier, value, expiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO verification (id, identifier, value, expiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
     )
-    .bind(
-      id,
-      opts.identifier,
-      opts.value,
-      toSec(opts.expiresAt),
-      toSec(opts.createdAt),
-      toSec(now),
-    )
+    .bind(id, opts.identifier, opts.value, toSec(opts.expiresAt), toSec(opts.createdAt), toSec(now))
     .run();
   return id;
 }

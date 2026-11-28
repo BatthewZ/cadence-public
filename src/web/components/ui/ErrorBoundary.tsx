@@ -29,7 +29,10 @@ interface State {
 }
 
 export class ErrorBoundary extends Component<Props, State> {
-  private hmrHot?: { on: (event: string, cb: () => void) => void; off: (event: string, cb: () => void) => void };
+  private hmrHot?: {
+    on: (event: string, cb: () => void) => void;
+    off: (event: string, cb: () => void) => void;
+  };
   private hmrResetHandler?: () => void;
 
   constructor(props: Props) {
@@ -58,9 +61,12 @@ export class ErrorBoundary extends Component<Props, State> {
     // Auto-reset on Vite HMR so transient module-replacement errors
     // don't leave the boundary stuck in the error state.
     const hot = (import.meta as unknown as Record<string, unknown>).hot as
-      | { on: (event: string, cb: () => void) => void; off: (event: string, cb: () => void) => void }
+      | {
+          on: (event: string, cb: () => void) => void;
+          off: (event: string, cb: () => void) => void;
+        }
       | undefined;
-    if (hot && typeof hot.on === 'function' && typeof hot.off === 'function') {
+    if (hot && typeof hot.on === "function" && typeof hot.off === "function") {
       this.hmrResetHandler = () => {
         if (this.state.hasError) {
           this.setState({ hasError: false });

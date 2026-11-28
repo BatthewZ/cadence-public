@@ -27,9 +27,8 @@ export function useNotificationMutations(opts?: {
   infiniteListFilter?: { unreadOnly: boolean };
 }) {
   const qc = useQueryClient();
-  const infiniteKey = opts?.infiniteListFilter != null
-    ? queryKeys.notifications.list(opts.infiniteListFilter)
-    : null;
+  const infiniteKey =
+    opts?.infiniteListFilter != null ? queryKeys.notifications.list(opts.infiniteListFilter) : null;
 
   /** Invalidate all notification caches after the server responds. */
   function invalidateAll() {
@@ -42,8 +41,7 @@ export function useNotificationMutations(opts?: {
   // -----------------------------------------------------------------------
 
   const markReadMutation = useMutation({
-    mutationFn: (id: string) =>
-      api.patch(`/api/notifications/${id}/read`, {}),
+    mutationFn: (id: string) => api.patch(`/api/notifications/${id}/read`, {}),
     onMutate: async (id) => {
       // Capture the current infiniteKey so rollback targets the correct query key
       // even if the user toggles the filter while the mutation is in-flight.
@@ -72,7 +70,11 @@ export function useNotificationMutations(opts?: {
 
       // Update flat list (bell popover)
       qc.setQueryData<FlatListData>(queryKeys.notifications.list(), (old) =>
-        old ? { notifications: old.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)) } : old,
+        old
+          ? {
+              notifications: old.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
+            }
+          : old
       );
 
       // Update infinite list if applicable (full notifications page)
@@ -83,26 +85,31 @@ export function useNotificationMutations(opts?: {
                 ...old,
                 pages: old.pages.map((page) => ({
                   ...page,
-                  notifications: page.notifications.map((n) => (n.id === id ? { ...n, read: true } : n)),
+                  notifications: page.notifications.map((n) =>
+                    n.id === id ? { ...n, read: true } : n
+                  ),
                 })),
               }
-            : old,
+            : old
         );
       }
 
       // Decrement count only when the notification was genuinely unread
       if (!wasAlreadyRead) {
         qc.setQueryData<CountData>(queryKeys.notifications.unreadCount, (old) =>
-          old ? { count: Math.max(0, old.count - 1) } : old,
+          old ? { count: Math.max(0, old.count - 1) } : old
         );
       }
 
       return { previousFlatList, previousCount, previousInfinite, capturedInfiniteKey };
     },
     onError: (_err, _id, context) => {
-      if (context?.previousFlatList) qc.setQueryData(queryKeys.notifications.list(), context.previousFlatList);
-      if (context?.previousCount) qc.setQueryData(queryKeys.notifications.unreadCount, context.previousCount);
-      if (context?.previousInfinite && context.capturedInfiniteKey) qc.setQueryData(context.capturedInfiniteKey, context.previousInfinite);
+      if (context?.previousFlatList)
+        qc.setQueryData(queryKeys.notifications.list(), context.previousFlatList);
+      if (context?.previousCount)
+        qc.setQueryData(queryKeys.notifications.unreadCount, context.previousCount);
+      if (context?.previousInfinite && context.capturedInfiniteKey)
+        qc.setQueryData(context.capturedInfiniteKey, context.previousInfinite);
     },
     onSettled: invalidateAll,
   });
@@ -124,7 +131,7 @@ export function useNotificationMutations(opts?: {
 
       // Update flat list (bell popover)
       qc.setQueryData<FlatListData>(queryKeys.notifications.list(), (old) =>
-        old ? { notifications: old.notifications.map((n) => ({ ...n, read: true })) } : old,
+        old ? { notifications: old.notifications.map((n) => ({ ...n, read: true })) } : old
       );
 
       // Update infinite list if applicable (full notifications page)
@@ -138,7 +145,7 @@ export function useNotificationMutations(opts?: {
                   notifications: page.notifications.map((n) => ({ ...n, read: true })),
                 })),
               }
-            : old,
+            : old
         );
       }
 
@@ -148,9 +155,12 @@ export function useNotificationMutations(opts?: {
       return { previousFlatList, previousCount, previousInfinite, capturedInfiniteKey };
     },
     onError: (_err, _vars, context) => {
-      if (context?.previousFlatList) qc.setQueryData(queryKeys.notifications.list(), context.previousFlatList);
-      if (context?.previousCount) qc.setQueryData(queryKeys.notifications.unreadCount, context.previousCount);
-      if (context?.previousInfinite && context.capturedInfiniteKey) qc.setQueryData(context.capturedInfiniteKey, context.previousInfinite);
+      if (context?.previousFlatList)
+        qc.setQueryData(queryKeys.notifications.list(), context.previousFlatList);
+      if (context?.previousCount)
+        qc.setQueryData(queryKeys.notifications.unreadCount, context.previousCount);
+      if (context?.previousInfinite && context.capturedInfiniteKey)
+        qc.setQueryData(context.capturedInfiniteKey, context.previousInfinite);
     },
     onSettled: invalidateAll,
   });

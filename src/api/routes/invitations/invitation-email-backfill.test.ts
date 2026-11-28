@@ -34,7 +34,7 @@ import { createTestD1, seedInvitation, seedUser, seedWorkspace, TEST_USER } from
 
 const MIGRATION_PATH = path.resolve(
   __dirname,
-  "../../../../migrations/0036_normalize_invitation_email.sql",
+  "../../../../migrations/0036_normalize_invitation_email.sql"
 );
 
 let d1: D1Database;
@@ -55,7 +55,7 @@ async function runMigration(): Promise<void> {
     .filter(
       (s) =>
         s.length > 0 &&
-        !s.split("\n").every((line) => line.trim().startsWith("--") || line.trim() === ""),
+        !s.split("\n").every((line) => line.trim().startsWith("--") || line.trim() === "")
     );
   expect(statements).toHaveLength(2);
   await d1.batch(statements.map((s) => d1.prepare(s)));

@@ -7,14 +7,7 @@ import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_SIZE } from "@/shared/schemas/upload";
 import { Checkbox, Field, Input, Label, Select, Textarea } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
 import { useOnlineOnly } from "@/web/components/sync/use-online-only";
-import {
-  Alert,
-  Button,
-  Card,
-  Dialog,
-  Text,
-  Tooltip,
-} from "@/web/components/ui";
+import { Alert, Button, Card, Dialog, Text, Tooltip } from "@/web/components/ui";
 import { IconDisplay } from "@/web/components/ui/IconDisplay";
 import { IconPicker } from "@/web/components/ui/IconPicker";
 import type { useToast } from "@/web/components/ui/ToastContext";
@@ -70,7 +63,7 @@ export function GeneralTab({
     () => {
       toast("Failed to apply Unsplash cover.", { variant: "error" });
       refetch();
-    },
+    }
   );
 
   const qc = useQueryClient();
@@ -100,16 +93,27 @@ export function GeneralTab({
       // Optimistically update sidebar project list
       qc.setQueryData(
         wpKey,
-        (old: { projects: Array<{ id: string; name: string; description?: string; status: string }> } | undefined) =>
+        (
+          old:
+            | {
+                projects: Array<{ id: string; name: string; description?: string; status: string }>;
+              }
+            | undefined
+        ) =>
           old
             ? {
                 projects: old.projects.map((p) =>
                   p.id === projectId
-                    ? { ...p, name: input.name, description: input.description, status: input.status }
-                    : p,
+                    ? {
+                        ...p,
+                        name: input.name,
+                        description: input.description,
+                        status: input.status,
+                      }
+                    : p
                 ),
               }
-            : old,
+            : old
       );
       return { previousData, previousWorkspaceProjects };
     },
@@ -118,7 +122,10 @@ export function GeneralTab({
         qc.setQueryData(queryKeys.projects.detail(projectId), context.previousData);
       }
       if (context?.previousWorkspaceProjects) {
-        qc.setQueryData(queryKeys.workspaces.projects(project.workspaceId), context.previousWorkspaceProjects);
+        qc.setQueryData(
+          queryKeys.workspaces.projects(project.workspaceId),
+          context.previousWorkspaceProjects
+        );
       }
     },
     onSettled: (result) => {
@@ -180,10 +187,16 @@ export function GeneralTab({
       updateProject({ icon: newIcon });
       // Also optimistically update the workspace projects cache (drives sidebar)
       const wpKey = queryKeys.workspaces.projects(project.workspaceId);
-      qc.setQueryData(wpKey, (old: { projects: Array<{ id: string; icon?: string | null }> } | undefined) =>
-        old
-          ? { projects: old.projects.map((p) => (p.id === projectId ? { ...p, icon: newIcon } : p)) }
-          : old,
+      qc.setQueryData(
+        wpKey,
+        (old: { projects: Array<{ id: string; icon?: string | null }> } | undefined) =>
+          old
+            ? {
+                projects: old.projects.map((p) =>
+                  p.id === projectId ? { ...p, icon: newIcon } : p
+                ),
+              }
+            : old
       );
       try {
         await sendWrite({
@@ -302,7 +315,9 @@ export function GeneralTab({
             <Field>
               <Label htmlFor="proj-budget">Budget</Label>
               <Row gap="r5" align="center">
-                <Text variant="body-2" color="muted">$</Text>
+                <Text variant="body-2" color="muted">
+                  $
+                </Text>
                 <Input
                   id="proj-budget"
                   type="number"
@@ -371,7 +386,9 @@ export function GeneralTab({
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => { void handleCoverRemove(); }}
+                      onClick={() => {
+                        void handleCoverRemove();
+                      }}
                       disabled={onlineOnly.disabled}
                       title={onlineOnly.title}
                     >
@@ -421,9 +438,8 @@ export function GeneralTab({
         <Stack gap="r4">
           <Text variant="h5">Export</Text>
           <Text variant="body-2" color="secondary">
-            Download every task in this project as a CSV spreadsheet, including
-            group, assignee, due date, priority, labels, completion state, and
-            cost.
+            Download every task in this project as a CSV spreadsheet, including group, assignee, due
+            date, priority, labels, completion state, and cost.
           </Text>
           <div>
             {onlineOnly.online ? (
@@ -476,7 +492,9 @@ export function GeneralTab({
         }}
       >
         <Stack gap="r4" className="p-r2">
-          <Text variant="h5" weight="semibold">Delete Project</Text>
+          <Text variant="h5" weight="semibold">
+            Delete Project
+          </Text>
           <Text variant="body-2" color="secondary">
             This will permanently delete the project and all associated tasks. Type{" "}
             <strong>DELETE</strong> to confirm.

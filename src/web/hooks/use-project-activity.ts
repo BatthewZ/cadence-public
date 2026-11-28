@@ -35,7 +35,7 @@ export function useProjectActivity(projectId: string) {
       const params = new URLSearchParams({ limit: String(ACTIVITY_LIMIT) });
       if (pageParam) params.set("cursor", pageParam as string);
       return api.get<ProjectActivityPage>(
-        `/api/projects/${projectId}/activity?${params.toString()}`,
+        `/api/projects/${projectId}/activity?${params.toString()}`
       );
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,

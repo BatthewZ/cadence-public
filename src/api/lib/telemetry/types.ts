@@ -11,11 +11,7 @@
 
 /** Discriminated union of all telemetry events. */
 export type TelemetryEvent =
-  | HttpRequestEvent
-  | WebhookDeliveryEvent
-  | WebhookRetryEvent
-  | CronRunEvent
-  | CronTaskEvent;
+  HttpRequestEvent | WebhookDeliveryEvent | WebhookRetryEvent | CronRunEvent | CronTaskEvent;
 
 // ---------------------------------------------------------------------------
 // Event variants

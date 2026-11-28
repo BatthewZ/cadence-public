@@ -53,9 +53,7 @@ let emptyProjectId: string;
 /** Insert a task↔label assignment (no seed helper exists for task_label). */
 async function seedTaskLabelRow(taskId: string, labelId: string) {
   await d1
-    .prepare(
-      "INSERT INTO task_label (id, taskId, labelId, createdAt) VALUES (?, ?, ?, ?)",
-    )
+    .prepare("INSERT INTO task_label (id, taskId, labelId, createdAt) VALUES (?, ?, ?, ?)")
     .bind(crypto.randomUUID(), taskId, labelId, Math.floor(Date.now() / 1000))
     .run();
 }
@@ -130,7 +128,7 @@ function createApp(user?: typeof TEST_USER | typeof TEST_USER_2) {
     env,
     requireAuth,
     requireProjectAccess(),
-    exportProjectCsv,
+    exportProjectCsv
   );
   return app;
 }
@@ -158,7 +156,7 @@ describe("exportProjectCsv", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("text/csv; charset=utf-8");
     expect(res.headers.get("Content-Disposition")).toBe(
-      'attachment; filename="CSV Export Project.csv"',
+      'attachment; filename="CSV Export Project.csv"'
     );
   });
 
@@ -200,10 +198,8 @@ describe("exportProjectCsv", () => {
 
     expect(res.status).toBe(200);
     expect(await res.text()).toBe(
-      "title,group,assignee_email,due_date,priority,labels,completed,cost\r\n",
+      "title,group,assignee_email,due_date,priority,labels,completed,cost\r\n"
     );
-    expect(res.headers.get("Content-Disposition")).toBe(
-      'attachment; filename="Empty Project.csv"',
-    );
+    expect(res.headers.get("Content-Disposition")).toBe('attachment; filename="Empty Project.csv"');
   });
 });

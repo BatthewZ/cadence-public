@@ -43,12 +43,7 @@ export function useDeferredDelete<T>(options: DeferredDeleteOptions<T>) {
     };
   }, []);
 
-  function schedule(
-    id: string,
-    item: T,
-    toastMessage: string,
-    onRestore: (item: T) => void,
-  ): void {
+  function schedule(id: string, item: T, toastMessage: string, onRestore: (item: T) => void): void {
     // Cancel any existing pending deletion for this id (rapid delete/undo/delete)
     const existing = pending.current.get(id);
     if (existing) {

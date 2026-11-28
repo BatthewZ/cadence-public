@@ -1,7 +1,4 @@
-import {
-  useInfiniteQuery,
-  useQuery,
-} from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { ArrowLeft, Bell, FolderKanban } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -12,7 +9,16 @@ import { NotificationItem } from "@/web/components/layout/NotificationItem";
 import { type Notification } from "@/web/components/layout/NotificationPanel";
 import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
 import { isUnavailableOffline, useOnlineOnly } from "@/web/components/sync/use-online-only";
-import { Avatar, Button, EmptyState, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle, Spinner, Text } from "@/web/components/ui";
+import {
+  Avatar,
+  Button,
+  EmptyState,
+  EmptyStateDescription,
+  EmptyStateIcon,
+  EmptyStateTitle,
+  Spinner,
+  Text,
+} from "@/web/components/ui";
 import { Breadcrumbs } from "@/web/components/ui/Breadcrumbs";
 import { QueryErrorRetry } from "@/web/components/ui/QueryErrorRetry";
 import { useOptionalWorkspace, type WorkspacesResponse } from "@/web/contexts/WorkspaceContext";
@@ -23,7 +29,10 @@ import { api } from "@/web/lib/api/client";
 import { useSession } from "@/web/lib/auth/auth-client";
 import { queryKeys } from "@/web/lib/query-keys";
 
-import { type NotificationActionsContext, renderNotificationActions } from "./components/NotificationActions";
+import {
+  type NotificationActionsContext,
+  renderNotificationActions,
+} from "./components/NotificationActions";
 import { NotificationFilters } from "./components/NotificationFilters";
 
 interface NotificationsPage {
@@ -45,7 +54,7 @@ export default function Notifications() {
   // the tab reads "Acme — Notifications"; on the standalone /notifications
   // route there is no workspace context, so fall back to the plain label.
   useDocumentTitle(
-    workspaceCtx ? `${workspaceCtx.workspace.name} — Notifications` : "Notifications",
+    workspaceCtx ? `${workspaceCtx.workspace.name} — Notifications` : "Notifications"
   );
 
   const { data: wsData } = useQuery({
@@ -55,7 +64,7 @@ export default function Notifications() {
 
   const slugMap = useMemo(
     () => new Map((wsData?.workspaces ?? []).map((ws) => [ws.id, ws.slug])),
-    [wsData],
+    [wsData]
   );
 
   const listQuery = useInfiniteQuery<NotificationsPage>({
@@ -64,14 +73,13 @@ export default function Notifications() {
       const params = new URLSearchParams({ limit: "30" });
       if (unreadOnly) params.set("unreadOnly", "true");
       if (pageParam) params.set("cursor", pageParam as string);
-      return api.get<NotificationsPage>(
-        `/api/notifications?${params.toString()}`,
-      );
+      return api.get<NotificationsPage>(`/api/notifications?${params.toString()}`);
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
   });
-  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = listQuery;
+  const { data, isLoading, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    listQuery;
   const onlineOnly = useOnlineOnly();
 
   const { markReadMutation, markAllReadMutation } = useNotificationMutations({
@@ -80,16 +88,14 @@ export default function Notifications() {
 
   const { data: countData } = useQuery({
     queryKey: queryKeys.notifications.unreadCount,
-    queryFn: () =>
-      api.get<{ count: number }>("/api/notifications/unread-count"),
+    queryFn: () => api.get<{ count: number }>("/api/notifications/unread-count"),
   });
   const unreadCount = countData?.count ?? 0;
 
   // Fetch pending invitations so we can offer Accept/Dismiss on invitation notifications
   const { data: pendingData } = useQuery({
     queryKey: queryKeys.invitations.pending,
-    queryFn: () =>
-      api.get<{ invitations: Invitation[] }>("/api/invitations/pending"),
+    queryFn: () => api.get<{ invitations: Invitation[] }>("/api/invitations/pending"),
     staleTime: 2 * 60_000,
   });
 
@@ -100,10 +106,14 @@ export default function Notifications() {
   // a notification for a revoked or expired invitation renders without one.
   const pendingInvitationIds = useMemo(
     () => new Set((pendingData?.invitations ?? []).map((inv) => inv.id)),
-    [pendingData],
+    [pendingData]
   );
 
-  const { accept: acceptInvitation, dismiss: dismissInvitation, isAccepting } = useInvitationActions();
+  const {
+    accept: acceptInvitation,
+    dismiss: dismissInvitation,
+    isAccepting,
+  } = useInvitationActions();
 
   const notifications = data?.pages.flatMap((p) => p.notifications) ?? [];
 
@@ -123,9 +133,7 @@ export default function Notifications() {
       if (n.taskId && n.projectId && n.workspaceId) {
         const slug = slugMap.get(n.workspaceId);
         if (slug) {
-          void navigate(
-            `/w/${slug}/projects/${n.projectId}/board?task=${n.taskId}`,
-          );
+          void navigate(`/w/${slug}/projects/${n.projectId}/board?task=${n.taskId}`);
           return;
         }
       }
@@ -138,7 +146,7 @@ export default function Notifications() {
         }
       }
     },
-    [navigate, slugMap],
+    [navigate, slugMap]
   );
 
   function handleClick(n: Notification) {
@@ -151,7 +159,9 @@ export default function Notifications() {
       <Container size={isInsideWorkspace ? "xl" : "md"} className="pt-r1 pb-r2">
         {isInsideWorkspace && workspaceCtx && (
           <Breadcrumbs className="pt-r2">
-            <Breadcrumbs.Item href={`/w/${workspaceCtx.workspace.slug}/dashboard`}>{workspaceCtx.workspace.name}</Breadcrumbs.Item>
+            <Breadcrumbs.Item href={`/w/${workspaceCtx.workspace.slug}/dashboard`}>
+              {workspaceCtx.workspace.name}
+            </Breadcrumbs.Item>
             <Breadcrumbs.Item current>Notifications</Breadcrumbs.Item>
           </Breadcrumbs>
         )}
@@ -192,11 +202,11 @@ export default function Notifications() {
             <QueryErrorRetry message="Failed to load notifications." onRetry={refetch} />
           ) : notifications.length === 0 ? (
             <EmptyState size="sm">
-              <EmptyStateIcon><Bell size={32} /></EmptyStateIcon>
+              <EmptyStateIcon>
+                <Bell size={32} />
+              </EmptyStateIcon>
               <EmptyStateTitle>
-                {unreadOnly
-                  ? "No unread notifications"
-                  : "No notifications yet"}
+                {unreadOnly ? "No unread notifications" : "No notifications yet"}
               </EmptyStateTitle>
               <EmptyStateDescription>
                 {unreadOnly

@@ -34,10 +34,18 @@ export function useTheme() {
   const setTheme = useCallback((next: Theme) => {
     if (next === "default") {
       document.documentElement.removeAttribute("data-theme");
-      try { localStorage.removeItem(STORAGE_KEY); } catch { /* private browsing */ }
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        /* private browsing */
+      }
     } else {
       document.documentElement.setAttribute("data-theme", next);
-      try { localStorage.setItem(STORAGE_KEY, next); } catch { /* private browsing */ }
+      try {
+        localStorage.setItem(STORAGE_KEY, next);
+      } catch {
+        /* private browsing */
+      }
     }
   }, []);
 
@@ -56,7 +64,7 @@ export function useTheme() {
  */
 export function useThemeApplication(
   workspaceTheme: string | null | undefined,
-  projectTheme: string | null | undefined,
+  projectTheme: string | null | undefined
 ): Theme {
   const raw = projectTheme ?? workspaceTheme ?? "default";
   const effective: Theme = THEMES.includes(raw as Theme) ? (raw as Theme) : "default";
@@ -76,7 +84,9 @@ export function useThemeApplication(
       } else {
         localStorage.setItem(STORAGE_KEY, effective);
       }
-    } catch { /* private browsing */ }
+    } catch {
+      /* private browsing */
+    }
   }, [effective]);
 
   return effective;

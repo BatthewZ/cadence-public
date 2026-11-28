@@ -220,10 +220,7 @@ interface ChipInput {
  * lexicographic order equals chronological order for this format, so no
  * Date parsing (and no UTC-parse risk) is involved.
  */
-export function placeTasks(
-  weeks: Week[],
-  tasks: CalendarTask[],
-): WeekLayout[] {
+export function placeTasks(weeks: Week[], tasks: CalendarTask[]): WeekLayout[] {
   const spans: SpanInput[] = [];
   const chips: ChipInput[] = [];
 
@@ -249,9 +246,7 @@ export function placeTasks(
   return weeks.map((week) => {
     const weekStartIso = week[0].iso;
     const weekEndIso = week[6].iso;
-    const colByIso = new Map<string, number>(
-      week.map((day, i) => [day.iso, i + 1]),
-    );
+    const colByIso = new Map<string, number>(week.map((day, i) => [day.iso, i + 1]));
 
     const chipsByIso: Record<string, CalendarTask[]> = {};
     const addChip = (iso: string, task: CalendarTask): void => {
@@ -275,9 +270,7 @@ export function placeTasks(
       })
       .sort(
         (a, b) =>
-          a.colStart - b.colStart ||
-          b.colEnd - a.colEnd ||
-          a.task.id.localeCompare(b.task.id),
+          a.colStart - b.colStart || b.colEnd - a.colEnd || a.task.id.localeCompare(b.task.id)
       );
 
     // Greedy lane assignment: lowest free lane wins; laneEnds[i] holds the

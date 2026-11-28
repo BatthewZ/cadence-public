@@ -484,12 +484,22 @@ export function TaskDetailDialog({
                     activeSubtask={activeSubtask}
                     newSubtaskTitle={newSubtaskTitle}
                     setNewSubtaskTitle={setNewSubtaskTitle}
-                    onToggle={(s) => { void handleSubtaskToggle(s); }}
-                    onDelete={(id) => { void handleDeleteSubtask(id); }}
-                    onRename={(id, title) => { void handleRenameSubtask(id, title); }}
-                    onAddSubtask={() => { void handleAddSubtask(); }}
+                    onToggle={(s) => {
+                      void handleSubtaskToggle(s);
+                    }}
+                    onDelete={(id) => {
+                      void handleDeleteSubtask(id);
+                    }}
+                    onRename={(id, title) => {
+                      void handleRenameSubtask(id, title);
+                    }}
+                    onAddSubtask={() => {
+                      void handleAddSubtask();
+                    }}
                     onDragStart={handleSubtaskDragStart}
-                    onDragEnd={(event) => { void handleSubtaskDragEnd(event); }}
+                    onDragEnd={(event) => {
+                      void handleSubtaskDragEnd(event);
+                    }}
                     canEdit={canEditTasks}
                   />
                 </div>

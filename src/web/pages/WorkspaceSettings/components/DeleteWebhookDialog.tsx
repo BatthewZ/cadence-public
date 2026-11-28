@@ -23,8 +23,8 @@ export function DeleteWebhookDialog({
       confirmingLabel="Deleting..."
       confirming={isPending}
     >
-      Delete <strong>{webhookName}</strong>? This will also remove all delivery
-      history. This action cannot be undone.
+      Delete <strong>{webhookName}</strong>? This will also remove all delivery history. This action
+      cannot be undone.
     </ConfirmDialog>
   );
 }

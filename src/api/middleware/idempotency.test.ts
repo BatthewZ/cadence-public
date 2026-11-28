@@ -26,7 +26,11 @@ import {
   TEST_USER_2,
 } from "../test-utils";
 import { auditPatMutations } from "./audit-pat";
-import { idempotency,IDEMPOTENCY_MAX_STORED_BODY_BYTES, IDEMPOTENCY_PENDING_TIMEOUT_MS } from "./idempotency";
+import {
+  idempotency,
+  IDEMPOTENCY_MAX_STORED_BODY_BYTES,
+  IDEMPOTENCY_PENDING_TIMEOUT_MS,
+} from "./idempotency";
 
 let d1: D1Database;
 let storage: R2Bucket;
@@ -65,7 +69,7 @@ const unauthenticated: MiddlewareHandler<AppEnv> = async (c, next) => {
 function counterApp(
   respond: (c: Context<AppEnv>, runs: number) => Response | Promise<Response> = (c, runs) =>
     c.json({ runs }, 201),
-  auth: MiddlewareHandler<AppEnv> = fakeAuth(d1),
+  auth: MiddlewareHandler<AppEnv> = fakeAuth(d1)
 ) {
   const state = { runs: 0 };
   const app = new Hono<AppEnv>();
@@ -166,7 +170,9 @@ describe("idempotency middleware", () => {
 
     expect(concurrent.status).toBe(409);
     expect(concurrent.headers.get("Retry-After")).toBe("1");
-    expect(await concurrent.json()).toMatchObject({ code: WRITE_ERROR_CODES.idempotencyInProgress });
+    expect(await concurrent.json()).toMatchObject({
+      code: WRITE_ERROR_CODES.idempotencyInProgress,
+    });
 
     held.resolve();
     expect((await first).status).toBe(201);
@@ -182,7 +188,10 @@ describe("idempotency middleware", () => {
     const stuck = crashed.app.request(post("/api/things", { a: 1 }, "key-4"));
     await waitFor(() => crashed.state.runs === 1);
     const staleSeconds = Math.floor((Date.now() - IDEMPOTENCY_PENDING_TIMEOUT_MS - 5_000) / 1000);
-    await d1.prepare("UPDATE idempotency_key SET createdAt = ? WHERE key = ?").bind(staleSeconds, "key-4").run();
+    await d1
+      .prepare("UPDATE idempotency_key SET createdAt = ? WHERE key = ?")
+      .bind(staleSeconds, "key-4")
+      .run();
 
     const { app, state } = counterApp();
     const res = await app.request(post("/api/things", { a: 1 }, "key-4"));
@@ -199,7 +208,10 @@ describe("idempotency middleware", () => {
     ["a 5xx", (c: Context<AppEnv>) => c.json({ error: "boom" }, 500)],
     ["a 4xx", (c: Context<AppEnv>) => c.json({ error: "nope" }, 400)],
     ["a non-JSON 2xx", (c: Context<AppEnv>) => c.text("ok", 200)],
-    ["an oversized 2xx", (c: Context<AppEnv>) => c.json({ pad: "x".repeat(IDEMPOTENCY_MAX_STORED_BODY_BYTES) })],
+    [
+      "an oversized 2xx",
+      (c: Context<AppEnv>) => c.json({ pad: "x".repeat(IDEMPOTENCY_MAX_STORED_BODY_BYTES) }),
+    ],
   ])("does not store %s, so a retry re-executes", async (_label, respond) => {
     const { app, state } = counterApp(respond);
     await app.request(post("/api/things", { a: 1 }, "key-5"));
@@ -280,7 +292,8 @@ describe("idempotency middleware in front of real routes", () => {
   it("a replayed JSON create returns the same task and writes one row", async () => {
     const app = routesApp();
     const before = await taskCount();
-    const request = () => post(`/api/projects/${projectId}/tasks`, { title: "Once", taskGroupId }, "create-once");
+    const request = () =>
+      post(`/api/projects/${projectId}/tasks`, { title: "Once", taskGroupId }, "create-once");
 
     const first = await app.request(request());
     const second = await app.request(request());
@@ -288,7 +301,10 @@ describe("idempotency middleware in front of real routes", () => {
     expect(first.status).toBe(201);
     expect(second.status).toBe(201);
     expect(second.headers.get(IDEMPOTENT_REPLAYED_HEADER)).toBe("true");
-    const [a, b] = await Promise.all([first.json<{ task: { id: string } }>(), second.json<{ task: { id: string } }>()]);
+    const [a, b] = await Promise.all([
+      first.json<{ task: { id: string } }>(),
+      second.json<{ task: { id: string } }>(),
+    ]);
     expect(b.task.id).toBe(a.task.id);
     expect(await taskCount()).toBe(before + 1);
   });
@@ -320,9 +336,19 @@ describe("idempotency middleware ahead of the PAT audit ledger", () => {
     const token = fakePat({ workspaceId });
     await d1
       .prepare(
-        "INSERT INTO api_token (id, userId, workspaceId, name, tokenHash, tokenPrefix, scopes, projectScope, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO api_token (id, userId, workspaceId, name, tokenHash, tokenPrefix, scopes, projectScope, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
       )
-      .bind(token.id, token.userId, workspaceId, token.name, token.tokenHash, token.tokenPrefix, token.scopes, token.projectScope, 0)
+      .bind(
+        token.id,
+        token.userId,
+        workspaceId,
+        token.name,
+        token.tokenHash,
+        token.tokenPrefix,
+        token.scopes,
+        token.projectScope,
+        0
+      )
       .run();
 
     const deferred: Promise<unknown>[] = [];
@@ -337,8 +363,18 @@ describe("idempotency middleware ahead of the PAT audit ledger", () => {
     app.use("/api/*", auditPatMutations);
     app.post("/api/things", (c) => c.json({ ok: true }, 201));
 
-    await app.request(post("/api/things", { a: 1 }, "audited-once"), undefined, undefined, executionCtx);
-    const replay = await app.request(post("/api/things", { a: 1 }, "audited-once"), undefined, undefined, executionCtx);
+    await app.request(
+      post("/api/things", { a: 1 }, "audited-once"),
+      undefined,
+      undefined,
+      executionCtx
+    );
+    const replay = await app.request(
+      post("/api/things", { a: 1 }, "audited-once"),
+      undefined,
+      undefined,
+      executionCtx
+    );
     await Promise.all(deferred);
 
     expect(replay.headers.get(IDEMPOTENT_REPLAYED_HEADER)).toBe("true");

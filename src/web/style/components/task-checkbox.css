@@ -68,8 +68,7 @@
   stroke-linejoin: round;
   stroke-dasharray: 16;
   stroke-dashoffset: 16;
-  transition:
-    stroke-dashoffset var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
+  transition: stroke-dashoffset var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
 }
 
 .task-checkbox--checked .task-checkbox__check {

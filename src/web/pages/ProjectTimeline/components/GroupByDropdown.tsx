@@ -29,10 +29,7 @@ export function GroupByDropdown({
   return (
     <DropdownMenu placement="bottom-end">
       <DropdownMenu.Trigger asChild>
-        <button
-          type="button"
-          className="task-filter-bar__trigger"
-        >
+        <button type="button" className="task-filter-bar__trigger">
           {current.icon}
           Group: {current.label}
         </button>
@@ -46,9 +43,7 @@ export function GroupByDropdown({
             icon={opt.icon}
             onSelect={() => onChange(opt.value)}
           >
-            <span className={value === opt.value ? "font-semibold" : ""}>
-              {opt.label}
-            </span>
+            <span className={value === opt.value ? "font-semibold" : ""}>{opt.label}</span>
           </DropdownMenu.Item>
         ))}
       </DropdownMenu.Content>

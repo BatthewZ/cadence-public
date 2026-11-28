@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { type MarkdownCommand,MarkdownToolbar } from "./MarkdownToolbar";
+import { type MarkdownCommand, MarkdownToolbar } from "./MarkdownToolbar";
 
 /**
  * The toolbar is the presentational half of the markdown editor: it must emit

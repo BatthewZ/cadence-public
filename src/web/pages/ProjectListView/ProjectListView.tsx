@@ -9,11 +9,7 @@ import { Avatar } from "@/web/components/ui/Avatar";
 import { Badge } from "@/web/components/ui/Badge";
 import { BulkActionBar } from "@/web/components/ui/BulkActionBar";
 import { type ColumnDef, DataTable } from "@/web/components/ui/DataTable";
-import {
-  EmptyState,
-  EmptyStateDescription,
-  EmptyStateTitle,
-} from "@/web/components/ui/EmptyState";
+import { EmptyState, EmptyStateDescription, EmptyStateTitle } from "@/web/components/ui/EmptyState";
 import type { Task } from "@/web/contexts/ProjectContext";
 import { useProject } from "@/web/contexts/ProjectContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
@@ -43,10 +39,7 @@ export default function ProjectListView() {
   const [, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [selectedKeys, setSelectedKeys] = useState<Set<string | number>>(new Set());
-  const selectedIds = useMemo(
-    () => new Set(Array.from(selectedKeys, String)),
-    [selectedKeys],
-  );
+  const selectedIds = useMemo(() => new Set(Array.from(selectedKeys, String)), [selectedKeys]);
 
   // Build lookups
   const groupMap = useMemo(() => {
@@ -217,9 +210,7 @@ export default function ProjectListView() {
         key: "dueDate",
         header: "Due Date",
         sortable: true,
-        render: (row) => (
-          <span className="text-fg-secondary">{formatDate(row.dueDate)}</span>
-        ),
+        render: (row) => <span className="text-fg-secondary">{formatDate(row.dueDate)}</span>,
       },
     ],
     [groupMap, memberMap, openTask, togglePriorityFilter, toggleAssigneeFilter]
@@ -228,19 +219,13 @@ export default function ProjectListView() {
   return (
     <Stack gap="r4">
       <Row justify="between" align="center">
-        <SearchInput
-          value={search}
-          onChange={setSearch}
-          placeholder="Search tasks..."
-        />
+        <SearchInput value={search} onChange={setSearch} placeholder="Search tasks..." />
       </Row>
 
       {filteredTasks.length === 0 && !search ? (
         <EmptyState size="lg">
           <EmptyStateTitle>No tasks yet</EmptyStateTitle>
-          <EmptyStateDescription>
-            Create your first task to get started.
-          </EmptyStateDescription>
+          <EmptyStateDescription>Create your first task to get started.</EmptyStateDescription>
         </EmptyState>
       ) : (
         <DataTable<Task>
@@ -253,9 +238,7 @@ export default function ProjectListView() {
           emptyContent={
             <EmptyState size="md">
               <EmptyStateTitle>No matching tasks</EmptyStateTitle>
-              <EmptyStateDescription>
-                Try adjusting your search query.
-              </EmptyStateDescription>
+              <EmptyStateDescription>Try adjusting your search query.</EmptyStateDescription>
             </EmptyState>
           }
         />

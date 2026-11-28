@@ -5,7 +5,12 @@ import { apiToken } from "../../../../db/schema/api-token";
 import { user as userTable } from "../../../../db/schema/auth";
 import { taskActivity } from "../../../../db/schema/task";
 import type { AppEnv } from "../../../env";
-import { compoundCursorCondition, computeCompoundNextCursor, parseCompoundCursor, parseCursorParams } from "../../../lib/pagination";
+import {
+  compoundCursorCondition,
+  computeCompoundNextCursor,
+  parseCompoundCursor,
+  parseCursorParams,
+} from "../../../lib/pagination";
 import { requireParam } from "../../../lib/params";
 
 // ---------------------------------------------------------------------------
@@ -21,7 +26,9 @@ export async function getTaskActivity(c: Context<AppEnv>) {
   const conditions = [eq(taskActivity.taskId, taskId)];
   const compound = parseCompoundCursor(cursor);
   if (compound) {
-    conditions.push(compoundCursorCondition(compound, taskActivity.createdAt, taskActivity.id, "desc"));
+    conditions.push(
+      compoundCursorCondition(compound, taskActivity.createdAt, taskActivity.id, "desc")
+    );
   }
 
   // LEFT JOIN api_token so activity without a token (cookie auth, or a
@@ -49,7 +56,12 @@ export async function getTaskActivity(c: Context<AppEnv>) {
     .orderBy(desc(taskActivity.createdAt), desc(taskActivity.id))
     .limit(limit);
 
-  const nextCursor = computeCompoundNextCursor(activities, limit, (a) => a.createdAt, (a) => a.id);
+  const nextCursor = computeCompoundNextCursor(
+    activities,
+    limit,
+    (a) => a.createdAt,
+    (a) => a.id
+  );
 
   return c.json({ activities, nextCursor });
 }

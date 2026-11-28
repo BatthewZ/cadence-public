@@ -19,9 +19,7 @@ describe("resolveEmailFrom", () => {
   it("returns a configured EMAIL_FROM unchanged", () => {
     // The failure this guards is a fallback that became an override, which
     // would silently break every correctly configured deployment at once.
-    expect(resolveEmailFrom({ EMAIL_FROM: "hello@cadence.app" })).toBe(
-      "hello@cadence.app",
-    );
+    expect(resolveEmailFrom({ EMAIL_FROM: "hello@cadence.app" })).toBe("hello@cadence.app");
   });
 
   it("falls back when EMAIL_FROM is absent", () => {
@@ -42,9 +40,7 @@ describe("resolveEmailFrom", () => {
   it("trims a padded address rather than rejecting it", () => {
     // A trailing newline is what a value pasted into a secrets UI most often
     // carries, and Resend rejects the header outright if it survives.
-    expect(resolveEmailFrom({ EMAIL_FROM: "  ops@cadence.app\n" })).toBe(
-      "ops@cadence.app",
-    );
+    expect(resolveEmailFrom({ EMAIL_FROM: "  ops@cadence.app\n" })).toBe("ops@cadence.app");
   });
 
   it("uses a reserved domain as the default", () => {

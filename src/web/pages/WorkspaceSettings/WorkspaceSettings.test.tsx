@@ -116,7 +116,7 @@ function renderPage() {
   render(
     <Wrapper>
       <WorkspaceSettings />
-    </Wrapper>,
+    </Wrapper>
   );
   return { user };
 }
@@ -189,7 +189,7 @@ describe("WorkspaceSettings", () => {
     renderPage();
 
     expect(
-      screen.getByText("The workspace URL cannot be changed after creation."),
+      screen.getByText("The workspace URL cannot be changed after creation.")
     ).toBeInTheDocument();
   });
 
@@ -311,7 +311,7 @@ describe("WorkspaceSettings", () => {
       () =>
         new Promise((resolve) => {
           resolveApi = resolve;
-        }),
+        })
     );
 
     const { user } = renderPage();

@@ -144,9 +144,9 @@ describe("resolveAllowedOrigin", () => {
   });
 
   it("returns origin when it matches a trusted origin", () => {
-    expect(
-      resolveAllowedOrigin("https://trusted.com", baseUrl, "https://trusted.com")
-    ).toBe("https://trusted.com");
+    expect(resolveAllowedOrigin("https://trusted.com", baseUrl, "https://trusted.com")).toBe(
+      "https://trusted.com"
+    );
   });
 
   it("returns null for unlisted origin", () => {
@@ -154,9 +154,7 @@ describe("resolveAllowedOrigin", () => {
   });
 
   it("returns null for unlisted origin with trusted origins set", () => {
-    expect(
-      resolveAllowedOrigin("https://evil.com", baseUrl, "https://trusted.com")
-    ).toBeNull();
+    expect(resolveAllowedOrigin("https://evil.com", baseUrl, "https://trusted.com")).toBeNull();
   });
 
   it("handles undefined trustedOrigins", () => {

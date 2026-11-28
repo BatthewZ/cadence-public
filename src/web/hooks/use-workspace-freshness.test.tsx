@@ -19,9 +19,7 @@ import { queryKeys } from "@/web/lib/query-keys";
 
 vi.mock("@/web/lib/api/client", async () => {
   const actual =
-    await vi.importActual<typeof import("@/web/lib/api/client")>(
-      "@/web/lib/api/client",
-    );
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -58,7 +56,7 @@ function wrapper({ children }: { children: ReactNode }) {
 
 function invalidatedKeys(): string[] {
   return invalidateSpy.mock.calls.map((call: unknown[]) =>
-    JSON.stringify((call[0] as { queryKey: unknown } | undefined)?.queryKey),
+    JSON.stringify((call[0] as { queryKey: unknown } | undefined)?.queryKey)
   );
 }
 
@@ -86,10 +84,7 @@ async function nextPoll(freshness: Payload) {
 }
 
 async function mountWithBaseline(multiUser = true) {
-  const view = renderHook(
-    () => useWorkspaceFreshness(WORKSPACE_ID, multiUser),
-    { wrapper },
-  );
+  const view = renderHook(() => useWorkspaceFreshness(WORKSPACE_ID, multiUser), { wrapper });
   if (multiUser) {
     await waitFor(() => expect(qc.getQueryData(FRESHNESS_KEY)).toBeDefined());
   }
@@ -123,9 +118,7 @@ describe("useWorkspaceFreshness", () => {
 
   it("jitters the poll interval around the documented 3s base", async () => {
     await mountWithBaseline();
-    expect(mockGet).toHaveBeenCalledWith(
-      `/api/workspaces/${WORKSPACE_ID}/freshness`,
-    );
+    expect(mockGet).toHaveBeenCalledWith(`/api/workspaces/${WORKSPACE_ID}/freshness`);
     expect(mockJitteredInterval).toHaveBeenCalledWith(3000);
   });
 
@@ -139,15 +132,11 @@ describe("useWorkspaceFreshness", () => {
     await nextPoll({ workspace: 100, projects: 200, tasks: 999 });
 
     const keys = invalidatedKeys();
+    expect(keys).toContain(JSON.stringify(queryKeys.workspaces.dashboard(WORKSPACE_ID)));
     expect(keys).toContain(
-      JSON.stringify(queryKeys.workspaces.dashboard(WORKSPACE_ID)),
+      JSON.stringify(queryKeys.workspaces.dashboardMyTasksPrefix(WORKSPACE_ID))
     );
-    expect(keys).toContain(
-      JSON.stringify(queryKeys.workspaces.dashboardMyTasksPrefix(WORKSPACE_ID)),
-    );
-    expect(keys).toContain(
-      JSON.stringify(queryKeys.workspaces.dashboardUpcoming(WORKSPACE_ID)),
-    );
+    expect(keys).toContain(JSON.stringify(queryKeys.workspaces.dashboardUpcoming(WORKSPACE_ID)));
     // The regression guard for a dialog opened from Dashboard or MyTasks.
     expect(keys).toContain(JSON.stringify(queryKeys.tasks.all));
   });
@@ -157,9 +146,7 @@ describe("useWorkspaceFreshness", () => {
     await nextPoll({ workspace: 100, projects: 999, tasks: 300 });
 
     const keys = invalidatedKeys();
-    expect(keys).toContain(
-      JSON.stringify(queryKeys.workspaces.projects(WORKSPACE_ID)),
-    );
+    expect(keys).toContain(JSON.stringify(queryKeys.workspaces.projects(WORKSPACE_ID)));
     expect(keys).not.toContain(JSON.stringify(queryKeys.tasks.all));
   });
 
@@ -168,30 +155,28 @@ describe("useWorkspaceFreshness", () => {
     await nextPoll({ workspace: 999, projects: 200, tasks: 300 });
 
     const keys = invalidatedKeys();
-    expect(keys).toContain(
-      JSON.stringify(queryKeys.workspaces.detail(WORKSPACE_ID)),
-    );
-    expect(keys).toContain(
-      JSON.stringify(queryKeys.workspaces.members(WORKSPACE_ID)),
-    );
+    expect(keys).toContain(JSON.stringify(queryKeys.workspaces.detail(WORKSPACE_ID)));
+    expect(keys).toContain(JSON.stringify(queryKeys.workspaces.members(WORKSPACE_ID)));
   });
 
   it("respects self-mutation suppression", async () => {
     await mountWithBaseline();
-    (
-      freshnessTracker.shouldInvalidate as ReturnType<typeof vi.fn>
-    ).mockReturnValue(false);
+    (freshnessTracker.shouldInvalidate as ReturnType<typeof vi.fn>).mockReturnValue(false);
 
     await nextPoll({ workspace: 999, projects: 999, tasks: 999 });
     expect(invalidatedKeys()).toEqual([]);
   });
 
   it("invalidates the dashboard lists when the last task is deleted", async () => {
-    mockGet.mockResolvedValue({ freshness: { workspace: 100, projects: 200, tasks: 300, projectCount: 2, taskCount: 1 } });
+    mockGet.mockResolvedValue({
+      freshness: { workspace: 100, projects: 200, tasks: 300, projectCount: 2, taskCount: 1 },
+    });
     await mountWithBaseline();
 
     await nextPoll({ workspace: 100, projects: 200, tasks: null, projectCount: 2, taskCount: 0 });
-    expect(invalidatedKeys()).toContain(JSON.stringify(queryKeys.workspaces.dashboard(WORKSPACE_ID)));
+    expect(invalidatedKeys()).toContain(
+      JSON.stringify(queryKeys.workspaces.dashboard(WORKSPACE_ID))
+    );
   });
 
   it("treats null timestamps as no-change", async () => {

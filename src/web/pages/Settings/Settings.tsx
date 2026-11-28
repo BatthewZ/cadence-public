@@ -20,7 +20,9 @@ export function Settings() {
       <Stack gap="r3" className="py-r2">
         {isInsideWorkspace && workspaceCtx && (
           <Breadcrumbs>
-            <Breadcrumbs.Item href={`/w/${workspaceCtx.workspace.slug}/dashboard`}>{workspaceCtx.workspace.name}</Breadcrumbs.Item>
+            <Breadcrumbs.Item href={`/w/${workspaceCtx.workspace.slug}/dashboard`}>
+              {workspaceCtx.workspace.name}
+            </Breadcrumbs.Item>
             <Breadcrumbs.Item current>Account</Breadcrumbs.Item>
           </Breadcrumbs>
         )}

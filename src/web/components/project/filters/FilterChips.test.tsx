@@ -58,9 +58,7 @@ const labels: Label[] = [
   },
 ];
 
-function makeFiltersReturn(
-  overrides: Partial<TaskFilters> = {},
-): UseTaskFiltersReturn {
+function makeFiltersReturn(overrides: Partial<TaskFilters> = {}): UseTaskFiltersReturn {
   return {
     filters: { ...emptyFilters, ...overrides },
     setFilter: vi.fn(),
@@ -80,7 +78,7 @@ function renderChips(filtersReturn: UseTaskFiltersReturn) {
       members={members}
       labels={labels}
       filtersReturn={filtersReturn}
-    />,
+    />
   );
 }
 
@@ -118,14 +116,9 @@ describe("FilterChips absence chips", () => {
       });
       renderChips(filtersReturn);
 
-      await user.click(
-        screen.getByRole("button", { name: "Remove unassigned filter" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Remove unassigned filter" }));
 
-      expect(filtersReturn.setFilter).toHaveBeenCalledExactlyOnceWith(
-        "assigneeIds",
-        ["u1"],
-      );
+      expect(filtersReturn.setFilter).toHaveBeenCalledExactlyOnceWith("assigneeIds", ["u1"]);
     });
   });
 
@@ -152,14 +145,9 @@ describe("FilterChips absence chips", () => {
       });
       renderChips(filtersReturn);
 
-      await user.click(
-        screen.getByRole("button", { name: "Remove no label filter" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Remove no label filter" }));
 
-      expect(filtersReturn.setFilter).toHaveBeenCalledExactlyOnceWith(
-        "labelIds",
-        ["lbl-1"],
-      );
+      expect(filtersReturn.setFilter).toHaveBeenCalledExactlyOnceWith("labelIds", ["lbl-1"]);
     });
   });
 
@@ -175,13 +163,9 @@ describe("FilterChips absence chips", () => {
       const filtersReturn = makeFiltersReturn({ noDueDate: true });
       renderChips(filtersReturn);
 
-      await user.click(
-        screen.getByRole("button", { name: "Remove no due date filter" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Remove no due date filter" }));
 
-      expect(filtersReturn.clearFilter).toHaveBeenCalledExactlyOnceWith(
-        "noDueDate",
-      );
+      expect(filtersReturn.clearFilter).toHaveBeenCalledExactlyOnceWith("noDueDate");
       expect(filtersReturn.setFilter).not.toHaveBeenCalled();
     });
 
@@ -201,13 +185,9 @@ describe("FilterChips absence chips", () => {
       expect(screen.getByText("2026-06-01 — 2026-06-30")).toBeInTheDocument();
       expect(screen.getByText("No due date")).toBeInTheDocument();
 
-      await user.click(
-        screen.getByRole("button", { name: "Remove no due date filter" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Remove no due date filter" }));
 
-      expect(filtersReturn.clearFilter).toHaveBeenCalledExactlyOnceWith(
-        "noDueDate",
-      );
+      expect(filtersReturn.clearFilter).toHaveBeenCalledExactlyOnceWith("noDueDate");
       // The range params are never written to — clearFilter("noDueDate")
       // deletes a single URL param, so dueDateFrom/dueDateTo survive.
       expect(filtersReturn.setFilter).not.toHaveBeenCalled();
@@ -228,9 +208,7 @@ describe("FilterChips absence chips", () => {
       });
       renderChips(filtersReturn);
 
-      await user.click(
-        screen.getByRole("button", { name: "Remove due date filter" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Remove due date filter" }));
 
       expect(filtersReturn.setFilters).toHaveBeenCalledExactlyOnceWith({
         dueDateFrom: null,

@@ -34,9 +34,8 @@ export function RevokeTokenConfirmation({
       confirmingLabel="Revoking..."
       confirming={isPending}
     >
-      Revoke <strong>{tokenName ?? "this token"}</strong>? Any integration
-      using it will immediately start receiving <strong>401 Unauthorized</strong>
-      {" "}errors. This action cannot be undone.
+      Revoke <strong>{tokenName ?? "this token"}</strong>? Any integration using it will immediately
+      start receiving <strong>401 Unauthorized</strong> errors. This action cannot be undone.
     </ConfirmDialog>
   );
 }

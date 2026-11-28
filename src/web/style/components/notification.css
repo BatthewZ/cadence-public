@@ -12,7 +12,8 @@
   border-radius: var(--RADIUS-MD);
   color: var(--C-TEXT-SECONDARY);
   cursor: pointer;
-  transition: background var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+  transition:
+    background var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
     color var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
 }
 
@@ -224,7 +225,8 @@
   border: 1px solid var(--C-BORDER-DEFAULT);
   background: var(--C-SURFACE-0);
   color: var(--C-TEXT-PRIMARY);
-  transition: background var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+  transition:
+    background var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
     border-color var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
 }
 

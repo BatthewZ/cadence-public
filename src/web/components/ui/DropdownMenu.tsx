@@ -270,7 +270,11 @@ const DropdownMenuItem = forwardRef<HTMLButtonElement, DropdownMenuItemProps>(
       <button
         ref={mergeRefs(ref, itemRef)}
         role="menuitem"
-        className={cn("dropdown-menu-item", variant === "danger" && "dropdown-menu-item--danger", className)}
+        className={cn(
+          "dropdown-menu-item",
+          variant === "danger" && "dropdown-menu-item--danger",
+          className
+        )}
         aria-disabled={disabled || undefined}
         tabIndex={activeIndex === index ? 0 : -1}
         {...getItemProps({
@@ -356,7 +360,8 @@ const DropdownMenuSubContext = createContext<DropdownMenuSubContextValue | null>
 
 function useDropdownMenuSubContext() {
   const ctx = useContext(DropdownMenuSubContext);
-  if (!ctx) throw new Error("DropdownMenu.SubTrigger/SubContent must be used within <DropdownMenu.Sub>");
+  if (!ctx)
+    throw new Error("DropdownMenu.SubTrigger/SubContent must be used within <DropdownMenu.Sub>");
   return ctx;
 }
 
@@ -442,9 +447,7 @@ function DropdownMenuSub({ children }: DropdownMenuSubProps) {
   );
 
   return (
-    <DropdownMenuSubContext.Provider value={value}>
-      {children}
-    </DropdownMenuSubContext.Provider>
+    <DropdownMenuSubContext.Provider value={value}>{children}</DropdownMenuSubContext.Provider>
   );
 }
 
@@ -552,8 +555,13 @@ const DropdownMenuSubItem = forwardRef<HTMLButtonElement, DropdownMenuSubItemPro
     ref
   ) {
     const { setOpen: setRootOpen } = useDropdownMenuContext();
-    const { setOpen: setSubOpen, listRef, listContentRef, activeIndex, getItemProps } =
-      useDropdownMenuSubContext();
+    const {
+      setOpen: setSubOpen,
+      listRef,
+      listContentRef,
+      activeIndex,
+      getItemProps,
+    } = useDropdownMenuSubContext();
 
     const handleSelect = useCallback(() => {
       if (disabled) return;
@@ -574,7 +582,11 @@ const DropdownMenuSubItem = forwardRef<HTMLButtonElement, DropdownMenuSubItemPro
       <button
         ref={mergeRefs(ref, itemRef)}
         role="menuitem"
-        className={cn("dropdown-menu-item", variant === "danger" && "dropdown-menu-item--danger", className)}
+        className={cn(
+          "dropdown-menu-item",
+          variant === "danger" && "dropdown-menu-item--danger",
+          className
+        )}
         aria-disabled={disabled || undefined}
         tabIndex={activeIndex === index ? 0 : -1}
         {...getItemProps({

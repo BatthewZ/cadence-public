@@ -51,18 +51,13 @@ function createApp() {
     currentProject: { id: projectId, workspaceId },
   });
 
-  app.post(
-    "/projects/:projectId/labels",
-    auth,
-    validateBody(createLabelSchema),
-    createLabel,
-  );
+  app.post("/projects/:projectId/labels", auth, validateBody(createLabelSchema), createLabel);
   app.get("/projects/:projectId/labels", auth, listLabels);
   app.patch(
     "/projects/:projectId/labels/:labelId",
     auth,
     validateBody(updateLabelSchema),
-    updateLabel,
+    updateLabel
   );
   app.delete("/projects/:projectId/labels/:labelId", auth, deleteLabel);
 
@@ -77,7 +72,7 @@ describe("createLabel", () => {
       jsonRequest("POST", `/projects/${projectId}/labels`, {
         name: "Bug",
         color: "#ef4444",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -95,7 +90,7 @@ describe("createLabel", () => {
       jsonRequest("POST", `/projects/${projectId}/labels`, {
         name: "Duplicate Test",
         color: "#3b82f6",
-      }),
+      })
     );
 
     // Try duplicate
@@ -104,7 +99,7 @@ describe("createLabel", () => {
       jsonRequest("POST", `/projects/${projectId}/labels`, {
         name: "duplicate test",
         color: "#ef4444",
-      }),
+      })
     );
 
     expect(res.status).toBe(409);
@@ -117,7 +112,7 @@ describe("createLabel", () => {
       jsonRequest("POST", `/projects/${projectId}/labels`, {
         name: "Invalid Color",
         color: "red",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -152,7 +147,7 @@ describe("updateLabel", () => {
       jsonRequest("POST", `/projects/${projectId}/labels`, {
         name: "Update Me",
         color: "#22c55e",
-      }),
+      })
     );
     const { label: created } = await createRes.json<{ label: { id: string } }>();
 
@@ -161,7 +156,7 @@ describe("updateLabel", () => {
       `/projects/${projectId}/labels/${created.id}`,
       jsonRequest("PATCH", `/projects/${projectId}/labels/${created.id}`, {
         name: "Updated Name",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -178,7 +173,7 @@ describe("updateLabel", () => {
       jsonRequest("POST", `/projects/${projectId}/labels`, {
         name: "Color Update",
         color: "#3b82f6",
-      }),
+      })
     );
     const { label: created } = await createRes.json<{ label: { id: string } }>();
 
@@ -187,7 +182,7 @@ describe("updateLabel", () => {
       `/projects/${projectId}/labels/${created.id}`,
       jsonRequest("PATCH", `/projects/${projectId}/labels/${created.id}`, {
         color: "#ef4444",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -204,14 +199,14 @@ describe("updateLabel", () => {
       jsonRequest("POST", `/projects/${projectId}/labels`, {
         name: "Label A",
         color: "#3b82f6",
-      }),
+      })
     );
     const createRes2 = await app.request(
       `/projects/${projectId}/labels`,
       jsonRequest("POST", `/projects/${projectId}/labels`, {
         name: "Label B",
         color: "#ef4444",
-      }),
+      })
     );
     const { label: labelB } = await createRes2.json<{ label: { id: string } }>();
 
@@ -220,7 +215,7 @@ describe("updateLabel", () => {
       `/projects/${projectId}/labels/${labelB.id}`,
       jsonRequest("PATCH", `/projects/${projectId}/labels/${labelB.id}`, {
         name: "Label A",
-      }),
+      })
     );
 
     expect(res.status).toBe(409);
@@ -232,7 +227,7 @@ describe("updateLabel", () => {
       `/projects/${projectId}/labels/nonexistent`,
       jsonRequest("PATCH", `/projects/${projectId}/labels/nonexistent`, {
         name: "New Name",
-      }),
+      })
     );
 
     expect(res.status).toBe(404);
@@ -249,14 +244,14 @@ describe("deleteLabel", () => {
       jsonRequest("POST", `/projects/${projectId}/labels`, {
         name: "Delete Me",
         color: "#6b7280",
-      }),
+      })
     );
     const { label: created } = await createRes.json<{ label: { id: string } }>();
 
     // Delete it
     const res = await app.request(
       `/projects/${projectId}/labels/${created.id}`,
-      jsonRequest("DELETE", `/projects/${projectId}/labels/${created.id}`),
+      jsonRequest("DELETE", `/projects/${projectId}/labels/${created.id}`)
     );
 
     expect(res.status).toBe(200);
@@ -273,7 +268,7 @@ describe("deleteLabel", () => {
     const app = createApp();
     const res = await app.request(
       `/projects/${projectId}/labels/nonexistent`,
-      jsonRequest("DELETE", `/projects/${projectId}/labels/nonexistent`),
+      jsonRequest("DELETE", `/projects/${projectId}/labels/nonexistent`)
     );
 
     expect(res.status).toBe(404);
@@ -344,7 +339,7 @@ describe("listWorkspaceLabels", () => {
   function wsLabelsApp(
     user: typeof TEST_USER | typeof TEST_USER_2,
     role: "owner" | "admin" | "member",
-    workspaceId: string,
+    workspaceId: string
   ) {
     const app = new Hono<AppEnv>();
     app.get(
@@ -352,7 +347,7 @@ describe("listWorkspaceLabels", () => {
       fakeAuth(d1, user, {
         workspaceMembership: { id: "wm-labels", workspaceId, role },
       }),
-      listWorkspaceLabels,
+      listWorkspaceLabels
     );
     return app;
   }
@@ -360,7 +355,7 @@ describe("listWorkspaceLabels", () => {
   async function fetchLabels(
     user: typeof TEST_USER | typeof TEST_USER_2,
     role: "owner" | "admin" | "member",
-    workspaceId: string,
+    workspaceId: string
   ) {
     const app = wsLabelsApp(user, role, workspaceId);
     const res = await app.request(`/workspaces/${workspaceId}/labels`);

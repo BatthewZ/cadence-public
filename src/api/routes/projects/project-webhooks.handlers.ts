@@ -3,10 +3,7 @@ import type { Context } from "hono";
 
 import { webhook, webhookDelivery } from "../../../db/schema/webhook";
 import { createWebhookSchema, updateWebhookSchema } from "../../../shared/schemas/webhook";
-import {
-  type WebhookEventType,
-  WORKSPACE_SCOPED_EVENTS,
-} from "../../../shared/types/webhook";
+import { type WebhookEventType, WORKSPACE_SCOPED_EVENTS } from "../../../shared/types/webhook";
 import type { AppEnv } from "../../env";
 import { errorResponse } from "../../lib/error-response";
 import { requireParam } from "../../lib/params";
@@ -44,10 +41,7 @@ export async function listProjectWebhooks(c: Context<AppEnv>) {
   const db = c.get("db");
   const { projectId } = getProjectContext(c);
 
-  const rows = await db
-    .select()
-    .from(webhook)
-    .where(eq(webhook.projectId, projectId));
+  const rows = await db.select().from(webhook).where(eq(webhook.projectId, projectId));
 
   return c.json({ webhooks: rows.map(omitSecret) });
 }
@@ -74,7 +68,7 @@ export async function createProjectWebhook(c: Context<AppEnv>) {
     return errorResponse(
       c,
       "Project-scoped webhooks cannot subscribe to workspace or invitation events",
-      400,
+      400
     );
   }
 
@@ -88,7 +82,7 @@ export async function createProjectWebhook(c: Context<AppEnv>) {
     return errorResponse(
       c,
       `Maximum of ${MAX_WEBHOOKS_PER_WORKSPACE} webhooks per workspace exceeded`,
-      409,
+      409
     );
   }
 
@@ -142,9 +136,7 @@ export async function getProjectWebhook(c: Context<AppEnv>) {
     db
       .select()
       .from(webhook)
-      .where(
-        and(eq(webhook.id, webhookId), eq(webhook.projectId, projectId)),
-      )
+      .where(and(eq(webhook.id, webhookId), eq(webhook.projectId, projectId)))
       .limit(1),
     db
       .select()
@@ -175,9 +167,7 @@ export async function updateProjectWebhook(c: Context<AppEnv>) {
   const [existing] = await db
     .select()
     .from(webhook)
-    .where(
-      and(eq(webhook.id, webhookId), eq(webhook.projectId, projectId)),
-    )
+    .where(and(eq(webhook.id, webhookId), eq(webhook.projectId, projectId)))
     .limit(1);
 
   if (!existing) {
@@ -201,7 +191,7 @@ export async function updateProjectWebhook(c: Context<AppEnv>) {
     return errorResponse(
       c,
       "Project-scoped webhooks cannot subscribe to workspace or invitation events",
-      400,
+      400
     );
   }
 
@@ -212,8 +202,7 @@ export async function updateProjectWebhook(c: Context<AppEnv>) {
   // projectId is never changed via this endpoint — it's implicit
   if (body.name !== undefined) updatePayload.name = body.name;
   if (body.url !== undefined) updatePayload.url = body.url;
-  if (body.events !== undefined)
-    updatePayload.events = JSON.stringify(body.events);
+  if (body.events !== undefined) updatePayload.events = JSON.stringify(body.events);
   if (body.active !== undefined) {
     updatePayload.active = body.active;
     if (body.active && !existing.active) updatePayload.consecutiveFailures = 0;
@@ -247,9 +236,7 @@ export async function deleteProjectWebhook(c: Context<AppEnv>) {
   const [existing] = await db
     .select({ id: webhook.id })
     .from(webhook)
-    .where(
-      and(eq(webhook.id, webhookId), eq(webhook.projectId, projectId)),
-    )
+    .where(and(eq(webhook.id, webhookId), eq(webhook.projectId, projectId)))
     .limit(1);
 
   if (!existing) {
@@ -272,9 +259,7 @@ export async function testProjectWebhook(c: Context<AppEnv>) {
   const [row] = await db
     .select()
     .from(webhook)
-    .where(
-      and(eq(webhook.id, webhookId), eq(webhook.projectId, projectId)),
-    )
+    .where(and(eq(webhook.id, webhookId), eq(webhook.projectId, projectId)))
     .limit(1);
 
   if (!row) {
@@ -290,13 +275,7 @@ export async function testProjectWebhook(c: Context<AppEnv>) {
     data: { message: "This is a test webhook delivery" },
   };
 
-  await deliverWebhook(
-    db,
-    row,
-    deliveryId,
-    "webhook.test" as never,
-    testPayload,
-  );
+  await deliverWebhook(db, row, deliveryId, "webhook.test" as never, testPayload);
 
   const [delivery] = await db
     .select()

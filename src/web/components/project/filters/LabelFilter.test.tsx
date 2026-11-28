@@ -52,9 +52,7 @@ describe("LabelFilter", () => {
 
       await openPopover(user);
 
-      expect(
-        screen.getByText("No labels in this project yet."),
-      ).toBeInTheDocument();
+      expect(screen.getByText("No labels in this project yet.")).toBeInTheDocument();
 
       const manageButton = screen.getByRole("button", { name: "Manage labels" });
       await user.click(manageButton);
@@ -68,13 +66,9 @@ describe("LabelFilter", () => {
       await openPopover(user);
 
       expect(
-        screen.getByText(
-          "No labels in this workspace yet. Create labels inside a project.",
-        ),
+        screen.getByText("No labels in this workspace yet. Create labels inside a project.")
       ).toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: "Manage labels" }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Manage labels" })).not.toBeInTheDocument();
     });
 
     it("renders no label options in the empty state", async () => {
@@ -96,9 +90,7 @@ describe("LabelFilter", () => {
 
       const checkboxes = screen.getAllByRole("checkbox");
       expect(checkboxes).toHaveLength(3);
-      expect(checkboxes[0]).toBe(
-        screen.getByRole("checkbox", { name: "No label" }),
-      );
+      expect(checkboxes[0]).toBe(screen.getByRole("checkbox", { name: "No label" }));
     });
 
     it("adds FILTER_NONE to the selection when toggled on", async () => {

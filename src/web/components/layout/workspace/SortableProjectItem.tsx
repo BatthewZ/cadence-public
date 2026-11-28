@@ -19,14 +19,9 @@ export function SortableProjectItem({
   isFavorite,
   onToggleFavorite,
 }: SortableProjectItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: project.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: project.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),

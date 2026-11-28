@@ -51,22 +51,17 @@ app.post(
   requireAuth,
   requireProjectRole("admin", "member"),
   validateBody(createTaskGroupSchema),
-  createTaskGroup,
+  createTaskGroup
 );
 
-app.get(
-  "/projects/:projectId/task-groups",
-  requireAuth,
-  requireProjectAccess(),
-  listTaskGroups,
-);
+app.get("/projects/:projectId/task-groups", requireAuth, requireProjectAccess(), listTaskGroups);
 
 app.get(
   "/workspaces/:workspaceId/task-groups",
   requireAuth,
   requireWorkspaceMember(),
   validateQuery(workspaceTaskGroupsQuerySchema),
-  listWorkspaceTaskGroups,
+  listWorkspaceTaskGroups
 );
 
 // Task-group-scoped routes — no projectId in URL, so access is resolved
@@ -81,20 +76,16 @@ app.patch(
   "/task-groups/:taskGroupId",
   requireAuth,
   validateBody(updateTaskGroupSchema),
-  updateTaskGroup,
+  updateTaskGroup
 );
 
-app.delete(
-  "/task-groups/:taskGroupId",
-  requireAuth,
-  deleteTaskGroup,
-);
+app.delete("/task-groups/:taskGroupId", requireAuth, deleteTaskGroup);
 
 app.patch(
   "/task-groups/:taskGroupId/reorder",
   requireAuth,
   validateBody(reorderTaskGroupSchema),
-  reorderTaskGroup,
+  reorderTaskGroup
 );
 
 export default app;

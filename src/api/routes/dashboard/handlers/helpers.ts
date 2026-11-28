@@ -17,7 +17,12 @@ export const costAggregationColumns = {
   tasksWithCost: sql<number>`COUNT(CASE WHEN ${task.cost} IS NOT NULL THEN 1 END)`,
 };
 
-export const emptyCostAggregation = { totalCost: 0, completedCost: 0, activeCost: 0, tasksWithCost: 0 };
+export const emptyCostAggregation = {
+  totalCost: 0,
+  completedCost: 0,
+  activeCost: 0,
+  tasksWithCost: 0,
+};
 
 /** Reusable Drizzle select columns for task count aggregation by completion status. */
 export const taskCountColumns = {

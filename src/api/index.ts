@@ -5,7 +5,10 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 
 import { createDb } from "../db";
-import { IDEMPOTENCY_KEY_HEADER, IDEMPOTENT_REPLAYED_HEADER } from "../shared/constants/offline-sync";
+import {
+  IDEMPOTENCY_KEY_HEADER,
+  IDEMPOTENT_REPLAYED_HEADER,
+} from "../shared/constants/offline-sync";
 import type { AppBindings, AppEnv } from "./env";
 import { resolveAllowedOrigin } from "./lib/auth";
 import { errorResponse } from "./lib/error-response";
@@ -86,9 +89,7 @@ const FAVICON_LINKS =
   '<link rel="icon" type="image/svg+xml" href="/favicon.svg" />' +
   '<link rel="icon" type="image/png" href="/favicon.png" />';
 
-const withCadenceFavicon = (
-  handler: MiddlewareHandler<AppEnv>,
-): MiddlewareHandler<AppEnv> => {
+const withCadenceFavicon = (handler: MiddlewareHandler<AppEnv>): MiddlewareHandler<AppEnv> => {
   return async (c, next) => {
     const response = await handler(c, next);
     if (!response) {
@@ -108,8 +109,8 @@ app.get(
     Scalar<AppEnv>({
       url: "/api/openapi.json",
       pageTitle: "Cadence API",
-    }),
-  ),
+    })
+  )
 );
 
 app.get(
@@ -118,8 +119,8 @@ app.get(
     Scalar<AppEnv>({
       url: "/api/openapi.json",
       pageTitle: "Cadence Webhook API",
-    }),
-  ),
+    })
+  )
 );
 
 app.get("/api/health", async (c) => {
@@ -155,12 +156,7 @@ app.all("/api/*", (c) => {
 });
 
 app.get("/robots.txt", () => {
-  const body = [
-    "User-agent: *",
-    "Allow: /",
-    "Disallow: /api/",
-    "Disallow: /w/",
-  ].join("\n");
+  const body = ["User-agent: *", "Allow: /", "Disallow: /api/", "Disallow: /w/"].join("\n");
   return withSpaSecurityHeaders(
     new Response(body, { headers: { "Content-Type": "text/plain" } }),
     "/robots.txt"

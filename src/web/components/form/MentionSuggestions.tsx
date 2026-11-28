@@ -51,7 +51,7 @@ export function MentionSuggestions({
       className={cn(
         "absolute z-50 min-w-[12.5rem] max-w-[17.5rem] max-h-[12.5rem] overflow-y-auto",
         "bg-surface-0 border border-border-default rounded-lg shadow-lg",
-        "py-1",
+        "py-1"
       )}
       style={{
         top: position.top,
@@ -71,7 +71,7 @@ export function MentionSuggestions({
             "transition-colors duration-fast",
             index === activeIndex
               ? "bg-surface-2 text-fg-primary"
-              : "text-fg-secondary hover:bg-surface-1",
+              : "text-fg-secondary hover:bg-surface-1"
           )}
           onMouseEnter={() => onActiveIndexChange(index)}
           onMouseDown={(e) => {

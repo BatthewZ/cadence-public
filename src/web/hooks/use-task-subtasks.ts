@@ -1,7 +1,4 @@
-import {
-  type DragEndEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
+import { type DragEndEvent, type DragStartEvent } from "@dnd-kit/core";
 import { arrayMove } from "@dnd-kit/sortable";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
@@ -25,7 +22,7 @@ interface UseTaskSubtasksOptions {
   invalidateTaskQueries: () => void;
   toast: (
     message: string,
-    options?: { variant?: "info" | "success" | "warning" | "error" },
+    options?: { variant?: "info" | "success" | "warning" | "error" }
   ) => string;
 }
 
@@ -52,7 +49,8 @@ export function useTaskSubtasks({
   // The board card's counts, copied from the subtasks as they stand after an edit, never worked
   // out from a captured list: that miscounted a rollback and edits made before an earlier one settled.
   const syncCardCounts = useCallback(() => {
-    const current = qc.getQueryData<{ task: TaskDetail }>(queryKeys.tasks.detail(taskId))?.task.subtasks;
+    const current = qc.getQueryData<{ task: TaskDetail }>(queryKeys.tasks.detail(taskId))?.task
+      .subtasks;
     if (!current) return;
     updateTaskInContext(taskId, {
       subtaskCount: current.length,
@@ -61,14 +59,8 @@ export function useTaskSubtasks({
   }, [qc, taskId, updateTaskInContext]);
 
   const subtasks = localTask?.subtasks;
-  const sortedSubtasks = useMemo(
-    () => (subtasks ? sortByPosition(subtasks) : []),
-    [subtasks],
-  );
-  const subtaskIds = useMemo(
-    () => sortedSubtasks.map((s) => s.id),
-    [sortedSubtasks],
-  );
+  const sortedSubtasks = useMemo(() => (subtasks ? sortByPosition(subtasks) : []), [subtasks]);
+  const subtaskIds = useMemo(() => sortedSubtasks.map((s) => s.id), [sortedSubtasks]);
 
   const [activeSubtaskId, setActiveSubtaskId] = useState<string | null>(null);
   const activeSubtask = activeSubtaskId
@@ -86,7 +78,7 @@ export function useTaskSubtasks({
         return {
           ...prev,
           subtasks: prev.subtasks.map((s) =>
-            s.id === subtask.id ? { ...s, completed: !s.completed } : s,
+            s.id === subtask.id ? { ...s, completed: !s.completed } : s
           ),
         };
       });
@@ -106,7 +98,7 @@ export function useTaskSubtasks({
           return {
             ...prev,
             subtasks: prev.subtasks.map((s) =>
-              s.id === subtask.id ? { ...s, completed: subtask.completed } : s,
+              s.id === subtask.id ? { ...s, completed: subtask.completed } : s
             ),
           };
         });
@@ -114,7 +106,7 @@ export function useTaskSubtasks({
         toast(apiErrorMessage(err, "Failed to update subtask"), { variant: "error" });
       }
     },
-    [setLocalTask, syncCardCounts, invalidateTaskQueries, toast],
+    [setLocalTask, syncCardCounts, invalidateTaskQueries, toast]
   );
 
   const handleAddSubtask = useCallback(async () => {
@@ -125,9 +117,7 @@ export function useTaskSubtasks({
 
     // Optimistically add subtask to local state
     const lastPosition =
-      sortedSubtasks.length > 0
-        ? sortedSubtasks[sortedSubtasks.length - 1].position
-        : null;
+      sortedSubtasks.length > 0 ? sortedSubtasks[sortedSubtasks.length - 1].position : null;
     const optimisticSubtask: Subtask = {
       id: crypto.randomUUID(),
       title,
@@ -182,9 +172,7 @@ export function useTaskSubtasks({
 
   const handleDeleteSubtask = useCallback(
     async (subtaskId: string) => {
-      const removedSubtask = localTask?.subtasks.find(
-        (s) => s.id === subtaskId,
-      );
+      const removedSubtask = localTask?.subtasks.find((s) => s.id === subtaskId);
       if (!removedSubtask) return;
       freshnessTracker.recordMutation("tasks");
 
@@ -215,22 +203,18 @@ export function useTaskSubtasks({
         toast(apiErrorMessage(err, "Failed to delete subtask"), { variant: "error" });
       }
     },
-    [localTask?.subtasks, setLocalTask, syncCardCounts, invalidateTaskQueries, toast],
+    [localTask?.subtasks, setLocalTask, syncCardCounts, invalidateTaskQueries, toast]
   );
 
   const handleRenameSubtask = useCallback(
     async (subtaskId: string, title: string) => {
       freshnessTracker.recordMutation("tasks");
-      const oldTitle = localTask?.subtasks.find(
-        (s) => s.id === subtaskId,
-      )?.title;
+      const oldTitle = localTask?.subtasks.find((s) => s.id === subtaskId)?.title;
       setLocalTask((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          subtasks: prev.subtasks.map((s) =>
-            s.id === subtaskId ? { ...s, title } : s,
-          ),
+          subtasks: prev.subtasks.map((s) => (s.id === subtaskId ? { ...s, title } : s)),
         };
       });
       try {
@@ -247,14 +231,14 @@ export function useTaskSubtasks({
           return {
             ...prev,
             subtasks: prev.subtasks.map((s) =>
-              s.id === subtaskId ? { ...s, title: oldTitle ?? title } : s,
+              s.id === subtaskId ? { ...s, title: oldTitle ?? title } : s
             ),
           };
         });
         toast(apiErrorMessage(err, "Failed to rename subtask"), { variant: "error" });
       }
     },
-    [localTask?.subtasks, setLocalTask, invalidateTaskQueries, toast],
+    [localTask?.subtasks, setLocalTask, invalidateTaskQueries, toast]
   );
 
   const handleSubtaskDragStart = useCallback((event: DragStartEvent) => {
@@ -274,12 +258,8 @@ export function useTaskSubtasks({
 
       const reordered = arrayMove(sortedSubtasks, oldIndex, newIndex);
       const above = newIndex > 0 ? reordered[newIndex - 1] : null;
-      const below =
-        newIndex < reordered.length - 1 ? reordered[newIndex + 1] : null;
-      const newPosition = generateKeyBetween(
-        above?.position ?? null,
-        below?.position ?? null,
-      );
+      const below = newIndex < reordered.length - 1 ? reordered[newIndex + 1] : null;
+      const newPosition = generateKeyBetween(above?.position ?? null, below?.position ?? null);
 
       const movedSubtask = sortedSubtasks[oldIndex];
 
@@ -289,7 +269,7 @@ export function useTaskSubtasks({
         return {
           ...prev,
           subtasks: prev.subtasks.map((s) =>
-            s.id === movedSubtask.id ? { ...s, position: newPosition } : s,
+            s.id === movedSubtask.id ? { ...s, position: newPosition } : s
           ),
         };
       });
@@ -308,16 +288,14 @@ export function useTaskSubtasks({
           return {
             ...prev,
             subtasks: prev.subtasks.map((s) =>
-              s.id === movedSubtask.id
-                ? { ...s, position: movedSubtask.position }
-                : s,
+              s.id === movedSubtask.id ? { ...s, position: movedSubtask.position } : s
             ),
           };
         });
         toast(apiErrorMessage(err, "Failed to reorder subtask"), { variant: "error" });
       }
     },
-    [localTask, sortedSubtasks, setLocalTask, invalidateTaskQueries, toast],
+    [localTask, sortedSubtasks, setLocalTask, invalidateTaskQueries, toast]
   );
 
   return {

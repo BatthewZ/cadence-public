@@ -1,10 +1,4 @@
-import {
-  index,
-  integer,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import type { WorkspaceRole } from "../../shared/types/roles";
 import { user } from "./auth";
@@ -32,5 +26,5 @@ export const invitation = sqliteTable(
     uniqueIndex("invitation_token_unique").on(table.token),
     index("invitation_workspace_status_idx").on(table.workspaceId, table.status),
     index("invitation_email_status_expires_idx").on(table.email, table.status, table.expiresAt),
-  ],
+  ]
 );

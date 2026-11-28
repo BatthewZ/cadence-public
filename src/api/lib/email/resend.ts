@@ -25,7 +25,7 @@ export class ResendEmailService implements EmailService {
     const response = await fetch(RESEND_API_URL, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${this.apiKey}`,
+        Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -40,9 +40,7 @@ export class ResendEmailService implements EmailService {
 
     if (!response.ok) {
       const body = await response.text();
-      throw new Error(
-        `Resend API error (${response.status} ${response.statusText}): ${body}`
-      );
+      throw new Error(`Resend API error (${response.status} ${response.statusText}): ${body}`);
     }
 
     const data: { id: string } = await response.json();

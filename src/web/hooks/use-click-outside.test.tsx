@@ -4,13 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useClickOutside } from "./use-click-outside";
 
-function TestComponent({
-  handler,
-  enabled = true,
-}: {
-  handler: () => void;
-  enabled?: boolean;
-}) {
+function TestComponent({ handler, enabled = true }: { handler: () => void; enabled?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   useClickOutside(ref, handler, enabled);
   return (

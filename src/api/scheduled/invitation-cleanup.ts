@@ -54,77 +54,55 @@ export async function cleanupInvitations(db: Database): Promise<number> {
       const oldRows = await db
         .select({ id: invitation.id })
         .from(invitation)
-        .where(
-          and(
-            ne(invitation.status, "pending"),
-            lt(invitation.expiresAt, now),
-          ),
-        )
+        .where(and(ne(invitation.status, "pending"), lt(invitation.expiresAt, now)))
         .limit(DELETE_BATCH_SIZE);
 
       if (oldRows.length === 0) break;
 
       const idsToDelete = oldRows.map((r) => r.id);
-      await db
-        .delete(invitation)
-        .where(
-          sql`${invitation.id} IN (${sql.join(
-            idsToDelete.map((id) => sql`${id}`),
-            sql`, `,
-          )})`,
-        );
+      await db.delete(invitation).where(
+        sql`${invitation.id} IN (${sql.join(
+          idsToDelete.map((id) => sql`${id}`),
+          sql`, `
+        )})`
+      );
 
       batchDeleted = oldRows.length;
       totalDeleted += batchDeleted;
     } while (batchDeleted === DELETE_BATCH_SIZE);
   } catch (error) {
-    console.error(
-      "[invitation-cleanup] Failed to delete non-pending expired invitations",
-      error,
-    );
+    console.error("[invitation-cleanup] Failed to delete non-pending expired invitations", error);
   }
 
   // ---------------------------------------------------------------------------
   // Policy 2: Delete pending invitations expired more than 7 days ago
   // ---------------------------------------------------------------------------
   try {
-    const graceCutoff = new Date(
-      Date.now() - PENDING_GRACE_DAYS * 24 * 60 * 60 * 1000,
-    );
+    const graceCutoff = new Date(Date.now() - PENDING_GRACE_DAYS * 24 * 60 * 60 * 1000);
 
     let batchDeleted: number;
     do {
       const oldRows = await db
         .select({ id: invitation.id })
         .from(invitation)
-        .where(
-          and(
-            eq(invitation.status, "pending"),
-            lt(invitation.expiresAt, graceCutoff),
-          ),
-        )
+        .where(and(eq(invitation.status, "pending"), lt(invitation.expiresAt, graceCutoff)))
         .limit(DELETE_BATCH_SIZE);
 
       if (oldRows.length === 0) break;
 
       const idsToDelete = oldRows.map((r) => r.id);
-      await db
-        .delete(invitation)
-        .where(
-          sql`${invitation.id} IN (${sql.join(
-            idsToDelete.map((id) => sql`${id}`),
-            sql`, `,
-          )})`,
-        );
+      await db.delete(invitation).where(
+        sql`${invitation.id} IN (${sql.join(
+          idsToDelete.map((id) => sql`${id}`),
+          sql`, `
+        )})`
+      );
 
       batchDeleted = oldRows.length;
       totalDeleted += batchDeleted;
     } while (batchDeleted === DELETE_BATCH_SIZE);
   } catch (error) {
-    console.error(
-      "[invitation-cleanup] Failed to delete expired pending invitations",
-      error,
-    );
+    console.error("[invitation-cleanup] Failed to delete expired pending invitations", error);
   }
 
   return totalDeleted;

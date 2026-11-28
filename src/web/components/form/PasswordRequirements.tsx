@@ -67,16 +67,10 @@ export const PasswordRequirements = forwardRef<HTMLUListElement, PasswordRequire
             key={req.label}
             className={cn(
               "password-requirements__item",
-              req.met
-                ? "password-requirements__item--met"
-                : "password-requirements__item--unmet"
+              req.met ? "password-requirements__item--met" : "password-requirements__item--unmet"
             )}
           >
-            {req.met ? (
-              <Check size={14} aria-hidden="true" />
-            ) : (
-              <X size={14} aria-hidden="true" />
-            )}
+            {req.met ? <Check size={14} aria-hidden="true" /> : <X size={14} aria-hidden="true" />}
             <span>{req.label}</span>
           </li>
         ))}

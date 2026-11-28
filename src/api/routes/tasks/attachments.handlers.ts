@@ -37,7 +37,11 @@ export async function uploadAttachment(c: Context<AppEnv>) {
   const baseMimeType = file.type.split(";")[0].trim().toLowerCase();
 
   if (!(ALLOWED_ATTACHMENT_TYPES as readonly string[]).includes(baseMimeType)) {
-    return errorResponse(c, "Invalid file type. Allowed types: images, PDFs, documents, text, CSV, ZIP", 400);
+    return errorResponse(
+      c,
+      "Invalid file type. Allowed types: images, PDFs, documents, text, CSV, ZIP",
+      400
+    );
   }
 
   if (file.size > MAX_ATTACHMENT_SIZE) {
@@ -51,7 +55,11 @@ export async function uploadAttachment(c: Context<AppEnv>) {
     .where(eq(taskAttachment.taskId, taskId));
 
   if (cnt >= MAX_ATTACHMENTS_PER_TASK) {
-    return errorResponse(c, `Maximum of ${MAX_ATTACHMENTS_PER_TASK} attachments per task reached`, 400);
+    return errorResponse(
+      c,
+      `Maximum of ${MAX_ATTACHMENTS_PER_TASK} attachments per task reached`,
+      400
+    );
   }
 
   // Upload to R2 first — if this fails, no DB records to clean up
@@ -104,23 +112,36 @@ export async function uploadAttachment(c: Context<AppEnv>) {
   } catch (error) {
     // Clean up R2 object and any partially-inserted records
     await deleteObject(storage, key).catch((err) =>
-      console.error("Failed to clean up orphaned attachment R2 object:", { taskId, key, uploadId }, err),
+      console.error(
+        "Failed to clean up orphaned attachment R2 object:",
+        { taskId, key, uploadId },
+        err
+      )
     );
-    await db.delete(upload).where(eq(upload.id, uploadId)).catch((err) =>
-      console.error("Failed to clean up orphaned upload record:", { taskId, uploadId }, err),
+    await db
+      .delete(upload)
+      .where(eq(upload.id, uploadId))
+      .catch((err) =>
+        console.error("Failed to clean up orphaned upload record:", { taskId, uploadId }, err)
+      );
+    console.error(
+      "Failed to save attachment records:",
+      { taskId, userId: user.id, key, uploadId, attachmentId },
+      error
     );
-    console.error("Failed to save attachment records:", { taskId, userId: user.id, key, uploadId, attachmentId }, error);
     return errorResponse(c, "Failed to save attachment", 500);
   }
 
   const uploadApiTokenId = c.get("apiToken")?.id ?? null;
-  deferWork(c, () => logActivity(db, {
-    taskId,
-    actorId: user.id,
-    action: "attachment_added",
-    newValue: file.name,
-    apiTokenId: uploadApiTokenId,
-  }));
+  deferWork(c, () =>
+    logActivity(db, {
+      taskId,
+      actorId: user.id,
+      action: "attachment_added",
+      newValue: file.name,
+      apiTokenId: uploadApiTokenId,
+    })
+  );
 
   return c.json(
     {
@@ -136,7 +157,7 @@ export async function uploadAttachment(c: Context<AppEnv>) {
         createdAt: now.toISOString(),
       },
     },
-    201,
+    201
   );
 }
 
@@ -196,12 +217,7 @@ export async function deleteAttachment(c: Context<AppEnv>) {
     })
     .from(taskAttachment)
     .innerJoin(upload, eq(taskAttachment.uploadId, upload.id))
-    .where(
-      and(
-        eq(taskAttachment.id, attachmentId),
-        eq(taskAttachment.taskId, taskId),
-      ),
-    )
+    .where(and(eq(taskAttachment.id, attachmentId), eq(taskAttachment.taskId, taskId)))
     .limit(1);
 
   if (!record) {
@@ -224,18 +240,24 @@ export async function deleteAttachment(c: Context<AppEnv>) {
       db.update(task).set({ updatedAt: new Date() }).where(eq(task.id, taskId)),
     ] as const),
     deleteObject(storage, record.key).catch((err) =>
-      console.error("Failed to delete attachment R2 object:", { taskId, attachmentId, key: record.key }, err),
+      console.error(
+        "Failed to delete attachment R2 object:",
+        { taskId, attachmentId, key: record.key },
+        err
+      )
     ),
   ]);
 
   const deleteApiTokenId = c.get("apiToken")?.id ?? null;
-  deferWork(c, () => logActivity(db, {
-    taskId,
-    actorId: user.id,
-    action: "attachment_removed",
-    newValue: record.filename,
-    apiTokenId: deleteApiTokenId,
-  }));
+  deferWork(c, () =>
+    logActivity(db, {
+      taskId,
+      actorId: user.id,
+      action: "attachment_removed",
+      newValue: record.filename,
+      apiTokenId: deleteApiTokenId,
+    })
+  );
 
   return c.json({ ok: true, deletedId: attachmentId });
 }

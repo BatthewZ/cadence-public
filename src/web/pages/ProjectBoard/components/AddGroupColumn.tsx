@@ -1,9 +1,5 @@
 import { Plus as PlusIcon } from "lucide-react";
-import {
-  type KeyboardEvent,
-  useRef,
-  useState,
-} from "react";
+import { type KeyboardEvent, useRef, useState } from "react";
 
 import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import { Input } from "@/web/components/form/Input";
@@ -40,7 +36,7 @@ export function AddGroupColumn() {
 
     const lastPosition = taskGroups.reduce<string | null>(
       (max, g) => (max === null || g.position > max ? g.position : max),
-      null,
+      null
     );
     const group: TaskGroup = {
       id: crypto.randomUUID(),

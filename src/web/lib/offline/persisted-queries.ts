@@ -6,8 +6,22 @@ import type { QueryKey } from "@tanstack/react-query";
  * activity feeds, notifications, webhooks, API tokens, invitations and the calendar-feed status
  * (a capability's metadata) — those are online-only screens, or data a device shouldn't keep.
  */
-const WORKSPACE_CHILDREN = new Set(["members", "projects", "labels", "task-groups", "dashboard", "teams"]);
-const PROJECT_CHILDREN = new Set(["members", "task-groups", "tasks", "labels", "saved-views", "dashboard"]);
+const WORKSPACE_CHILDREN = new Set([
+  "members",
+  "projects",
+  "labels",
+  "task-groups",
+  "dashboard",
+  "teams",
+]);
+const PROJECT_CHILDREN = new Set([
+  "members",
+  "task-groups",
+  "tasks",
+  "labels",
+  "saved-views",
+  "dashboard",
+]);
 const TASK_CHILDREN = new Set(["comments", "attachments"]);
 
 function childAllowed(key: QueryKey, children: Set<string>): boolean {

@@ -6,10 +6,7 @@ import {
   EmptyStateTitle,
   Text,
 } from "@/web/components/ui";
-import {
-  PRIORITY_DOT_CLASS,
-  PRIORITY_LABEL,
-} from "@/web/util/task-display";
+import { PRIORITY_DOT_CLASS, PRIORITY_LABEL } from "@/web/util/task-display";
 
 const PRIORITY_ORDER = ["urgent", "high", "medium", "low", "none"] as const;
 
@@ -66,9 +63,7 @@ export function PriorityBreakdownSection({
             <div className="flex flex-wrap gap-x-r3 gap-y-r6">
               {entries.map((e) => (
                 <Row key={e.priority} gap="r6" align="center">
-                  <span
-                    className={`inline-block size-2 rounded-full ${e.dotClass}`}
-                  />
+                  <span className={`inline-block size-2 rounded-full ${e.dotClass}`} />
                   <Text variant="body-3" color="secondary">
                     {e.label}
                   </Text>

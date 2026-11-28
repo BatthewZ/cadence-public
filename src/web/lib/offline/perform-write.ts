@@ -1,7 +1,4 @@
-import {
-  IDEMPOTENCY_KEY_HEADER,
-  WRITE_ERROR_CODES,
-} from "@/shared/constants/offline-sync";
+import { IDEMPOTENCY_KEY_HEADER, WRITE_ERROR_CODES } from "@/shared/constants/offline-sync";
 import type { ErrorBody } from "@/web/lib/api/client";
 
 export type WriteMethod = "POST" | "PUT" | "PATCH" | "DELETE";
@@ -78,7 +75,7 @@ export const WRITE_TIMEOUT_MS = 20_000;
 export async function performWrite(
   write: Pick<QueuedWrite, "method" | "path" | "body" | "key">,
   fetchImpl: typeof fetch = fetch,
-  timeoutMs: number = WRITE_TIMEOUT_MS,
+  timeoutMs: number = WRITE_TIMEOUT_MS
 ): Promise<WriteOutcome> {
   const abort = new AbortController();
   const timer = setTimeout(() => abort.abort(), timeoutMs);
@@ -110,7 +107,8 @@ export async function performWrite(
   const message = body.error ?? res.statusText ?? `HTTP ${res.status}`;
 
   if (res.status === 401) return { kind: "unauthorized", message };
-  if (res.status === 429) return { kind: "rate-limited", retryAfterMs: retryAfterMs(res, body), message };
+  if (res.status === 429)
+    return { kind: "rate-limited", retryAfterMs: retryAfterMs(res, body), message };
   if (res.status === 409 && body.code === WRITE_ERROR_CODES.idempotencyInProgress) {
     return { kind: "in-progress" };
   }

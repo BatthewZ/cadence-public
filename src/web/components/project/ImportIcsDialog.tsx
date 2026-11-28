@@ -164,54 +164,56 @@ export function ImportIcsDialog({ open, onClose }: ImportIcsDialogProps) {
     onClose();
   }, [resetFile, onClose]);
 
-  const handleFilesSelected = useCallback(async (files: File[]) => {
-    const file = files[0];
-    if (!file) return;
-    // Clear any prior file/preview/error state before validating the new pick,
-    // via the same path `resetFile` uses so the two can't drift apart.
-    resetFile();
+  const handleFilesSelected = useCallback(
+    async (files: File[]) => {
+      const file = files[0];
+      if (!file) return;
+      // Clear any prior file/preview/error state before validating the new pick,
+      // via the same path `resetFile` uses so the two can't drift apart.
+      resetFile();
 
-    // Extension OR MIME match: many platforms report an empty `file.type`
-    // for .ics files, so a MIME-only check would silently reject valid files.
-    const isIcs =
-      file.name.toLowerCase().endsWith(".ics") || file.type === "text/calendar";
-    if (!isIcs) {
-      setUploadError("That doesn't look like an .ics calendar file.");
-      return;
-    }
-    if (file.size > MAX_IMPORT_FILE_BYTES) {
-      setUploadError("File is too large — the limit is 1 MB.");
-      return;
-    }
+      // Extension OR MIME match: many platforms report an empty `file.type`
+      // for .ics files, so a MIME-only check would silently reject valid files.
+      const isIcs = file.name.toLowerCase().endsWith(".ics") || file.type === "text/calendar";
+      if (!isIcs) {
+        setUploadError("That doesn't look like an .ics calendar file.");
+        return;
+      }
+      if (file.size > MAX_IMPORT_FILE_BYTES) {
+        setUploadError("File is too large — the limit is 1 MB.");
+        return;
+      }
 
-    let text: string;
-    try {
-      text = await file.text();
-    } catch {
-      setUploadError("Couldn't read the file. Please try again.");
-      return;
-    }
+      let text: string;
+      try {
+        text = await file.text();
+      } catch {
+        setUploadError("Couldn't read the file. Please try again.");
+        return;
+      }
 
-    const result = parseICS(text);
-    if (result.events.length === 0) {
-      // Not a dead end: the FileUpload stays mounted so the user can pick
-      // another file immediately.
-      setEmptyFile(true);
-      return;
-    }
-    setFileName(file.name);
-    setParsed(result);
-  }, [resetFile]);
+      const result = parseICS(text);
+      if (result.events.length === 0) {
+        // Not a dead end: the FileUpload stays mounted so the user can pick
+        // another file immediately.
+        setEmptyFile(true);
+        return;
+      }
+      setFileName(file.name);
+      setParsed(result);
+    },
+    [resetFile]
+  );
 
   const handleImport = useCallback(async () => {
     if (!parsed || importing || selectedGroupId === "") return;
     setImporting(true);
     try {
       const tasks = parsed.events.slice(0, MAX_IMPORT_TASKS).map(toImportItem);
-      const result = await api.post<ImportResult>(
-        `/api/projects/${project.id}/tasks/import`,
-        { taskGroupId: selectedGroupId, tasks },
-      );
+      const result = await api.post<ImportResult>(`/api/projects/${project.id}/tasks/import`, {
+        taskGroupId: selectedGroupId,
+        tasks,
+      });
       toast(importResultMessage(result.created, result.skipped), { variant: "success" });
       refetchTasks();
       handleDialogClose();
@@ -245,8 +247,8 @@ export function ImportIcsDialog({ open, onClose }: ImportIcsDialogProps) {
             />
             {emptyFile && (
               <Alert variant="warning">
-                This file doesn&apos;t contain any readable events. Try exporting
-                it again from your calendar app, then pick the new file.
+                This file doesn&apos;t contain any readable events. Try exporting it again from your
+                calendar app, then pick the new file.
               </Alert>
             )}
           </Stack>
@@ -264,15 +266,15 @@ export function ImportIcsDialog({ open, onClose }: ImportIcsDialogProps) {
 
             {warnings.length > 0 && (
               <Alert variant="warning">
-                {warnings.length} event{warnings.length === 1 ? "" : "s"} couldn&apos;t
-                be read and will be left out.
+                {warnings.length} event{warnings.length === 1 ? "" : "s"} couldn&apos;t be read and
+                will be left out.
               </Alert>
             )}
 
             {events.length > MAX_IMPORT_TASKS && (
               <Alert variant="warning">
-                Imports are limited to {MAX_IMPORT_TASKS} tasks at a time — only the
-                first {MAX_IMPORT_TASKS} events will be imported.
+                Imports are limited to {MAX_IMPORT_TASKS} tasks at a time — only the first{" "}
+                {MAX_IMPORT_TASKS} events will be imported.
               </Alert>
             )}
 
@@ -320,20 +322,14 @@ export function ImportIcsDialog({ open, onClose }: ImportIcsDialogProps) {
             )}
 
             <Text variant="body-3" color="muted">
-              Re-importing the same file skips events it has already created,
-              matched by each event&apos;s unique ID. Events without an ID are
-              always created again.
+              Re-importing the same file skips events it has already created, matched by each
+              event&apos;s unique ID. Events without an ID are always created again.
             </Text>
           </Stack>
         )}
 
         <FormActions>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleDialogClose}
-            disabled={importing}
-          >
+          <Button type="button" variant="ghost" onClick={handleDialogClose} disabled={importing}>
             Cancel
           </Button>
           {parsed !== null && (

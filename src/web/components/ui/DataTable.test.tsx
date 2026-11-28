@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { type ColumnDef,DataTable } from "./DataTable";
+import { type ColumnDef, DataTable } from "./DataTable";
 
 type Item = { id: number; name: string; age: number };
 
@@ -66,7 +66,7 @@ describe("DataTable", () => {
         columns={sortableColumns}
         rowKey={rowKey}
         onSortChange={onSortChange}
-      />,
+      />
     );
 
     await user.click(screen.getByText("Name"));
@@ -82,18 +82,12 @@ describe("DataTable", () => {
         selectable
         selectedKeys={new Set()}
         onSelectionChange={vi.fn()}
-      />,
+      />
     );
 
-    expect(
-      screen.getByRole("checkbox", { name: /select all rows/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("checkbox", { name: /select row 1/i }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("checkbox", { name: /select row 2/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /select all rows/i })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /select row 1/i })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: /select row 2/i })).toBeInTheDocument();
   });
 
   it("select all checkbox selects all rows", async () => {
@@ -108,12 +102,10 @@ describe("DataTable", () => {
         selectable
         selectedKeys={new Set()}
         onSelectionChange={onSelectionChange}
-      />,
+      />
     );
 
-    await user.click(
-      screen.getByRole("checkbox", { name: /select all rows/i }),
-    );
+    await user.click(screen.getByRole("checkbox", { name: /select all rows/i }));
     expect(onSelectionChange).toHaveBeenCalledWith(new Set([1, 2]));
   });
 
@@ -129,12 +121,10 @@ describe("DataTable", () => {
         selectable
         selectedKeys={new Set()}
         onSelectionChange={onSelectionChange}
-      />,
+      />
     );
 
-    await user.click(
-      screen.getByRole("checkbox", { name: /select row 1/i }),
-    );
+    await user.click(screen.getByRole("checkbox", { name: /select row 1/i }));
     expect(onSelectionChange).toHaveBeenCalledWith(new Set([1]));
   });
 
@@ -147,24 +137,14 @@ describe("DataTable", () => {
         page={1}
         totalPages={5}
         onPageChange={vi.fn()}
-      />,
+      />
     );
 
-    expect(
-      screen.getByRole("navigation", { name: /pagination/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: /pagination/i })).toBeInTheDocument();
   });
 
   it("shows skeleton rows when loading=true", () => {
-    render(
-      <DataTable
-        data={[]}
-        columns={columns}
-        rowKey={rowKey}
-        loading
-        loadingRowCount={3}
-      />,
-    );
+    render(<DataTable data={[]} columns={columns} rowKey={rowKey} loading loadingRowCount={3} />);
 
     const skeletons = screen.getAllByRole("status", { name: /loading/i });
     expect(skeletons).toHaveLength(6);
@@ -183,7 +163,7 @@ describe("DataTable", () => {
         columns={columns}
         rowKey={rowKey}
         emptyContent={<div>Nothing to see here</div>}
-      />,
+      />
     );
 
     expect(screen.getByText("Nothing to see here")).toBeInTheDocument();

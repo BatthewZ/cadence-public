@@ -220,8 +220,7 @@ function toView(token: ApiToken, now = Date.now()): ApiTokenView {
     tokenPrefix: token.tokenPrefix,
     scopes: parseScopes(token.scopes),
     projectScope: token.projectScope,
-    projectIds:
-      token.projectScope === "selected" ? parseProjectIds(token.projectIds) : null,
+    projectIds: token.projectScope === "selected" ? parseProjectIds(token.projectIds) : null,
     lastUsedAt: token.lastUsedAt,
     expiresAt: token.expiresAt,
     revokeAt: token.revokeAt,
@@ -292,9 +291,7 @@ export async function listApiTokens(c: Context<AppEnv>) {
   // `isNull(revokedAt)` is the soft-delete filter — keep the predicate at the
   // DB level so a workspace with thousands of historical revoked tokens
   // doesn't ship every row over the wire only to have the UI hide them.
-  const where = includeRevoked
-    ? ownershipWhere
-    : and(ownershipWhere, isNull(apiToken.revokedAt));
+  const where = includeRevoked ? ownershipWhere : and(ownershipWhere, isNull(apiToken.revokedAt));
 
   const rows = await db.select().from(apiToken).where(where);
   const now = Date.now();
@@ -379,29 +376,19 @@ export async function createApiToken(c: Context<AppEnv>) {
   if (body.projectScope === "selected") {
     const requested = body.projectIds ?? [];
     if (requested.length === 0) {
-      return errorResponse(
-        c,
-        "projectIds is required when projectScope is 'selected'",
-        400,
-      );
+      return errorResponse(c, "projectIds is required when projectScope is 'selected'", 400);
     }
 
     const uniqueIds = Array.from(new Set(requested));
     const existing = await db
       .select({ id: project.id })
       .from(project)
-      .where(
-        and(eq(project.workspaceId, workspaceId), inArray(project.id, uniqueIds)),
-      );
+      .where(and(eq(project.workspaceId, workspaceId), inArray(project.id, uniqueIds)));
 
     const existingIds = new Set(existing.map((p) => p.id));
     const missing = uniqueIds.filter((id) => !existingIds.has(id));
     if (missing.length > 0) {
-      return errorResponse(
-        c,
-        `Project ids not found in workspace: ${missing.join(", ")}`,
-        400,
-      );
+      return errorResponse(c, `Project ids not found in workspace: ${missing.join(", ")}`, 400);
     }
 
     projectIdsJson = JSON.stringify(uniqueIds);
@@ -489,7 +476,7 @@ function scheduleCreationEmail(
     workspaceName: string;
     scopes: string[];
     createdAt: Date;
-  },
+  }
 ) {
   deferWork(c, async () => {
     try {
@@ -523,7 +510,7 @@ function scheduleCreationEmail(
           op: "sendCreationEmail",
           email: args.recipientEmail,
           error: error instanceof Error ? error.message : String(error),
-        }),
+        })
       );
     }
   });
@@ -552,7 +539,7 @@ function scheduleRotationEmail(
     rotatedAt: Date;
     oldTokenPrefix: string;
     revokeAt: Date;
-  },
+  }
 ) {
   deferWork(c, async () => {
     try {
@@ -587,7 +574,7 @@ function scheduleRotationEmail(
           op: "sendRotationEmail",
           email: args.recipientEmail,
           error: error instanceof Error ? error.message : String(error),
-        }),
+        })
       );
     }
   });
@@ -615,7 +602,7 @@ function scheduleRevocationEmail(
     workspaceName: string;
     revokedAt: Date;
     revokedByAdmin: boolean;
-  },
+  }
 ) {
   deferWork(c, async () => {
     try {
@@ -649,7 +636,7 @@ function scheduleRevocationEmail(
           op: "sendRevocationEmail",
           email: args.recipientEmail,
           error: error instanceof Error ? error.message : String(error),
-        }),
+        })
       );
     }
   });
@@ -811,10 +798,7 @@ export async function revokeApiToken(c: Context<AppEnv>) {
   }
 
   const now = new Date();
-  await db
-    .update(apiToken)
-    .set({ revokedAt: now })
-    .where(eq(apiToken.id, tokenId));
+  await db.update(apiToken).set({ revokedAt: now }).where(eq(apiToken.id, tokenId));
 
   // Resolve workspace + actor email so we can notify the OWNER (which may
   // not be the same as the caller — admins can revoke a member's token

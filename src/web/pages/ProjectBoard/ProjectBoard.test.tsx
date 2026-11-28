@@ -34,8 +34,7 @@ vi.mock("@/web/hooks/use-permissions", () => ({
 // read/write through MemoryRouter), while the board-level useTaskFilters is
 // stubbed to a pass-through so filter state never hides cards from the suite.
 vi.mock("@/web/hooks/use-task-filters", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("@/web/hooks/use-task-filters")>();
+  const actual = await importOriginal<typeof import("@/web/hooks/use-task-filters")>();
   return {
     ...actual,
     useTaskFilters: (tasks: Task[]) => ({
@@ -72,20 +71,11 @@ vi.mock("@/web/lib/api/client", () => ({
 // Track items passed to each SortableContext so we can assert DnD integration
 const capturedSortableContextItems: string[][] = [];
 
-type CapturedDragEnd = (event: {
-  active: { id: string };
-  over: { id: string } | null;
-}) => void;
+type CapturedDragEnd = (event: { active: { id: string }; over: { id: string } | null }) => void;
 let capturedOnDragEnd: CapturedDragEnd | null = null;
 
 vi.mock("@dnd-kit/core", () => ({
-  DndContext: ({
-    children,
-    onDragEnd,
-  }: {
-    children: ReactNode;
-    onDragEnd: CapturedDragEnd;
-  }) => {
+  DndContext: ({ children, onDragEnd }: { children: ReactNode; onDragEnd: CapturedDragEnd }) => {
     capturedOnDragEnd = onDragEnd;
     return <>{children}</>;
   },
@@ -99,13 +89,7 @@ vi.mock("@dnd-kit/core", () => ({
 }));
 
 vi.mock("@dnd-kit/sortable", () => ({
-  SortableContext: ({
-    children,
-    items,
-  }: {
-    children: ReactNode;
-    items: string[];
-  }) => {
+  SortableContext: ({ children, items }: { children: ReactNode; items: string[] }) => {
     capturedSortableContextItems.push([...items]);
     return <div data-testid="sortable-context">{children}</div>;
   },
@@ -150,7 +134,7 @@ function makeGroup(
   id: string,
   name: string,
   position: string,
-  isCompletionGroup = false,
+  isCompletionGroup = false
 ): TaskGroup {
   return { id, name, isCompletionGroup, position };
 }
@@ -186,9 +170,7 @@ function LocationSpy() {
 }
 
 function searchParams(): URLSearchParams {
-  return new URLSearchParams(
-    screen.getByTestId("location-search").textContent ?? "",
-  );
+  return new URLSearchParams(screen.getByTestId("location-search").textContent ?? "");
 }
 
 function renderBoard() {
@@ -202,7 +184,7 @@ function renderBoard() {
         <ProjectBoard />
         <LocationSpy />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -288,9 +270,7 @@ describe("Board column task cap", () => {
       setupProjectMock([group], tasks);
       renderBoard();
 
-      expect(
-        screen.getByText(`Show ${hiddenCount} more tasks`),
-      ).toBeInTheDocument();
+      expect(screen.getByText(`Show ${hiddenCount} more tasks`)).toBeInTheDocument();
     });
 
     it("uses correct singular form when only 1 task is hidden", () => {
@@ -331,7 +311,7 @@ describe("Board column task cap", () => {
       expect(screen.queryByText(/Show .* more task/)).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Show less" })).toHaveAttribute(
         "aria-expanded",
-        "true",
+        "true"
       );
     });
 
@@ -346,7 +326,7 @@ describe("Board column task cap", () => {
 
       expect(screen.queryByText(`Task ${totalTasks}`)).not.toBeInTheDocument();
       expect(
-        screen.getByText(`Show ${totalTasks - COLUMN_TASK_LIMIT} more tasks`),
+        screen.getByText(`Show ${totalTasks - COLUMN_TASK_LIMIT} more tasks`)
       ).toBeInTheDocument();
     });
   });
@@ -360,16 +340,12 @@ describe("Board column task cap", () => {
       setupProjectMock([doneGroup], makeTasks(totalTasks, "g1"));
       renderBoard();
 
+      expect(screen.getByText(`Task ${COMPLETION_COLUMN_TASK_LIMIT}`)).toBeInTheDocument();
       expect(
-        screen.getByText(`Task ${COMPLETION_COLUMN_TASK_LIMIT}`),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByText(`Task ${COMPLETION_COLUMN_TASK_LIMIT + 1}`),
+        screen.queryByText(`Task ${COMPLETION_COLUMN_TASK_LIMIT + 1}`)
       ).not.toBeInTheDocument();
       expect(
-        screen.getByText(
-          `Show ${totalTasks - COMPLETION_COLUMN_TASK_LIMIT} more tasks`,
-        ),
+        screen.getByText(`Show ${totalTasks - COMPLETION_COLUMN_TASK_LIMIT} more tasks`)
       ).toBeInTheDocument();
     });
 
@@ -424,7 +400,7 @@ describe("Board column task cap", () => {
       // Group-level SortableContext has items like "group-g1".
       // Column-level SortableContext has items like "task-task-1".
       const taskContextCaptures = capturedSortableContextItems.filter(
-        (items) => items.length > 0 && items[0].startsWith("task-"),
+        (items) => items.length > 0 && items[0].startsWith("task-")
       );
 
       expect(taskContextCaptures.length).toBeGreaterThan(0);
@@ -445,7 +421,7 @@ describe("Board column task cap", () => {
 
       // After expansion, the last captured task context should have all IDs
       const taskContextCaptures = capturedSortableContextItems.filter(
-        (items) => items.length > 0 && items[0].startsWith("task-"),
+        (items) => items.length > 0 && items[0].startsWith("task-")
       );
 
       const lastTaskCapture = taskContextCaptures[taskContextCaptures.length - 1];
@@ -576,19 +552,13 @@ describe("click-to-filter on card chips", () => {
     setupProjectMock([group], [taskA, taskB]);
     renderBoard();
 
-    await user.click(
-      screen.getByRole("button", { name: "Filter by priority: High" }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Filter by priority: Low" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Filter by priority: High" }));
+    await user.click(screen.getByRole("button", { name: "Filter by priority: Low" }));
 
     expect(searchParams().get("priority")).toBe("high,low");
 
     // Removing one value keeps the other.
-    await user.click(
-      screen.getByRole("button", { name: "Filter by priority: High" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Filter by priority: High" }));
     expect(searchParams().get("priority")).toBe("low");
   });
 
@@ -612,9 +582,7 @@ describe("click-to-filter on card chips", () => {
     renderBoard();
 
     // Build filter state first, exactly as a user would.
-    await user.click(
-      screen.getByRole("button", { name: "Filter by priority: High" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Filter by priority: High" }));
     expect(searchParams().get("priority")).toBe("high");
 
     await user.click(screen.getByText("Task 1"));
@@ -723,10 +691,10 @@ describe("within-column reorder menu", () => {
     await openTaskMenu(user, 0);
     expect(screen.getByRole("menuitem", { name: "Move up" })).toHaveAttribute(
       "aria-disabled",
-      "true",
+      "true"
     );
     expect(screen.getByRole("menuitem", { name: "Move down" })).not.toHaveAttribute(
-      "aria-disabled",
+      "aria-disabled"
     );
   });
 
@@ -738,11 +706,9 @@ describe("within-column reorder menu", () => {
     await openTaskMenu(user, 2);
     expect(screen.getByRole("menuitem", { name: "Move down" })).toHaveAttribute(
       "aria-disabled",
-      "true",
+      "true"
     );
-    expect(screen.getByRole("menuitem", { name: "Move up" })).not.toHaveAttribute(
-      "aria-disabled",
-    );
+    expect(screen.getByRole("menuitem", { name: "Move up" })).not.toHaveAttribute("aria-disabled");
   });
 
   it("Move down on the middle task PATCHes the move endpoint with the same group and a new position", async () => {
@@ -756,7 +722,7 @@ describe("within-column reorder menu", () => {
     await waitFor(() => {
       expect(api.patch).toHaveBeenCalledWith(
         "/api/tasks/task-2/move",
-        expect.objectContaining({ taskGroupId: "g1" }),
+        expect.objectContaining({ taskGroupId: "g1" })
       );
     });
 
@@ -785,7 +751,7 @@ describe("within-column reorder menu", () => {
     await waitFor(() => {
       expect(api.patch).toHaveBeenCalledWith(
         "/api/tasks/task-2/move",
-        expect.objectContaining({ taskGroupId: "g1" }),
+        expect.objectContaining({ taskGroupId: "g1" })
       );
     });
 

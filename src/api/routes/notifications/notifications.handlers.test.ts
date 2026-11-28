@@ -132,10 +132,7 @@ describe("listNotifications", () => {
     const app = new Hono<AppEnv>();
     app.get("/notifications", auth(), listNotifications);
 
-    const res = await app.request(
-      "/notifications",
-      jsonRequest("GET", "/notifications"),
-    );
+    const res = await app.request("/notifications", jsonRequest("GET", "/notifications"));
 
     expect(res.status).toBe(200);
     const body = await res.json<{
@@ -155,10 +152,7 @@ describe("listNotifications", () => {
     const app = new Hono<AppEnv>();
     app.get("/notifications", auth(), listNotifications);
 
-    const res = await app.request(
-      "/notifications",
-      jsonRequest("GET", "/notifications"),
-    );
+    const res = await app.request("/notifications", jsonRequest("GET", "/notifications"));
 
     expect(res.status).toBe(200);
     const body = await res.json<{
@@ -177,7 +171,7 @@ describe("listNotifications", () => {
     // Request with limit=3 to get first page
     const res1 = await app.request(
       "/notifications?limit=3",
-      jsonRequest("GET", "/notifications?limit=3"),
+      jsonRequest("GET", "/notifications?limit=3")
     );
 
     expect(res1.status).toBe(200);
@@ -192,10 +186,7 @@ describe("listNotifications", () => {
     // Request next page using cursor
     const res2 = await app.request(
       `/notifications?limit=3&cursor=${encodeURIComponent(body1.nextCursor!)}`,
-      jsonRequest(
-        "GET",
-        `/notifications?limit=3&cursor=${encodeURIComponent(body1.nextCursor!)}`,
-      ),
+      jsonRequest("GET", `/notifications?limit=3&cursor=${encodeURIComponent(body1.nextCursor!)}`)
     );
 
     expect(res2.status).toBe(200);
@@ -219,7 +210,7 @@ describe("listNotifications", () => {
 
     const res = await app.request(
       "/notifications?limit=2",
-      jsonRequest("GET", "/notifications?limit=2"),
+      jsonRequest("GET", "/notifications?limit=2")
     );
 
     expect(res.status).toBe(200);
@@ -237,7 +228,7 @@ describe("listNotifications", () => {
 
     const res = await app.request(
       "/notifications?unreadOnly=true",
-      jsonRequest("GET", "/notifications?unreadOnly=true"),
+      jsonRequest("GET", "/notifications?unreadOnly=true")
     );
 
     expect(res.status).toBe(200);
@@ -263,7 +254,7 @@ describe("listNotifications", () => {
     // Fetch all at once (limit=100 > total count)
     const res = await app.request(
       "/notifications?limit=100",
-      jsonRequest("GET", "/notifications?limit=100"),
+      jsonRequest("GET", "/notifications?limit=100")
     );
 
     expect(res.status).toBe(200);
@@ -279,10 +270,7 @@ describe("listNotifications", () => {
     const app = new Hono<AppEnv>();
     app.get("/notifications", auth(), listNotifications);
 
-    const res = await app.request(
-      "/notifications",
-      jsonRequest("GET", "/notifications"),
-    );
+    const res = await app.request("/notifications", jsonRequest("GET", "/notifications"));
 
     expect(res.status).toBe(200);
     const body = await res.json<{
@@ -295,17 +283,13 @@ describe("listNotifications", () => {
       nextCursor: string | null;
     }>();
 
-    const withActor = body.notifications.find(
-      (n) => n.id === notifWithActorId,
-    );
+    const withActor = body.notifications.find((n) => n.id === notifWithActorId);
     expect(withActor).toBeDefined();
     expect(withActor!.actorId).toBe(TEST_USER_2.id);
     expect(withActor!.actorName).toBe(TEST_USER_2.name);
 
     // A notification without actorId should have null actor fields
-    const withoutActor = body.notifications.find(
-      (n) => n.id === notifUnread1Id,
-    );
+    const withoutActor = body.notifications.find((n) => n.id === notifUnread1Id);
     expect(withoutActor).toBeDefined();
     expect(withoutActor!.actorName).toBeNull();
   });
@@ -322,7 +306,7 @@ describe("getUnreadCount", () => {
 
     const res = await app.request(
       "/notifications/unread-count",
-      jsonRequest("GET", "/notifications/unread-count"),
+      jsonRequest("GET", "/notifications/unread-count")
     );
 
     expect(res.status).toBe(200);
@@ -341,12 +325,12 @@ describe("getUnreadCount", () => {
     // Mark the other user's notification as read first
     await app.request(
       `/notifications/${otherUserNotifId}/read`,
-      jsonRequest("PATCH", `/notifications/${otherUserNotifId}/read`),
+      jsonRequest("PATCH", `/notifications/${otherUserNotifId}/read`)
     );
 
     const res = await app.request(
       "/notifications/unread-count",
-      jsonRequest("GET", "/notifications/unread-count"),
+      jsonRequest("GET", "/notifications/unread-count")
     );
 
     expect(res.status).toBe(200);
@@ -367,7 +351,7 @@ describe("markAsRead", () => {
 
     const res = await app.request(
       `/notifications/${notifUnread1Id}/read`,
-      jsonRequest("PATCH", `/notifications/${notifUnread1Id}/read`),
+      jsonRequest("PATCH", `/notifications/${notifUnread1Id}/read`)
     );
 
     expect(res.status).toBe(200);
@@ -377,7 +361,7 @@ describe("markAsRead", () => {
     // Verify it is now read by fetching notifications
     const listRes = await app.request(
       "/notifications?unreadOnly=true",
-      jsonRequest("GET", "/notifications?unreadOnly=true"),
+      jsonRequest("GET", "/notifications?unreadOnly=true")
     );
     const listBody = await listRes.json<{
       notifications: { id: string }[];
@@ -393,7 +377,7 @@ describe("markAsRead", () => {
 
     const res = await app.request(
       "/notifications/nonexistent-id/read",
-      jsonRequest("PATCH", "/notifications/nonexistent-id/read"),
+      jsonRequest("PATCH", "/notifications/nonexistent-id/read")
     );
 
     expect(res.status).toBe(404);
@@ -408,7 +392,7 @@ describe("markAsRead", () => {
     // Try to mark TEST_USER_2's notification as read while authed as TEST_USER
     const res = await app.request(
       `/notifications/${otherUserNotifId}/read`,
-      jsonRequest("PATCH", `/notifications/${otherUserNotifId}/read`),
+      jsonRequest("PATCH", `/notifications/${otherUserNotifId}/read`)
     );
 
     expect(res.status).toBe(404);
@@ -429,7 +413,7 @@ describe("markAllAsRead", () => {
 
     const res = await app.request(
       "/notifications/mark-all-read",
-      jsonRequest("POST", "/notifications/mark-all-read"),
+      jsonRequest("POST", "/notifications/mark-all-read")
     );
 
     expect(res.status).toBe(200);
@@ -439,7 +423,7 @@ describe("markAllAsRead", () => {
     // Verify unread count is now 0
     const countRes = await app.request(
       "/notifications/unread-count",
-      jsonRequest("GET", "/notifications/unread-count"),
+      jsonRequest("GET", "/notifications/unread-count")
     );
     const countBody = await countRes.json<{ count: number }>();
     expect(countBody.count).toBe(0);
@@ -452,7 +436,7 @@ describe("markAllAsRead", () => {
 
     const res = await app.request(
       "/notifications/mark-all-read",
-      jsonRequest("POST", "/notifications/mark-all-read"),
+      jsonRequest("POST", "/notifications/mark-all-read")
     );
 
     expect(res.status).toBe(200);
@@ -473,7 +457,7 @@ describe("deleteNotification", () => {
 
     const res = await app.request(
       `/notifications/${notifRead2Id}`,
-      jsonRequest("DELETE", `/notifications/${notifRead2Id}`),
+      jsonRequest("DELETE", `/notifications/${notifRead2Id}`)
     );
 
     expect(res.status).toBe(200);
@@ -481,10 +465,7 @@ describe("deleteNotification", () => {
     expect(body.ok).toBe(true);
 
     // Verify it no longer appears in the list
-    const listRes = await app.request(
-      "/notifications",
-      jsonRequest("GET", "/notifications"),
-    );
+    const listRes = await app.request("/notifications", jsonRequest("GET", "/notifications"));
     const listBody = await listRes.json<{
       notifications: { id: string }[];
       nextCursor: string | null;
@@ -499,7 +480,7 @@ describe("deleteNotification", () => {
 
     const res = await app.request(
       "/notifications/nonexistent-id",
-      jsonRequest("DELETE", "/notifications/nonexistent-id"),
+      jsonRequest("DELETE", "/notifications/nonexistent-id")
     );
 
     expect(res.status).toBe(404);
@@ -514,7 +495,7 @@ describe("deleteNotification", () => {
     // Try to delete TEST_USER_2's notification while authed as TEST_USER
     const res = await app.request(
       `/notifications/${otherUserNotifId}`,
-      jsonRequest("DELETE", `/notifications/${otherUserNotifId}`),
+      jsonRequest("DELETE", `/notifications/${otherUserNotifId}`)
     );
 
     expect(res.status).toBe(404);

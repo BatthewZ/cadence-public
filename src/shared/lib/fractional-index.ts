@@ -8,8 +8,7 @@
  * Uses a base-62 character set: 0-9, A-Z, a-z.
  */
 
-const BASE_62_DIGITS =
-  "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const BASE_62_DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 const BASE = BASE_62_DIGITS.length; // 62
 
@@ -83,9 +82,7 @@ function midpoint(a: string, b: string): string {
     }
 
     if (da > db) {
-      throw new Error(
-        `midpoint: unexpected da > db at position ${i} (a="${a}", b="${b}")`,
-      );
+      throw new Error(`midpoint: unexpected da > db at position ${i} (a="${a}", b="${b}")`);
     }
 
     // da < db at position i. Build the shared prefix from actual digit values.
@@ -128,9 +125,7 @@ function midpoint(a: string, b: string): string {
   // would create these degenerate adjacent pairs.
   //
   // Safety: if this ever happens, throw a clear error.
-  throw new Error(
-    `midpoint: no space between "${a}" and "${b}"`,
-  );
+  throw new Error(`midpoint: no space between "${a}" and "${b}"`);
 }
 
 /**
@@ -201,9 +196,7 @@ function generateKeyBefore(s: string): string {
     // d === 0: keep looking leftward.
   }
 
-  throw new Error(
-    `Cannot generate a key before "${s}": all digits are at minimum`,
-  );
+  throw new Error(`Cannot generate a key before "${s}": all digits are at minimum`);
 }
 
 /**
@@ -229,18 +222,13 @@ function validateKey(key: string, label: string): void {
  *
  * @throws If `a >= b` when both are provided.
  */
-export function generateKeyBetween(
-  a: string | null,
-  b: string | null,
-): string {
+export function generateKeyBetween(a: string | null, b: string | null): string {
   if (a !== null) validateKey(a, "a");
   if (b !== null) validateKey(b, "b");
 
   if (a !== null && b !== null) {
     if (a >= b) {
-      throw new Error(
-        `generateKeyBetween: a must be less than b (got a="${a}", b="${b}")`,
-      );
+      throw new Error(`generateKeyBetween: a must be less than b (got a="${a}", b="${b}")`);
     }
     return midpoint(a, b);
   }
@@ -264,11 +252,7 @@ export function generateKeyBetween(
  *
  * @throws If `n < 0`, or if `a >= b` when both are provided.
  */
-export function generateNKeysBetween(
-  a: string | null,
-  b: string | null,
-  n: number,
-): string[] {
+export function generateNKeysBetween(a: string | null, b: string | null, n: number): string[] {
   if (n < 0) {
     throw new Error("n must be non-negative");
   }

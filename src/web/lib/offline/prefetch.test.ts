@@ -6,12 +6,26 @@ import { ApiError } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 
 import { type OfflineDb, openOfflineDb } from "./idb";
-import { COMPLETED_DETAILS_PER_PROJECT, PREFETCH_MAX_AGE_MS, type PrefetchDeps,prefetchForOffline } from "./prefetch";
+import {
+  COMPLETED_DETAILS_PER_PROJECT,
+  PREFETCH_MAX_AGE_MS,
+  type PrefetchDeps,
+  prefetchForOffline,
+} from "./prefetch";
 
 const subtask = { id: "s1", title: "Sub", completed: false, position: "a0" };
 
 function project(id: string) {
-  const open = { id: `${id}-open`, title: "Open", completed: false, completedAt: null, taskGroupId: "g", position: "a0", commentCount: 2, subtasks: [subtask] };
+  const open = {
+    id: `${id}-open`,
+    title: "Open",
+    completed: false,
+    completedAt: null,
+    taskGroupId: "g",
+    position: "a0",
+    commentCount: 2,
+    subtasks: [subtask],
+  };
   // More completed tasks than the Done column shows; days 1..12, so the newest are 03..12.
   const done = Array.from({ length: 12 }, (_, i) => ({
     id: `${id}-done-${i + 1}`,
@@ -43,7 +57,7 @@ function deps(overrides: Partial<PrefetchDeps> = {}): PrefetchDeps {
     isCurrent: () => current,
     isOnline: () => true,
     now: () => clock,
-    get: <T,>(path: string) => {
+    get: <T>(path: string) => {
       calls.push(path);
       const route = routes[path];
       if (!route) return Promise.reject(new Error(`unexpected ${path}`));
@@ -86,13 +100,20 @@ beforeEach(async () => {
 
 afterEach(() => db.close());
 
-const tasksOf = (id: string) => qc.getQueryData<{ tasks: Record<string, unknown>[] }>(queryKeys.projects.tasks(id))?.tasks;
-const detailOf = (id: string) => qc.getQueryData<{ task: Record<string, unknown> }>(queryKeys.tasks.detail(id))?.task;
+const tasksOf = (id: string) =>
+  qc.getQueryData<{ tasks: Record<string, unknown>[] }>(queryKeys.projects.tasks(id))?.tasks;
+const detailOf = (id: string) =>
+  qc.getQueryData<{ task: Record<string, unknown> }>(queryKeys.tasks.detail(id))?.task;
 const projectLoads = () => calls.filter((c) => c.endsWith("?include=subtasks"));
 
 describe("prefetchForOffline", () => {
   it("loads every project's board and its tasks' panels, without subtasks on the board's list", async () => {
-    await expect(prefetchForOffline(deps())).resolves.toMatchObject({ projects: 2, loaded: 2, skipped: 0, failed: 0 });
+    await expect(prefetchForOffline(deps())).resolves.toMatchObject({
+      projects: 2,
+      loaded: 2,
+      skipped: 0,
+      failed: 0,
+    });
 
     for (const id of ["p1", "p2"]) {
       expect(qc.getQueryData(queryKeys.projects.detail(id))).toEqual({ project: { id } });
@@ -100,7 +121,11 @@ describe("prefetchForOffline", () => {
       expect(tasksOf(id)).toHaveLength(13);
       expect(tasksOf(id)?.every((t) => !("subtasks" in t))).toBe(true);
     }
-    expect(detailOf("p1-open")).toMatchObject({ projectId: "p1", subtasks: [subtask], commentCount: 2 });
+    expect(detailOf("p1-open")).toMatchObject({
+      projectId: "p1",
+      subtasks: [subtask],
+      commentCount: 2,
+    });
     // Open tasks, plus the most recently completed the Done column shows.
     const done = Array.from({ length: 12 }, (_, i) => detailOf(`p1-done-${i + 1}`) !== undefined);
     expect(done.filter(Boolean)).toHaveLength(COMPLETED_DETAILS_PER_PROJECT);
@@ -150,7 +175,11 @@ describe("prefetchForOffline", () => {
   });
 
   it("keeps a task panel newer than the load (fetched or edited since)", async () => {
-    qc.setQueryData(queryKeys.tasks.detail("p1-open"), { task: { id: "p1-open", title: "Edited here" } }, { updatedAt: clock + 1 });
+    qc.setQueryData(
+      queryKeys.tasks.detail("p1-open"),
+      { task: { id: "p1-open", title: "Edited here" } },
+      { updatedAt: clock + 1 }
+    );
     await prefetchForOffline(deps());
     expect(detailOf("p1-open")).toEqual({ id: "p1-open", title: "Edited here" });
   });

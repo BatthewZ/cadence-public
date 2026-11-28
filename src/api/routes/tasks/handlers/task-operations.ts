@@ -10,11 +10,26 @@ import { deferWork } from "../../../lib/defer";
 import { errorResponse } from "../../../lib/error-response";
 import { createNotification } from "../../../lib/notifications";
 import { requireParam } from "../../../lib/params";
-import { nextSiblingPosition, retryOnPositionConflict, writeClientPosition } from "../../../lib/position-conflict";
+import {
+  nextSiblingPosition,
+  retryOnPositionConflict,
+  writeClientPosition,
+} from "../../../lib/position-conflict";
 import { validJson } from "../../../lib/validated";
-import { buildTaskEventData, dispatchWebhook, resolveRecurringTaskEnrichment, resolveTaskEnrichment, resolveTaskGroup } from "../../../lib/webhook-payloads";
+import {
+  buildTaskEventData,
+  dispatchWebhook,
+  resolveRecurringTaskEnrichment,
+  resolveTaskEnrichment,
+  resolveTaskGroup,
+} from "../../../lib/webhook-payloads";
 import { copyTaskRelations } from "../helpers/copy-task-relations";
-import { logRecurringInstanceCreated, removeUntouchedRecurringInstance, type SpawnedTaskData, spawnNextRecurringInstance } from "../helpers/spawn-recurring-instance";
+import {
+  logRecurringInstanceCreated,
+  removeUntouchedRecurringInstance,
+  type SpawnedTaskData,
+  spawnNextRecurringInstance,
+} from "../helpers/spawn-recurring-instance";
 import { type ActivityEntry, logActivity, logActivityBatch } from "../log-activity";
 
 export async function moveTask(c: Context<AppEnv>) {
@@ -63,7 +78,12 @@ export async function moveTask(c: Context<AppEnv>) {
   const [updated] = await writeClientPosition(
     body.position,
     nextSiblingPosition(db, task, eq(task.taskGroupId, body.taskGroupId), taskId),
-    (position) => db.update(task).set({ ...updateData, position }).where(eq(task.id, taskId)).returning(),
+    (position) =>
+      db
+        .update(task)
+        .set({ ...updateData, position })
+        .where(eq(task.id, taskId))
+        .returning()
   );
 
   // Spawn next recurring instance when auto-completing via move to done column.
@@ -183,7 +203,13 @@ export async function moveTask(c: Context<AppEnv>) {
   if (nextRecurringTask) {
     const recurEnrichment = await resolveRecurringTaskEnrichment(db, nextRecurringTask);
     dispatchWebhook(c, foundTask.projectId, [
-      { event: "task.created", data: buildTaskEventData(nextRecurringTask as Parameters<typeof buildTaskEventData>[0], recurEnrichment) },
+      {
+        event: "task.created",
+        data: buildTaskEventData(
+          nextRecurringTask as Parameters<typeof buildTaskEventData>[0],
+          recurEnrichment
+        ),
+      },
     ]);
   }
 
@@ -213,7 +239,9 @@ export async function duplicateTask(c: Context<AppEnv>) {
   // notification below (which carries the task title). Dropped to null rather
   // than 400 so an unrelated offboarding never breaks the Duplicate button.
   const duplicateAssigneeId = await retainAssignableAssignee(
-    db, sourceTask.projectId, sourceTask.assigneeId,
+    db,
+    sourceTask.projectId,
+    sourceTask.assigneeId
   );
 
   // Read last position + insert inside a retry loop — concurrent
@@ -269,9 +297,9 @@ export async function duplicateTask(c: Context<AppEnv>) {
   });
 
   // Copy subtasks (with completion reset) and labels from the source task
-  const { subtaskCount, labels: copiedLabels } = await copyTaskRelations(
-    db, taskId, newTaskId, { resetSubtaskCompletion: true },
-  );
+  const { subtaskCount, labels: copiedLabels } = await copyTaskRelations(db, taskId, newTaskId, {
+    resetSubtaskCompletion: true,
+  });
 
   // Log activity on the new task
   try {
@@ -283,7 +311,11 @@ export async function duplicateTask(c: Context<AppEnv>) {
       apiTokenId: c.get("apiToken")?.id ?? null,
     });
   } catch (error) {
-    console.error("Failed to log activity for duplicateTask:", { sourceTaskId: taskId, newTaskId, userId: user.id }, error);
+    console.error(
+      "Failed to log activity for duplicateTask:",
+      { sourceTaskId: taskId, newTaskId, userId: user.id },
+      error
+    );
     // Non-fatal: task was already duplicated
   }
 
@@ -300,15 +332,30 @@ export async function duplicateTask(c: Context<AppEnv>) {
         taskId: newTaskId,
       });
     } catch (error) {
-      console.error("Failed to create assignment notification for duplicateTask:", { newTaskId, assigneeId: duplicateAssigneeId, projectId: sourceTask.projectId, userId: user.id }, error);
+      console.error(
+        "Failed to create assignment notification for duplicateTask:",
+        {
+          newTaskId,
+          assigneeId: duplicateAssigneeId,
+          projectId: sourceTask.projectId,
+          userId: user.id,
+        },
+        error
+      );
       // Non-fatal: task was already duplicated
     }
   }
 
   // Non-blocking webhook dispatch for task.created (duplicated task)
-  const dupEnrichment = await resolveTaskEnrichment(db, newTask as Parameters<typeof resolveTaskEnrichment>[1]);
+  const dupEnrichment = await resolveTaskEnrichment(
+    db,
+    newTask as Parameters<typeof resolveTaskEnrichment>[1]
+  );
   dispatchWebhook(c, sourceTask.projectId, [
-    { event: "task.created", data: buildTaskEventData(newTask as Parameters<typeof buildTaskEventData>[0], dupEnrichment) },
+    {
+      event: "task.created",
+      data: buildTaskEventData(newTask as Parameters<typeof buildTaskEventData>[0], dupEnrichment),
+    },
   ]);
 
   return c.json(
@@ -321,6 +368,6 @@ export async function duplicateTask(c: Context<AppEnv>) {
         labels: copiedLabels,
       },
     },
-    201,
+    201
   );
 }

@@ -41,7 +41,10 @@ beforeAll(async () => {
   taskId = await seedTask(d1, projectId, taskGroupId);
 
   app = new Hono<AppEnv>();
-  app.use("/api/*", fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm", workspaceId, role: "owner" } }));
+  app.use(
+    "/api/*",
+    fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm", workspaceId, role: "owner" } })
+  );
   app.route("/api", projectRoutes);
   app.route("/api", taskGroupRoutes);
   app.route("/api", taskRoutes);
@@ -96,7 +99,10 @@ const cases: CreateCase[] = [
   {
     name: "saved view",
     path: () => `/api/projects/${projectId}/views`,
-    body: () => ({ name: `V${crypto.randomUUID().slice(0, 8)}`, state: { tab: "board", params: {} } }),
+    body: () => ({
+      name: `V${crypto.randomUUID().slice(0, 8)}`,
+      state: { tab: "board", params: {} },
+    }),
     responseKey: "view",
     otherPath: () => `/api/projects/${otherProjectId}/views`,
   },
@@ -106,36 +112,39 @@ async function create(path: string, body: Record<string, unknown>): Promise<Resp
   return app.request(jsonRequest("POST", path, body));
 }
 
-describe.each(cases)("client-supplied id on $name create", ({ path, body, responseKey, otherPath }) => {
-  it("uses the supplied id", async () => {
-    const id = crypto.randomUUID();
-    const res = await create(path(), { ...body(), id });
+describe.each(cases)(
+  "client-supplied id on $name create",
+  ({ path, body, responseKey, otherPath }) => {
+    it("uses the supplied id", async () => {
+      const id = crypto.randomUUID();
+      const res = await create(path(), { ...body(), id });
 
-    expect(res.status).toBe(201);
-    const json = await res.json<Record<string, { id: string }>>();
-    expect(json[responseKey].id).toBe(id);
-  });
+      expect(res.status).toBe(201);
+      const json = await res.json<Record<string, { id: string }>>();
+      expect(json[responseKey].id).toBe(id);
+    });
 
-  it("generates an id when none is supplied", async () => {
-    const res = await create(path(), body());
+    it("generates an id when none is supplied", async () => {
+      const res = await create(path(), body());
 
-    expect(res.status).toBe(201);
-    const json = await res.json<Record<string, { id: string }>>();
-    expect(json[responseKey].id).toMatch(/^[0-9a-f-]{36}$/);
-  });
+      expect(res.status).toBe(201);
+      const json = await res.json<Record<string, { id: string }>>();
+      expect(json[responseKey].id).toMatch(/^[0-9a-f-]{36}$/);
+    });
 
-  it("answers 409 id_conflict when the id already exists", async () => {
-    const id = crypto.randomUUID();
-    expect((await create(path(), { ...body(), id })).status).toBe(201);
+    it("answers 409 id_conflict when the id already exists", async () => {
+      const id = crypto.randomUUID();
+      expect((await create(path(), { ...body(), id })).status).toBe(201);
 
-    const res = await create((otherPath ?? path)(), { ...body(), id });
+      const res = await create((otherPath ?? path)(), { ...body(), id });
 
-    expect(res.status).toBe(409);
-    expect(await res.json()).toMatchObject({ code: WRITE_ERROR_CODES.idConflict });
-  });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toMatchObject({ code: WRITE_ERROR_CODES.idConflict });
+    });
 
-  it("rejects an id that is not a UUID", async () => {
-    const res = await create(path(), { ...body(), id: "not-a-uuid" });
-    expect(res.status).toBe(400);
-  });
-});
+    it("rejects an id that is not a UUID", async () => {
+      const res = await create(path(), { ...body(), id: "not-a-uuid" });
+      expect(res.status).toBe(400);
+    });
+  }
+);

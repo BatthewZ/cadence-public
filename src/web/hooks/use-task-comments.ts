@@ -27,7 +27,7 @@ type InfiniteCommentsData = { pages: CommentsPage[]; pageParams: unknown[] };
 export function optimisticAddComment(
   qc: QueryClient,
   taskId: string,
-  opts: { id: string; body: string; authorId: string; authorName: string },
+  opts: { id: string; body: string; authorId: string; authorName: string }
 ): void {
   freshnessTracker.recordMutation("tasks");
   const optimisticComment: Comment = {
@@ -46,61 +46,48 @@ export function optimisticAddComment(
     qc.setQueryData<InfiniteCommentsData>(
       key,
       { pages: [{ comments: [optimisticComment], nextCursor: null }], pageParams: [undefined] },
-      { updatedAt: 0 },
+      { updatedAt: 0 }
     );
     return;
   }
-  qc.setQueryData<InfiniteCommentsData>(
-    key,
-    (old) => {
-      if (!old || old.pages.length === 0) return old;
-      const pages = [...old.pages];
-      const lastIdx = pages.length - 1;
-      pages[lastIdx] = {
-        ...pages[lastIdx],
-        comments: [...pages[lastIdx].comments, optimisticComment],
-      };
-      return { ...old, pages };
-    },
-  );
+  qc.setQueryData<InfiniteCommentsData>(key, (old) => {
+    if (!old || old.pages.length === 0) return old;
+    const pages = [...old.pages];
+    const lastIdx = pages.length - 1;
+    pages[lastIdx] = {
+      ...pages[lastIdx],
+      comments: [...pages[lastIdx].comments, optimisticComment],
+    };
+    return { ...old, pages };
+  });
 }
 
 /** Replaces a cached comment with the server's copy of the same row. */
 export function mergeServerComment(qc: QueryClient, taskId: string, comment: Comment): void {
-  qc.setQueryData<InfiniteCommentsData>(
-    queryKeys.tasks.comments(taskId),
-    (old) => {
-      if (!old) return old;
-      return {
-        ...old,
-        pages: old.pages.map((page) => ({
-          ...page,
-          comments: page.comments.map((c) => (c.id === comment.id ? { ...c, ...comment } : c)),
-        })),
-      };
-    },
-  );
+  qc.setQueryData<InfiniteCommentsData>(queryKeys.tasks.comments(taskId), (old) => {
+    if (!old) return old;
+    return {
+      ...old,
+      pages: old.pages.map((page) => ({
+        ...page,
+        comments: page.comments.map((c) => (c.id === comment.id ? { ...c, ...comment } : c)),
+      })),
+    };
+  });
 }
 
 /** Removes a previously-added optimistic comment from the cache (rollback). */
-export function rollbackAddComment(
-  qc: QueryClient,
-  taskId: string,
-  commentId: string,
-): void {
-  qc.setQueryData<InfiniteCommentsData>(
-    queryKeys.tasks.comments(taskId),
-    (old) => {
-      if (!old) return old;
-      return {
-        ...old,
-        pages: old.pages.map((page) => ({
-          ...page,
-          comments: page.comments.filter((c) => c.id !== commentId),
-        })),
-      };
-    },
-  );
+export function rollbackAddComment(qc: QueryClient, taskId: string, commentId: string): void {
+  qc.setQueryData<InfiniteCommentsData>(queryKeys.tasks.comments(taskId), (old) => {
+    if (!old) return old;
+    return {
+      ...old,
+      pages: old.pages.map((page) => ({
+        ...page,
+        comments: page.comments.filter((c) => c.id !== commentId),
+      })),
+    };
+  });
 }
 
 /**
@@ -111,29 +98,26 @@ export function optimisticUpdateComment(
   qc: QueryClient,
   taskId: string,
   commentId: string,
-  newBody: string,
+  newBody: string
 ): string {
   freshnessTracker.recordMutation("tasks");
   let oldBody = "";
-  qc.setQueryData<InfiniteCommentsData>(
-    queryKeys.tasks.comments(taskId),
-    (old) => {
-      if (!old) return old;
-      return {
-        ...old,
-        pages: old.pages.map((page) => ({
-          ...page,
-          comments: page.comments.map((c) => {
-            if (c.id === commentId) {
-              oldBody = c.body;
-              return { ...c, body: newBody, updatedAt: new Date().toISOString() };
-            }
-            return c;
-          }),
-        })),
-      };
-    },
-  );
+  qc.setQueryData<InfiniteCommentsData>(queryKeys.tasks.comments(taskId), (old) => {
+    if (!old) return old;
+    return {
+      ...old,
+      pages: old.pages.map((page) => ({
+        ...page,
+        comments: page.comments.map((c) => {
+          if (c.id === commentId) {
+            oldBody = c.body;
+            return { ...c, body: newBody, updatedAt: new Date().toISOString() };
+          }
+          return c;
+        }),
+      })),
+    };
+  });
   return oldBody;
 }
 
@@ -142,23 +126,18 @@ export function rollbackUpdateComment(
   qc: QueryClient,
   taskId: string,
   commentId: string,
-  previousBody: string,
+  previousBody: string
 ): void {
-  qc.setQueryData<InfiniteCommentsData>(
-    queryKeys.tasks.comments(taskId),
-    (old) => {
-      if (!old) return old;
-      return {
-        ...old,
-        pages: old.pages.map((page) => ({
-          ...page,
-          comments: page.comments.map((c) =>
-            c.id === commentId ? { ...c, body: previousBody } : c,
-          ),
-        })),
-      };
-    },
-  );
+  qc.setQueryData<InfiniteCommentsData>(queryKeys.tasks.comments(taskId), (old) => {
+    if (!old) return old;
+    return {
+      ...old,
+      pages: old.pages.map((page) => ({
+        ...page,
+        comments: page.comments.map((c) => (c.id === commentId ? { ...c, body: previousBody } : c)),
+      })),
+    };
+  });
 }
 
 /**
@@ -172,19 +151,14 @@ export function useTaskComments(taskId: string, options?: { enabled?: boolean })
     queryFn: ({ pageParam }) => {
       const params = new URLSearchParams({ limit: "20" });
       if (pageParam) params.set("cursor", pageParam as string);
-      return api.get<CommentsPage>(
-        `/api/tasks/${taskId}/comments?${params.toString()}`,
-      );
+      return api.get<CommentsPage>(`/api/tasks/${taskId}/comments?${params.toString()}`);
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     initialPageParam: undefined as string | undefined,
     enabled: options?.enabled,
   });
 
-  const comments = useMemo(
-    () => query.data?.pages.flatMap((p) => p.comments) ?? [],
-    [query.data],
-  );
+  const comments = useMemo(() => query.data?.pages.flatMap((p) => p.comments) ?? [], [query.data]);
 
   return {
     comments,

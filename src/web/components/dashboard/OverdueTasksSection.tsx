@@ -70,11 +70,7 @@ function OverdueTasksSection<T extends OverdueTask>({
                 </Text>
               )}
               {task.assigneeName && (
-                <Avatar
-                  size="xs"
-                  name={task.assigneeName}
-                  src={task.assigneeImage ?? undefined}
-                />
+                <Avatar size="xs" name={task.assigneeName} src={task.assigneeImage ?? undefined} />
               )}
               <Text variant="body-3" className="shrink-0 text-status-error">
                 {formatDueDate(task.dueDate)}

@@ -148,7 +148,7 @@ export function fakeAuth(
     env?: Record<string, unknown>;
     /** Overrides the `requestId` written into the context. */
     requestId?: string;
-  },
+  }
 ): MiddlewareHandler<AppEnv> {
   return async (c: Context<AppEnv>, next) => {
     // Inject the D1 binding into env (c.env may be undefined in Hono test mode)

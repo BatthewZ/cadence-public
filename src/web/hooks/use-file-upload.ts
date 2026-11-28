@@ -72,53 +72,50 @@ export function useFileUpload<T = unknown>(): UseFileUploadReturn<T> {
 
       return null;
     },
-    [],
+    []
   );
 
-  const upload = useCallback(
-    async (file: File, options: UploadOptions): Promise<T | null> => {
-      // Cancel any in-flight upload.
-      abortRef.current?.abort();
+  const upload = useCallback(async (file: File, options: UploadOptions): Promise<T | null> => {
+    // Cancel any in-flight upload.
+    abortRef.current?.abort();
 
-      const controller = new AbortController();
-      abortRef.current = controller;
+    const controller = new AbortController();
+    abortRef.current = controller;
 
-      const formData = new FormData();
-      formData.append(options.fieldName ?? "file", file);
+    const formData = new FormData();
+    formData.append(options.fieldName ?? "file", file);
 
-      setState("uploading");
-      setError(null);
-      setData(null);
+    setState("uploading");
+    setError(null);
+    setData(null);
 
-      try {
-        const method = options.method ?? "put";
-        const result = await api[method]<T>(options.endpoint, formData, {
-          signal: controller.signal,
-        });
+    try {
+      const method = options.method ?? "put";
+      const result = await api[method]<T>(options.endpoint, formData, {
+        signal: controller.signal,
+      });
 
-        if (!controller.signal.aborted) {
-          setState("success");
-          setData(result);
-          return result;
-        }
-        return null;
-      } catch (err: unknown) {
-        if (controller.signal.aborted) return null;
-
-        let message = "Upload failed. Please try again.";
-        if (err instanceof ApiError) {
-          message = err.message;
-        } else if (err instanceof Error && err.name !== "AbortError") {
-          message = err.message;
-        }
-
-        setState("error");
-        setError(message);
-        return null;
+      if (!controller.signal.aborted) {
+        setState("success");
+        setData(result);
+        return result;
       }
-    },
-    [],
-  );
+      return null;
+    } catch (err: unknown) {
+      if (controller.signal.aborted) return null;
+
+      let message = "Upload failed. Please try again.";
+      if (err instanceof ApiError) {
+        message = err.message;
+      } else if (err instanceof Error && err.name !== "AbortError") {
+        message = err.message;
+      }
+
+      setState("error");
+      setError(message);
+      return null;
+    }
+  }, []);
 
   const reset = useCallback(() => {
     abortRef.current?.abort();

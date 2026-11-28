@@ -21,19 +21,20 @@ function ResolvedIcon({ icon: Icon, size }: { icon: LucideIcon; size: number }) 
  * Renders a lucide icon by its curated name string.
  * Returns null if the name is unknown and no fallback is provided.
  */
-export const IconDisplay = forwardRef<HTMLSpanElement, IconDisplayProps>(
-  function IconDisplay({ name, fallback, size = 20, className, ...props }, ref) {
-    const Icon = getIconComponent(name) ?? fallback;
-    if (!Icon) return null;
+export const IconDisplay = forwardRef<HTMLSpanElement, IconDisplayProps>(function IconDisplay(
+  { name, fallback, size = 20, className, ...props },
+  ref
+) {
+  const Icon = getIconComponent(name) ?? fallback;
+  if (!Icon) return null;
 
-    return (
-      <span
-        ref={ref}
-        className={cn("inline-flex shrink-0 items-center justify-center", className)}
-        {...props}
-      >
-        <ResolvedIcon icon={Icon} size={size} />
-      </span>
-    );
-  }
-);
+  return (
+    <span
+      ref={ref}
+      className={cn("inline-flex shrink-0 items-center justify-center", className)}
+      {...props}
+    >
+      <ResolvedIcon icon={Icon} size={size} />
+    </span>
+  );
+});

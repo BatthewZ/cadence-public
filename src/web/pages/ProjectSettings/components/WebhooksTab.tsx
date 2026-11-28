@@ -1,15 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  AlertTriangle,
-  ChevronLeft,
-  ExternalLink,
-  Play,
-  Trash2,
-  Webhook,
-} from "lucide-react";
+import { AlertTriangle, ChevronLeft, ExternalLink, Play, Trash2, Webhook } from "lucide-react";
 import { type SyntheticEvent, useState } from "react";
 
-import { type CreateWebhookInput, createWebhookSchema, type UpdateWebhookInput } from "@/shared/schemas/webhook";
+import {
+  type CreateWebhookInput,
+  createWebhookSchema,
+  type UpdateWebhookInput,
+} from "@/shared/schemas/webhook";
 import type { WebhookEventType } from "@/shared/types/webhook";
 import { Divider, Row, Stack } from "@/web/components/layout";
 import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
@@ -120,8 +117,7 @@ export function WebhooksTab({
   const onlineOnly = useOnlineOnly();
   const listQuery = useQuery({
     queryKey: queryKeys.projects.webhooks(projectId),
-    queryFn: () =>
-      api.get<{ webhooks: WebhookRow[] }>(`/api/projects/${projectId}/webhooks`),
+    queryFn: () => api.get<{ webhooks: WebhookRow[] }>(`/api/projects/${projectId}/webhooks`),
     enabled: !!projectId,
     staleTime: 30_000,
   });
@@ -132,7 +128,7 @@ export function WebhooksTab({
     queryKey: queryKeys.projects.webhookDetail(projectId, selectedWebhookId ?? ""),
     queryFn: () =>
       api.get<{ webhook: WebhookRow; deliveries: DeliveryRow[] }>(
-        `/api/projects/${projectId}/webhooks/${selectedWebhookId}`,
+        `/api/projects/${projectId}/webhooks/${selectedWebhookId}`
       ),
     enabled: !!projectId && !!selectedWebhookId,
     staleTime: 15_000,
@@ -159,10 +155,7 @@ export function WebhooksTab({
 
   const updateMutation = useMutation({
     mutationFn: ({ id, ...data }: UpdateWebhookInput & { id: string }) =>
-      api.patch<{ webhook: WebhookRow }>(
-        `/api/projects/${projectId}/webhooks/${id}`,
-        data,
-      ),
+      api.patch<{ webhook: WebhookRow }>(`/api/projects/${projectId}/webhooks/${id}`, data),
     onSuccess: (result) => {
       void qc.invalidateQueries({ queryKey: queryKeys.projects.webhooks(projectId) });
       if (selectedWebhookId) {
@@ -180,8 +173,7 @@ export function WebhooksTab({
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) =>
-      api.delete(`/api/projects/${projectId}/webhooks/${id}`),
+    mutationFn: (id: string) => api.delete(`/api/projects/${projectId}/webhooks/${id}`),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: queryKeys.projects.webhooks(projectId) });
       toast("Webhook deleted.", { variant: "success" });
@@ -196,7 +188,7 @@ export function WebhooksTab({
     mutationFn: (id: string) =>
       api.post<{ delivery: TestDeliveryResult | null }>(
         `/api/projects/${projectId}/webhooks/${id}/test`,
-        {},
+        {}
       ),
     onSuccess: (result) => {
       setTestResult(result.delivery ?? null);
@@ -348,9 +340,7 @@ export function WebhooksTab({
                       {wh.active ? "Active" : "Disabled"}
                     </Badge>
                     {wh.consecutiveFailures > 0 && (
-                      <Badge variant="warning">
-                        {wh.consecutiveFailures} consecutive failures
-                      </Badge>
+                      <Badge variant="warning">{wh.consecutiveFailures} consecutive failures</Badge>
                     )}
                   </Row>
                 </Row>
@@ -518,9 +508,7 @@ export function WebhooksTab({
       </Row>
 
       {listError && !isUnavailableOffline(listQuery) && (
-        <Alert variant="error">
-          {(listError).message || "Failed to load webhooks."}
-        </Alert>
+        <Alert variant="error">{listError.message || "Failed to load webhooks."}</Alert>
       )}
 
       {isUnavailableOffline(listQuery) ? (

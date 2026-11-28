@@ -4,7 +4,11 @@ import type { Context } from "hono";
 import { user } from "../../../db/schema/auth";
 import { team, teamMember } from "../../../db/schema/team";
 import { workspaceMember } from "../../../db/schema/workspace";
-import { addTeamMemberSchema, createTeamSchema, updateTeamSchema } from "../../../shared/schemas/team";
+import {
+  addTeamMemberSchema,
+  createTeamSchema,
+  updateTeamSchema,
+} from "../../../shared/schemas/team";
 import type { AppEnv } from "../../env";
 import { errorResponse } from "../../lib/error-response";
 import { requireParam, requireParams } from "../../lib/params";
@@ -170,13 +174,19 @@ export async function addTeamMember(c: Context<AppEnv>) {
 
   // Batch all 3 validation queries in a single round-trip
   const [teamResult, wsMemberResult, existingResult] = await db.batch([
-    db.select().from(team)
+    db
+      .select()
+      .from(team)
       .where(and(eq(team.id, teamId), eq(team.workspaceId, workspaceId)))
       .limit(1),
-    db.select().from(workspaceMember)
+    db
+      .select()
+      .from(workspaceMember)
       .where(and(eq(workspaceMember.workspaceId, workspaceId), eq(workspaceMember.userId, userId)))
       .limit(1),
-    db.select().from(teamMember)
+    db
+      .select()
+      .from(teamMember)
       .where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, userId)))
       .limit(1),
   ] as const);
@@ -218,10 +228,14 @@ export async function removeTeamMember(c: Context<AppEnv>) {
 
   // Batch both verification queries in a single round-trip (both are independent)
   const [teamResult, memberResult] = await db.batch([
-    db.select().from(team)
+    db
+      .select()
+      .from(team)
       .where(and(eq(team.id, teamId), eq(team.workspaceId, workspaceId)))
       .limit(1),
-    db.select().from(teamMember)
+    db
+      .select()
+      .from(teamMember)
       .where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, userId)))
       .limit(1),
   ] as const);
@@ -236,9 +250,7 @@ export async function removeTeamMember(c: Context<AppEnv>) {
 
   await db
     .delete(teamMember)
-    .where(
-      and(eq(teamMember.teamId, teamId), eq(teamMember.userId, userId)),
-    );
+    .where(and(eq(teamMember.teamId, teamId), eq(teamMember.userId, userId)));
 
   return c.json({ ok: true });
 }

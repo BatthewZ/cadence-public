@@ -29,7 +29,11 @@ describe("GuestGuard", () => {
       isPending: false,
     });
 
-    render(<GuestGuard><span>Guest Content</span></GuestGuard>);
+    render(
+      <GuestGuard>
+        <span>Guest Content</span>
+      </GuestGuard>
+    );
     expect(screen.getByText("Guest Content")).toBeInTheDocument();
   });
 
@@ -39,11 +43,13 @@ describe("GuestGuard", () => {
       isPending: false,
     });
 
-    render(<GuestGuard><span>Guest Content</span></GuestGuard>);
-    expect(screen.queryByText("Guest Content")).not.toBeInTheDocument();
-    expect(mockNavigate).toHaveBeenCalledWith(
-      expect.objectContaining({ to: "/", replace: true })
+    render(
+      <GuestGuard>
+        <span>Guest Content</span>
+      </GuestGuard>
     );
+    expect(screen.queryByText("Guest Content")).not.toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: "/", replace: true }));
   });
 
   it("shows loading state while auth is pending on first load", () => {
@@ -52,7 +58,11 @@ describe("GuestGuard", () => {
       isPending: true,
     });
 
-    const { container } = render(<GuestGuard><span>Guest Content</span></GuestGuard>);
+    const { container } = render(
+      <GuestGuard>
+        <span>Guest Content</span>
+      </GuestGuard>
+    );
     expect(screen.queryByText("Guest Content")).not.toBeInTheDocument();
     // Should render Spinner inside Center
     expect(container.querySelector("[role='status']")).toBeTruthy();
@@ -71,13 +81,19 @@ describe("GuestGuard", () => {
     // was live. Same node ⇒ React reused the subtree ⇒ its state survived.
     mockUseSession.mockReturnValue({ data: null, isPending: false });
     const { rerender, container } = render(
-      <GuestGuard><span>Guest Content</span></GuestGuard>,
+      <GuestGuard>
+        <span>Guest Content</span>
+      </GuestGuard>
     );
     const firstNode = screen.getByText("Guest Content");
 
     // …now a refetch starts.
     mockUseSession.mockReturnValue({ data: null, isPending: true });
-    rerender(<GuestGuard><span>Guest Content</span></GuestGuard>);
+    rerender(
+      <GuestGuard>
+        <span>Guest Content</span>
+      </GuestGuard>
+    );
 
     expect(container.querySelector("[role='status']")).toBeNull();
     expect(screen.getByText("Guest Content")).toBe(firstNode);
@@ -87,14 +103,20 @@ describe("GuestGuard", () => {
     // Tolerating the refetch must not tolerate an authenticated user sitting
     // on a guest page: the moment a session resolves, the redirect fires.
     mockUseSession.mockReturnValue({ data: null, isPending: false });
-    const { rerender } = render(<GuestGuard><span>Guest Content</span></GuestGuard>);
+    const { rerender } = render(
+      <GuestGuard>
+        <span>Guest Content</span>
+      </GuestGuard>
+    );
 
     mockUseSession.mockReturnValue({ data: { user: { id: "1" } }, isPending: true });
-    rerender(<GuestGuard><span>Guest Content</span></GuestGuard>);
+    rerender(
+      <GuestGuard>
+        <span>Guest Content</span>
+      </GuestGuard>
+    );
 
     expect(screen.queryByText("Guest Content")).not.toBeInTheDocument();
-    expect(mockNavigate).toHaveBeenCalledWith(
-      expect.objectContaining({ to: "/", replace: true })
-    );
+    expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ to: "/", replace: true }));
   });
 });

@@ -18,9 +18,7 @@ export class ConsoleEmailService implements EmailService {
   // eslint-disable-next-line @typescript-eslint/require-await
   async send(message: EmailMessage): Promise<EmailSendResult> {
     const to = Array.isArray(message.to) ? message.to.join(", ") : message.to;
-    const preview = message.text
-      ? message.text.slice(0, 200)
-      : "(no text content)";
+    const preview = message.text ? message.text.slice(0, 200) : "(no text content)";
 
     console.log(
       [

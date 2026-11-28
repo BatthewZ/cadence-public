@@ -112,10 +112,7 @@ afterAll(async () => {
  * Hono's Context assigns `this.env = options.env` which overwrites the default
  * `{}` with `undefined` when no env is supplied to `app.request()`.
  */
-async function req(
-  app: Hono<AppEnv>,
-  input: string | Request,
-): Promise<Response> {
+async function req(app: Hono<AppEnv>, input: string | Request): Promise<Response> {
   if (typeof input === "string") {
     return await app.request(input, undefined, {});
   }
@@ -142,11 +139,19 @@ describe("POST /workspaces — createWorkspace", () => {
         name: "My Workspace",
         slug: "my-workspace",
         description: "A test workspace",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ workspace: { id: string; name: string; slug: string; description: string | null; ownerId: string } }>();
+    const body = await res.json<{
+      workspace: {
+        id: string;
+        name: string;
+        slug: string;
+        description: string | null;
+        ownerId: string;
+      };
+    }>();
     expect(body.workspace.name).toBe("My Workspace");
     expect(body.workspace.slug).toBe("my-workspace");
     expect(body.workspace.description).toBe("A test workspace");
@@ -154,9 +159,7 @@ describe("POST /workspaces — createWorkspace", () => {
 
     // Verify the owner was added as a workspace member
     const memberRows = await d1
-      .prepare(
-        "SELECT * FROM workspace_member WHERE workspaceId = ? AND userId = ?",
-      )
+      .prepare("SELECT * FROM workspace_member WHERE workspaceId = ? AND userId = ?")
       .bind(body.workspace.id, TEST_USER.id)
       .all();
     expect(memberRows.results.length).toBe(1);
@@ -170,7 +173,7 @@ describe("POST /workspaces — createWorkspace", () => {
       jsonRequest("POST", "/workspaces", {
         name: "No Desc",
         slug: "no-desc",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -184,7 +187,7 @@ describe("POST /workspaces — createWorkspace", () => {
       app,
       jsonRequest("POST", "/workspaces", {
         slug: "valid-slug",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -199,7 +202,7 @@ describe("POST /workspaces — createWorkspace", () => {
       app,
       jsonRequest("POST", "/workspaces", {
         name: "Valid Name",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -215,7 +218,7 @@ describe("POST /workspaces — createWorkspace", () => {
       jsonRequest("POST", "/workspaces", {
         name: "Valid Name",
         slug: "INVALID SLUG!",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -226,10 +229,7 @@ describe("POST /workspaces — createWorkspace", () => {
 
   it("returns 400 when body is empty", async () => {
     const app = createApp();
-    const res = await req(
-      app,
-      jsonRequest("POST", "/workspaces", {}),
-    );
+    const res = await req(app, jsonRequest("POST", "/workspaces", {}));
 
     expect(res.status).toBe(400);
     const body = await res.json<{ error: string }>();
@@ -286,7 +286,7 @@ describe("GET /workspaces — listWorkspaces", () => {
     const isolatedUserId = "isolated-user-id";
     await d1
       .prepare(
-        "INSERT INTO user (id, name, email, emailVerified, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO user (id, name, email, emailVerified, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
       )
       .bind(isolatedUserId, "Isolated", "isolated@example.com", 0, Date.now(), Date.now())
       .run();
@@ -302,7 +302,7 @@ describe("GET /workspaces — listWorkspaces", () => {
         image: null,
         createdAt: new Date(),
         updatedAt: new Date(),
-      }),
+      })
     );
     app.get("/workspaces", listWorkspaces);
 
@@ -323,7 +323,7 @@ describe("GET /workspaces/:workspaceId — getWorkspace", () => {
     const app = new Hono<AppEnv>();
     app.use(
       "/*",
-      fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-get", role: "owner" } }),
+      fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-get", role: "owner" } })
     );
     app.get("/workspaces/:workspaceId", getWorkspace);
     return app;
@@ -366,13 +366,9 @@ describe("PATCH /workspaces/:workspaceId — updateWorkspace", () => {
     const app = new Hono<AppEnv>();
     app.use(
       "/*",
-      fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-update", role: "owner" } }),
+      fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-update", role: "owner" } })
     );
-    app.patch(
-      "/workspaces/:workspaceId",
-      validateBody(updateWorkspaceSchema),
-      updateWorkspace,
-    );
+    app.patch("/workspaces/:workspaceId", validateBody(updateWorkspaceSchema), updateWorkspace);
     return app;
   }
 
@@ -387,7 +383,7 @@ describe("PATCH /workspaces/:workspaceId — updateWorkspace", () => {
       app,
       jsonRequest("PATCH", `/workspaces/${wsId}`, {
         name: "New Name",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -406,7 +402,7 @@ describe("PATCH /workspaces/:workspaceId — updateWorkspace", () => {
       app,
       jsonRequest("PATCH", `/workspaces/${wsId}`, {
         description: "Updated description",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -425,7 +421,7 @@ describe("PATCH /workspaces/:workspaceId — updateWorkspace", () => {
       app,
       jsonRequest("PATCH", `/workspaces/${wsId}`, {
         slug: "new-slug",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -439,7 +435,7 @@ describe("PATCH /workspaces/:workspaceId — updateWorkspace", () => {
       app,
       jsonRequest("PATCH", "/workspaces/nonexistent-id", {
         name: "Doesn't matter",
-      }),
+      })
     );
 
     expect(res.status).toBe(404);
@@ -458,7 +454,7 @@ describe("PATCH /workspaces/:workspaceId — updateWorkspace", () => {
       app,
       jsonRequest("PATCH", `/workspaces/${wsId}`, {
         slug: "INVALID SLUG!!",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -478,7 +474,7 @@ describe("PATCH /workspaces/:workspaceId — updateWorkspace", () => {
       app,
       jsonRequest("PATCH", `/workspaces/${wsId}`, {
         name: "",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -497,7 +493,7 @@ describe("DELETE /workspaces/:workspaceId — deleteWorkspace", () => {
     const app = new Hono<AppEnv>();
     app.use(
       "/*",
-      fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-delete", role: "owner" } }),
+      fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-delete", role: "owner" } })
     );
     app.delete("/workspaces/:workspaceId", deleteWorkspace);
     return app;
@@ -510,20 +506,14 @@ describe("DELETE /workspaces/:workspaceId — deleteWorkspace", () => {
     });
 
     const app = createApp();
-    const res = await req(
-      app,
-      jsonRequest("DELETE", `/workspaces/${wsId}`),
-    );
+    const res = await req(app, jsonRequest("DELETE", `/workspaces/${wsId}`));
 
     expect(res.status).toBe(200);
     const body = await res.json<{ ok: boolean }>();
     expect(body.ok).toBe(true);
 
     // Verify workspace is actually deleted
-    const row = await d1
-      .prepare("SELECT * FROM workspace WHERE id = ?")
-      .bind(wsId)
-      .first();
+    const row = await d1.prepare("SELECT * FROM workspace WHERE id = ?").bind(wsId).first();
     expect(row).toBeNull();
   });
 
@@ -582,26 +572,48 @@ describe("DELETE /workspaces/:workspaceId — deleteWorkspace", () => {
     expect((await res.json<{ ok: boolean }>()).ok).toBe(true);
 
     async function countRows(sql: string, ...binds: string[]): Promise<number> {
-      const row = await d1.prepare(sql).bind(...binds).first<{ n: number }>();
+      const row = await d1
+        .prepare(sql)
+        .bind(...binds)
+        .first<{ n: number }>();
       return row!.n;
     }
 
     expect(await countRows("SELECT COUNT(*) AS n FROM workspace WHERE id = ?", wsId)).toBe(0);
-    expect(await countRows("SELECT COUNT(*) AS n FROM workspace_member WHERE workspaceId = ?", wsId)).toBe(0);
-    expect(await countRows("SELECT COUNT(*) AS n FROM project WHERE workspaceId = ?", wsId)).toBe(0);
-    expect(await countRows("SELECT COUNT(*) AS n FROM task_group WHERE projectId IN (?, ?)", projId, otherProjId)).toBe(0);
-    expect(await countRows("SELECT COUNT(*) AS n FROM task WHERE projectId IN (?, ?)", projId, otherProjId)).toBe(0);
+    expect(
+      await countRows("SELECT COUNT(*) AS n FROM workspace_member WHERE workspaceId = ?", wsId)
+    ).toBe(0);
+    expect(await countRows("SELECT COUNT(*) AS n FROM project WHERE workspaceId = ?", wsId)).toBe(
+      0
+    );
+    expect(
+      await countRows(
+        "SELECT COUNT(*) AS n FROM task_group WHERE projectId IN (?, ?)",
+        projId,
+        otherProjId
+      )
+    ).toBe(0);
+    expect(
+      await countRows(
+        "SELECT COUNT(*) AS n FROM task WHERE projectId IN (?, ?)",
+        projId,
+        otherProjId
+      )
+    ).toBe(0);
     // Counted explicitly: an orphan here still satisfies a membership join.
-    expect(await countRows("SELECT COUNT(*) AS n FROM project_member WHERE projectId IN (?, ?)", projId, otherProjId)).toBe(0);
+    expect(
+      await countRows(
+        "SELECT COUNT(*) AS n FROM project_member WHERE projectId IN (?, ?)",
+        projId,
+        otherProjId
+      )
+    ).toBe(0);
     expect(await countRows("SELECT COUNT(*) AS n FROM task WHERE id = ?", taskId)).toBe(0);
   });
 
   it("returns 200 even for nonexistent workspace (idempotent delete)", async () => {
     const app = createApp();
-    const res = await req(
-      app,
-      jsonRequest("DELETE", "/workspaces/nonexistent-id"),
-    );
+    const res = await req(app, jsonRequest("DELETE", "/workspaces/nonexistent-id"));
 
     // The handler does a blind delete without checking existence first
     expect(res.status).toBe(200);
@@ -619,7 +631,7 @@ describe("GET /workspaces/:workspaceId/members — listMembers", () => {
     const app = new Hono<AppEnv>();
     app.use(
       "/*",
-      fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-list", role: "owner" } }),
+      fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-list", role: "owner" } })
     );
     app.get("/workspaces/:workspaceId/members", listMembers);
     return app;
@@ -636,7 +648,9 @@ describe("GET /workspaces/:workspaceId/members — listMembers", () => {
     const res = await req(app, `/workspaces/${wsId}/members`);
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ members: { userId: string; role: string; user: { name: string; email: string } }[] }>();
+    const body = await res.json<{
+      members: { userId: string; role: string; user: { name: string; email: string } }[];
+    }>();
     expect(body.members.length).toBe(2);
 
     const owner = body.members.find((m: { userId: string }) => m.userId === TEST_USER.id);
@@ -656,7 +670,7 @@ describe("GET /workspaces/:workspaceId/members — listMembers", () => {
     const wsId = crypto.randomUUID();
     await d1
       .prepare(
-        "INSERT INTO workspace (id, name, slug, ownerId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)",
+        "INSERT INTO workspace (id, name, slug, ownerId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
       )
       .bind(wsId, "Empty Members WS", "empty-members-ws", TEST_USER.id, Date.now(), Date.now())
       .run();
@@ -679,12 +693,12 @@ describe("PATCH /workspaces/:workspaceId/members/:userId — updateMemberRole", 
     const app = new Hono<AppEnv>();
     app.use(
       "/*",
-      fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-role", role: "owner" } }),
+      fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-role", role: "owner" } })
     );
     app.patch(
       "/workspaces/:workspaceId/members/:userId",
       validateBody(updateMemberRoleSchema),
-      updateMemberRole,
+      updateMemberRole
     );
     return app;
   }
@@ -701,7 +715,7 @@ describe("PATCH /workspaces/:workspaceId/members/:userId — updateMemberRole", 
       app,
       jsonRequest("PATCH", `/workspaces/${wsId}/members/${TEST_USER_2.id}`, {
         role: "admin",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -722,7 +736,7 @@ describe("PATCH /workspaces/:workspaceId/members/:userId — updateMemberRole", 
       app,
       jsonRequest("PATCH", `/workspaces/${wsId}/members/${TEST_USER_2.id}`, {
         role: "member",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -741,7 +755,7 @@ describe("PATCH /workspaces/:workspaceId/members/:userId — updateMemberRole", 
       app,
       jsonRequest("PATCH", `/workspaces/${wsId}/members/${TEST_USER.id}`, {
         role: "admin",
-      }),
+      })
     );
 
     expect(res.status).toBe(403);
@@ -760,7 +774,7 @@ describe("PATCH /workspaces/:workspaceId/members/:userId — updateMemberRole", 
       app,
       jsonRequest("PATCH", `/workspaces/${wsId}/members/nonexistent-user-id`, {
         role: "admin",
-      }),
+      })
     );
 
     expect(res.status).toBe(404);
@@ -779,7 +793,7 @@ describe("PATCH /workspaces/:workspaceId/members/:userId — updateMemberRole", 
       app,
       jsonRequest("PATCH", `/workspaces/${wsId}/members/${TEST_USER_2.id}`, {
         role: "superadmin",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -797,7 +811,7 @@ describe("PATCH /workspaces/:workspaceId/members/:userId — updateMemberRole", 
     const app = createApp();
     const res = await req(
       app,
-      jsonRequest("PATCH", `/workspaces/${wsId}/members/${TEST_USER_2.id}`, {}),
+      jsonRequest("PATCH", `/workspaces/${wsId}/members/${TEST_USER_2.id}`, {})
     );
 
     expect(res.status).toBe(400);
@@ -834,7 +848,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — removeMember", () 
     const app = createApp();
     const res = await req(
       app,
-      jsonRequest("DELETE", `/workspaces/${wsId}/members/${TEST_USER_2.id}`),
+      jsonRequest("DELETE", `/workspaces/${wsId}/members/${TEST_USER_2.id}`)
     );
 
     expect(res.status).toBe(200);
@@ -843,9 +857,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — removeMember", () 
 
     // Verify member was actually removed
     const row = await d1
-      .prepare(
-        "SELECT * FROM workspace_member WHERE workspaceId = ? AND userId = ?",
-      )
+      .prepare("SELECT * FROM workspace_member WHERE workspaceId = ? AND userId = ?")
       .bind(wsId, TEST_USER_2.id)
       .first();
     expect(row).toBeNull();
@@ -861,7 +873,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — removeMember", () 
     const app = createApp(TEST_USER_2);
     const res = await req(
       app,
-      jsonRequest("DELETE", `/workspaces/${wsId}/members/${TEST_USER.id}`),
+      jsonRequest("DELETE", `/workspaces/${wsId}/members/${TEST_USER.id}`)
     );
 
     expect(res.status).toBe(403);
@@ -893,7 +905,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — removeMember", () 
     const app = createApp();
     const res = await req(
       app,
-      jsonRequest("DELETE", `/workspaces/${wsId}/members/${TEST_USER.id}`),
+      jsonRequest("DELETE", `/workspaces/${wsId}/members/${TEST_USER.id}`)
     );
 
     expect(res.status).toBe(400);
@@ -918,7 +930,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — removeMember", () 
     const app = createApp(TEST_USER_2);
     const res = await req(
       app,
-      jsonRequest("DELETE", `/workspaces/${wsId}/members/${TEST_USER_2.id}`),
+      jsonRequest("DELETE", `/workspaces/${wsId}/members/${TEST_USER_2.id}`)
     );
 
     expect(res.status).toBe(400);
@@ -935,7 +947,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — removeMember", () 
     const app = createApp();
     const res = await req(
       app,
-      jsonRequest("DELETE", `/workspaces/${wsId}/members/nonexistent-user-id`),
+      jsonRequest("DELETE", `/workspaces/${wsId}/members/nonexistent-user-id`)
     );
 
     expect(res.status).toBe(404);
@@ -999,7 +1011,10 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — revokes downstream
   }
 
   async function countRow(sql: string, ...binds: string[]): Promise<number> {
-    const row = await d1.prepare(sql).bind(...binds).first<{ n: number }>();
+    const row = await d1
+      .prepare(sql)
+      .bind(...binds)
+      .first<{ n: number }>();
     return row?.n ?? 0;
   }
 
@@ -1013,13 +1028,13 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — revokes downstream
     const beforeRoute = await guardedProjectApp(PLAIN_MEMBER).request(
       `/projects/${projectId}`,
       undefined,
-      {},
+      {}
     );
     expect(beforeRoute.status).toBe(200);
 
     const res = await req(
       removeApp(OWNER),
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`)
     );
     expect(res.status).toBe(200);
 
@@ -1038,7 +1053,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — revokes downstream
     const afterRoute = await guardedProjectApp(PLAIN_MEMBER).request(
       `/projects/${projectId}`,
       undefined,
-      {},
+      {}
     );
     expect(afterRoute.status).toBe(403);
 
@@ -1048,22 +1063,22 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — revokes downstream
       await countRow(
         "SELECT COUNT(*) AS n FROM project_member WHERE projectId = ? AND userId = ?",
         projectId,
-        PLAIN_MEMBER.id,
-      ),
+        PLAIN_MEMBER.id
+      )
     ).toBe(0);
     expect(
       await countRow(
         "SELECT COUNT(*) AS n FROM team_member WHERE teamId = ? AND userId = ?",
         teamId,
-        PLAIN_MEMBER.id,
-      ),
+        PLAIN_MEMBER.id
+      )
     ).toBe(0);
     expect(
       await countRow(
         "SELECT COUNT(*) AS n FROM workspace_member WHERE workspaceId = ? AND userId = ?",
         workspaceId,
-        PLAIN_MEMBER.id,
-      ),
+        PLAIN_MEMBER.id
+      )
     ).toBe(0);
   });
 
@@ -1074,7 +1089,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — revokes downstream
 
     const res = await req(
       removeApp(OWNER),
-      jsonRequest("DELETE", `/workspaces/${removed.workspaceId}/members/${PLAIN_MEMBER.id}`),
+      jsonRequest("DELETE", `/workspaces/${removed.workspaceId}/members/${PLAIN_MEMBER.id}`)
     );
     expect(res.status).toBe(200);
 
@@ -1089,15 +1104,15 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — revokes downstream
       await countRow(
         "SELECT COUNT(*) AS n FROM team_member WHERE teamId = ? AND userId = ?",
         kept.teamId,
-        PLAIN_MEMBER.id,
-      ),
+        PLAIN_MEMBER.id
+      )
     ).toBe(1);
     expect(
       await countRow(
         "SELECT COUNT(*) AS n FROM workspace_member WHERE workspaceId = ? AND userId = ?",
         kept.workspaceId,
-        PLAIN_MEMBER.id,
-      ),
+        PLAIN_MEMBER.id
+      )
     ).toBe(1);
   });
 
@@ -1109,7 +1124,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — revokes downstream
 
     const res = await req(
       removeApp(OWNER),
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`)
     );
 
     expect(res.status).toBe(200);
@@ -1117,8 +1132,8 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — revokes downstream
       await countRow(
         "SELECT COUNT(*) AS n FROM workspace_member WHERE workspaceId = ? AND userId = ?",
         workspaceId,
-        PLAIN_MEMBER.id,
-      ),
+        PLAIN_MEMBER.id
+      )
     ).toBe(0);
   });
 
@@ -1152,7 +1167,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — revokes downstream
 
     const res = await req(
       removeApp(OWNER),
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`)
     );
     expect(res.status).toBe(200);
 
@@ -1168,7 +1183,7 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — revokes downstream
     const guarded = await guardedProjectApp(BYSTANDER).request(
       `/projects/${projectId}`,
       undefined,
-      {},
+      {}
     );
     expect(guarded.status).toBe(200);
 
@@ -1176,22 +1191,22 @@ describe("DELETE /workspaces/:workspaceId/members/:userId — revokes downstream
       await countRow(
         "SELECT COUNT(*) AS n FROM project_member WHERE projectId = ? AND userId = ?",
         projectId,
-        BYSTANDER.id,
-      ),
+        BYSTANDER.id
+      )
     ).toBe(1);
     expect(
       await countRow(
         "SELECT COUNT(*) AS n FROM team_member WHERE teamId = ? AND userId = ?",
         teamId,
-        BYSTANDER.id,
-      ),
+        BYSTANDER.id
+      )
     ).toBe(1);
     expect(
       await countRow(
         "SELECT COUNT(*) AS n FROM workspace_member WHERE workspaceId = ? AND userId = ?",
         workspaceId,
-        BYSTANDER.id,
-      ),
+        BYSTANDER.id
+      )
     ).toBe(1);
   });
 });
@@ -1217,7 +1232,7 @@ describe("member governance — actor must outrank target", () => {
     app.patch(
       "/workspaces/:workspaceId/members/:userId",
       validateBody(updateMemberRoleSchema),
-      updateMemberRole,
+      updateMemberRole
     );
     app.delete("/workspaces/:workspaceId/members/:userId", removeMember);
     return app;
@@ -1247,7 +1262,7 @@ describe("member governance — actor must outrank target", () => {
       govApp(ADMIN_A),
       jsonRequest("PATCH", `/workspaces/${workspaceId}/members/${ADMIN_B.id}`, {
         role: "member",
-      }),
+      })
     );
 
     expect(res.status).toBe(403);
@@ -1261,7 +1276,7 @@ describe("member governance — actor must outrank target", () => {
 
     const res = await req(
       govApp(ADMIN_A),
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${ADMIN_B.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${ADMIN_B.id}`)
     );
 
     expect(res.status).toBe(403);
@@ -1277,12 +1292,12 @@ describe("member governance — actor must outrank target", () => {
       govApp(ADMIN_A),
       jsonRequest("PATCH", `/workspaces/${workspaceId}/members/${ADMIN_A.id}`, {
         role: "member",
-      }),
+      })
     );
 
     expect(res.status).toBe(403);
     expect((await res.json<{ error: string }>()).error).toBe(
-      "Only the workspace owner can change an admin's role",
+      "Only the workspace owner can change an admin's role"
     );
     expect(await storedRole(workspaceId, ADMIN_A.id)).toBe("admin");
   });
@@ -1307,12 +1322,12 @@ describe("member governance — actor must outrank target", () => {
       govApp(ADMIN_A),
       jsonRequest("PATCH", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`, {
         role: "admin",
-      }),
+      })
     );
 
     expect(promote.status).toBe(403);
     expect((await promote.json<{ error: string }>()).error).toBe(
-      "Only the workspace owner can grant the admin role",
+      "Only the workspace owner can grant the admin role"
     );
     expect(await storedRole(workspaceId, PLAIN_MEMBER.id)).toBe("member");
 
@@ -1321,7 +1336,7 @@ describe("member governance — actor must outrank target", () => {
     // it did not already have, and left the admin's existing powers intact.
     const removeStillAllowed = await req(
       govApp(ADMIN_A),
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`)
     );
     expect(removeStillAllowed.status).toBe(200);
     expect(await storedRole(workspaceId, PLAIN_MEMBER.id)).toBeNull();
@@ -1347,12 +1362,12 @@ describe("member governance — actor must outrank target", () => {
       govApp(ADMIN_A),
       jsonRequest("PATCH", `/workspaces/${workspaceId}/members/${ADMIN_B.id}`, {
         role: "admin",
-      }),
+      })
     );
 
     expect(res.status).toBe(403);
     expect((await res.json<{ error: string }>()).error).toBe(
-      "Only the workspace owner can change an admin's role",
+      "Only the workspace owner can change an admin's role"
     );
     expect(await storedRole(workspaceId, ADMIN_B.id)).toBe("admin");
   });
@@ -1367,7 +1382,7 @@ describe("member governance — actor must outrank target", () => {
       govApp(OWNER),
       jsonRequest("PATCH", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`, {
         role: "admin",
-      }),
+      })
     );
 
     expect(promote.status).toBe(200);
@@ -1377,7 +1392,7 @@ describe("member governance — actor must outrank target", () => {
     // the whole point of the hierarchy.
     const removeNowPeer = await req(
       govApp(ADMIN_A),
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`)
     );
     expect(removeNowPeer.status).toBe(403);
     expect(await storedRole(workspaceId, PLAIN_MEMBER.id)).toBe("admin");
@@ -1394,7 +1409,7 @@ describe("member governance — actor must outrank target", () => {
       govApp(ADMIN_A),
       jsonRequest("PATCH", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`, {
         role: "member",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -1406,7 +1421,7 @@ describe("member governance — actor must outrank target", () => {
 
     const res = await req(
       govApp(ADMIN_A),
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`)
     );
 
     expect(res.status).toBe(200);
@@ -1421,21 +1436,21 @@ describe("member governance — actor must outrank target", () => {
       owner,
       jsonRequest("PATCH", `/workspaces/${workspaceId}/members/${ADMIN_A.id}`, {
         role: "member",
-      }),
+      })
     );
     expect(demote.status).toBe(200);
     expect(await storedRole(workspaceId, ADMIN_A.id)).toBe("member");
 
     const removeAdmin = await req(
       owner,
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${ADMIN_B.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${ADMIN_B.id}`)
     );
     expect(removeAdmin.status).toBe(200);
     expect(await storedRole(workspaceId, ADMIN_B.id)).toBeNull();
 
     const removeMemberRes = await req(
       owner,
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`)
     );
     expect(removeMemberRes.status).toBe(200);
     expect(await storedRole(workspaceId, PLAIN_MEMBER.id)).toBeNull();
@@ -1448,20 +1463,18 @@ describe("member governance — actor must outrank target", () => {
       govApp(ADMIN_A),
       jsonRequest("PATCH", `/workspaces/${workspaceId}/members/${OWNER.id}`, {
         role: "member",
-      }),
+      })
     );
     expect(demote.status).toBe(403);
-    expect((await demote.json<{ error: string }>()).error).toBe(
-      "Cannot change the owner's role",
-    );
+    expect((await demote.json<{ error: string }>()).error).toBe("Cannot change the owner's role");
 
     const remove = await req(
       govApp(ADMIN_A),
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${OWNER.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${OWNER.id}`)
     );
     expect(remove.status).toBe(403);
     expect((await remove.json<{ error: string }>()).error).toBe(
-      "Cannot remove the workspace owner",
+      "Cannot remove the workspace owner"
     );
 
     expect(await storedRole(workspaceId, OWNER.id)).toBe("owner");
@@ -1477,7 +1490,7 @@ describe("member governance — actor must outrank target", () => {
       govApp(OUTSIDER),
       jsonRequest("PATCH", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`, {
         role: "admin",
-      }),
+      })
     );
     expect(patch.status).toBe(403);
     expect((await patch.json<{ error: string }>()).error).toBe("Forbidden");
@@ -1485,7 +1498,7 @@ describe("member governance — actor must outrank target", () => {
 
     const del = await req(
       govApp(OUTSIDER),
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`)
     );
     expect(del.status).toBe(403);
     expect((await del.json<{ error: string }>()).error).toBe("Forbidden");
@@ -1506,14 +1519,14 @@ describe("member governance — actor must outrank target", () => {
       govApp(OUTSIDER),
       jsonRequest("PATCH", `/workspaces/${workspaceId}/members/${OWNER.id}`, {
         role: "member",
-      }),
+      })
     );
     expect(patch.status).toBe(403);
     expect((await patch.json<{ error: string }>()).error).toBe("Forbidden");
 
     const del = await req(
       govApp(OUTSIDER),
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${OWNER.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${OWNER.id}`)
     );
     expect(del.status).toBe(403);
     expect((await del.json<{ error: string }>()).error).toBe("Forbidden");
@@ -1570,8 +1583,7 @@ function racingD1(base: D1Database, interfere: () => Promise<void>): D1Database 
         // `bind` returns another statement, which must stay wrapped; every
         // other method is an execution, after which the interference fires.
         if (prop === "bind") {
-          return (...args: unknown[]) =>
-            wrapStatement(fn(...args) as D1PreparedStatement);
+          return (...args: unknown[]) => wrapStatement(fn(...args) as D1PreparedStatement);
         }
         return async (...args: unknown[]) => {
           const result = await fn(...args);
@@ -1588,8 +1600,7 @@ function racingD1(base: D1Database, interfere: () => Promise<void>): D1Database 
       if (typeof value !== "function") return value;
       const fn = (value as (...args: unknown[]) => unknown).bind(target);
       if (prop === "prepare" && !fired) {
-        return (query: string) =>
-          wrapStatement(fn(query) as D1PreparedStatement);
+        return (query: string) => wrapStatement(fn(query) as D1PreparedStatement);
       }
       return fn;
     },
@@ -1625,7 +1636,7 @@ describe("member governance — a role change mid-request cannot be raced", () =
     app.patch(
       "/workspaces/:workspaceId/members/:userId",
       validateBody(updateMemberRoleSchema),
-      updateMemberRole,
+      updateMemberRole
     );
     app.delete("/workspaces/:workspaceId/members/:userId", removeMember);
     return app;
@@ -1652,9 +1663,7 @@ describe("member governance — a role change mid-request cannot be raced", () =
   function promoteToAdmin(workspaceId: string, userId: string) {
     return async () => {
       await d1
-        .prepare(
-          "UPDATE workspace_member SET role = 'admin' WHERE workspaceId = ? AND userId = ?",
-        )
+        .prepare("UPDATE workspace_member SET role = 'admin' WHERE workspaceId = ? AND userId = ?")
         .bind(workspaceId, userId)
         .run();
     };
@@ -1669,7 +1678,10 @@ describe("member governance — a role change mid-request cannot be raced", () =
   }
 
   async function countRow(sql: string, ...binds: string[]): Promise<number> {
-    const row = await d1.prepare(sql).bind(...binds).first<{ n: number }>();
+    const row = await d1
+      .prepare(sql)
+      .bind(...binds)
+      .first<{ n: number }>();
     return row?.n ?? 0;
   }
 
@@ -1680,7 +1692,7 @@ describe("member governance — a role change mid-request cannot be raced", () =
       racingApp(ADMIN_A, promoteToAdmin(workspaceId, PLAIN_MEMBER.id)),
       jsonRequest("PATCH", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`, {
         role: "member",
-      }),
+      })
     );
 
     expect(res.status).toBe(409);
@@ -1694,7 +1706,7 @@ describe("member governance — a role change mid-request cannot be raced", () =
 
     const res = await req(
       racingApp(ADMIN_A, promoteToAdmin(workspaceId, PLAIN_MEMBER.id)),
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`)
     );
 
     expect(res.status).toBe(409);
@@ -1707,15 +1719,15 @@ describe("member governance — a role change mid-request cannot be raced", () =
       await countRow(
         "SELECT COUNT(*) AS n FROM project_member WHERE projectId = ? AND userId = ?",
         projectId,
-        PLAIN_MEMBER.id,
-      ),
+        PLAIN_MEMBER.id
+      )
     ).toBe(1);
     expect(
       await countRow(
         "SELECT COUNT(*) AS n FROM team_member WHERE teamId = ? AND userId = ?",
         teamId,
-        PLAIN_MEMBER.id,
-      ),
+        PLAIN_MEMBER.id
+      )
     ).toBe(1);
 
     // And the other plain member — whose role the EXISTS guard could match if
@@ -1725,15 +1737,15 @@ describe("member governance — a role change mid-request cannot be raced", () =
       await countRow(
         "SELECT COUNT(*) AS n FROM project_member WHERE projectId = ? AND userId = ?",
         projectId,
-        BYSTANDER.id,
-      ),
+        BYSTANDER.id
+      )
     ).toBe(1);
     expect(
       await countRow(
         "SELECT COUNT(*) AS n FROM team_member WHERE teamId = ? AND userId = ?",
         teamId,
-        BYSTANDER.id,
-      ),
+        BYSTANDER.id
+      )
     ).toBe(1);
   });
 
@@ -1745,7 +1757,7 @@ describe("member governance — a role change mid-request cannot be raced", () =
 
     const res = await req(
       racingApp(ADMIN_A, noInterference),
-      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`),
+      jsonRequest("DELETE", `/workspaces/${workspaceId}/members/${PLAIN_MEMBER.id}`)
     );
 
     expect(res.status).toBe(200);
@@ -1754,15 +1766,15 @@ describe("member governance — a role change mid-request cannot be raced", () =
       await countRow(
         "SELECT COUNT(*) AS n FROM project_member WHERE projectId = ? AND userId = ?",
         projectId,
-        PLAIN_MEMBER.id,
-      ),
+        PLAIN_MEMBER.id
+      )
     ).toBe(0);
     expect(
       await countRow(
         "SELECT COUNT(*) AS n FROM team_member WHERE teamId = ? AND userId = ?",
         teamId,
-        PLAIN_MEMBER.id,
-      ),
+        PLAIN_MEMBER.id
+      )
     ).toBe(0);
   });
 });

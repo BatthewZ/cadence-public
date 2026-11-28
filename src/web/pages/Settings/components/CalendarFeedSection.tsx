@@ -70,8 +70,7 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
   /* ------- Status query --------------------------------------------- */
   const statusQuery = useQuery({
     queryKey: queryKeys.workspaces.calendarFeed(workspaceId),
-    queryFn: () =>
-      api.get<CalendarFeedStatus>(`/api/workspaces/${workspaceId}/calendar-feed`),
+    queryFn: () => api.get<CalendarFeedStatus>(`/api/workspaces/${workspaceId}/calendar-feed`),
     enabled: !!workspaceId,
     staleTime: 30_000,
   });
@@ -82,8 +81,7 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
   // feed token, so one mutation serves both flows. Invalidate the status
   // query so the metadata view reflects the new createdAt after dismissal.
   const generateMutation = useMutation({
-    mutationFn: () =>
-      api.post<{ url: string }>(`/api/workspaces/${workspaceId}/calendar-feed`, {}),
+    mutationFn: () => api.post<{ url: string }>(`/api/workspaces/${workspaceId}/calendar-feed`, {}),
     onSuccess: (result) => {
       setMintedUrl(result.url);
       setCopied(false);
@@ -175,8 +173,8 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
           </Row>
 
           <Text variant="body-2" color="secondary">
-            Subscribe in Google Calendar, Apple Calendar, or Outlook. Anyone
-            with this URL can see your assigned task titles and dates.
+            Subscribe in Google Calendar, Apple Calendar, or Outlook. Anyone with this URL can see
+            your assigned task titles and dates.
           </Text>
 
           {mutationError && (
@@ -189,19 +187,15 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
             <Stack gap="r4">
               <Alert variant="warning">
                 <Row gap="r5" align="start" className="w-full">
-                  <AlertTriangle
-                    size={18}
-                    className="shrink-0 mt-r6 text-status-warning"
-                  />
+                  <AlertTriangle size={18} className="shrink-0 mt-r6 text-status-warning" />
                   <Stack gap="r6">
                     <Text variant="body-2" weight="semibold" as="span">
                       You won&apos;t see this URL again.
                     </Text>
                     <Text variant="body-3" color="muted" as="span">
-                      Copy it now and paste it into your calendar app&apos;s
-                      &quot;subscribe by URL&quot; option. If you lose it,
-                      regenerate a new one — the old URL stops working
-                      immediately.
+                      Copy it now and paste it into your calendar app&apos;s &quot;subscribe by
+                      URL&quot; option. If you lose it, regenerate a new one — the old URL stops
+                      working immediately.
                     </Text>
                   </Stack>
                 </Row>
@@ -248,12 +242,7 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
               </div>
 
               <Row justify="end" gap="r4">
-                <Button
-                  type="button"
-                  variant="primary"
-                  size="md"
-                  onClick={handleRevealDone}
-                >
+                <Button type="button" variant="primary" size="md" onClick={handleRevealDone}>
                   Done
                 </Button>
               </Row>
@@ -317,8 +306,8 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
           ) : (
             <Stack gap="r4">
               <Text variant="body-2" color="secondary">
-                No calendar URL yet. Generate one to see the tasks assigned to
-                you in this workspace inside your calendar app.
+                No calendar URL yet. Generate one to see the tasks assigned to you in this workspace
+                inside your calendar app.
               </Text>
               <div>
                 <Button
@@ -328,9 +317,7 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
                   disabled={generateMutation.isPending || onlineOnly.disabled}
                   title={onlineOnly.title}
                 >
-                  {generateMutation.isPending
-                    ? "Generating..."
-                    : "Generate calendar URL"}
+                  {generateMutation.isPending ? "Generating..." : "Generate calendar URL"}
                 </Button>
               </div>
             </Stack>
@@ -350,9 +337,8 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
           confirmingLabel="Regenerating..."
           confirming={generateMutation.isPending}
         >
-          This creates a new calendar URL and immediately disables the current
-          one. Calendar apps subscribed with the old URL will stop updating
-          until you paste in the new one.
+          This creates a new calendar URL and immediately disables the current one. Calendar apps
+          subscribed with the old URL will stop updating until you paste in the new one.
         </ConfirmDialog>
       )}
 
@@ -366,8 +352,8 @@ export function CalendarFeedSection({ workspaceId }: CalendarFeedSectionProps) {
           confirmingLabel="Revoking..."
           confirming={revokeMutation.isPending}
         >
-          Calendar apps subscribed with this URL will stop updating
-          immediately. You can generate a new URL at any time.
+          Calendar apps subscribed with this URL will stop updating immediately. You can generate a
+          new URL at any time.
         </ConfirmDialog>
       )}
     </>

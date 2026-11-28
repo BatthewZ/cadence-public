@@ -7,7 +7,7 @@ export class ApiError extends Error {
     /** The error body's machine-readable `code`, when the server sent one. */
     public code?: string,
     /** The parsed error body, for refusals that carry data (e.g. a description conflict's current task). */
-    public body?: unknown,
+    public body?: unknown
   ) {
     super(message);
     this.name = "ApiError";

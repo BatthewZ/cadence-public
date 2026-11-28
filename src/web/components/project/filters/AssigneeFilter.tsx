@@ -1,7 +1,4 @@
-import {
-  User,
-  UserX,
-} from "lucide-react";
+import { User, UserX } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Checkbox } from "@/web/components/form/Checkbox";
@@ -10,10 +7,7 @@ import { Badge } from "@/web/components/ui/Badge";
 import { Popover } from "@/web/components/ui/Popover";
 import { Text } from "@/web/components/ui/Text";
 import type { ProjectMember } from "@/web/contexts/ProjectContext";
-import {
-  FILTER_NONE,
-  type UseTaskFiltersReturn,
-} from "@/web/hooks/use-task-filters";
+import { FILTER_NONE, type UseTaskFiltersReturn } from "@/web/hooks/use-task-filters";
 import { toggleArrayValue } from "@/web/util/array";
 
 /**
@@ -44,9 +38,7 @@ export function AssigneeFilter({
     if (!search.trim()) return members;
     const q = search.toLowerCase();
     return members.filter(
-      (m) =>
-        m.name.toLowerCase().includes(q) ||
-        m.email.toLowerCase().includes(q),
+      (m) => m.name.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
     );
   }, [members, search]);
 
@@ -101,10 +93,7 @@ export function AssigneeFilter({
         </div>
         <div className="task-filter-bar__popover-list">
           {filtered.map((member) => (
-            <label
-              key={member.userId}
-              className="task-filter-bar__option"
-            >
+            <label key={member.userId} className="task-filter-bar__option">
               <Checkbox
                 checked={filters.assigneeIds.includes(member.userId)}
                 onChange={() => toggle(member.userId)}
@@ -113,7 +102,9 @@ export function AssigneeFilter({
             </label>
           ))}
           {filtered.length === 0 && (
-            <Text variant="body-3" color="muted">No members found</Text>
+            <Text variant="body-3" color="muted">
+              No members found
+            </Text>
           )}
         </div>
       </Popover.Content>

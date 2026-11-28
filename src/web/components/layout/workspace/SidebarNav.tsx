@@ -1,22 +1,7 @@
-import {
-  closestCenter,
-  DndContext,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { closestCenter, DndContext, type DragEndEvent } from "@dnd-kit/core";
+import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Bell,
-  CheckSquare,
-  FolderKanban,
-  LayoutDashboard,
-  Plus,
-  Users,
-} from "lucide-react";
+import { Bell, CheckSquare, FolderKanban, LayoutDashboard, Plus, Users } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
@@ -29,10 +14,7 @@ import { Text } from "@/web/components/ui/Text";
 import { Tooltip } from "@/web/components/ui/Tooltip";
 import type { WorkspaceProject } from "@/web/contexts/WorkspaceContext";
 import { useDndSensors } from "@/web/hooks/use-dnd-sensors";
-import {
-  PROJECT_CREATION_DENIED_HINT,
-  useWorkspacePermissions,
-} from "@/web/hooks/use-permissions";
+import { PROJECT_CREATION_DENIED_HINT, useWorkspacePermissions } from "@/web/hooks/use-permissions";
 import { getIconComponent } from "@/web/lib/icon-map";
 import { useOnline } from "@/web/lib/offline/hooks";
 import { sendWrite } from "@/web/lib/offline/send-write";
@@ -87,13 +69,10 @@ export function SidebarNav({
         if (!b.position) return -1;
         return a.position < b.position ? -1 : a.position > b.position ? 1 : 0;
       }),
-    [visibleProjects],
+    [visibleProjects]
   );
 
-  const projectIds = useMemo(
-    () => sortedVisibleProjects.map((p) => p.id),
-    [sortedVisibleProjects],
-  );
+  const projectIds = useMemo(() => sortedVisibleProjects.map((p) => p.id), [sortedVisibleProjects]);
 
   const handleDragEnd = useCallback(
     async (event: DragEndEvent) => {
@@ -106,12 +85,8 @@ export function SidebarNav({
 
       const reordered = arrayMove(sortedVisibleProjects, oldIndex, newIndex);
       const above = newIndex > 0 ? reordered[newIndex - 1] : null;
-      const below =
-        newIndex < reordered.length - 1 ? reordered[newIndex + 1] : null;
-      const newPosition = generateKeyBetween(
-        above?.position ?? null,
-        below?.position ?? null,
-      );
+      const below = newIndex < reordered.length - 1 ? reordered[newIndex + 1] : null;
+      const newPosition = generateKeyBetween(above?.position ?? null, below?.position ?? null);
 
       const movedProject = sortedVisibleProjects[oldIndex];
       const queryKey = queryKeys.workspaces.projects(workspaceId);
@@ -124,10 +99,10 @@ export function SidebarNav({
           return {
             ...old,
             projects: old.projects.map((p) =>
-              p.id === movedProject.id ? { ...p, position: newPosition } : p,
+              p.id === movedProject.id ? { ...p, position: newPosition } : p
             ),
           };
-        },
+        }
       );
 
       try {
@@ -141,7 +116,7 @@ export function SidebarNav({
         qc.setQueryData(queryKey, previousData);
       }
     },
-    [sortedVisibleProjects, workspaceId, qc],
+    [sortedVisibleProjects, workspaceId, qc]
   );
 
   return (
@@ -165,7 +140,12 @@ export function SidebarNav({
       {favoriteProjects.length > 0 && (
         <AppShell.SidebarSection>
           <div className="flex items-center justify-between px-3 py-1">
-            <Text variant="body-3" weight="semibold" color="muted" className="uppercase tracking-wider text-[0.6875rem]">
+            <Text
+              variant="body-3"
+              weight="semibold"
+              color="muted"
+              className="uppercase tracking-wider text-[0.6875rem]"
+            >
               Favorites
             </Text>
           </div>
@@ -204,9 +184,7 @@ export function SidebarNav({
               keeps the explanation reachable; same wrapper, same reason, as
               `NewProjectButton`.
             */}
-            <span
-              className={`inline-flex ${createDisabled ? "cursor-not-allowed" : ""}`}
-            >
+            <span className={`inline-flex ${createDisabled ? "cursor-not-allowed" : ""}`}>
               <button
                 type="button"
                 onClick={() => setCreateDialogOpen(true)}
@@ -227,10 +205,7 @@ export function SidebarNav({
               void handleDragEnd(event);
             }}
           >
-            <SortableContext
-              items={projectIds}
-              strategy={verticalListSortingStrategy}
-            >
+            <SortableContext items={projectIds} strategy={verticalListSortingStrategy}>
               {sortedVisibleProjects.map((project) => (
                 <SortableProjectItem
                   key={project.id}

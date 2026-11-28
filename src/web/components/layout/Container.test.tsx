@@ -24,22 +24,38 @@ describe("Container", () => {
   });
 
   it("supports sm size variant", () => {
-    render(<Container size="sm" data-testid="container">Content</Container>);
+    render(
+      <Container size="sm" data-testid="container">
+        Content
+      </Container>
+    );
     expect(screen.getByTestId("container").className).toContain("max-w-[30rem]");
   });
 
   it("supports lg size variant", () => {
-    render(<Container size="lg" data-testid="container">Content</Container>);
+    render(
+      <Container size="lg" data-testid="container">
+        Content
+      </Container>
+    );
     expect(screen.getByTestId("container").className).toContain("max-w-[48rem]");
   });
 
   it("supports xl size variant", () => {
-    render(<Container size="xl" data-testid="container">Content</Container>);
+    render(
+      <Container size="xl" data-testid="container">
+        Content
+      </Container>
+    );
     expect(screen.getByTestId("container").className).toContain("max-w-[64rem]");
   });
 
   it("supports full size variant", () => {
-    render(<Container size="full" data-testid="container">Content</Container>);
+    render(
+      <Container size="full" data-testid="container">
+        Content
+      </Container>
+    );
     expect(screen.getByTestId("container").className).toContain("max-w-full");
   });
 

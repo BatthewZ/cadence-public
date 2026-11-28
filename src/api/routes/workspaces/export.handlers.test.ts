@@ -90,7 +90,7 @@ beforeAll(async () => {
   await seedUser(d1, TEST_USER_2);
   await d1
     .prepare(
-      "INSERT INTO user (id, name, email, emailVerified, createdAt, updatedAt) VALUES (?, ?, ?, 0, ?, ?)",
+      "INSERT INTO user (id, name, email, emailVerified, createdAt, updatedAt) VALUES (?, ?, ?, 0, ?, ?)"
     )
     .bind(EX_MEMBER.id, EX_MEMBER.name, EX_MEMBER.email, 1700000000, 1700000000)
     .run();
@@ -123,7 +123,7 @@ function createGuardedApp(user?: typeof TEST_USER | typeof TEST_USER_2) {
     "/workspaces/:workspaceId/export",
     requireAuth,
     requireWorkspaceRole("owner", "admin"),
-    exportWorkspace,
+    exportWorkspace
   );
   return app;
 }
@@ -220,14 +220,14 @@ async function seedFullGraph(): Promise<SeededGraph> {
   });
   await d1
     .prepare(
-      "UPDATE task SET recurrence_rule = ?, recurrence_series_id = ?, completedBy = ?, completedAt = ? WHERE id = ?",
+      "UPDATE task SET recurrence_rule = ?, recurrence_series_id = ?, completedBy = ?, completedAt = ? WHERE id = ?"
     )
     .bind(
       JSON.stringify({ frequency: "weekly", interval: 1, daysOfWeek: [1, 3] }),
       "series-export-test",
       EX_MEMBER.id,
       Math.floor(Date.now() / 1000),
-      recurringTaskId,
+      recurringTaskId
     )
     .run();
 
@@ -246,9 +246,7 @@ async function seedFullGraph(): Promise<SeededGraph> {
 
   // Task ↔ label link.
   await d1
-    .prepare(
-      "INSERT INTO task_label (id, taskId, labelId, createdAt) VALUES (?, ?, ?, ?)",
-    )
+    .prepare("INSERT INTO task_label (id, taskId, labelId, createdAt) VALUES (?, ?, ?, ?)")
     .bind(crypto.randomUUID(), taskId, labelId, Math.floor(Date.now() / 1000))
     .run();
 
@@ -258,7 +256,7 @@ async function seedFullGraph(): Promise<SeededGraph> {
   const uploadId = crypto.randomUUID();
   await d1
     .prepare(
-      "INSERT INTO upload (id, userId, key, filename, mimeType, size, purpose, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO upload (id, userId, key, filename, mimeType, size, purpose, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(
       uploadId,
@@ -268,13 +266,11 @@ async function seedFullGraph(): Promise<SeededGraph> {
       "application/pdf",
       34_567,
       "task-attachment",
-      Math.floor(Date.now() / 1000),
+      Math.floor(Date.now() / 1000)
     )
     .run();
   await d1
-    .prepare(
-      "INSERT INTO task_attachment (id, taskId, uploadId, createdAt) VALUES (?, ?, ?, ?)",
-    )
+    .prepare("INSERT INTO task_attachment (id, taskId, uploadId, createdAt) VALUES (?, ?, ?, ?)")
     .bind(crypto.randomUUID(), taskId, uploadId, Math.floor(Date.now() / 1000))
     .run();
 
@@ -307,9 +303,7 @@ async function seedFullGraph(): Promise<SeededGraph> {
  * inline but unawaited (`void work()`), so the row may land a tick after
  * the response resolves — poll briefly instead of racing it.
  */
-async function waitForAuditRow(
-  workspaceId: string,
-): Promise<Record<string, unknown> | null> {
+async function waitForAuditRow(workspaceId: string): Promise<Record<string, unknown> | null> {
   for (let attempt = 0; attempt < 50; attempt++) {
     const row = await d1
       .prepare("SELECT * FROM audit_log WHERE workspaceId = ? AND action = 'export'")
@@ -330,10 +324,7 @@ describe("GET /workspaces/:workspaceId/export — contract", () => {
     const graph = await seedFullGraph();
     const app = createHandlerApp();
 
-    const res = await req(
-      app,
-      `/workspaces/${graph.wsId}/export?includeActivity=true`,
-    );
+    const res = await req(app, `/workspaces/${graph.wsId}/export?includeActivity=true`);
     expect(res.status).toBe(200);
 
     // Read the FULL streamed body and require it to be ONE valid JSON
@@ -371,7 +362,7 @@ describe("GET /workspaces/:workspaceId/export — contract", () => {
     expect(proj.coverUnsplash?.id).toBe("export-project-cover");
     expect(proj.members).toHaveLength(2);
     expect(proj.taskGroups.map((g) => g.id).sort()).toEqual(
-      [graph.groupId, graph.doneGroupId].sort(),
+      [graph.groupId, graph.doneGroupId].sort()
     );
     // Split assertion instead of `createdAt: expect.any(String)` — expect.any
     // returns `any`, which trips no-unsafe-assignment in an object literal.
@@ -395,14 +386,8 @@ describe("GET /workspaces/:workspaceId/export — contract", () => {
     expect(calendarTask!.sourceUid).toBe("ics-uid-export-test@example.com");
     expect(calendarTask!.coverUnsplash?.id).toBe("export-task-cover");
     expect(calendarTask!.labelIds).toEqual([graph.labelId]);
-    expect(calendarTask!.subtasks.map((s) => s.title)).toEqual([
-      "Subtask A",
-      "Subtask B",
-    ]);
-    expect(calendarTask!.comments.map((c) => c.authorRef)).toEqual([
-      TEST_USER.id,
-      EX_MEMBER.id,
-    ]);
+    expect(calendarTask!.subtasks.map((s) => s.title)).toEqual(["Subtask A", "Subtask B"]);
+    expect(calendarTask!.comments.map((c) => c.authorRef)).toEqual([TEST_USER.id, EX_MEMBER.id]);
     expect(calendarTask!.attachments).toEqual([
       {
         filename: "spec.pdf",
@@ -502,10 +487,7 @@ describe("GET /workspaces/:workspaceId/export — users directory", () => {
     const graph = await seedFullGraph();
     const app = createHandlerApp();
 
-    const res = await req(
-      app,
-      `/workspaces/${graph.wsId}/export?includeActivity=true`,
-    );
+    const res = await req(app, `/workspaces/${graph.wsId}/export?includeActivity=true`);
     const doc = workspaceExportSchema.parse(JSON.parse(await res.text()));
 
     const refs = new Set(doc.users.map((u) => u.ref));
@@ -548,23 +530,16 @@ describe("GET /workspaces/:workspaceId/export — includeActivity", () => {
     const app = createHandlerApp();
 
     const defaultRes = await req(app, `/workspaces/${graph.wsId}/export`);
-    const defaultDoc = workspaceExportSchema.parse(
-      JSON.parse(await defaultRes.text()),
-    );
+    const defaultDoc = workspaceExportSchema.parse(JSON.parse(await defaultRes.text()));
     for (const p of defaultDoc.projects) {
       for (const t of p.tasks) {
         expect(t.activity).toBeUndefined();
       }
     }
 
-    const withRes = await req(
-      app,
-      `/workspaces/${graph.wsId}/export?includeActivity=true`,
-    );
+    const withRes = await req(app, `/workspaces/${graph.wsId}/export?includeActivity=true`);
     const withDoc = workspaceExportSchema.parse(JSON.parse(await withRes.text()));
-    const allActivity = withDoc.projects.flatMap((p) =>
-      p.tasks.flatMap((t) => t.activity ?? []),
-    );
+    const allActivity = withDoc.projects.flatMap((p) => p.tasks.flatMap((t) => t.activity ?? []));
     expect(allActivity.length).toBe(2);
   });
 
@@ -574,9 +549,7 @@ describe("GET /workspaces/:workspaceId/export — includeActivity", () => {
 
     const res = await req(app, `/workspaces/${graph.wsId}/export?includeActivity=1`);
     const doc = workspaceExportSchema.parse(JSON.parse(await res.text()));
-    const allActivity = doc.projects.flatMap((p) =>
-      p.tasks.flatMap((t) => t.activity ?? []),
-    );
+    const allActivity = doc.projects.flatMap((p) => p.tasks.flatMap((t) => t.activity ?? []));
     expect(allActivity.length).toBe(2);
   });
 });
@@ -596,7 +569,7 @@ describe("GET /workspaces/:workspaceId/export — headers", () => {
 
     const today = new Date().toISOString().slice(0, 10);
     expect(res.headers.get("Content-Disposition")).toBe(
-      `attachment; filename="${graph.slug}-export-${today}.json"`,
+      `attachment; filename="${graph.slug}-export-${today}.json"`
     );
   });
 });
@@ -643,10 +616,7 @@ describe("GET /workspaces/:workspaceId/export — audit", () => {
     const graph = await seedFullGraph();
     const app = createHandlerApp();
 
-    const res = await req(
-      app,
-      `/workspaces/${graph.wsId}/export?includeActivity=true`,
-    );
+    const res = await req(app, `/workspaces/${graph.wsId}/export?includeActivity=true`);
     expect(res.status).toBe(200);
     await res.text();
 
@@ -693,7 +663,7 @@ describe("GET /workspaces/:workspaceId/export — rate limit", () => {
         prefix: "workspace-export-test",
         keyFn: defaultRateLimitKey,
       }),
-      exportWorkspace,
+      exportWorkspace
     );
 
     for (let i = 0; i < 5; i++) {

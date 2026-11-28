@@ -3,11 +3,7 @@ import { Palette, RotateCcw } from "lucide-react";
 
 import type { Theme } from "@/shared/types/theme";
 import { Row, Stack } from "@/web/components/layout";
-import {
-  Button,
-  Card,
-  Text,
-} from "@/web/components/ui";
+import { Button, Card, Text } from "@/web/components/ui";
 import { ThemeGrid } from "@/web/components/ui/ThemeGrid";
 import type { useToast } from "@/web/components/ui/ToastContext";
 import type { useProject } from "@/web/contexts/ProjectContext";
@@ -46,7 +42,7 @@ export function AppearanceTab({
       qc.setQueryData(
         queryKeys.projects.detail(projectId),
         (old: { project: Record<string, unknown> } | undefined) =>
-          old ? { ...old, project: { ...old.project, theme: newTheme } } : old,
+          old ? { ...old, project: { ...old.project, theme: newTheme } } : old
       );
       return { previousData };
     },
@@ -94,7 +90,8 @@ export function AppearanceTab({
 
         {!hasOverride && (
           <Text variant="body-3" color="muted">
-            Currently inheriting the workspace theme: <strong>{THEME_LABELS[workspaceTheme]}</strong>
+            Currently inheriting the workspace theme:{" "}
+            <strong>{THEME_LABELS[workspaceTheme]}</strong>
           </Text>
         )}
 

@@ -7,7 +7,13 @@ import { task } from "../../../../db/schema/task";
 import type { AppEnv } from "../../../env";
 import { requireParam } from "../../../lib/params";
 import { tokenProjectScopeFilter } from "../../../middleware/authorize";
-import { costAggregationColumns, emptyCostAggregation, emptyTaskCounts, isElevatedRole, taskCountColumns } from "./helpers";
+import {
+  costAggregationColumns,
+  emptyCostAggregation,
+  emptyTaskCounts,
+  isElevatedRole,
+  taskCountColumns,
+} from "./helpers";
 
 /**
  * GET /workspaces/:workspaceId/dashboard
@@ -42,7 +48,7 @@ export async function workspaceDashboard(c: Context<AppEnv>) {
   // PAT project narrowing so no query below can forget it.
   const inWorkspace = and(
     eq(project.workspaceId, workspaceId),
-    tokenProjectScopeFilter(c, project.id),
+    tokenProjectScopeFilter(c, project.id)
   );
   const isActiveProject = eq(project.status, "active");
 
@@ -239,7 +245,11 @@ export async function workspaceDashboard(c: Context<AppEnv>) {
     const costRows = await costQuery;
     costAggregation = costRows[0] ?? emptyCostAggregation;
   } catch (error) {
-    console.error("Failed to fetch cost aggregation for workspace dashboard:", { workspaceId }, error);
+    console.error(
+      "Failed to fetch cost aggregation for workspace dashboard:",
+      { workspaceId },
+      error
+    );
     // Non-fatal: return the rest of the dashboard with zeroed cost data
   }
 

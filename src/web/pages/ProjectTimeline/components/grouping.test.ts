@@ -31,9 +31,7 @@ const bug: TaskLabelInfo = { id: "l-bug", name: "bug", color: "#ef4444" };
 const feature: TaskLabelInfo = { id: "l-feat", name: "Feature", color: "#3b82f6" };
 const urgent: TaskLabelInfo = { id: "l-urg", name: "URGENT", color: "#f59e0b" };
 
-function makeTask(
-  overrides: Partial<TimelineTask> & { id: string },
-): TimelineTask {
+function makeTask(overrides: Partial<TimelineTask> & { id: string }): TimelineTask {
   return {
     title: `Task ${overrides.id}`,
     completed: false,
@@ -119,9 +117,7 @@ describe("groupTasksByLabel", () => {
     // Groups derive from embedded labels, so a label that exists in the
     // project but is attached to no visible task never produces a group —
     // equivalent to the empty-group filtering every other mode applies.
-    const groups = groupTasksByLabel([
-      makeTask({ id: "t-1", labels: [feature] }),
-    ]);
+    const groups = groupTasksByLabel([makeTask({ id: "t-1", labels: [feature] })]);
 
     expect(groups).toHaveLength(1);
     expect(groups[0].label).toBe("Feature");
@@ -134,10 +130,7 @@ describe("groupTasksByLabel", () => {
 
 describe("groupTimelineTasks (label mode)", () => {
   it("dispatches 'label' to groupTasksByLabel without needing taskGroups or members", () => {
-    const tasks = [
-      makeTask({ id: "t-1", labels: [bug] }),
-      makeTask({ id: "t-2" }),
-    ];
+    const tasks = [makeTask({ id: "t-1", labels: [bug] }), makeTask({ id: "t-2" })];
 
     const groups = groupTimelineTasks("label", tasks, [], []);
 

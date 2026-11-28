@@ -20,10 +20,14 @@ async function setup() {
   const view = () =>
     renderHook(
       () => {
-        const { data } = useQuery<{ task: TaskDetail }>({ queryKey: KEY, queryFn: () => new Promise(() => {}), enabled: false });
+        const { data } = useQuery<{ task: TaskDetail }>({
+          queryKey: KEY,
+          queryFn: () => new Promise(() => {}),
+          enabled: false,
+        });
         return useLocalTask("t-1", data?.task);
       },
-      { wrapper },
+      { wrapper }
     );
   const first = view();
   await act(async () => {});

@@ -14,7 +14,7 @@ export function validationHook(
     success: boolean;
     error?: { issues: { path: PropertyKey[]; message: string }[] };
   },
-  c: Context,
+  c: Context
 ) {
   if (!result.success) {
     return c.json(
@@ -25,7 +25,7 @@ export function validationHook(
           message: i.message,
         })),
       },
-      400,
+      400
     );
   }
 }

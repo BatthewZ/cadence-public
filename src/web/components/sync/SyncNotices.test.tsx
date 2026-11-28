@@ -132,7 +132,10 @@ describe("SyncNotices", () => {
 
   it.each([
     ["is missing (an insecure context)", undefined],
-    ["refuses the write", { writeText: vi.fn(() => Promise.reject(new DOMException("Denied", "NotAllowedError"))) }],
+    [
+      "refuses the write",
+      { writeText: vi.fn(() => Promise.reject(new DOMException("Denied", "NotAllowedError"))) },
+    ],
   ])("says the copy failed when the clipboard %s", async (_case, clipboard) => {
     Object.defineProperty(navigator, "clipboard", { value: clipboard, configurable: true });
     renderNotices();

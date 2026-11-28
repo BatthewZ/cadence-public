@@ -42,7 +42,7 @@ describe("projectTasksToICSEvents", () => {
           dueDate: "2026-03-12T00:00:00.000Z",
         }),
       ],
-      DTSTAMP,
+      DTSTAMP
     );
 
     expect(events).toHaveLength(1);
@@ -57,7 +57,7 @@ describe("projectTasksToICSEvents", () => {
   it("maps a single-day task (due only): one day, DTEND = due + 1", () => {
     const events = projectTasksToICSEvents(
       [makeTask({ id: "t2", dueDate: "2026-03-10T00:00:00.000Z" })],
-      DTSTAMP,
+      DTSTAMP
     );
 
     expect(events[0].startDate).toBe("2026-03-10");
@@ -69,7 +69,7 @@ describe("projectTasksToICSEvents", () => {
     // it lands on the calendar on its start date rather than being dropped.
     const events = projectTasksToICSEvents(
       [makeTask({ id: "t-start-only", startDate: "2026-03-10T00:00:00.000Z", dueDate: null })],
-      DTSTAMP,
+      DTSTAMP
     );
 
     expect(events).toHaveLength(1);
@@ -83,7 +83,7 @@ describe("projectTasksToICSEvents", () => {
         makeTask({ id: "t3", dueDate: "2026-01-31T00:00:00.000Z" }),
         makeTask({ id: "t4", dueDate: "2026-12-31T00:00:00.000Z" }),
       ],
-      DTSTAMP,
+      DTSTAMP
     );
 
     expect(events[0].endDateExclusive).toBe("2026-02-01");
@@ -96,7 +96,7 @@ describe("projectTasksToICSEvents", () => {
         makeTask({ id: "t5", title: "No dates" }),
         makeTask({ id: "t6", title: "Dated", dueDate: "2026-03-10T00:00:00.000Z" }),
       ],
-      DTSTAMP,
+      DTSTAMP
     );
 
     expect(events).toHaveLength(1);
@@ -112,7 +112,7 @@ describe("projectTasksToICSEvents", () => {
           dueDate: "2026-03-10T00:00:00.000Z",
         }),
       ],
-      DTSTAMP,
+      DTSTAMP
     );
 
     expect(events[0].startDate).toBe("2026-03-10");
@@ -130,7 +130,7 @@ describe("projectTasksToICSEvents", () => {
         }),
         makeTask({ id: "t9", dueDate: "2026-03-10T00:00:00.000Z" }),
       ],
-      DTSTAMP,
+      DTSTAMP
     );
 
     expect(events[0].description).toBe("Full details here");
@@ -155,7 +155,7 @@ describe("buildProjectICS round-trip through the shared parser", () => {
         makeTask({ id: "t2", title: "Single day", dueDate: "2026-04-01T00:00:00.000Z" }),
         makeTask({ id: "t3", title: "Date-less — skipped" }),
       ],
-      DTSTAMP,
+      DTSTAMP
     );
 
     const { events, warnings } = parseICS(ics);
@@ -225,9 +225,7 @@ describe("downloadProjectICS", () => {
       configurable: true,
     });
     // Block jsdom's "not implemented: navigation" on anchor click.
-    const click = vi
-      .spyOn(HTMLAnchorElement.prototype, "click")
-      .mockImplementation(() => {});
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     return { createObjectURL, revokeObjectURL, click };
   }
 
@@ -260,9 +258,7 @@ describe("downloadProjectICS", () => {
   it("returns 0 and triggers no download when no task has dates", () => {
     const { createObjectURL, click } = stubDownloadApis();
 
-    const exported = downloadProjectICS("My Project", [
-      makeTask({ id: "t1", title: "No dates" }),
-    ]);
+    const exported = downloadProjectICS("My Project", [makeTask({ id: "t1", title: "No dates" })]);
 
     expect(exported).toBe(0);
     expect(createObjectURL).not.toHaveBeenCalled();

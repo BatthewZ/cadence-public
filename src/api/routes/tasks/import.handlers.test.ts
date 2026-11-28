@@ -99,21 +99,17 @@ function importApp(opts?: {
     }),
     requireProjectRole("admin", "member"),
     validateBody(importTasksSchema),
-    importTasks,
+    importTasks
   );
   return app;
 }
 
-function postImport(
-  app: Hono<AppEnv>,
-  body: unknown,
-  ctx?: ExecutionContext,
-) {
+function postImport(app: Hono<AppEnv>, body: unknown, ctx?: ExecutionContext) {
   return app.request(
     `/projects/${projectId}/tasks/import`,
     jsonRequest("POST", `/projects/${projectId}/tasks/import`, body),
     {},
-    ctx,
+    ctx
   );
 }
 
@@ -128,7 +124,7 @@ async function tasksInGroup(groupId: string) {
   const { results } = await d1
     .prepare(
       `SELECT id, title, source_uid AS sourceUid, startDate, dueDate, position, completed
-       FROM task WHERE taskGroupId = ? ORDER BY position ASC`,
+       FROM task WHERE taskGroupId = ? ORDER BY position ASC`
     )
     .bind(groupId)
     .all<{
@@ -352,10 +348,16 @@ describe("importTasks — dedupe via sourceUid", () => {
     const groupId = await seedTaskGroup(d1, projectId, { name: "Import NoUid" });
     const payload = { taskGroupId: groupId, tasks: [{ title: "Anonymous event" }] };
 
-    expect(await (await postImport(importApp(), payload)).json<ImportCounters>())
-      .toEqual({ created: 1, skipped: 0, total: 1 });
-    expect(await (await postImport(importApp(), payload)).json<ImportCounters>())
-      .toEqual({ created: 1, skipped: 0, total: 1 });
+    expect(await (await postImport(importApp(), payload)).json<ImportCounters>()).toEqual({
+      created: 1,
+      skipped: 0,
+      total: 1,
+    });
+    expect(await (await postImport(importApp(), payload)).json<ImportCounters>()).toEqual({
+      created: 1,
+      skipped: 0,
+      total: 1,
+    });
 
     const rows = await tasksInGroup(groupId);
     expect(rows).toHaveLength(2);
@@ -385,14 +387,14 @@ describe("importTasks — dedupe via sourceUid", () => {
       }),
       requireProjectRole("admin", "member"),
       validateBody(importTasksSchema),
-      importTasks,
+      importTasks
     );
     const second = await otherApp.request(
       `/projects/${otherProjectId}/tasks/import`,
       jsonRequest("POST", `/projects/${otherProjectId}/tasks/import`, {
         taskGroupId: otherGroupId,
         tasks: [{ title: "Shared event", sourceUid: "xproj-uid@cal.example.com" }],
-      }),
+      })
     );
     expect(second.status).toBe(201);
     expect(await second.json<ImportCounters>()).toEqual({ created: 1, skipped: 0, total: 1 });
@@ -496,7 +498,7 @@ describe("importTasks — side effects", () => {
           { title: "Act B", sourceUid: "act-uid-b@cal.example.com" },
         ],
       },
-      ctx,
+      ctx
     );
     expect(res.status).toBe(201);
     await flush(); // activity logging is deferred via waitUntil
@@ -505,7 +507,7 @@ describe("importTasks — side effects", () => {
     const { results: activities } = await d1
       .prepare(
         `SELECT taskId, action, newValue, actorId FROM task_activity
-         WHERE taskId IN (?, ?) ORDER BY taskId`,
+         WHERE taskId IN (?, ?) ORDER BY taskId`
       )
       .bind(rows[0].id, rows[1].id)
       .all<{ taskId: string; action: string; newValue: string | null; actorId: string }>();
@@ -539,13 +541,13 @@ describe("importTasks — side effects", () => {
             { title: "Silent B", sourceUid: "hook-uid-b@cal.example.com" },
           ],
         },
-        ctx,
+        ctx
       );
       expect(res.status).toBe(201);
       await flush();
 
       const deliveryCalls = fetchSpy.calls.filter(
-        ([url]) => url === "https://hooks.example.com/import-should-not-fire",
+        ([url]) => url === "https://hooks.example.com/import-should-not-fire"
       );
       expect(deliveryCalls).toHaveLength(0);
     } finally {
@@ -609,7 +611,7 @@ describe("sourceUid contract", () => {
       jsonRequest("PATCH", `/tasks/${imported.id}`, {
         title: "Renamed",
         sourceUid: "attacker-controlled-uid",
-      }),
+      })
     );
     expect(res.status).toBe(200);
     const body = await res.json<{ task: { title: string; sourceUid: string | null } }>();

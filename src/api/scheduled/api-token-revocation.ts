@@ -49,9 +49,7 @@ const REVOKE_BATCH_SIZE = 100;
  *
  * @returns Number of tokens revoked in this run (for telemetry / logging).
  */
-export async function processScheduledTokenRevocations(
-  db: Database,
-): Promise<number> {
+export async function processScheduledTokenRevocations(db: Database): Promise<number> {
   const now = new Date();
   let totalRevoked = 0;
 
@@ -66,8 +64,8 @@ export async function processScheduledTokenRevocations(
             // `lte` so a token whose revokeAt exactly equals now still
             // qualifies — there is no value in waiting another 5 minutes.
             lte(apiToken.revokeAt, now),
-            isNull(apiToken.revokedAt),
-          ),
+            isNull(apiToken.revokedAt)
+          )
         )
         .limit(REVOKE_BATCH_SIZE);
 
@@ -83,18 +81,15 @@ export async function processScheduledTokenRevocations(
         .where(
           sql`${apiToken.id} IN (${sql.join(
             ids.map((id) => sql`${id}`),
-            sql`, `,
-          )})`,
+            sql`, `
+          )})`
         );
 
       batchRevoked = dueRows.length;
       totalRevoked += batchRevoked;
     } while (batchRevoked === REVOKE_BATCH_SIZE);
   } catch (error) {
-    console.error(
-      "[api-token-revocation] Failed to process scheduled revocations",
-      error,
-    );
+    console.error("[api-token-revocation] Failed to process scheduled revocations", error);
   }
 
   return totalRevoked;

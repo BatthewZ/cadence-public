@@ -55,7 +55,7 @@ describe("savedViewStateSchema params (forward-compat openness)", () => {
 
   it(`accepts exactly ${SAVED_VIEW_MAX_PARAMS} params and rejects one more`, () => {
     const atCap = Object.fromEntries(
-      Array.from({ length: SAVED_VIEW_MAX_PARAMS }, (_, i) => [`k${i}`, "v"]),
+      Array.from({ length: SAVED_VIEW_MAX_PARAMS }, (_, i) => [`k${i}`, "v"])
     );
     expect(savedViewStateSchema.safeParse({ tab: "board", params: atCap }).success).toBe(true);
 
@@ -66,29 +66,29 @@ describe("savedViewStateSchema params (forward-compat openness)", () => {
   it(`accepts a ${SAVED_VIEW_MAX_PARAM_LENGTH}-char value and rejects an oversized one`, () => {
     const atCap = "x".repeat(SAVED_VIEW_MAX_PARAM_LENGTH);
     expect(
-      savedViewStateSchema.safeParse({ tab: "board", params: { assignee: atCap } }).success,
+      savedViewStateSchema.safeParse({ tab: "board", params: { assignee: atCap } }).success
     ).toBe(true);
     expect(
-      savedViewStateSchema.safeParse({ tab: "board", params: { assignee: `${atCap}x` } }).success,
+      savedViewStateSchema.safeParse({ tab: "board", params: { assignee: `${atCap}x` } }).success
     ).toBe(false);
   });
 
   it("accepts a 40-char key and rejects oversized or empty keys", () => {
     expect(
-      savedViewStateSchema.safeParse({ tab: "board", params: { ["k".repeat(40)]: "v" } }).success,
+      savedViewStateSchema.safeParse({ tab: "board", params: { ["k".repeat(40)]: "v" } }).success
     ).toBe(true);
     expect(
-      savedViewStateSchema.safeParse({ tab: "board", params: { ["k".repeat(41)]: "v" } }).success,
+      savedViewStateSchema.safeParse({ tab: "board", params: { ["k".repeat(41)]: "v" } }).success
     ).toBe(false);
-    expect(
-      savedViewStateSchema.safeParse({ tab: "board", params: { "": "v" } }).success,
-    ).toBe(false);
+    expect(savedViewStateSchema.safeParse({ tab: "board", params: { "": "v" } }).success).toBe(
+      false
+    );
   });
 
   it("rejects non-string param values (URL params are strings by definition)", () => {
-    expect(
-      savedViewStateSchema.safeParse({ tab: "board", params: { assignee: 7 } }).success,
-    ).toBe(false);
+    expect(savedViewStateSchema.safeParse({ tab: "board", params: { assignee: 7 } }).success).toBe(
+      false
+    );
   });
 });
 
@@ -118,14 +118,14 @@ describe("createSavedViewSchema name (trim-then-validate semantics)", () => {
 
   it("rejects a whitespace-only name (would otherwise store an empty name)", () => {
     expect(createSavedViewSchema.safeParse({ name: "   ", state: VALID_STATE }).success).toBe(
-      false,
+      false
     );
   });
 
   it("rejects an empty name and a name over 50 trimmed chars", () => {
     expect(createSavedViewSchema.safeParse({ name: "", state: VALID_STATE }).success).toBe(false);
     expect(
-      createSavedViewSchema.safeParse({ name: "n".repeat(51), state: VALID_STATE }).success,
+      createSavedViewSchema.safeParse({ name: "n".repeat(51), state: VALID_STATE }).success
     ).toBe(false);
   });
 
@@ -146,9 +146,7 @@ describe("updateSavedViewSchema", () => {
 
   it("applies the same name and state rules as create when fields are present", () => {
     expect(updateSavedViewSchema.safeParse({ name: "   " }).success).toBe(false);
-    expect(updateSavedViewSchema.safeParse({ state: { tab: "", params: {} } }).success).toBe(
-      false,
-    );
+    expect(updateSavedViewSchema.safeParse({ state: { tab: "", params: {} } }).success).toBe(false);
     const result = updateSavedViewSchema.safeParse({ name: " renamed " });
     expect(result.success).toBe(true);
     if (result.success) expect(result.data.name).toBe("renamed");

@@ -24,15 +24,10 @@ import { Hono } from "hono";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createDb } from "../../db";
-import { type ApiToken, apiToken,auditLog } from "../../db/schema";
+import { type ApiToken, apiToken, auditLog } from "../../db/schema";
 import type { AppEnv } from "../env";
-import {
-  createTestD1,
-  seedUser,
-  seedWorkspace,
-  TEST_USER,
-} from "../test-utils";
-import { auditPatMutations,deriveAuditFields } from "./audit-pat";
+import { createTestD1, seedUser, seedWorkspace, TEST_USER } from "../test-utils";
+import { auditPatMutations, deriveAuditFields } from "./audit-pat";
 
 let d1: D1Database;
 let dispose: () => Promise<void>;
@@ -52,7 +47,7 @@ beforeAll(async () => {
   await d1
     .prepare(
       `INSERT INTO api_token (id, userId, workspaceId, name, tokenHash, tokenPrefix, scopes, projectScope, projectIds, lastUsedAt, expiresAt, revokeAt, revokedAt, rotatedToId, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       tokenId,
@@ -69,7 +64,7 @@ beforeAll(async () => {
       null,
       null,
       null,
-      Math.floor(Date.now() / 1000),
+      Math.floor(Date.now() / 1000)
     )
     .run();
 });
@@ -116,10 +111,7 @@ describe("deriveAuditFields", () => {
   });
 
   it("captures the rotate verb under api-tokens", () => {
-    const r = deriveAuditFields(
-      "/workspaces/:workspaceId/api-tokens/:tokenId/rotate",
-      "POST",
-    );
+    const r = deriveAuditFields("/workspaces/:workspaceId/api-tokens/:tokenId/rotate", "POST");
     expect(r.resourceType).toBe("api-tokens");
     expect(r.idParamName).toBe("tokenId");
     expect(r.action).toBe("rotate");
@@ -160,10 +152,7 @@ describe("deriveAuditFields", () => {
 // auditPatMutations — integration against a real D1
 // ---------------------------------------------------------------------------
 
-function buildAuditApp(opts: {
-  withToken: boolean;
-  status?: number;
-}): Hono<AppEnv> {
+function buildAuditApp(opts: { withToken: boolean; status?: number }): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
 
   app.use("*", async (c, next) => {
@@ -222,7 +211,7 @@ describe("auditPatMutations", () => {
   it("writes one row when a PAT performs a successful verb mutation", async () => {
     const app = buildAuditApp({ withToken: true });
     const res = await app.request(
-      new Request("http://localhost/tasks/task-123/complete", { method: "POST" }),
+      new Request("http://localhost/tasks/task-123/complete", { method: "POST" })
     );
     expect(res.status).toBe(200);
 
@@ -245,7 +234,7 @@ describe("auditPatMutations", () => {
   it("writes one row when a PAT creates a collection item", async () => {
     const app = buildAuditApp({ withToken: true });
     const res = await app.request(
-      new Request("http://localhost/workspaces/ws-1/projects", { method: "POST" }),
+      new Request("http://localhost/workspaces/ws-1/projects", { method: "POST" })
     );
     expect(res.status).toBe(201);
 
@@ -262,7 +251,7 @@ describe("auditPatMutations", () => {
   it("does NOT write a row when no PAT is present (cookie traffic)", async () => {
     const app = buildAuditApp({ withToken: false });
     const res = await app.request(
-      new Request("http://localhost/tasks/task-1/complete", { method: "POST" }),
+      new Request("http://localhost/tasks/task-1/complete", { method: "POST" })
     );
     expect(res.status).toBe(200);
 
@@ -274,9 +263,7 @@ describe("auditPatMutations", () => {
 
   it("does NOT write a row for GET requests", async () => {
     const app = buildAuditApp({ withToken: true });
-    const res = await app.request(
-      new Request("http://localhost/tasks/task-1", { method: "GET" }),
-    );
+    const res = await app.request(new Request("http://localhost/tasks/task-1", { method: "GET" }));
     expect(res.status).toBe(200);
 
     await new Promise((r) => setTimeout(r, 25));
@@ -288,7 +275,7 @@ describe("auditPatMutations", () => {
   it("does NOT write a row when the response is non-2xx", async () => {
     const app = buildAuditApp({ withToken: true, status: 400 });
     const res = await app.request(
-      new Request("http://localhost/tasks/task-1/complete", { method: "POST" }),
+      new Request("http://localhost/tasks/task-1/complete", { method: "POST" })
     );
     expect(res.status).toBe(400);
 

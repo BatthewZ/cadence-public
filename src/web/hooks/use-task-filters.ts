@@ -127,7 +127,7 @@ export function parsePriorities(raw: string | null): TaskPriority[] {
   return raw
     .split(",")
     .filter((value): value is TaskPriority =>
-      (TASK_PRIORITIES as readonly string[]).includes(value),
+      (TASK_PRIORITIES as readonly string[]).includes(value)
     );
 }
 
@@ -140,8 +140,7 @@ function parseFilters(searchParams: URLSearchParams): TaskFilters {
   return {
     assigneeIds: assigneeRaw ? assigneeRaw.split(",").filter(Boolean) : [],
     priorities: parsePriorities(searchParams.get("priority")),
-    completed:
-      completedRaw === "true" ? true : completedRaw === "false" ? false : null,
+    completed: completedRaw === "true" ? true : completedRaw === "false" ? false : null,
     dueDateFrom: parseDateParam(searchParams.get("dueDateFrom")),
     dueDateTo: parseDateParam(searchParams.get("dueDateTo")),
     noDueDate: searchParams.get("noDueDate") === "true",
@@ -157,7 +156,7 @@ function parseFilters(searchParams: URLSearchParams): TaskFilters {
  */
 function serializeFilterValue<K extends keyof TaskFilters>(
   key: K,
-  value: TaskFilters[K],
+  value: TaskFilters[K]
 ): string | null {
   switch (key) {
     case "assigneeIds":
@@ -195,17 +194,12 @@ function applyFilters(tasks: Task[], filters: TaskFilters): Task[] {
   return tasks.filter((task) => {
     if (filters.assigneeIds.length > 0) {
       const matchesAssignee =
-        Boolean(task.assigneeId) &&
-        filters.assigneeIds.includes(task.assigneeId as string);
-      const matchesUnassigned =
-        filters.assigneeIds.includes(FILTER_NONE) && !task.assigneeId;
+        Boolean(task.assigneeId) && filters.assigneeIds.includes(task.assigneeId as string);
+      const matchesUnassigned = filters.assigneeIds.includes(FILTER_NONE) && !task.assigneeId;
       if (!matchesAssignee && !matchesUnassigned) return false;
     }
 
-    if (
-      filters.priorities.length > 0 &&
-      !filters.priorities.includes(task.priority)
-    ) {
+    if (filters.priorities.length > 0 && !filters.priorities.includes(task.priority)) {
       return false;
     }
 
@@ -232,11 +226,8 @@ function applyFilters(tasks: Task[], filters: TaskFilters): Task[] {
       const taskLabelIds = (task.labels ?? []).map((l) => l.id);
       // Real label IDs are nanoids, so FILTER_NONE can never appear in
       // taskLabelIds — `some(includes)` cannot false-positive on the sentinel.
-      const matchesLabel = filters.labelIds.some((id) =>
-        taskLabelIds.includes(id),
-      );
-      const matchesUnlabeled =
-        filters.labelIds.includes(FILTER_NONE) && taskLabelIds.length === 0;
+      const matchesLabel = filters.labelIds.some((id) => taskLabelIds.includes(id));
+      const matchesUnlabeled = filters.labelIds.includes(FILTER_NONE) && taskLabelIds.length === 0;
       if (!matchesLabel && !matchesUnlabeled) return false;
     }
 
@@ -289,10 +280,10 @@ export function useTaskFilterControls(): UseTaskFilterControlsReturn {
           else next.delete(PARAM_BY_KEY[key]);
           return next;
         },
-        { replace: true },
+        { replace: true }
       );
     },
-    [setSearchParams],
+    [setSearchParams]
   );
 
   const setFilters = useCallback(
@@ -310,10 +301,10 @@ export function useTaskFilterControls(): UseTaskFilterControlsReturn {
           }
           return next;
         },
-        { replace: true },
+        { replace: true }
       );
     },
-    [setSearchParams],
+    [setSearchParams]
   );
 
   const clearFilter = useCallback(
@@ -324,10 +315,10 @@ export function useTaskFilterControls(): UseTaskFilterControlsReturn {
           next.delete(PARAM_BY_KEY[key]);
           return next;
         },
-        { replace: true },
+        { replace: true }
       );
     },
-    [setSearchParams],
+    [setSearchParams]
   );
 
   const clearFilters = useCallback(() => {
@@ -337,13 +328,13 @@ export function useTaskFilterControls(): UseTaskFilterControlsReturn {
         for (const param of TASK_FILTER_PARAM_KEYS) next.delete(param);
         return next;
       },
-      { replace: true },
+      { replace: true }
     );
   }, [setSearchParams]);
 
   return useMemo(
     () => ({ filters, setFilter, setFilters, clearFilter, clearFilters }),
-    [filters, setFilter, setFilters, clearFilter, clearFilters],
+    [filters, setFilter, setFilters, clearFilter, clearFilters]
   );
 }
 
@@ -358,15 +349,9 @@ export function useTaskFilters(tasks: Task[]): UseTaskFiltersReturn {
   const controls = useTaskFilterControls();
   const { filters } = controls;
 
-  const filteredTasks = useMemo(
-    () => applyFilters(tasks, filters),
-    [tasks, filters],
-  );
+  const filteredTasks = useMemo(() => applyFilters(tasks, filters), [tasks, filters]);
 
-  const activeFilterCount = useMemo(
-    () => countActiveFilters(filters),
-    [filters],
-  );
+  const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
 
   return {
     ...controls,

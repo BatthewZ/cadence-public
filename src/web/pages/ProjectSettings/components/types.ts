@@ -28,4 +28,10 @@ interface ReorderTaskGroupInput {
   position: string;
 }
 
-export type { AddProjectMemberInput, CreateTaskGroupInput, ReorderTaskGroupInput, UpdateProjectInput, UpdateTaskGroupInput };
+export type {
+  AddProjectMemberInput,
+  CreateTaskGroupInput,
+  ReorderTaskGroupInput,
+  UpdateProjectInput,
+  UpdateTaskGroupInput,
+};

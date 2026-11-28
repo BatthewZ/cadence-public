@@ -60,7 +60,7 @@ function buildApp() {
     "/*",
     fakeAuth(d1, TEST_USER, {
       workspaceMembership: { id: "wm-proj-wh", role: "owner" },
-    }),
+    })
   );
   // Simulates requireProjectRole middleware by setting currentProject
   app.use("/*", async (c, next) => {
@@ -70,9 +70,17 @@ function buildApp() {
   });
 
   app.get("/projects/:projectId/webhooks", listProjectWebhooks);
-  app.post("/projects/:projectId/webhooks", validateBody(createWebhookSchema), createProjectWebhook);
+  app.post(
+    "/projects/:projectId/webhooks",
+    validateBody(createWebhookSchema),
+    createProjectWebhook
+  );
   app.get("/projects/:projectId/webhooks/:webhookId", getProjectWebhook);
-  app.patch("/projects/:projectId/webhooks/:webhookId", validateBody(updateWebhookSchema), updateProjectWebhook);
+  app.patch(
+    "/projects/:projectId/webhooks/:webhookId",
+    validateBody(updateWebhookSchema),
+    updateProjectWebhook
+  );
   app.delete("/projects/:projectId/webhooks/:webhookId", deleteProjectWebhook);
 
   return app;
@@ -98,7 +106,7 @@ describe("listProjectWebhooks", () => {
     const app = buildApp();
     const res = await app.request(
       `/projects/${projectId}/webhooks`,
-      jsonRequest("GET", `/projects/${projectId}/webhooks`),
+      jsonRequest("GET", `/projects/${projectId}/webhooks`)
     );
 
     expect(res.status).toBe(200);
@@ -112,7 +120,7 @@ describe("listProjectWebhooks", () => {
     const app = buildApp();
     const res = await app.request(
       `/projects/${projectId}/webhooks`,
-      jsonRequest("GET", `/projects/${projectId}/webhooks`),
+      jsonRequest("GET", `/projects/${projectId}/webhooks`)
     );
 
     expect(res.status).toBe(200);
@@ -136,7 +144,7 @@ describe("createProjectWebhook", () => {
         name: "New Project Webhook",
         url: "https://example.com/hook",
         events: ["task.created"],
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -153,7 +161,7 @@ describe("createProjectWebhook", () => {
         name: "Bad Webhook",
         url: "https://example.com/hook",
         events: ["workspace.updated"],
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -175,7 +183,7 @@ describe("getProjectWebhook", () => {
     const app = buildApp();
     const res = await app.request(
       `/projects/${projectId}/webhooks/${hook.id}`,
-      jsonRequest("GET", `/projects/${projectId}/webhooks/${hook.id}`),
+      jsonRequest("GET", `/projects/${projectId}/webhooks/${hook.id}`)
     );
 
     expect(res.status).toBe(200);
@@ -196,7 +204,7 @@ describe("getProjectWebhook", () => {
     const app = buildApp();
     const res = await app.request(
       `/projects/${projectId}/webhooks/${otherHook.id}`,
-      jsonRequest("GET", `/projects/${projectId}/webhooks/${otherHook.id}`),
+      jsonRequest("GET", `/projects/${projectId}/webhooks/${otherHook.id}`)
     );
 
     expect(res.status).toBe(404);
@@ -221,7 +229,7 @@ describe("updateProjectWebhook", () => {
       jsonRequest("PATCH", `/projects/${projectId}/webhooks/${hook.id}`, {
         name: "After Update",
         active: false,
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -242,7 +250,7 @@ describe("updateProjectWebhook", () => {
       `/projects/${projectId}/webhooks/${hook.id}`,
       jsonRequest("PATCH", `/projects/${projectId}/webhooks/${hook.id}`, {
         events: ["workspace.updated"],
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -264,16 +272,13 @@ describe("deleteProjectWebhook", () => {
     const app = buildApp();
     const res = await app.request(
       `/projects/${projectId}/webhooks/${hook.id}`,
-      jsonRequest("DELETE", `/projects/${projectId}/webhooks/${hook.id}`),
+      jsonRequest("DELETE", `/projects/${projectId}/webhooks/${hook.id}`)
     );
 
     expect(res.status).toBe(204);
 
     // Verify it's gone
-    const check = await d1
-      .prepare("SELECT id FROM webhook WHERE id = ?")
-      .bind(hook.id)
-      .first();
+    const check = await d1.prepare("SELECT id FROM webhook WHERE id = ?").bind(hook.id).first();
     expect(check).toBeNull();
   });
 
@@ -288,7 +293,7 @@ describe("deleteProjectWebhook", () => {
     const app = buildApp();
     const res = await app.request(
       `/projects/${projectId}/webhooks/${otherHook.id}`,
-      jsonRequest("DELETE", `/projects/${projectId}/webhooks/${otherHook.id}`),
+      jsonRequest("DELETE", `/projects/${projectId}/webhooks/${otherHook.id}`)
     );
 
     expect(res.status).toBe(404);

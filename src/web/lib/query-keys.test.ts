@@ -29,9 +29,7 @@ describe("queryKeys", () => {
     it("does not collide with the project-scoped task list key", () => {
       // ["projects", id, "tasks"] is the board list and lives under a different
       // root, so invalidating one must never implicitly invalidate the other.
-      expect(queryKeys.projects.tasks("proj-1").slice(0, 1)).not.toEqual(
-        queryKeys.tasks.all,
-      );
+      expect(queryKeys.projects.tasks("proj-1").slice(0, 1)).not.toEqual(queryKeys.tasks.all);
     });
   });
 
@@ -94,10 +92,10 @@ describe("queryKeys", () => {
 
     it("is distinct from other project sub-resources for the same project", () => {
       expect(queryKeys.projects.savedViews("proj-1")).not.toEqual(
-        queryKeys.projects.labels("proj-1"),
+        queryKeys.projects.labels("proj-1")
       );
       expect(queryKeys.projects.savedViews("proj-1")).not.toEqual(
-        queryKeys.projects.tasks("proj-1"),
+        queryKeys.projects.tasks("proj-1")
       );
     });
   });
@@ -114,7 +112,7 @@ describe("queryKeys", () => {
 
     it("produces distinct keys for different workspace ids", () => {
       expect(queryKeys.workspaces.dashboardUpcoming("ws-1")).not.toEqual(
-        queryKeys.workspaces.dashboardUpcoming("ws-2"),
+        queryKeys.workspaces.dashboardUpcoming("ws-2")
       );
     });
 
@@ -127,7 +125,7 @@ describe("queryKeys", () => {
 
     it("is distinct from dashboardMyTasks for the same workspace", () => {
       expect(queryKeys.workspaces.dashboardUpcoming("ws-1")).not.toEqual(
-        queryKeys.workspaces.dashboardMyTasks("ws-1"),
+        queryKeys.workspaces.dashboardMyTasks("ws-1")
       );
     });
   });
@@ -147,7 +145,7 @@ describe("queryKeys", () => {
 
     it("produces distinct keys for different filter states", () => {
       expect(queryKeys.notifications.list({ unreadOnly: true })).not.toEqual(
-        queryKeys.notifications.list({ unreadOnly: false }),
+        queryKeys.notifications.list({ unreadOnly: false })
       );
     });
   });
@@ -225,7 +223,7 @@ describe("queryKeys", () => {
         "ws-1",
         "week",
         ["p1"],
-        ["g1"],
+        ["g1"]
       );
 
       expect(allKey).not.toEqual(weekKey);
@@ -297,12 +295,7 @@ describe("queryKeys", () => {
     it("shares a common prefix for invalidation", () => {
       const allKey = queryKeys.workspaces.dashboardMyTasks("ws-1");
       const weekKey = queryKeys.workspaces.dashboardMyTasks("ws-1", "week");
-      const filteredKey = queryKeys.workspaces.dashboardMyTasks(
-        "ws-1",
-        "week",
-        ["p1"],
-        ["g1"],
-      );
+      const filteredKey = queryKeys.workspaces.dashboardMyTasks("ws-1", "week", ["p1"], ["g1"]);
       const prefix = queryKeys.workspaces.dashboardMyTasksPrefix("ws-1");
 
       // All variants start with the same prefix — react-query invalidation

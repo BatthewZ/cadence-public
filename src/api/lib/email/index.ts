@@ -25,7 +25,7 @@ export function createEmailService(env: {
     // deployment silently sent every message from the placeholder address.
     if (!env.EMAIL_FROM?.trim()) {
       console.warn(
-        `[Email] RESEND_API_KEY is set but EMAIL_FROM is not configured. Emails will use '${DEFAULT_EMAIL_FROM}' which will likely be rejected by Resend.`,
+        `[Email] RESEND_API_KEY is set but EMAIL_FROM is not configured. Emails will use '${DEFAULT_EMAIL_FROM}' which will likely be rejected by Resend.`
       );
     }
     return new ResendEmailService(env.RESEND_API_KEY, defaultFrom);

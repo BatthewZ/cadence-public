@@ -73,12 +73,7 @@ export function InviteMemberDialog({
           {inviteError && <Alert variant="error">{inviteError}</Alert>}
 
           <Row gap="r4" justify="end">
-            <Button
-              variant="ghost"
-              size="md"
-              type="button"
-              onClick={onClose}
-            >
+            <Button variant="ghost" size="md" type="button" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" variant="primary" size="md" disabled={inviting}>

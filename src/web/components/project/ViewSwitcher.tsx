@@ -90,10 +90,7 @@ function useViewSwitcherState(projectId: string) {
   const segments = location.pathname.split("/");
   const tab = resolveViewTab(segments[segments.length - 1]);
 
-  const currentState = useMemo(
-    () => captureViewState(tab, searchParams),
-    [tab, searchParams],
-  );
+  const currentState = useMemo(() => captureViewState(tab, searchParams), [tab, searchParams]);
 
   // Is there any filter/grouping state worth saving? Both mount points gate
   // on this (the bar's zero-views affordance and the menu footer), so it is
@@ -237,11 +234,7 @@ export function SaveViewButton({ projectId }: ViewSwitcherProps) {
 
   if (!naming) {
     return (
-      <button
-        type="button"
-        className="view-switcher__save"
-        onClick={() => setNaming(true)}
-      >
+      <button type="button" className="view-switcher__save" onClick={() => setNaming(true)}>
         <BookmarkPlus size={13} aria-hidden="true" />
         Save view
       </button>
@@ -305,7 +298,7 @@ export function ViewSwitcher({ projectId }: ViewSwitcherProps) {
   function applyView(view: SavedView) {
     handleOpenChange(false);
     void navigate(
-      `${basePath}/${resolveViewTab(view.state.tab)}?${viewStateToSearch(view.state, view.id)}`,
+      `${basePath}/${resolveViewTab(view.state.tab)}?${viewStateToSearch(view.state, view.id)}`
     );
   }
 
@@ -366,9 +359,7 @@ export function ViewSwitcher({ projectId }: ViewSwitcherProps) {
       <DropdownMenu.Trigger asChild>
         <button type="button" className="task-filter-bar__trigger view-switcher__pill">
           <Bookmark size={14} aria-hidden="true" className="shrink-0" />
-          <span className="view-switcher__pill-name">
-            {activeView ? activeView.name : "Views"}
-          </span>
+          <span className="view-switcher__pill-name">{activeView ? activeView.name : "Views"}</span>
           {isDirty && <span className="view-switcher__edited">· Edited</span>}
         </button>
       </DropdownMenu.Trigger>
@@ -386,9 +377,7 @@ export function ViewSwitcher({ projectId }: ViewSwitcherProps) {
                   <span className="dropdown-menu-item-icon">
                     <RefreshCw size={13} />
                   </span>
-                  <span className="view-switcher__action-text">
-                    Update “{activeView.name}”
-                  </span>
+                  <span className="view-switcher__action-text">Update “{activeView.name}”</span>
                 </button>
                 <button
                   type="button"
@@ -470,7 +459,7 @@ export function ViewSwitcher({ projectId }: ViewSwitcherProps) {
                 <X size={13} />
               </button>
             </div>
-          ),
+          )
         )}
 
         {showFooter && (

@@ -65,9 +65,17 @@ beforeAll(async () => {
   for (const u of [USER_BEN, USER_ALICE]) {
     await d1
       .prepare(
-        "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)"
       )
-      .bind(u.id, u.name, u.email, u.emailVerified ? 1 : 0, u.image, Math.floor(u.createdAt.getTime() / 1000), Math.floor(u.updatedAt.getTime() / 1000))
+      .bind(
+        u.id,
+        u.name,
+        u.email,
+        u.emailVerified ? 1 : 0,
+        u.image,
+        Math.floor(u.createdAt.getTime() / 1000),
+        Math.floor(u.updatedAt.getTime() / 1000)
+      )
       .run();
   }
 
@@ -118,7 +126,7 @@ describe("parseMentions", () => {
     const result = await parseMentions(
       db,
       'Assigning @"Test User" and @"Alice Johnson" to this task',
-      projectId,
+      projectId
     );
     expect(result).toContain(TEST_USER.id);
     expect(result).toContain(USER_ALICE.id);
@@ -142,11 +150,7 @@ describe("parseMentions", () => {
   it("deduplicates resolved user IDs", async () => {
     const db = createDb(d1);
     // Mention the same user twice: once quoted, once unquoted
-    const result = await parseMentions(
-      db,
-      '@"Alice Johnson" and also @Alice',
-      projectId,
-    );
+    const result = await parseMentions(db, '@"Alice Johnson" and also @Alice', projectId);
     expect(result).toEqual([USER_ALICE.id]);
   });
 

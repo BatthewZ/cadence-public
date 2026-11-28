@@ -19,8 +19,7 @@ export function DeleteTeamDialog({
       title="Delete Team"
       confirmLabel="Delete Team"
     >
-      Are you sure you want to delete <strong>{teamName}</strong>? This action
-      cannot be undone.
+      Are you sure you want to delete <strong>{teamName}</strong>? This action cannot be undone.
     </ConfirmDialog>
   );
 }

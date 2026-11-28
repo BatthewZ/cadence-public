@@ -167,7 +167,9 @@
   color: var(--C-TEXT-PRIMARY);
   font-size: var(--BodyText-3);
   font-family: inherit;
-  transition: border-color var(--DURATION-FAST) ease, box-shadow var(--DURATION-FAST) ease;
+  transition:
+    border-color var(--DURATION-FAST) ease,
+    box-shadow var(--DURATION-FAST) ease;
 }
 
 .task-filter-bar__date-input:focus {

@@ -7,9 +7,7 @@ import { AppShell } from "./AppShell";
 
 function renderWithRouter(ui: React.ReactElement, { route = "/" } = {}) {
   return render(ui, {
-    wrapper: ({ children }) => (
-      <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
-    ),
+    wrapper: ({ children }) => <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>,
   });
 }
 
@@ -21,7 +19,7 @@ beforeEach(() => {
       media: query,
       addEventListener: vi.fn(),
       removeEventListener: vi.fn(),
-    })),
+    }))
   );
 });
 
@@ -35,7 +33,7 @@ describe("AppShell", () => {
       <AppShell>
         <AppShell.Navbar>Nav content</AppShell.Navbar>
         <AppShell.Main>Main</AppShell.Main>
-      </AppShell>,
+      </AppShell>
     );
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(screen.getByText("Nav content")).toBeInTheDocument();
@@ -46,7 +44,7 @@ describe("AppShell", () => {
       <AppShell>
         <AppShell.Sidebar>Sidebar content</AppShell.Sidebar>
         <AppShell.Main>Main</AppShell.Main>
-      </AppShell>,
+      </AppShell>
     );
     const nav = screen.getByRole("navigation", { name: "Main navigation" });
     expect(nav).toBeInTheDocument();
@@ -57,7 +55,7 @@ describe("AppShell", () => {
     renderWithRouter(
       <AppShell>
         <AppShell.Main>Main content here</AppShell.Main>
-      </AppShell>,
+      </AppShell>
     );
     expect(screen.getByText("Main content here")).toBeInTheDocument();
   });
@@ -74,7 +72,7 @@ describe("AppShell", () => {
           </AppShell.SidebarSection>
         </AppShell.Sidebar>
         <AppShell.Main>Main</AppShell.Main>
-      </AppShell>,
+      </AppShell>
     );
     expect(screen.getByText("Section A")).toBeInTheDocument();
     expect(screen.getByText("Section B")).toBeInTheDocument();
@@ -88,7 +86,7 @@ describe("AppShell", () => {
           <AppShell.SidebarLink to="/settings">Settings</AppShell.SidebarLink>
         </AppShell.Sidebar>
         <AppShell.Main>Main</AppShell.Main>
-      </AppShell>,
+      </AppShell>
     );
     expect(screen.getByRole("link", { name: "Dashboard" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Settings" })).toBeInTheDocument();
@@ -103,7 +101,7 @@ describe("AppShell", () => {
         </AppShell.Sidebar>
         <AppShell.Main>Main</AppShell.Main>
       </AppShell>,
-      { route: "/" },
+      { route: "/" }
     );
     const homeLink = screen.getByRole("link", { name: "Home" });
     expect(homeLink).toHaveAttribute("aria-current", "page");
@@ -120,7 +118,7 @@ describe("AppShell", () => {
         </AppShell.Navbar>
         <AppShell.Sidebar>Sidebar</AppShell.Sidebar>
         <AppShell.Main>Main</AppShell.Main>
-      </AppShell>,
+      </AppShell>
     );
     const toggle = screen.getByRole("button", { name: /sidebar/i });
     expect(toggle).toHaveAttribute("aria-expanded", "true");
@@ -135,7 +133,7 @@ describe("AppShell", () => {
         </AppShell.Navbar>
         <AppShell.Sidebar>Sidebar</AppShell.Sidebar>
         <AppShell.Main>Main</AppShell.Main>
-      </AppShell>,
+      </AppShell>
     );
     const toggle = screen.getByRole("button", { name: /sidebar/i });
     expect(toggle).toHaveAttribute("aria-expanded", "true");
@@ -152,7 +150,7 @@ describe("AppShell", () => {
         </AppShell.Navbar>
         <AppShell.Sidebar>Sidebar</AppShell.Sidebar>
         <AppShell.Main>Main</AppShell.Main>
-      </AppShell>,
+      </AppShell>
     );
     const toggle = screen.getByRole("button", { name: /sidebar/i });
     const sidebarId = toggle.getAttribute("aria-controls");
@@ -171,7 +169,7 @@ describe("AppShell", () => {
         </AppShell.Navbar>
         <AppShell.Sidebar>Sidebar</AppShell.Sidebar>
         <AppShell.Main>Main</AppShell.Main>
-      </AppShell>,
+      </AppShell>
     );
     const sidebar = screen.getByRole("navigation", { name: "Main navigation" });
     expect(sidebar).not.toHaveAttribute("data-collapsed");
@@ -188,7 +186,7 @@ describe("AppShell", () => {
           <AppShell.Brand>MyApp</AppShell.Brand>
         </AppShell.Navbar>
         <AppShell.Main>Main</AppShell.Main>
-      </AppShell>,
+      </AppShell>
     );
     expect(screen.getByText("MyApp")).toBeInTheDocument();
   });
@@ -202,7 +200,7 @@ describe("AppShell", () => {
           </AppShell.NavbarActions>
         </AppShell.Navbar>
         <AppShell.Main>Main</AppShell.Main>
-      </AppShell>,
+      </AppShell>
     );
     expect(screen.getByRole("button", { name: "Profile" })).toBeInTheDocument();
   });

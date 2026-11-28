@@ -61,7 +61,7 @@ export const FileUpload = forwardRef<HTMLDivElement, FileUploadProps>(function F
     className,
     ...props
   },
-  ref,
+  ref
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -80,7 +80,7 @@ export const FileUpload = forwardRef<HTMLDivElement, FileUploadProps>(function F
         return true;
       });
     },
-    [accept, maxSize],
+    [accept, maxSize]
   );
 
   /* ---- Handlers ---- */
@@ -94,7 +94,7 @@ export const FileUpload = forwardRef<HTMLDivElement, FileUploadProps>(function F
         onFilesSelected?.(multiple ? valid : [valid[0]]);
       }
     },
-    [validateFiles, onFilesSelected, multiple],
+    [validateFiles, onFilesSelected, multiple]
   );
 
   const handleDragOver = useCallback(
@@ -103,17 +103,14 @@ export const FileUpload = forwardRef<HTMLDivElement, FileUploadProps>(function F
       e.stopPropagation();
       if (!disabled && !uploading) setDragOver(true);
     },
-    [disabled, uploading],
+    [disabled, uploading]
   );
 
-  const handleDragLeave = useCallback(
-    (e: DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setDragOver(false);
-    },
-    [],
-  );
+  const handleDragLeave = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+  }, []);
 
   const handleDrop = useCallback(
     (e: DragEvent) => {
@@ -123,7 +120,7 @@ export const FileUpload = forwardRef<HTMLDivElement, FileUploadProps>(function F
       if (disabled || uploading) return;
       handleFiles(e.dataTransfer.files);
     },
-    [disabled, uploading, handleFiles],
+    [disabled, uploading, handleFiles]
   );
 
   const handleClick = useCallback(() => {
@@ -137,7 +134,7 @@ export const FileUpload = forwardRef<HTMLDivElement, FileUploadProps>(function F
         inputRef.current?.click();
       }
     },
-    [disabled, uploading],
+    [disabled, uploading]
   );
 
   const handleInputChange = useCallback(
@@ -146,7 +143,7 @@ export const FileUpload = forwardRef<HTMLDivElement, FileUploadProps>(function F
       // Reset input so the same file can be re-selected.
       e.target.value = "";
     },
-    [handleFiles],
+    [handleFiles]
   );
 
   /* ---- Hint text ---- */
@@ -169,7 +166,7 @@ export const FileUpload = forwardRef<HTMLDivElement, FileUploadProps>(function F
         success && "file-upload--success",
         error && "file-upload--error",
         disabled && "file-upload--disabled",
-        className,
+        className
       )}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
@@ -201,15 +198,12 @@ export const FileUpload = forwardRef<HTMLDivElement, FileUploadProps>(function F
         <p className="file-upload__text">Uploading...</p>
       ) : (
         <p className="file-upload__text">
-          Drag & drop or{" "}
-          <span className="file-upload__text-emphasis">browse</span>
+          Drag & drop or <span className="file-upload__text-emphasis">browse</span>
         </p>
       )}
 
       {/* Hint / constraints */}
-      {computedHint && !error && !success && (
-        <p className="file-upload__hint">{computedHint}</p>
-      )}
+      {computedHint && !error && !success && <p className="file-upload__hint">{computedHint}</p>}
 
       {/* Error message */}
       {error && <p className="file-upload__error">{error}</p>}

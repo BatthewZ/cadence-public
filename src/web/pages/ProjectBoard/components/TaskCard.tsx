@@ -10,11 +10,7 @@ import {
   Paperclip,
   Repeat,
 } from "lucide-react";
-import {
-  type CSSProperties,
-  type MouseEvent,
-  type SyntheticEvent,
-} from "react";
+import { type CSSProperties, type MouseEvent, type SyntheticEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { TaskCheckbox } from "@/web/components/form/TaskCheckbox";
@@ -236,7 +232,9 @@ export function SortableTaskCard({
       }
       void qc.invalidateQueries({ queryKey: queryKeys.tasks.detail(task.id) });
       void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
-      void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(project.workspaceId) });
+      void qc.invalidateQueries({
+        queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(project.workspaceId),
+      });
     } catch {
       // Revert
       ctxUpdateTask(task.id, before);

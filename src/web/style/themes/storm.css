@@ -61,9 +61,14 @@
   --RADIUS-XL: 0.75rem;
 
   /* Shadows — strong, dramatic, blue-electric tint, pressing down */
-  --SHADOW-SM: 0 2px 6px 0 oklch(0.1998 0.0086 264.36 / 0.5), 0 0 4px 0 oklch(0.9477 0.0265 246.34 / 0.04);
-  --SHADOW-MD: 0 6px 16px -2px oklch(0.1998 0.0086 264.36 / 0.6), 0 0 8px -1px oklch(0.9477 0.0265 246.34 / 0.06);
-  --SHADOW-LG: 0 16px 36px -4px oklch(0.1998 0.0086 264.36 / 0.7), 0 0 16px -2px oklch(0.9477 0.0265 246.34 / 0.08);
+  --SHADOW-SM:
+    0 2px 6px 0 oklch(0.1998 0.0086 264.36 / 0.5), 0 0 4px 0 oklch(0.9477 0.0265 246.34 / 0.04);
+  --SHADOW-MD:
+    0 6px 16px -2px oklch(0.1998 0.0086 264.36 / 0.6),
+    0 0 8px -1px oklch(0.9477 0.0265 246.34 / 0.06);
+  --SHADOW-LG:
+    0 16px 36px -4px oklch(0.1998 0.0086 264.36 / 0.7),
+    0 0 16px -2px oklch(0.9477 0.0265 246.34 / 0.08);
 
   /* Typography — strong, commanding */
   --Bold-Weight: 800;
@@ -120,7 +125,7 @@
     filter: brightness(1.8);
   }
   40% {
-    filter: brightness(1.0);
+    filter: brightness(1);
   }
   100% {
     opacity: 1;

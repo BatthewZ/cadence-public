@@ -46,7 +46,8 @@ export function useSession(): SessionResult {
 
   if (data) return result;
   const unreachable =
-    isConnectionFailure(error) || (isPending && (slow || (typeof navigator !== "undefined" && !navigator.onLine)));
+    isConnectionFailure(error) ||
+    (isPending && (slow || (typeof navigator !== "undefined" && !navigator.onLine)));
   if (!unreachable) return result;
   const cached = readCachedSession<AuthSession>();
   if (!cached) return result;

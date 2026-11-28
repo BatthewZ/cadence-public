@@ -81,10 +81,7 @@ import type {
   ExportedUser,
   WorkspaceExport,
 } from "../../../shared/schemas/workspace-export";
-import {
-  EXPORT_FORMAT,
-  EXPORT_FORMAT_VERSION,
-} from "../../../shared/schemas/workspace-export";
+import { EXPORT_FORMAT, EXPORT_FORMAT_VERSION } from "../../../shared/schemas/workspace-export";
 import {
   INVITATION_STATUSES,
   PROJECT_STATUSES,
@@ -220,27 +217,17 @@ type ExportRowSets = {
 async function selectExportRows(
   db: Database,
   workspaceId: string,
-  includeActivity: boolean,
+  includeActivity: boolean
 ): Promise<ExportRowSets> {
   // Correlated id sets, inlined as subqueries — no extra round-trips.
   const projectIds = db
     .select({ id: project.id })
     .from(project)
     .where(eq(project.workspaceId, workspaceId));
-  const taskIds = db
-    .select({ id: task.id })
-    .from(task)
-    .where(inArray(task.projectId, projectIds));
-  const teamIds = db
-    .select({ id: team.id })
-    .from(team)
-    .where(eq(team.workspaceId, workspaceId));
+  const taskIds = db.select({ id: task.id }).from(task).where(inArray(task.projectId, projectIds));
+  const teamIds = db.select({ id: team.id }).from(team).where(eq(team.workspaceId, workspaceId));
 
-  const qWorkspace = db
-    .select()
-    .from(workspace)
-    .where(eq(workspace.id, workspaceId))
-    .limit(1);
+  const qWorkspace = db.select().from(workspace).where(eq(workspace.id, workspaceId)).limit(1);
   const qMembers = db
     .select({
       userId: workspaceMember.userId,
@@ -257,10 +244,7 @@ async function selectExportRows(
     .from(team)
     .where(eq(team.workspaceId, workspaceId))
     .orderBy(team.createdAt);
-  const qTeamMembers = db
-    .select()
-    .from(teamMember)
-    .where(inArray(teamMember.teamId, teamIds));
+  const qTeamMembers = db.select().from(teamMember).where(inArray(teamMember.teamId, teamIds));
   const qWebhooks = db
     .select()
     .from(webhook)
@@ -305,10 +289,7 @@ async function selectExportRows(
     .from(comment)
     .where(inArray(comment.taskId, taskIds))
     .orderBy(comment.createdAt);
-  const qTaskLabels = db
-    .select()
-    .from(taskLabel)
-    .where(inArray(taskLabel.taskId, taskIds));
+  const qTaskLabels = db.select().from(taskLabel).where(inArray(taskLabel.taskId, taskIds));
   const qAttachments = db
     .select({
       taskId: taskAttachment.taskId,
@@ -518,7 +499,7 @@ function buildEnvelopeHead(
   rows: ExportRowSets,
   users: ExportedUser[],
   exportedBy: string,
-  exportedAt: Date,
+  exportedAt: Date
 ): ExportEnvelopeHead {
   const teamMembersByTeam = groupBy(rows.teamMemberRows, (m) => m.teamId);
 
@@ -762,7 +743,7 @@ function buildProject(row: ProjectRow, ctx: ProjectBuildContext): ExportedProjec
  */
 function buildExportStream(
   head: ExportEnvelopeHead,
-  projectBuilders: Array<() => ExportedProject>,
+  projectBuilders: Array<() => ExportedProject>
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
   // headJson is a non-empty JSON object literal (format/formatVersion are
@@ -782,9 +763,7 @@ function buildExportStream(
       const build = projectBuilders[nextProject];
       if (build) {
         const projectJson = JSON.stringify(build());
-        controller.enqueue(
-          encoder.encode(nextProject === 0 ? projectJson : `,${projectJson}`),
-        );
+        controller.enqueue(encoder.encode(nextProject === 0 ? projectJson : `,${projectJson}`));
         nextProject += 1;
         return;
       }
@@ -878,9 +857,6 @@ export async function exportWorkspace(c: Context<AppEnv>) {
   // header-safe by construction (no quoting/injection hazard).
   const datePart = exportedAt.toISOString().slice(0, 10);
   c.header("Content-Type", "application/json; charset=utf-8");
-  c.header(
-    "Content-Disposition",
-    `attachment; filename="${ws.slug}-export-${datePart}.json"`,
-  );
+  c.header("Content-Disposition", `attachment; filename="${ws.slug}-export-${datePart}.json"`);
   return c.body(buildExportStream(head, projectBuilders));
 }

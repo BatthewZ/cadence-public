@@ -14,9 +14,8 @@ import Notifications from "./Notifications";
 // ---------------------------------------------------------------------------
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -145,7 +144,7 @@ describe("Notifications", () => {
     render(
       <Wrapper>
         <Notifications />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -174,7 +173,7 @@ describe("Notifications", () => {
     render(
       <Wrapper>
         <Notifications />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -202,7 +201,7 @@ describe("Notifications", () => {
     render(
       <Wrapper>
         <Notifications />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -218,7 +217,7 @@ describe("Notifications", () => {
     render(
       <Wrapper>
         <Notifications />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -244,7 +243,7 @@ describe("Notifications", () => {
     render(
       <Wrapper>
         <Notifications />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -264,7 +263,7 @@ describe("Notifications", () => {
     render(
       <Wrapper>
         <Notifications />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {

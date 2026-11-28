@@ -1,10 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Plus as PlusIcon } from "lucide-react";
-import {
-  type KeyboardEvent,
-  useRef,
-  useState,
-} from "react";
+import { type KeyboardEvent, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { generateKeyBetween } from "@/shared/lib/fractional-index";
@@ -43,7 +39,7 @@ function optimisticTask({
   const assignee = autoAssignCreator ? creator : undefined;
   const lastPosition = groupTasks.reduce<string | null>(
     (max, t) => (max === null || t.position > max ? t.position : max),
-    null,
+    null
   );
   return {
     id,
@@ -146,7 +142,12 @@ export function AddTaskInline({ groupId }: { groupId: string }) {
         addTask(result.data.task);
       } else {
         // The detail query can't fetch a task the server doesn't have yet; seed it from the card.
-        const detail: TaskDetail = { ...task, subtasks: [], commentCount: 0, projectId: project.id };
+        const detail: TaskDetail = {
+          ...task,
+          subtasks: [],
+          commentCount: 0,
+          projectId: project.id,
+        };
         qc.setQueryData(queryKeys.tasks.detail(task.id), { task: detail });
       }
       openDetail();

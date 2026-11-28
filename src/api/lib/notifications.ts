@@ -23,7 +23,7 @@ interface CreateNotificationOpts {
  */
 export async function createNotification(
   db: Database,
-  opts: CreateNotificationOpts,
+  opts: CreateNotificationOpts
 ): Promise<void> {
   if (opts.actorId && opts.actorId === opts.userId) return;
 
@@ -53,7 +53,7 @@ export async function createNotification(
 export async function createNotifications(
   db: Database,
   recipientIds: string[],
-  opts: Omit<CreateNotificationOpts, "userId">,
+  opts: Omit<CreateNotificationOpts, "userId">
 ): Promise<void> {
   const validRecipients = recipientIds.filter((id) => id !== opts.actorId);
   if (validRecipients.length === 0) return;
@@ -74,6 +74,6 @@ export async function createNotifications(
       commentId: opts.commentId ?? null,
       invitationId: opts.invitationId ?? null,
       createdAt: now,
-    })),
+    }))
   );
 }

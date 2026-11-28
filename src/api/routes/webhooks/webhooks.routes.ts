@@ -2,10 +2,7 @@ import type { RouteConfig, RouteHandler } from "@hono/zod-openapi";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
 
-import {
-  createWebhookSchema,
-  updateWebhookSchema,
-} from "../../../shared/schemas/webhook";
+import { createWebhookSchema, updateWebhookSchema } from "../../../shared/schemas/webhook";
 import {
   createWebhookResponseSchema,
   errorResponseSchema,
@@ -80,9 +77,18 @@ const rateLimitedResponse = {
 
 const authSecurity = [{ bearerAuth: [] }];
 const baseAuth = [requireAuth, requireWorkspaceRole("owner", "admin")];
-const readMiddleware = [...baseAuth, rateLimit({ max: 60, windowSeconds: 60, prefix: "webhook-read", keyFn: defaultRateLimitKey })];
-const writeMiddleware = [...baseAuth, rateLimit({ max: 20, windowSeconds: 60, prefix: "webhook-write", keyFn: defaultRateLimitKey })];
-const testMiddleware = [...baseAuth, rateLimit({ max: 5, windowSeconds: 60, prefix: "webhook-test", keyFn: defaultRateLimitKey })];
+const readMiddleware = [
+  ...baseAuth,
+  rateLimit({ max: 60, windowSeconds: 60, prefix: "webhook-read", keyFn: defaultRateLimitKey }),
+];
+const writeMiddleware = [
+  ...baseAuth,
+  rateLimit({ max: 20, windowSeconds: 60, prefix: "webhook-write", keyFn: defaultRateLimitKey }),
+];
+const testMiddleware = [
+  ...baseAuth,
+  rateLimit({ max: 5, windowSeconds: 60, prefix: "webhook-test", keyFn: defaultRateLimitKey }),
+];
 
 // ---------------------------------------------------------------------------
 // Route definitions
@@ -253,7 +259,7 @@ const testWebhookRoute = createRoute({
  * RouteHandler expectation.
  */
 function asRouteHandler<R extends RouteConfig>(
-  fn: (c: Context<AppEnv>) => unknown,
+  fn: (c: Context<AppEnv>) => unknown
 ): RouteHandler<R, AppEnv> {
   return fn as unknown as RouteHandler<R, AppEnv>;
 }

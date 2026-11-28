@@ -22,10 +22,7 @@ export function useFavorites(workspaceId: string) {
     setFavorites(loadFavorites(workspaceId));
   }, [workspaceId]);
 
-  const isFavorite = useCallback(
-    (projectId: string) => favorites.includes(projectId),
-    [favorites],
-  );
+  const isFavorite = useCallback((projectId: string) => favorites.includes(projectId), [favorites]);
 
   const toggleFavorite = useCallback(
     (projectId: string) => {
@@ -35,11 +32,13 @@ export function useFavorites(workspaceId: string) {
           : [...prev, projectId];
         try {
           localStorage.setItem(getStorageKey(workspaceId), JSON.stringify(updated));
-        } catch { /* storage full */ }
+        } catch {
+          /* storage full */
+        }
         return updated;
       });
     },
-    [workspaceId],
+    [workspaceId]
   );
 
   return { favorites, isFavorite, toggleFavorite };

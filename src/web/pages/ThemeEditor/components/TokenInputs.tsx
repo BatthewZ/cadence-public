@@ -92,9 +92,7 @@ function TokenGroupSection({
       <div
         className={cn(
           "grid gap-x-r4 gap-y-r5",
-          isColorGroup
-            ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-            : "grid-cols-1 sm:grid-cols-2"
+          isColorGroup ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3" : "grid-cols-1 sm:grid-cols-2"
         )}
       >
         {group.tokens.map((token) =>

@@ -1,9 +1,4 @@
-import {
-  Check,
-  ChevronDown,
-  Plus,
-  Settings,
-} from "lucide-react";
+import { Check, ChevronDown, Plus, Settings } from "lucide-react";
 import type { NavigateFunction } from "react-router-dom";
 
 import { AppShell } from "@/web/components/ui/AppShell";
@@ -45,7 +40,13 @@ export function WorkspaceSwitcher({
               <DropdownMenu.Item
                 key={ws.id}
                 index={index}
-                icon={ws.id === workspace.id ? <Check size={16} className="text-fg-primary" /> : <span className="inline-block size-4" />}
+                icon={
+                  ws.id === workspace.id ? (
+                    <Check size={16} className="text-fg-primary" />
+                  ) : (
+                    <span className="inline-block size-4" />
+                  )
+                }
                 className={cn(ws.id === workspace.id && "bg-surface-2 font-semibold")}
                 onSelect={() => {
                   localStorage.setItem("lastWorkspaceSlug", ws.slug);

@@ -16,10 +16,7 @@ import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 import { formatDueDate, isOverdue } from "@/web/util/date";
-import {
-  getPriorityBadgeVariant,
-  getPriorityLabel,
-} from "@/web/util/task-display";
+import { getPriorityBadgeVariant, getPriorityLabel } from "@/web/util/task-display";
 
 import type { DashboardTask, MyTasksResponse, UpcomingResponse } from "./types";
 import { normalizeTask } from "./types";
@@ -41,7 +38,13 @@ const bucketKey: Record<string, string> = {
 /*  TaskRow — compact task row inside accordion                        */
 /* ------------------------------------------------------------------ */
 
-function TaskRow({ task, onTaskClick }: { task: DashboardTask; onTaskClick: (taskId: string) => void }) {
+function TaskRow({
+  task,
+  onTaskClick,
+}: {
+  task: DashboardTask;
+  onTaskClick: (taskId: string) => void;
+}) {
   return (
     <button
       type="button"
@@ -87,7 +90,7 @@ function TimeGroupedTaskList({ onTaskClick }: { onTaskClick: (taskId: string) =>
       const params = new URLSearchParams({ limit: "50" });
       if (pageParam) params.set("cursor", pageParam as string);
       return api.get<UpcomingResponse>(
-        `/api/workspaces/${workspace.id}/dashboard/upcoming?${params.toString()}`,
+        `/api/workspaces/${workspace.id}/dashboard/upcoming?${params.toString()}`
       );
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -114,9 +117,7 @@ function TimeGroupedTaskList({ onTaskClick }: { onTaskClick: (taskId: string) =>
   }
 
   if (error) {
-    return (
-      <QueryErrorRetry message="Failed to load upcoming tasks." onRetry={refetch} />
-    );
+    return <QueryErrorRetry message="Failed to load upcoming tasks." onRetry={refetch} />;
   }
 
   // Merge buckets across all pages
@@ -212,7 +213,12 @@ const MY_TASKS_PREVIEW_LIMIT = 5;
 
 function MyTasksPreview({ onTaskClick }: { onTaskClick: (taskId: string) => void }) {
   const { workspace } = useWorkspace();
-  const { data, isLoading: loading, error, refetch } = useQuery({
+  const {
+    data,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useQuery({
     queryKey: queryKeys.workspaces.dashboardMyTasksPreview(workspace.id),
     queryFn: () => api.get<MyTasksResponse>(`/api/workspaces/${workspace.id}/dashboard/my-tasks`),
   });
@@ -233,9 +239,7 @@ function MyTasksPreview({ onTaskClick }: { onTaskClick: (taskId: string) => void
   }
 
   if (error) {
-    return (
-      <QueryErrorRetry message="Failed to load tasks." onRetry={refetch} />
-    );
+    return <QueryErrorRetry message="Failed to load tasks." onRetry={refetch} />;
   }
 
   const allTasks = (data?.tasks ?? []).map(normalizeTask);
@@ -245,9 +249,7 @@ function MyTasksPreview({ onTaskClick }: { onTaskClick: (taskId: string) => void
     return (
       <EmptyState size="md">
         <EmptyStateTitle>No tasks assigned</EmptyStateTitle>
-        <EmptyStateDescription>
-          Tasks assigned to you will appear here.
-        </EmptyStateDescription>
+        <EmptyStateDescription>Tasks assigned to you will appear here.</EmptyStateDescription>
       </EmptyState>
     );
   }
@@ -285,4 +287,4 @@ function MyTasksPreview({ onTaskClick }: { onTaskClick: (taskId: string) => void
   );
 }
 
-export { MyTasksPreview,TaskRow, TimeGroupedTaskList };
+export { MyTasksPreview, TaskRow, TimeGroupedTaskList };

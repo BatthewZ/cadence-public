@@ -84,7 +84,7 @@ function addDaysUTC(isoDate: string, days: number): string {
  */
 export function projectTasksToICSEvents(
   tasks: ExportableTask[],
-  dtstamp: Date = new Date(),
+  dtstamp: Date = new Date()
 ): ICSEvent[] {
   const events: ICSEvent[] = [];
   for (const task of tasks) {
@@ -133,7 +133,7 @@ export function icsFileName(projectName: string): string {
 export function buildProjectICS(
   projectName: string,
   tasks: ExportableTask[],
-  dtstamp: Date = new Date(),
+  dtstamp: Date = new Date()
 ): string {
   return generateICS({
     calendarName: projectName,
@@ -149,10 +149,7 @@ export function buildProjectICS(
  * (every task was date-less) so the caller can tell the user why nothing
  * happened instead of handing them an empty calendar file.
  */
-export function downloadProjectICS(
-  projectName: string,
-  tasks: ExportableTask[],
-): number {
+export function downloadProjectICS(projectName: string, tasks: ExportableTask[]): number {
   const events = projectTasksToICSEvents(tasks);
   if (events.length === 0) return 0;
 

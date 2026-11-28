@@ -1,9 +1,4 @@
-import {
-  ChevronLeft,
-  ChevronRight,
-  ChevronsLeft,
-  ChevronsRight,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { type ComponentPropsWithRef, forwardRef } from "react";
 
 import { cn } from "@/web/util/style/style";
@@ -65,121 +60,107 @@ type PaginationProps = {
   variant?: "full" | "compact";
 } & Omit<ComponentPropsWithRef<"nav">, "children">;
 
-export const Pagination = forwardRef<HTMLElement, PaginationProps>(
-  function Pagination(
-    {
-      page,
-      totalPages,
-      onPageChange,
-      siblingCount = 1,
-      showEdges = true,
-      variant = "full",
-      className,
-      ...props
-    },
-    ref
-  ) {
-    const isFirst = page <= 1;
-    const isLast = page >= totalPages;
+export const Pagination = forwardRef<HTMLElement, PaginationProps>(function Pagination(
+  {
+    page,
+    totalPages,
+    onPageChange,
+    siblingCount = 1,
+    showEdges = true,
+    variant = "full",
+    className,
+    ...props
+  },
+  ref
+) {
+  const isFirst = page <= 1;
+  const isLast = page >= totalPages;
 
-    return (
-      <nav
-        ref={ref}
-        aria-label="Pagination"
-        className={cn("pagination", className)}
-        {...props}
-      >
-        <ul className="pagination__list">
-          {/* First page button (full only, when showEdges) */}
-          {variant === "full" && showEdges && (
-            <li>
-              <IconButton
-                aria-label="First page"
-                disabled={isFirst}
-                onClick={() => onPageChange(1)}
-                className="pagination__nav"
-              >
-                <ChevronsLeft size={16} />
-              </IconButton>
-            </li>
-          )}
-
-          {/* Prev button */}
+  return (
+    <nav ref={ref} aria-label="Pagination" className={cn("pagination", className)} {...props}>
+      <ul className="pagination__list">
+        {/* First page button (full only, when showEdges) */}
+        {variant === "full" && showEdges && (
           <li>
             <IconButton
-              aria-label="Previous page"
+              aria-label="First page"
               disabled={isFirst}
-              onClick={() => onPageChange(page - 1)}
+              onClick={() => onPageChange(1)}
               className="pagination__nav"
             >
-              <ChevronLeft size={16} />
+              <ChevronsLeft size={16} />
             </IconButton>
           </li>
+        )}
 
-          {variant === "full" ? (
-            // Page number buttons
-            getPageRange(page, totalPages, siblingCount).map((item, i) =>
-              item === "ellipsis" ? (
-                <li
-                  key={`ellipsis-${i}`}
-                  className="pagination__ellipsis"
-                  aria-hidden="true"
+        {/* Prev button */}
+        <li>
+          <IconButton
+            aria-label="Previous page"
+            disabled={isFirst}
+            onClick={() => onPageChange(page - 1)}
+            className="pagination__nav"
+          >
+            <ChevronLeft size={16} />
+          </IconButton>
+        </li>
+
+        {variant === "full" ? (
+          // Page number buttons
+          getPageRange(page, totalPages, siblingCount).map((item, i) =>
+            item === "ellipsis" ? (
+              <li key={`ellipsis-${i}`} className="pagination__ellipsis" aria-hidden="true">
+                <span>&hellip;</span>
+              </li>
+            ) : (
+              <li key={item}>
+                <button
+                  type="button"
+                  className={cn("pagination__page", item === page && "pagination__page--current")}
+                  aria-current={item === page ? "page" : undefined}
+                  aria-label={`Page ${item}`}
+                  onClick={() => onPageChange(item)}
                 >
-                  <span>&hellip;</span>
-                </li>
-              ) : (
-                <li key={item}>
-                  <button
-                    type="button"
-                    className={cn(
-                      "pagination__page",
-                      item === page && "pagination__page--current"
-                    )}
-                    aria-current={item === page ? "page" : undefined}
-                    aria-label={`Page ${item}`}
-                    onClick={() => onPageChange(item)}
-                  >
-                    {item}
-                  </button>
-                </li>
-              )
+                  {item}
+                </button>
+              </li>
             )
-          ) : (
-            // Compact: "Page X of Y"
-            <li className="pagination__info">
-              <span>
-                Page <strong>{page}</strong> of <strong>{totalPages}</strong>
-              </span>
-            </li>
-          )}
+          )
+        ) : (
+          // Compact: "Page X of Y"
+          <li className="pagination__info">
+            <span>
+              Page <strong>{page}</strong> of <strong>{totalPages}</strong>
+            </span>
+          </li>
+        )}
 
-          {/* Next button */}
+        {/* Next button */}
+        <li>
+          <IconButton
+            aria-label="Next page"
+            disabled={isLast}
+            onClick={() => onPageChange(page + 1)}
+            className="pagination__nav"
+          >
+            <ChevronRight size={16} />
+          </IconButton>
+        </li>
+
+        {/* Last page button (full only, when showEdges) */}
+        {variant === "full" && showEdges && (
           <li>
             <IconButton
-              aria-label="Next page"
+              aria-label="Last page"
               disabled={isLast}
-              onClick={() => onPageChange(page + 1)}
+              onClick={() => onPageChange(totalPages)}
               className="pagination__nav"
             >
-              <ChevronRight size={16} />
+              <ChevronsRight size={16} />
             </IconButton>
           </li>
-
-          {/* Last page button (full only, when showEdges) */}
-          {variant === "full" && showEdges && (
-            <li>
-              <IconButton
-                aria-label="Last page"
-                disabled={isLast}
-                onClick={() => onPageChange(totalPages)}
-                className="pagination__nav"
-              >
-                <ChevronsRight size={16} />
-              </IconButton>
-            </li>
-          )}
-        </ul>
-      </nav>
-    );
-  }
-);
+        )}
+      </ul>
+    </nav>
+  );
+});

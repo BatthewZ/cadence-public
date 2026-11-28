@@ -14,7 +14,5 @@
  * Accepts `readonly` arrays so callers can pass frozen or `as const` lists.
  */
 export function toggleArrayValue<T>(values: readonly T[], value: T): T[] {
-  return values.includes(value)
-    ? values.filter((v) => v !== value)
-    : [...values, value];
+  return values.includes(value) ? values.filter((v) => v !== value) : [...values, value];
 }

@@ -1,7 +1,4 @@
-import {
-  Settings,
-  Tag,
-} from "lucide-react";
+import { Settings, Tag } from "lucide-react";
 
 import { Checkbox } from "@/web/components/form/Checkbox";
 import { Badge } from "@/web/components/ui/Badge";
@@ -53,12 +50,7 @@ export interface LabelFilterProps {
  * empty-state popover instead explains the situation and (when project-scoped)
  * offers the management dialog in place.
  */
-export function LabelFilter({
-  options,
-  selected,
-  onChange,
-  onManageLabels,
-}: LabelFilterProps) {
+export function LabelFilter({ options, selected, onChange, onManageLabels }: LabelFilterProps) {
   const isActive = selected.length > 0;
 
   function toggle(labelId: string) {
@@ -93,11 +85,7 @@ export function LabelFilter({
                 : "No labels in this workspace yet. Create labels inside a project."}
             </Text>
             {onManageLabels && (
-              <button
-                type="button"
-                className="task-filter-bar__manage"
-                onClick={onManageLabels}
-              >
+              <button type="button" className="task-filter-bar__manage" onClick={onManageLabels}>
                 <Settings size={12} />
                 Manage labels
               </button>
@@ -117,14 +105,8 @@ export function LabelFilter({
               <span className="truncate">No label</span>
             </label>
             {options.map((lbl) => (
-              <label
-                key={lbl.id}
-                className="task-filter-bar__option"
-              >
-                <Checkbox
-                  checked={selected.includes(lbl.id)}
-                  onChange={() => toggle(lbl.id)}
-                />
+              <label key={lbl.id} className="task-filter-bar__option">
+                <Checkbox checked={selected.includes(lbl.id)} onChange={() => toggle(lbl.id)} />
                 <span
                   className="inline-block size-2.5 rounded-full shrink-0"
                   style={{ backgroundColor: lbl.color }}

@@ -17,9 +17,8 @@ import {
 
 // Mock the api client module following the use-file-upload.test.tsx pattern
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -181,7 +180,7 @@ describe("useCreateSavedView", () => {
     mockPost.mockReturnValueOnce(
       new Promise<{ view: SavedView }>((resolve) => {
         resolvePost = resolve;
-      }),
+      })
     );
     const { queryClient, Wrapper } = createClientAndWrapper();
     queryClient.setQueryData(LIST_KEY, existing);
@@ -296,10 +295,9 @@ describe("useUpdateSavedView", () => {
 
     // viewId must be peeled off the body — the server schema rejects unknown
     // keys, and the id belongs in the path.
-    expect(mockPatch).toHaveBeenCalledWith(
-      `/api/projects/${PROJECT_ID}/views/view-a`,
-      { name: "Renamed" },
-    );
+    expect(mockPatch).toHaveBeenCalledWith(`/api/projects/${PROJECT_ID}/views/view-a`, {
+      name: "Renamed",
+    });
   });
 
   it("applies the change to the cached list immediately (optimistic)", async () => {
@@ -307,7 +305,7 @@ describe("useUpdateSavedView", () => {
     mockPatch.mockReturnValueOnce(
       new Promise<{ view: SavedView }>((resolve) => {
         resolvePatch = resolve;
-      }),
+      })
     );
     const { queryClient, Wrapper } = createClientAndWrapper();
     queryClient.setQueryData(LIST_KEY, seeded);
@@ -322,10 +320,7 @@ describe("useUpdateSavedView", () => {
 
     // The optimistic write happens in onMutate, before the request settles.
     await waitFor(() => {
-      expect(getCachedViews(queryClient)?.views.map((v) => v.name)).toEqual([
-        "Renamed",
-        "Beta",
-      ]);
+      expect(getCachedViews(queryClient)?.views.map((v) => v.name)).toEqual(["Renamed", "Beta"]);
     });
     // Untouched views keep their identity — only the target row is replaced.
     expect(getCachedViews(queryClient)?.views[1]).toBe(viewB);
@@ -424,7 +419,7 @@ describe("useDeleteSavedView", () => {
     mockDelete.mockReturnValueOnce(
       new Promise<{ ok: true; deletedId: string }>((resolve) => {
         resolveDelete = resolve;
-      }),
+      })
     );
     const { queryClient, Wrapper } = createClientAndWrapper();
     queryClient.setQueryData(LIST_KEY, seeded);
@@ -528,7 +523,7 @@ describe("queued update and delete", () => {
     });
 
     expect(mockSendWrite).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "DELETE", label: "Delete view “Alpha”" }),
+      expect.objectContaining({ method: "DELETE", label: "Delete view “Alpha”" })
     );
     expect(getCachedViews(queryClient)?.views).toEqual([viewB]);
     expect(invalidateSpy).not.toHaveBeenCalled();

@@ -6,18 +6,9 @@ import {
   DragOverlay,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import {
-  arrayMove,
-  horizontalListSortingStrategy,
-  SortableContext,
-} from "@dnd-kit/sortable";
+import { arrayMove, horizontalListSortingStrategy, SortableContext } from "@dnd-kit/sortable";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  useCallback,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 
 import { generateKeyBetween } from "@/shared/lib/fractional-index";
 import { BulkActionBar } from "@/web/components/ui/BulkActionBar";
@@ -238,7 +229,9 @@ export default function ProjectBoard() {
         let dropIndex: number;
         if (overParsed.type === "group") {
           // Done columns list newest-first, so a drop at the end would land behind "Show more".
-          const isCompletionTarget = sortedGroups.find((g) => g.id === targetGroupId)?.isCompletionGroup;
+          const isCompletionTarget = sortedGroups.find(
+            (g) => g.id === targetGroupId
+          )?.isCompletionGroup;
           dropIndex = isCompletionTarget ? 0 : groupTasks.length;
         } else {
           const overIndex = groupTasks.findIndex((t) => t.id === overParsed.id);
@@ -300,7 +293,16 @@ export default function ProjectBoard() {
         }
       }
     },
-    [sortedGroups, tasks, toast, ctxUpdateTask, ctxRemoveTask, ctxUpdateTaskGroup, qcBoard, project.id]
+    [
+      sortedGroups,
+      tasks,
+      toast,
+      ctxUpdateTask,
+      ctxRemoveTask,
+      ctxUpdateTaskGroup,
+      qcBoard,
+      project.id,
+    ]
   );
 
   // --- Render overlay ---
@@ -347,7 +349,9 @@ export default function ProjectBoard() {
         collisionDetection={closestCorners}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
-        onDragEnd={(event) => { void handleDragEnd(event); }}
+        onDragEnd={(event) => {
+          void handleDragEnd(event);
+        }}
       >
         <SortableContext items={groupIds} strategy={horizontalListSortingStrategy}>
           {sortedGroups.map((group) => (

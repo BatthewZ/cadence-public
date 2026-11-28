@@ -10,11 +10,6 @@ const app = new Hono<AppEnv>();
 
 app.get("/legal/tos-status", requireAuth, getTosStatus);
 
-app.post(
-  "/legal/accept-tos",
-  requireAuth,
-  validateBody(acceptTosSchema),
-  acceptTos,
-);
+app.post("/legal/accept-tos", requireAuth, validateBody(acceptTosSchema), acceptTos);
 
 export default app;

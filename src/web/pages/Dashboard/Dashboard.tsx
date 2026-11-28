@@ -53,7 +53,12 @@ export default function Dashboard() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [createProjectOpen, setCreateProjectOpen] = useState(false);
 
-  const { data: statsData, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useQuery({
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    isError: statsError,
+    refetch: refetchStats,
+  } = useQuery({
     queryKey: queryKeys.workspaces.dashboard(workspace.id),
     queryFn: () => api.get<DashboardStatsResponse>(`/api/workspaces/${workspace.id}/dashboard`),
     staleTime: 30_000,
@@ -63,7 +68,7 @@ export default function Dashboard() {
 
   const allActivities = useMemo(
     () => activityQuery.data?.pages.flatMap((p) => p.activities ?? []) ?? [],
-    [activityQuery.data],
+    [activityQuery.data]
   );
 
   const activityRows = useMemo(
@@ -75,7 +80,7 @@ export default function Dashboard() {
           ? formatGroupedLabelMessage(group)
           : formatActivityMessage(group.representative, members),
       })),
-    [allActivities, members],
+    [allActivities, members]
   );
 
   const projectCount = projects?.length ?? 0;
@@ -86,7 +91,9 @@ export default function Dashboard() {
       <Container size="xl" className="py-r2">
         <Stack gap="r3">
           <Breadcrumbs>
-            <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>{workspace.name}</Breadcrumbs.Item>
+            <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>
+              {workspace.name}
+            </Breadcrumbs.Item>
             <Breadcrumbs.Item current>Dashboard</Breadcrumbs.Item>
           </Breadcrumbs>
           <Text variant="h3">Dashboard</Text>
@@ -101,7 +108,9 @@ export default function Dashboard() {
       <Container size="xl" className="py-r2">
         <Stack gap="r3">
           <Breadcrumbs>
-            <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>{workspace.name}</Breadcrumbs.Item>
+            <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>
+              {workspace.name}
+            </Breadcrumbs.Item>
             <Breadcrumbs.Item current>Dashboard</Breadcrumbs.Item>
           </Breadcrumbs>
           <Text variant="h3">Dashboard</Text>
@@ -123,7 +132,9 @@ export default function Dashboard() {
       <Container size="xl" className="py-r2">
         <Stack gap="r3">
           <Breadcrumbs>
-            <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>{workspace.name}</Breadcrumbs.Item>
+            <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>
+              {workspace.name}
+            </Breadcrumbs.Item>
             <Breadcrumbs.Item current>Dashboard</Breadcrumbs.Item>
           </Breadcrumbs>
           <Text variant="h3">Dashboard</Text>
@@ -173,7 +184,9 @@ export default function Dashboard() {
     <Container size="xl" className="py-r2">
       <Stack gap="r3">
         <Breadcrumbs>
-          <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>{workspace.name}</Breadcrumbs.Item>
+          <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>
+            {workspace.name}
+          </Breadcrumbs.Item>
           <Breadcrumbs.Item current>Dashboard</Breadcrumbs.Item>
         </Breadcrumbs>
         <Text variant="h3">Dashboard</Text>
@@ -184,7 +197,11 @@ export default function Dashboard() {
           renderContext={(task) => task.projectName}
         />
 
-        <StatCardsRow taskCounts={taskCounts} projectCount={activeProjectCount} costAggregation={costAggregation} />
+        <StatCardsRow
+          taskCounts={taskCounts}
+          projectCount={activeProjectCount}
+          costAggregation={costAggregation}
+        />
         <ArchivedProjectsSummary archivedSummary={archivedSummary} />
 
         <div className="grid grid-cols-1 gap-r4 md:grid-cols-3">

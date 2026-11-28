@@ -12,7 +12,11 @@ import { getPriorityLabel } from "@/web/util/task-display";
 export type GroupingMode = "dueDate" | "priority" | "taskGroup" | "assignee" | "label";
 
 const VALID_GROUPING_MODES: ReadonlySet<string> = new Set<GroupingMode>([
-  "dueDate", "priority", "taskGroup", "assignee", "label",
+  "dueDate",
+  "priority",
+  "taskGroup",
+  "assignee",
+  "label",
 ]);
 
 /** Safely parse a URL param into a GroupingMode, falling back to "dueDate". */
@@ -127,10 +131,7 @@ function groupTasksByPriority(tasks: TimelineTask[]): TimelineGroup[] {
 /*  Group by Task Group                                                */
 /* ------------------------------------------------------------------ */
 
-function groupTasksByTaskGroup(
-  tasks: TimelineTask[],
-  taskGroups: TaskGroup[],
-): TimelineGroup[] {
+function groupTasksByTaskGroup(tasks: TimelineTask[], taskGroups: TaskGroup[]): TimelineGroup[] {
   const sorted = sortByPosition(taskGroups);
 
   const groups: TimelineGroup[] = sorted.map((tg) => ({
@@ -156,10 +157,7 @@ function groupTasksByTaskGroup(
 /*  Group by Assignee                                                  */
 /* ------------------------------------------------------------------ */
 
-function groupTasksByAssignee(
-  tasks: TimelineTask[],
-  members: ProjectMember[],
-): TimelineGroup[] {
+function groupTasksByAssignee(tasks: TimelineTask[], members: ProjectMember[]): TimelineGroup[] {
   const sorted = [...members].sort((a, b) => a.name.localeCompare(b.name));
 
   const groups: TimelineGroup[] = sorted.map((m) => ({
@@ -234,7 +232,7 @@ export function groupTasksByLabel(tasks: TimelineTask[]): TimelineGroup[] {
   }
 
   const sortedLabels = [...labelsById.values()].sort((a, b) =>
-    a.name.toLowerCase().localeCompare(b.name.toLowerCase()),
+    a.name.toLowerCase().localeCompare(b.name.toLowerCase())
   );
 
   const groups: TimelineGroup[] = sortedLabels.map((l) => ({
@@ -278,7 +276,7 @@ export function groupTimelineTasks(
   mode: GroupingMode,
   tasks: TimelineTask[],
   taskGroups: TaskGroup[],
-  members: ProjectMember[],
+  members: ProjectMember[]
 ): TimelineGroup[] {
   switch (mode) {
     case "dueDate":
@@ -298,15 +296,10 @@ export function groupTimelineTasks(
 /*  Default open keys per grouping mode                                */
 /* ------------------------------------------------------------------ */
 
-export function getDefaultOpenKeys(
-  mode: GroupingMode,
-  groups: TimelineGroup[],
-): string[] {
+export function getDefaultOpenKeys(mode: GroupingMode, groups: TimelineGroup[]): string[] {
   switch (mode) {
     case "dueDate":
-      return groups
-        .filter((g) => g.key === "overdue" || g.key === "today")
-        .map((g) => g.key);
+      return groups.filter((g) => g.key === "overdue" || g.key === "today").map((g) => g.key);
     case "priority":
       return groups.length > 0 ? [groups[0].key] : [];
     case "taskGroup":

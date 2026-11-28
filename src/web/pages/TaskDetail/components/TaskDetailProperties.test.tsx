@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, type Mock,vi } from "vitest";
+import { describe, expect, it, type Mock, vi } from "vitest";
 
 import type { TaskGroup } from "@/web/contexts/ProjectContext";
 import type { WorkspaceMember } from "@/web/contexts/WorkspaceContext";
@@ -26,7 +26,7 @@ const MEMBERS: WorkspaceMember[] = [
 ];
 
 function makeTask(
-  overrides: Partial<TaskDetailPropertiesProps["task"]> = {},
+  overrides: Partial<TaskDetailPropertiesProps["task"]> = {}
 ): TaskDetailPropertiesProps["task"] {
   return {
     id: "task-1",
@@ -43,7 +43,7 @@ function makeTask(
 
 function makeProps(
   taskOverrides: Partial<TaskDetailPropertiesProps["task"]> = {},
-  propOverrides: Partial<TaskDetailPropertiesProps> = {},
+  propOverrides: Partial<TaskDetailPropertiesProps> = {}
 ): TaskDetailPropertiesProps & { onPatch: Mock<TaskDetailPropertiesProps["onPatch"]> } {
   // Typed against the real prop signature so the mock satisfies the
   // intersection return type without casts (and so call-arg assertions in the
@@ -172,7 +172,7 @@ describe("TaskDetailProperties date rows", () => {
   it("read-only users see disabled inputs and no clear buttons", () => {
     const props = makeProps(
       { startDate: "2026-06-10T00:00:00.000Z", dueDate: "2026-06-20T00:00:00.000Z" },
-      { canEditTasks: false },
+      { canEditTasks: false }
     );
     const { container } = render(<TaskDetailProperties {...props} />);
 
@@ -242,7 +242,7 @@ describe("TaskDetailProperties independent date clearing", () => {
       <TaskDetailProperties
         {...props}
         task={makeTask({ startDate: "2026-06-10T00:00:00.000Z", dueDate: null })}
-      />,
+      />
     );
     expect(getDateInputs(container)).toHaveLength(2);
     expect(screen.getByText("Start date")).toBeInTheDocument();

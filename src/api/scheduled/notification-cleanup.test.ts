@@ -11,13 +11,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createDb, type Database } from "../../db";
-import {
-  createTestD1,
-  seedNotification,
-  seedUser,
-  seedWorkspace,
-  TEST_USER,
-} from "../test-utils";
+import { createTestD1, seedNotification, seedUser, seedWorkspace, TEST_USER } from "../test-utils";
 import { cleanupNotifications } from "./notification-cleanup";
 
 // ---------------------------------------------------------------------------
@@ -160,22 +154,26 @@ describe("cleanupNotifications", () => {
     expect(deleted).toBe(0);
   });
 
-  it("handles batching with more than 100 old read notifications", { timeout: 15_000 }, async () => {
-    const promises: Promise<string>[] = [];
-    for (let i = 0; i < 150; i++) {
-      promises.push(
-        seedNotification(d1, TEST_USER.id, {
-          read: true,
-          createdAt: daysAgo(31),
-          workspaceId,
-        }),
-      );
+  it(
+    "handles batching with more than 100 old read notifications",
+    { timeout: 15_000 },
+    async () => {
+      const promises: Promise<string>[] = [];
+      for (let i = 0; i < 150; i++) {
+        promises.push(
+          seedNotification(d1, TEST_USER.id, {
+            read: true,
+            createdAt: daysAgo(31),
+            workspaceId,
+          })
+        );
+      }
+      await Promise.all(promises);
+
+      const deleted = await cleanupNotifications(db);
+
+      expect(deleted).toBe(150);
+      expect(await countNotifications()).toBe(0);
     }
-    await Promise.all(promises);
-
-    const deleted = await cleanupNotifications(db);
-
-    expect(deleted).toBe(150);
-    expect(await countNotifications()).toBe(0);
-  });
+  );
 });

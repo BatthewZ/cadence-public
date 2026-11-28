@@ -26,7 +26,10 @@ export const createLabelSchema = z.object({
 
 export const updateLabelSchema = z.object({
   name: z.string().min(1).max(30).trim().optional(),
-  color: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
 });
 
 export const assignLabelSchema = z.object({

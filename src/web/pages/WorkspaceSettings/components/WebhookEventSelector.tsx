@@ -1,4 +1,8 @@
-import { WEBHOOK_EVENT_GROUPS, type WebhookEventType, WORKSPACE_SCOPED_EVENTS } from "@/shared/types/webhook";
+import {
+  WEBHOOK_EVENT_GROUPS,
+  type WebhookEventType,
+  WORKSPACE_SCOPED_EVENTS,
+} from "@/shared/types/webhook";
 import { Checkbox } from "@/web/components/form";
 import { Stack } from "@/web/components/layout";
 import { Text } from "@/web/components/ui";
@@ -42,7 +46,11 @@ interface WebhookEventSelectorProps {
  * using the shared WEBHOOK_EVENT_GROUPS constant. Each group includes a
  * "Select all" toggle for fast bulk selection.
  */
-export function WebhookEventSelector({ value, onChange, projectScoped }: WebhookEventSelectorProps) {
+export function WebhookEventSelector({
+  value,
+  onChange,
+  projectScoped,
+}: WebhookEventSelectorProps) {
   const selected = new Set(value);
 
   function toggleEvent(event: WebhookEventType) {
@@ -77,11 +85,14 @@ export function WebhookEventSelector({ value, onChange, projectScoped }: Webhook
             key={groupName}
             className={`border border-border-default/50 rounded-lg p-r4${groupDisabled ? " opacity-50" : ""}`}
           >
-            <label className={`flex items-center gap-r5 mb-r5${groupDisabled ? " cursor-not-allowed" : " cursor-pointer"}`}>
+            <label
+              className={`flex items-center gap-r5 mb-r5${groupDisabled ? " cursor-not-allowed" : " cursor-pointer"}`}
+            >
               <Checkbox
                 checked={!groupDisabled && allInGroupSelected}
                 ref={(el) => {
-                  if (el) el.indeterminate = !groupDisabled && someInGroupSelected && !allInGroupSelected;
+                  if (el)
+                    el.indeterminate = !groupDisabled && someInGroupSelected && !allInGroupSelected;
                 }}
                 onChange={() => !groupDisabled && toggleGroup(events, allInGroupSelected)}
                 aria-label={`Select all ${groupName} events`}

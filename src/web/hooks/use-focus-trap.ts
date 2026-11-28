@@ -4,8 +4,7 @@ const FOCUSABLE_SELECTOR =
   'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
 
 function focusFirstOrContainer(container: HTMLElement) {
-  const focusable =
-    container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
+  const focusable = container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
   if (focusable.length > 0) {
     focusable[0].focus();
   } else {
@@ -13,10 +12,7 @@ function focusFirstOrContainer(container: HTMLElement) {
   }
 }
 
-export function useFocusTrap(
-  ref: React.RefObject<HTMLElement | null>,
-  enabled: boolean
-) {
+export function useFocusTrap(ref: React.RefObject<HTMLElement | null>, enabled: boolean) {
   const previousFocusRef = useRef<Element | null>(null);
 
   useEffect(() => {

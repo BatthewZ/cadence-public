@@ -94,9 +94,7 @@ function fullBoard(): Record<string, unknown> {
       black: "",
     },
     dateLastActivity: "2026-05-20T10:00:00.000Z",
-    memberships: [
-      { id: "ms1", idMember: "member-ada", memberType: "admin", unconfirmed: false },
-    ],
+    memberships: [{ id: "ms1", idMember: "member-ada", memberType: "admin", unconfirmed: false }],
     members: [
       { id: "member-ada", fullName: "Ada Lovelace", username: "ada", initials: "AL" },
       { id: "member-grace", fullName: "Grace Hopper", username: "ghopper", initials: "GH" },
@@ -253,8 +251,20 @@ function fullBoard(): Record<string, unknown> {
         name: "Design",
         pos: 1,
         checkItems: [
-          { id: "ci-review", idChecklist: "chk-design", name: "Review", state: "incomplete", pos: 2 },
-          { id: "ci-wireframe", idChecklist: "chk-design", name: "Wireframe", state: "complete", pos: 1 },
+          {
+            id: "ci-review",
+            idChecklist: "chk-design",
+            name: "Review",
+            state: "incomplete",
+            pos: 2,
+          },
+          {
+            id: "ci-wireframe",
+            idChecklist: "chk-design",
+            name: "Wireframe",
+            state: "complete",
+            pos: 1,
+          },
         ],
       },
       {
@@ -264,7 +274,13 @@ function fullBoard(): Record<string, unknown> {
         name: "Checklist",
         pos: 1,
         checkItems: [
-          { id: "ci-repro", idChecklist: "chk-steps", name: "Repro the bug", state: "complete", pos: 1 },
+          {
+            id: "ci-repro",
+            idChecklist: "chk-steps",
+            name: "Repro the bug",
+            state: "complete",
+            pos: 1,
+          },
           { id: "ci-patch", idChecklist: "chk-steps", name: "Patch", state: "incomplete", pos: 2 },
         ],
       },
@@ -282,7 +298,12 @@ function fullBoard(): Record<string, unknown> {
         id: "act-1",
         type: "commentCard",
         date: "2026-05-02T08:00:00.000Z",
-        memberCreator: { id: "member-ada", fullName: "Ada Lovelace", username: "ada", avatarHash: "x" },
+        memberCreator: {
+          id: "member-ada",
+          fullName: "Ada Lovelace",
+          username: "ada",
+          avatarHash: "x",
+        },
         data: {
           text: "Looks good to me",
           card: { id: "card-spec", name: "Write the spec", shortLink: "gH3iJ4kL" },
@@ -335,7 +356,7 @@ describe("trelloBoardSchema", () => {
 
   it("degrades a malformed pos to undefined instead of failing the file", () => {
     const board = trelloBoardSchema.parse(
-      minimalBoard({ lists: [{ id: "list-a", name: "A", closed: false, pos: "top" }] }),
+      minimalBoard({ lists: [{ id: "list-a", name: "A", closed: false, pos: "top" }] })
     );
     expect(board.lists[0].pos).toBeUndefined();
   });
@@ -347,9 +368,7 @@ describe("looksLikeTrelloBoard", () => {
   });
 
   it("rejects a Cadence export (format discriminator present)", () => {
-    expect(
-      looksLikeTrelloBoard({ format: "cadence.workspace", lists: [], cards: [] }),
-    ).toBe(false);
+    expect(looksLikeTrelloBoard({ format: "cadence.workspace", lists: [], cards: [] })).toBe(false);
   });
 
   it("rejects non-board values", () => {
@@ -442,7 +461,7 @@ describe("trelloToImportDocument — full board", () => {
   it("warns about cards whose list is missing from the export", () => {
     const { warnings } = convert(fullBoard());
     expect(warnings.some((w) => w.includes("referenced a list that is not in the export"))).toBe(
-      true,
+      true
     );
   });
 
@@ -571,9 +590,7 @@ describe("trelloToImportDocument — full board", () => {
   it("reports the unmatched-members situation as a warning", () => {
     const { warnings } = convert(fullBoard());
     expect(
-      warnings.some(
-        (w) => w.includes("2 members") && w.includes("do not include email addresses"),
-      ),
+      warnings.some((w) => w.includes("2 members") && w.includes("do not include email addresses"))
     ).toBe(true);
   });
 });
@@ -593,7 +610,7 @@ describe("trelloToImportDocument — caps as contract pressure", () => {
             pos: 1,
           },
         ],
-      }),
+      })
     );
     const task = result.document.projects[0].tasks[0];
     expect(task.title).toHaveLength(200);
@@ -615,7 +632,7 @@ describe("trelloToImportDocument — caps as contract pressure", () => {
             pos: 1,
           },
         ],
-      }),
+      })
     );
     expect(result.document.projects[0].tasks[0].description).toHaveLength(5000);
     expect(result.warnings.some((w) => w.includes("card description"))).toBe(true);
@@ -623,9 +640,7 @@ describe("trelloToImportDocument — caps as contract pressure", () => {
   });
 
   it("truncates board name to 100 and board description to 1000", () => {
-    const result = convert(
-      minimalBoard({ name: "B".repeat(120), desc: "d".repeat(1500) }),
-    );
+    const result = convert(minimalBoard({ name: "B".repeat(120), desc: "d".repeat(1500) }));
     const project = result.document.projects[0];
     expect(project.name).toHaveLength(100);
     expect(project.description).toHaveLength(1000);
@@ -636,9 +651,7 @@ describe("trelloToImportDocument — caps as contract pressure", () => {
     const result = convert(
       minimalBoard({
         lists: [{ id: "list-a", name: "A", closed: false, pos: 1 }],
-        cards: [
-          { id: "card-a", name: "Card", desc: "", closed: false, idList: "list-a", pos: 1 },
-        ],
+        cards: [{ id: "card-a", name: "Card", desc: "", closed: false, idList: "list-a", pos: 1 }],
         checklists: [
           {
             id: "chk-1",
@@ -655,7 +668,7 @@ describe("trelloToImportDocument — caps as contract pressure", () => {
             checkItems: [{ id: "ci-2", name: "ok", state: "incomplete", pos: 1 }],
           },
         ],
-      }),
+      })
     );
     const subtasks = result.document.projects[0].tasks[0].subtasks;
     expect(subtasks[0].title).toHaveLength(200);
@@ -673,7 +686,7 @@ describe("trelloToImportDocument — caps as contract pressure", () => {
           { id: "label-3", name: "", color: "green" },
           { id: "label-4", name: "", color: "green" },
         ],
-      }),
+      })
     );
     const names = result.document.projects[0].labels.map((l) => l.name);
     expect(names).toEqual(["Bug", "Bug (2)", "green", "green (2)"]);
@@ -687,10 +700,8 @@ describe("trelloToImportDocument — resilience and provenance", () => {
     const result = convert(
       minimalBoard({
         lists: [{ id: "list-a", name: "A", closed: false, pos: 1 }],
-        cards: [
-          { id: "card-a", name: "Card", desc: "", closed: false, idList: "list-a", pos: 1 },
-        ],
-      }),
+        cards: [{ id: "card-a", name: "Card", desc: "", closed: false, idList: "list-a", pos: 1 }],
+      })
     );
     expect(() => importDocumentSchema.parse(result.document)).not.toThrow();
     const task = result.document.projects[0].tasks[0];
@@ -733,7 +744,7 @@ describe("trelloToImportDocument — resilience and provenance", () => {
             pos: 1,
           },
         ],
-      }),
+      })
     );
     const task = result.document.projects[0].tasks[0];
     expect(task.createdAt).toBe("2021-01-14T08:25:36.000Z");
@@ -757,7 +768,7 @@ describe("trelloToImportDocument — resilience and provenance", () => {
             pos: 1,
           },
         ],
-      }),
+      })
     );
     expect(result.document.projects[0].tasks[0].dueDate).toBeNull();
     expect(result.warnings.some((w) => w.includes("due date"))).toBe(true);
@@ -773,7 +784,7 @@ describe("trelloToImportDocument — resilience and provenance", () => {
           { id: "list-a", name: "First", closed: false, pos: 1 },
           { id: "list-y", name: "No pos C", closed: false },
         ],
-      }),
+      })
     );
     expect(result.document.projects[0].taskGroups.map((g) => g.name)).toEqual([
       "First",
@@ -798,9 +809,7 @@ describe("trelloToImportDocument — resilience and provenance", () => {
     const result = convert(
       minimalBoard({
         lists: [{ id: "list-a", name: "A", closed: false, pos: 1 }],
-        cards: [
-          { id: "card-a", name: "Card", desc: "", closed: false, idList: "list-a", pos: 1 },
-        ],
+        cards: [{ id: "card-a", name: "Card", desc: "", closed: false, idList: "list-a", pos: 1 }],
         actions: [
           {
             id: "act-u",
@@ -816,7 +825,7 @@ describe("trelloToImportDocument — resilience and provenance", () => {
             data: { text: "no member at all", card: { id: "card-a" } },
           },
         ],
-      }),
+      })
     );
     const bodies = result.document.projects[0].tasks[0].comments.map((c) => c.body);
     expect(bodies).toEqual(["**kay:** via username", "**Unknown member:** no member at all"]);

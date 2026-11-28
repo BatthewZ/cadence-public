@@ -1,4 +1,4 @@
-import type { TelemetryEvent,TelemetrySink } from "./types";
+import type { TelemetryEvent, TelemetrySink } from "./types";
 
 /**
  * A no-op telemetry sink that silently discards all events.

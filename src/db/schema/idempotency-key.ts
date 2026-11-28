@@ -26,7 +26,7 @@ export const idempotencyKey = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.userId, table.key] }),
     index("idempotency_key_created_idx").on(table.createdAt),
-  ],
+  ]
 );
 
 export type IdempotencyKey = typeof idempotencyKey.$inferSelect;

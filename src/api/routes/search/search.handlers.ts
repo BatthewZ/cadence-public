@@ -69,11 +69,8 @@ export async function workspaceSearch(c: Context<AppEnv>) {
           and(
             eq(project.workspaceId, workspaceId),
             patScope,
-            or(
-              like(project.name, pattern),
-              like(project.description, pattern),
-            ),
-          ),
+            or(like(project.name, pattern), like(project.description, pattern))
+          )
         )
         .limit(limit)
     : db
@@ -87,20 +84,14 @@ export async function workspaceSearch(c: Context<AppEnv>) {
         .from(project)
         .innerJoin(
           projectMember,
-          and(
-            eq(projectMember.projectId, project.id),
-            eq(projectMember.userId, user.id),
-          ),
+          and(eq(projectMember.projectId, project.id), eq(projectMember.userId, user.id))
         )
         .where(
           and(
             eq(project.workspaceId, workspaceId),
             patScope,
-            or(
-              like(project.name, pattern),
-              like(project.description, pattern),
-            ),
-          ),
+            or(like(project.name, pattern), like(project.description, pattern))
+          )
         )
         .limit(limit);
 
@@ -122,11 +113,8 @@ export async function workspaceSearch(c: Context<AppEnv>) {
           and(
             eq(project.workspaceId, workspaceId),
             patScope,
-            or(
-              like(task.title, pattern),
-              like(task.description, pattern),
-            ),
-          ),
+            or(like(task.title, pattern), like(task.description, pattern))
+          )
         )
         .limit(limit)
     : db
@@ -143,20 +131,14 @@ export async function workspaceSearch(c: Context<AppEnv>) {
         .innerJoin(project, eq(task.projectId, project.id))
         .innerJoin(
           projectMember,
-          and(
-            eq(projectMember.projectId, project.id),
-            eq(projectMember.userId, user.id),
-          ),
+          and(eq(projectMember.projectId, project.id), eq(projectMember.userId, user.id))
         )
         .where(
           and(
             eq(project.workspaceId, workspaceId),
             patScope,
-            or(
-              like(task.title, pattern),
-              like(task.description, pattern),
-            ),
-          ),
+            or(like(task.title, pattern), like(task.description, pattern))
+          )
         )
         .limit(limit);
 

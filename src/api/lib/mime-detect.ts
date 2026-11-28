@@ -41,13 +41,14 @@ function matchesBytes(data: Uint8Array, sig: MagicSignature): boolean {
 function classifyZip(data: Uint8Array): string {
   // Convert enough bytes to search for OOXML markers
   const searchLen = Math.min(data.length, 8000);
-  const text = new TextDecoder("ascii", { fatal: false }).decode(
-    data.subarray(0, searchLen),
-  );
+  const text = new TextDecoder("ascii", { fatal: false }).decode(data.subarray(0, searchLen));
 
-  if (text.includes("word/")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-  if (text.includes("xl/")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-  if (text.includes("ppt/")) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+  if (text.includes("word/"))
+    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (text.includes("xl/"))
+    return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  if (text.includes("ppt/"))
+    return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
   // Generic ZIP
   return "application/zip";
@@ -56,13 +57,13 @@ function classifyZip(data: Uint8Array): string {
 function classifyOle2(data: Uint8Array): string {
   // OLE2 files (.doc, .xls, .ppt) have internal stream markers
   const searchLen = Math.min(data.length, 8000);
-  const text = new TextDecoder("ascii", { fatal: false }).decode(
-    data.subarray(0, searchLen),
-  );
+  const text = new TextDecoder("ascii", { fatal: false }).decode(data.subarray(0, searchLen));
 
   if (text.includes("Word.Document") || text.includes("W\0o\0r\0d")) return "application/msword";
-  if (text.includes("Microsoft Excel") || text.includes("Workbook")) return "application/vnd.ms-excel";
-  if (text.includes("PowerPoint") || text.includes("P\0o\0w\0e\0r")) return "application/vnd.ms-powerpoint";
+  if (text.includes("Microsoft Excel") || text.includes("Workbook"))
+    return "application/vnd.ms-excel";
+  if (text.includes("PowerPoint") || text.includes("P\0o\0w\0e\0r"))
+    return "application/vnd.ms-powerpoint";
 
   // Default to msword for unrecognized OLE2 (most common legacy format)
   return "application/msword";
@@ -70,7 +71,13 @@ function classifyOle2(data: Uint8Array): string {
 
 function classifyRiff(data: Uint8Array): string | null {
   // RIFF....WEBP
-  if (data.length >= 12 && data[8] === 0x57 && data[9] === 0x45 && data[10] === 0x42 && data[11] === 0x50) {
+  if (
+    data.length >= 12 &&
+    data[8] === 0x57 &&
+    data[9] === 0x45 &&
+    data[10] === 0x42 &&
+    data[11] === 0x50
+  ) {
     return "image/webp";
   }
   return null;
@@ -111,10 +118,7 @@ function containsHtmlPatterns(data: Uint8Array): boolean {
   );
 }
 
-export function detectMimeType(
-  buffer: ArrayBuffer,
-  claimedType: string,
-): string | null {
+export function detectMimeType(buffer: ArrayBuffer, claimedType: string): string | null {
   const data = new Uint8Array(buffer);
   if (data.length === 0) return null;
 

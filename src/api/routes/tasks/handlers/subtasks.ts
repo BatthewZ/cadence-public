@@ -9,7 +9,11 @@ import { resolveProjectAccess } from "../../../lib/access";
 import { clientIdConflict } from "../../../lib/client-id";
 import { errorResponse } from "../../../lib/error-response";
 import { requireParam } from "../../../lib/params";
-import { nextSiblingPosition, retryOnPositionConflict, writeClientPosition } from "../../../lib/position-conflict";
+import {
+  nextSiblingPosition,
+  retryOnPositionConflict,
+  writeClientPosition,
+} from "../../../lib/position-conflict";
 import { validJson } from "../../../lib/validated";
 import { enforceTokenProjectBinding } from "../../../middleware/authorize";
 
@@ -70,11 +74,7 @@ export async function updateSubtask(c: Context<AppEnv>) {
   const body = validJson(c, updateSubtaskSchema);
 
   // Look up the subtask and verify project access
-  const [found] = await db
-    .select()
-    .from(subtask)
-    .where(eq(subtask.id, subtaskId))
-    .limit(1);
+  const [found] = await db.select().from(subtask).where(eq(subtask.id, subtaskId)).limit(1);
 
   if (!found) {
     return errorResponse(c, "Subtask not found", 404);
@@ -119,21 +119,24 @@ export async function updateSubtask(c: Context<AppEnv>) {
   };
 
   const now = new Date();
-  const write = (position: string | undefined) => db.batch([
-    db.update(subtask)
-      .set({ ...updateData, ...(position !== undefined && { position }) })
-      .where(eq(subtask.id, subtaskId))
-      .returning(),
-    db.update(task).set({ updatedAt: now }).where(eq(task.id, found.taskId)),
-  ] as const);
+  const write = (position: string | undefined) =>
+    db.batch([
+      db
+        .update(subtask)
+        .set({ ...updateData, ...(position !== undefined && { position }) })
+        .where(eq(subtask.id, subtaskId))
+        .returning(),
+      db.update(task).set({ updatedAt: now }).where(eq(task.id, found.taskId)),
+    ] as const);
 
-  const [[updated]] = body.position === undefined
-    ? await write(undefined)
-    : await writeClientPosition(
-      body.position,
-      nextSiblingPosition(db, subtask, eq(subtask.taskId, found.taskId), subtaskId),
-      write,
-    );
+  const [[updated]] =
+    body.position === undefined
+      ? await write(undefined)
+      : await writeClientPosition(
+          body.position,
+          nextSiblingPosition(db, subtask, eq(subtask.taskId, found.taskId), subtaskId),
+          write
+        );
 
   return c.json({ subtask: updated });
 }
@@ -144,11 +147,7 @@ export async function deleteSubtask(c: Context<AppEnv>) {
   const subtaskId = requireParam(c, "subtaskId");
 
   // Look up the subtask
-  const [found] = await db
-    .select()
-    .from(subtask)
-    .where(eq(subtask.id, subtaskId))
-    .limit(1);
+  const [found] = await db.select().from(subtask).where(eq(subtask.id, subtaskId)).limit(1);
 
   if (!found) {
     return errorResponse(c, "Subtask not found", 404);

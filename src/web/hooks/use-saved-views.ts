@@ -63,7 +63,11 @@ function viewName(qc: QueryClient, projectId: string, viewId: string): string {
 }
 
 /** A queued write's reply comes with the refresh after the queue drains, so it skips this one. */
-function invalidateViews(qc: QueryClient, projectId: string, result: WriteResult<unknown> | undefined) {
+function invalidateViews(
+  qc: QueryClient,
+  projectId: string,
+  result: WriteResult<unknown> | undefined
+) {
   if (result?.status === "queued") return;
   void qc.invalidateQueries({ queryKey: queryKeys.projects.savedViews(projectId) });
 }
@@ -112,7 +116,7 @@ export function useCreateSavedView(projectId: string) {
       if (result.status !== "sent") return;
       const { view } = result.data;
       qc.setQueryData<SavedViewsData>(listKey, (old) =>
-        old ? { views: old.views.map((v) => (v.id === view.id ? view : v)) } : old,
+        old ? { views: old.views.map((v) => (v.id === view.id ? view : v)) } : old
       );
     },
     onError: (_err, _vars, ctx) => {
@@ -143,7 +147,9 @@ export function useUpdateSavedView(projectId: string) {
         path: `/api/projects/${projectId}/views/${viewId}`,
         body: input,
         // Runs after onMutate has applied the new name, so a rename is named by it.
-        label: input.name ? `Rename view to “${input.name}”` : `Update view ${viewName(qc, projectId, viewId)}`,
+        label: input.name
+          ? `Rename view to “${input.name}”`
+          : `Update view ${viewName(qc, projectId, viewId)}`,
       }),
     onMutate: async ({ viewId, ...input }) => {
       await qc.cancelQueries({ queryKey: queryKeys.projects.savedViews(projectId) });

@@ -16,12 +16,13 @@ import { resolveProjectAccess } from "../../lib/access";
 import { clientIdConflict } from "../../lib/client-id";
 import { errorResponse } from "../../lib/error-response";
 import { requireParam } from "../../lib/params";
-import { nextSiblingPosition, retryOnPositionConflict, writeClientPosition } from "../../lib/position-conflict";
-import { validJson, validQuery } from "../../lib/validated";
 import {
-  enforceTokenProjectBinding,
-  tokenProjectScopeFilter,
-} from "../../middleware/authorize";
+  nextSiblingPosition,
+  retryOnPositionConflict,
+  writeClientPosition,
+} from "../../lib/position-conflict";
+import { validJson, validQuery } from "../../lib/validated";
+import { enforceTokenProjectBinding, tokenProjectScopeFilter } from "../../middleware/authorize";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -43,16 +44,8 @@ import {
  * "404 Not found", while a PAT binding failure must answer `403 Forbidden`,
  * uniform with every other authorization denial in the API.
  */
-async function resolveTaskGroupWithAccess(
-  db: Database,
-  taskGroupId: string,
-  userId: string,
-) {
-  const [group] = await db
-    .select()
-    .from(taskGroup)
-    .where(eq(taskGroup.id, taskGroupId))
-    .limit(1);
+async function resolveTaskGroupWithAccess(db: Database, taskGroupId: string, userId: string) {
+  const [group] = await db.select().from(taskGroup).where(eq(taskGroup.id, taskGroupId)).limit(1);
 
   if (!group) return null;
 
@@ -153,29 +146,16 @@ export async function listWorkspaceTaskGroups(c: Context<AppEnv>) {
     ? await db
         .select({ id: project.id, name: project.name })
         .from(project)
-        .where(
-          and(
-            eq(project.workspaceId, workspaceId),
-            inArray(project.id, projectIds),
-            patScope,
-          ),
-        )
+        .where(and(eq(project.workspaceId, workspaceId), inArray(project.id, projectIds), patScope))
     : await db
         .select({ id: project.id, name: project.name })
         .from(project)
         .innerJoin(
           projectMember,
-          and(
-            eq(projectMember.projectId, project.id),
-            eq(projectMember.userId, user.id),
-          ),
+          and(eq(projectMember.projectId, project.id), eq(projectMember.userId, user.id))
         )
         .where(
-          and(
-            eq(project.workspaceId, workspaceId),
-            inArray(project.id, projectIds),
-            patScope,
-          ),
+          and(eq(project.workspaceId, workspaceId), inArray(project.id, projectIds), patScope)
         );
 
   const visibleIds = visibleProjects.map((p) => p.id);
@@ -197,11 +177,7 @@ export async function listWorkspaceTaskGroups(c: Context<AppEnv>) {
     })
     .from(taskGroup)
     .where(inArray(taskGroup.projectId, visibleIds))
-    .orderBy(
-      asc(taskGroup.projectId),
-      asc(taskGroup.position),
-      asc(taskGroup.id),
-    );
+    .orderBy(asc(taskGroup.projectId), asc(taskGroup.position), asc(taskGroup.id));
 
   const enriched = groups.map((g) => ({
     ...g,
@@ -217,18 +193,19 @@ export async function listTaskGroups(c: Context<AppEnv>) {
 
   // Batch groups + task counts in a single round-trip
   const [groups, taskCounts] = await db.batch([
-    db.select().from(taskGroup)
+    db
+      .select()
+      .from(taskGroup)
       .where(eq(taskGroup.projectId, projectId))
       .orderBy(asc(taskGroup.position), asc(taskGroup.id)),
-    db.select({ taskGroupId: task.taskGroupId, count: count() })
+    db
+      .select({ taskGroupId: task.taskGroupId, count: count() })
       .from(task)
       .where(eq(task.projectId, projectId))
       .groupBy(task.taskGroupId),
   ] as const);
 
-  const taskCountMap = new Map(
-    taskCounts.map((tc) => [tc.taskGroupId, tc.count]),
-  );
+  const taskCountMap = new Map(taskCounts.map((tc) => [tc.taskGroupId, tc.count]));
 
   const enrichedGroups = groups.map((g) => ({
     ...g,
@@ -319,7 +296,8 @@ export async function deleteTaskGroup(c: Context<AppEnv>) {
 
   // Batch: move tasks to target group, then delete the group (order preserved)
   await db.batch([
-    db.update(task)
+    db
+      .update(task)
       .set({ taskGroupId: targetGroupId, updatedAt: new Date() })
       .where(eq(task.taskGroupId, taskGroupId)),
     db.delete(taskGroup).where(eq(taskGroup.id, taskGroupId)),
@@ -352,12 +330,18 @@ export async function reorderTaskGroup(c: Context<AppEnv>) {
 
   const [updated] = await writeClientPosition(
     body.position,
-    nextSiblingPosition(db, taskGroup, eq(taskGroup.projectId, result.group.projectId), taskGroupId),
-    (position) => db
-      .update(taskGroup)
-      .set({ position, updatedAt: now })
-      .where(eq(taskGroup.id, taskGroupId))
-      .returning(),
+    nextSiblingPosition(
+      db,
+      taskGroup,
+      eq(taskGroup.projectId, result.group.projectId),
+      taskGroupId
+    ),
+    (position) =>
+      db
+        .update(taskGroup)
+        .set({ position, updatedAt: now })
+        .where(eq(taskGroup.id, taskGroupId))
+        .returning()
   );
 
   return c.json({ taskGroup: updated });

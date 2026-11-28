@@ -53,7 +53,12 @@ export function CreateProjectDialog({
   useThemePreview(theme, open);
 
   const qc = useQueryClient();
-  const { mutateAsync, isPending: loading, error: mutationError, reset } = useMutation({
+  const {
+    mutateAsync,
+    isPending: loading,
+    error: mutationError,
+    reset,
+  } = useMutation({
     mutationFn: (input: CreateProjectBody) =>
       api.post<CreateProjectResponse>(`/api/workspaces/${workspaceId}/projects`, input),
     onSuccess: () => {
@@ -81,9 +86,7 @@ export function CreateProjectDialog({
     e.preventDefault();
     resetFieldErrors();
 
-    const budgetCents = budget.trim() === ""
-      ? null
-      : Math.round(parseFloat(budget) * 100);
+    const budgetCents = budget.trim() === "" ? null : Math.round(parseFloat(budget) * 100);
 
     if (budgetCents !== null && (isNaN(budgetCents) || budgetCents < 0)) return;
 
@@ -155,7 +158,9 @@ export function CreateProjectDialog({
                   <Field>
                     <Label htmlFor="create-proj-budget">Budget</Label>
                     <Row gap="r5" align="center">
-                      <Text variant="body-2" color="muted">$</Text>
+                      <Text variant="body-2" color="muted">
+                        $
+                      </Text>
                       <Input
                         id="create-proj-budget"
                         type="number"
@@ -196,7 +201,11 @@ export function CreateProjectDialog({
             <Button type="button" variant="ghost" onClick={handleClose} disabled={loading}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading || onlineOnly.disabled} title={onlineOnly.title}>
+            <Button
+              type="submit"
+              disabled={loading || onlineOnly.disabled}
+              title={onlineOnly.title}
+            >
               {loading ? "Creating..." : "Create"}
             </Button>
           </FormActions>

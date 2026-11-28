@@ -3,15 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Select } from "@/web/components/form";
 import { Container, Row, Stack } from "@/web/components/layout";
-import {
-  Badge,
-  Button,
-  Card,
-  IconButton,
-  Tabs,
-  Text,
-  useToast,
-} from "@/web/components/ui";
+import { Badge, Button, Card, IconButton, Tabs, Text, useToast } from "@/web/components/ui";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { THEMES } from "@/web/hooks/use-theme";
 
@@ -30,9 +22,7 @@ export function ThemeEditor() {
   const { toast } = useToast();
 
   // Track which theme was active on mount so we can restore it on leave
-  const originalThemeAttr = useRef(
-    document.documentElement.getAttribute("data-theme")
-  );
+  const originalThemeAttr = useRef(document.documentElement.getAttribute("data-theme"));
   // Snapshot the initial computed values before any user overrides
   const baselineRef = useRef<Record<string, string>>(snapshotAll());
 
@@ -131,9 +121,7 @@ export function ThemeEditor() {
               <Text variant="h5" className="whitespace-nowrap">
                 Theme Editor
               </Text>
-              {changeCount > 0 && (
-                <Badge variant="info">{changeCount} changed</Badge>
-              )}
+              {changeCount > 0 && <Badge variant="info">{changeCount} changed</Badge>}
             </Row>
 
             <Row gap="r5" align="center" wrap>
@@ -153,18 +141,11 @@ export function ThemeEditor() {
                 </Select>
               </Row>
 
-              <IconButton
-                aria-label="Reset all overrides"
-                onClick={handleReset}
-              >
+              <IconButton aria-label="Reset all overrides" onClick={handleReset}>
                 <RotateCcw className="w-4 h-4" />
               </IconButton>
 
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={handleExportAll}
-              >
+              <Button size="sm" variant="secondary" onClick={handleExportAll}>
                 <Download className="w-3.5 h-3.5 mr-1.5" />
                 Export All
               </Button>

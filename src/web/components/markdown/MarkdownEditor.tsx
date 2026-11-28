@@ -24,13 +24,7 @@
  * before the browser paints, so the caret never visibly jumps.
  */
 import { Eye, Pencil } from "lucide-react";
-import {
-  type KeyboardEvent,
-  useCallback,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { type KeyboardEvent, useCallback, useLayoutEffect, useRef, useState } from "react";
 
 import { MentionSuggestions } from "@/web/components/form/MentionSuggestions";
 import { IconButton } from "@/web/components/ui/IconButton";
@@ -207,7 +201,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): React.JSX.Element {
       onChange(next.value);
       return true;
     },
-    [value, onChange],
+    [value, onChange]
   );
 
   const handleCommand = useCallback(
@@ -215,7 +209,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): React.JSX.Element {
       if (disabled) return;
       applyTransform((sel) => applyCommand(command, sel));
     },
-    [disabled, applyTransform],
+    [disabled, applyTransform]
   );
 
   const handleKeyDown = useCallback(
@@ -263,7 +257,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): React.JSX.Element {
         }
       }
     },
-    [disabled, mention, applyTransform],
+    [disabled, mention, applyTransform]
   );
 
   const hasContent = value.trim().length > 0;
@@ -302,7 +296,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): React.JSX.Element {
         // instead, so the surface still reads as one clean rounded card.
         "rounded-md border border-border-strong bg-surface-0 duration-fast",
         "focus-within:border-border-focus focus-within:ring-2 focus-within:ring-border-focus",
-        disabled && "opacity-60",
+        disabled && "opacity-60"
       )}
     >
       {/* Chrome row: formatting toolbar (Write) or "Preview" label + mode toggle */}
@@ -358,7 +352,7 @@ export function MarkdownEditor(props: MarkdownEditorProps): React.JSX.Element {
             className={cn(
               "md-editor__textarea block w-full resize-none overflow-y-auto bg-transparent px-r4 py-r5",
               "text-body-2 leading-relaxed text-fg-primary placeholder:text-fg-muted",
-              "focus:outline-none disabled:cursor-not-allowed",
+              "focus:outline-none disabled:cursor-not-allowed"
             )}
           />
 

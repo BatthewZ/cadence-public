@@ -4,10 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockCanCreateProject = { value: true };
 vi.mock("@/web/hooks/use-permissions", async () => {
-  const actual =
-    await vi.importActual<typeof import("@/web/hooks/use-permissions")>(
-      "@/web/hooks/use-permissions",
-    );
+  const actual = await vi.importActual<typeof import("@/web/hooks/use-permissions")>(
+    "@/web/hooks/use-permissions"
+  );
   return {
     // The denial copy is imported from the real module rather than restated,
     // so a reworded hint updates this test's expectation with it instead of

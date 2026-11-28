@@ -4,12 +4,7 @@ import { type FormEvent, useCallback, useState } from "react";
 import { createWorkspaceSchema } from "@/shared/schemas/workspace";
 import { Field, FieldError, FormActions, Input, Label, Textarea } from "@/web/components/form";
 import { Stack } from "@/web/components/layout";
-import {
-  Alert,
-  Button,
-  Dialog,
-  Text,
-} from "@/web/components/ui";
+import { Alert, Button, Dialog, Text } from "@/web/components/ui";
 import { type Workspace } from "@/web/contexts/WorkspaceContext";
 import { useFieldErrors } from "@/web/hooks/use-field-errors";
 import { api } from "@/web/lib/api/client";
@@ -43,7 +38,12 @@ export function CreateWorkspaceDialog({
   const { fieldErrors, clearFieldError, setFromZodError, resetFieldErrors } = useFieldErrors();
 
   const qc = useQueryClient();
-  const { mutateAsync, isPending: loading, error: mutationError, reset } = useMutation({
+  const {
+    mutateAsync,
+    isPending: loading,
+    error: mutationError,
+    reset,
+  } = useMutation({
     mutationFn: (input: CreateWorkspaceBody) =>
       api.post<CreateWorkspaceResponse>("/api/workspaces", input),
     onSuccess: () => {
@@ -143,7 +143,8 @@ export function CreateWorkspaceDialog({
             <FieldError>{fieldErrors.slug}</FieldError>
             {slug && (
               <Text variant="body-3" color="secondary" className="mt-1">
-                Your workspace will be at <span className="font-medium text-fg-primary">/w/{slug}</span>
+                Your workspace will be at{" "}
+                <span className="font-medium text-fg-primary">/w/{slug}</span>
               </Text>
             )}
           </Field>

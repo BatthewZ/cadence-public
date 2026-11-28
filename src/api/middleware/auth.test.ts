@@ -11,11 +11,7 @@ vi.mock("../lib/auth", () => ({
 import { createDb } from "../../db";
 import { apiToken } from "../../db/schema";
 import type { AppEnv } from "../env";
-import {
-  generateApiToken,
-  newApiTokenId,
-  TOKEN_PREFIX,
-} from "../lib/api-tokens";
+import { generateApiToken, newApiTokenId, TOKEN_PREFIX } from "../lib/api-tokens";
 import { createAuth, resetAuthCache } from "../lib/auth";
 import {
   createTestD1,
@@ -351,10 +347,7 @@ describe("authSessionMiddleware — PAT authentication", () => {
 
     // Confirm starting state — no lastUsedAt yet.
     const db = createDb(d1);
-    const [before] = await db
-      .select()
-      .from(apiToken)
-      .where(eq(apiToken.id, tokenId));
+    const [before] = await db.select().from(apiToken).where(eq(apiToken.id, tokenId));
     expect(before.lastUsedAt).toBeNull();
 
     const app = createPatApp();
@@ -366,10 +359,7 @@ describe("authSessionMiddleware — PAT authentication", () => {
     // inline promise a tick to settle.
     await new Promise((r) => setTimeout(r, 10));
 
-    const [after] = await db
-      .select()
-      .from(apiToken)
-      .where(eq(apiToken.id, tokenId));
+    const [after] = await db.select().from(apiToken).where(eq(apiToken.id, tokenId));
     expect(after.lastUsedAt).not.toBeNull();
     expect(after.lastUsedAt instanceof Date).toBe(true);
   });
@@ -432,7 +422,7 @@ describe("authSessionMiddleware — PAT authentication", () => {
           authorization: `Bearer ${malformed}`,
           cookie: "better-auth.session_token=valid-cookie",
         },
-      }),
+      })
     );
 
     expect(res.status).toBe(401);
@@ -460,7 +450,7 @@ describe("authSessionMiddleware — PAT authentication", () => {
     const res = await app.request(
       new Request("http://localhost/test", {
         headers: { authorization: "Bearer some-non-pat-bearer" },
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -487,7 +477,7 @@ describe("authSessionMiddleware — PAT authentication", () => {
     const res = await app.request(
       new Request("http://localhost/test", {
         headers: { cookie: "better-auth.session_token=valid" },
-      }),
+      })
     );
 
     expect(res.status).toBe(200);

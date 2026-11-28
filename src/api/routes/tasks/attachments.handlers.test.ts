@@ -82,7 +82,7 @@ function splitStatements(sql: string): string[] {
     .filter(
       (s) =>
         s.length > 0 &&
-        !s.split("\n").every((line) => line.trim().startsWith("--") || line.trim() === ""),
+        !s.split("\n").every((line) => line.trim().startsWith("--") || line.trim() === "")
     );
 }
 
@@ -142,7 +142,7 @@ beforeEach(async () => {
 function authWithStorage(
   user: typeof TEST_USER | typeof TEST_USER_2 = TEST_USER,
   storageOverride?: R2Bucket,
-  projectAccess?: { role: "admin" | "member" | "viewer"; source: "workspace" | "project" },
+  projectAccess?: { role: "admin" | "member" | "viewer"; source: "workspace" | "project" }
 ): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     if (!c.env) {
@@ -281,7 +281,7 @@ describe("uploadAttachment", () => {
       new Request(`http://localhost/tasks/${taskId}/attachments`, {
         method: "POST",
         body: new FormData(),
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -313,7 +313,7 @@ describe("uploadAttachment", () => {
     app.post(
       "/tasks/:taskId/attachments",
       authWithStorage(TEST_USER, undefined as unknown as R2Bucket),
-      uploadAttachment,
+      uploadAttachment
     );
 
     // Override to remove storage
@@ -417,14 +417,13 @@ describe("deleteAttachment", () => {
     deleteApp.delete(
       "/tasks/:taskId/attachments/:attachmentId",
       authWithStorage(),
-      deleteAttachment,
+      deleteAttachment
     );
 
     const res = await deleteApp.request(
-      new Request(
-        `http://localhost/tasks/${taskId}/attachments/${attachment.id}`,
-        { method: "DELETE" },
-      ),
+      new Request(`http://localhost/tasks/${taskId}/attachments/${attachment.id}`, {
+        method: "DELETE",
+      })
     );
     expect(res.status).toBe(200);
 
@@ -445,17 +444,12 @@ describe("deleteAttachment", () => {
 
   it("returns 404 for non-existent attachment", async () => {
     const app = new Hono<AppEnv>();
-    app.delete(
-      "/tasks/:taskId/attachments/:attachmentId",
-      authWithStorage(),
-      deleteAttachment,
-    );
+    app.delete("/tasks/:taskId/attachments/:attachmentId", authWithStorage(), deleteAttachment);
 
     const res = await app.request(
-      new Request(
-        `http://localhost/tasks/${taskId}/attachments/non-existent-id`,
-        { method: "DELETE" },
-      ),
+      new Request(`http://localhost/tasks/${taskId}/attachments/non-existent-id`, {
+        method: "DELETE",
+      })
     );
     expect(res.status).toBe(404);
   });
@@ -474,14 +468,13 @@ describe("deleteAttachment", () => {
     deleteApp.delete(
       "/tasks/:taskId/attachments/:attachmentId",
       authWithStorage(TEST_USER, undefined, { role: "viewer", source: "project" }),
-      deleteAttachment,
+      deleteAttachment
     );
 
     const res = await deleteApp.request(
-      new Request(
-        `http://localhost/tasks/${taskId}/attachments/${attachment.id}`,
-        { method: "DELETE" },
-      ),
+      new Request(`http://localhost/tasks/${taskId}/attachments/${attachment.id}`, {
+        method: "DELETE",
+      })
     );
     expect(res.status).toBe(200);
     const body: DeleteResponse = await res.json();
@@ -502,14 +495,13 @@ describe("deleteAttachment", () => {
     deleteApp.delete(
       "/tasks/:taskId/attachments/:attachmentId",
       authWithStorage(TEST_USER_2, undefined, { role: "viewer", source: "project" }),
-      deleteAttachment,
+      deleteAttachment
     );
 
     const res = await deleteApp.request(
-      new Request(
-        `http://localhost/tasks/${taskId}/attachments/${attachment.id}`,
-        { method: "DELETE" },
-      ),
+      new Request(`http://localhost/tasks/${taskId}/attachments/${attachment.id}`, {
+        method: "DELETE",
+      })
     );
     expect(res.status).toBe(403);
     const body: ErrorResponse = await res.json();
@@ -530,14 +522,13 @@ describe("deleteAttachment", () => {
     deleteApp.delete(
       "/tasks/:taskId/attachments/:attachmentId",
       authWithStorage(TEST_USER_2, undefined, { role: "admin", source: "project" }),
-      deleteAttachment,
+      deleteAttachment
     );
 
     const res = await deleteApp.request(
-      new Request(
-        `http://localhost/tasks/${taskId}/attachments/${attachment.id}`,
-        { method: "DELETE" },
-      ),
+      new Request(`http://localhost/tasks/${taskId}/attachments/${attachment.id}`, {
+        method: "DELETE",
+      })
     );
     expect(res.status).toBe(200);
     const body: DeleteResponse = await res.json();
@@ -560,7 +551,7 @@ describe("deleteAttachment", () => {
       .all();
 
     const uploadActivity = activities.results.find(
-      (a: Record<string, unknown>) => a.action === "attachment_added",
+      (a: Record<string, unknown>) => a.action === "attachment_added"
     );
     expect(uploadActivity).toBeDefined();
     expect((uploadActivity as Record<string, unknown>).newValue).toBe("activity-test.pdf");
@@ -570,14 +561,13 @@ describe("deleteAttachment", () => {
     deleteApp.delete(
       "/tasks/:taskId/attachments/:attachmentId",
       authWithStorage(),
-      deleteAttachment,
+      deleteAttachment
     );
 
     await deleteApp.request(
-      new Request(
-        `http://localhost/tasks/${taskId}/attachments/${attachment.id}`,
-        { method: "DELETE" },
-      ),
+      new Request(`http://localhost/tasks/${taskId}/attachments/${attachment.id}`, {
+        method: "DELETE",
+      })
     );
 
     // Check delete activity
@@ -587,7 +577,7 @@ describe("deleteAttachment", () => {
       .all();
 
     const deleteActivity = activitiesAfter.results.find(
-      (a: Record<string, unknown>) => a.action === "attachment_removed",
+      (a: Record<string, unknown>) => a.action === "attachment_removed"
     );
     expect(deleteActivity).toBeDefined();
     expect((deleteActivity as Record<string, unknown>).newValue).toBe("activity-test.pdf");

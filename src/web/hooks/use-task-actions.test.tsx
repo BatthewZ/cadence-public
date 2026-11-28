@@ -15,9 +15,8 @@ vi.mock("@/web/lib/offline/send-write", async (importOriginal) => {
 });
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -74,7 +73,7 @@ function setup() {
         taskGroups: TASK_GROUPS,
         workspaceId: "ws-1",
       }),
-    { wrapper },
+    { wrapper }
   );
   return { result, updateTask, removeTask, restore };
 }

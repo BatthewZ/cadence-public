@@ -36,13 +36,10 @@ function nextSeedPosition(): string {
 }
 
 /** Insert a test user into the database. */
-export async function seedUser(
-  d1: D1Database,
-  user: TestUserFixture = TEST_USER,
-) {
+export async function seedUser(d1: D1Database, user: TestUserFixture = TEST_USER) {
   await d1
     .prepare(
-      "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(
       user.id,
@@ -51,7 +48,7 @@ export async function seedUser(
       user.emailVerified ? 1 : 0,
       user.image,
       toSec(user.createdAt),
-      toSec(user.updatedAt),
+      toSec(user.updatedAt)
     )
     .run();
 }
@@ -60,21 +57,28 @@ export async function seedUser(
 export async function seedWorkspace(
   d1: D1Database,
   ownerId: string,
-  opts?: { id?: string; name?: string; slug?: string },
+  opts?: { id?: string; name?: string; slug?: string }
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = toSec(Date.now());
   await d1
     .prepare(
-      "INSERT INTO workspace (id, name, slug, ownerId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO workspace (id, name, slug, ownerId, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
     )
-    .bind(id, opts?.name ?? "Test Workspace", opts?.slug ?? `test-ws-${id.slice(0, 8)}`, ownerId, now, now)
+    .bind(
+      id,
+      opts?.name ?? "Test Workspace",
+      opts?.slug ?? `test-ws-${id.slice(0, 8)}`,
+      ownerId,
+      now,
+      now
+    )
     .run();
 
   // Add owner as workspace member
   await d1
     .prepare(
-      "INSERT INTO workspace_member (id, workspaceId, userId, role, joinedAt) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO workspace_member (id, workspaceId, userId, role, joinedAt) VALUES (?, ?, ?, ?, ?)"
     )
     .bind(crypto.randomUUID(), id, ownerId, "owner", now)
     .run();
@@ -87,12 +91,12 @@ export async function seedWorkspaceMember(
   d1: D1Database,
   workspaceId: string,
   userId: string,
-  role: "owner" | "admin" | "member" = "member",
+  role: "owner" | "admin" | "member" = "member"
 ): Promise<string> {
   const id = crypto.randomUUID();
   await d1
     .prepare(
-      "INSERT INTO workspace_member (id, workspaceId, userId, role, joinedAt) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO workspace_member (id, workspaceId, userId, role, joinedAt) VALUES (?, ?, ?, ?, ?)"
     )
     .bind(id, workspaceId, userId, role, toSec(Date.now()))
     .run();
@@ -114,13 +118,13 @@ export async function seedProject(
     status?: string;
     coverImageKey?: string;
     coverUnsplash?: UnsplashCoverPayload;
-  },
+  }
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = toSec(Date.now());
   await d1
     .prepare(
-      "INSERT INTO project (id, workspaceId, name, description, icon, theme, status, budget, auto_assign_creator, cover_image_key, cover_unsplash, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO project (id, workspaceId, name, description, icon, theme, status, budget, auto_assign_creator, cover_image_key, cover_unsplash, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(
       id,
@@ -135,7 +139,7 @@ export async function seedProject(
       opts?.coverImageKey ?? null,
       opts?.coverUnsplash ? JSON.stringify(opts.coverUnsplash) : null,
       now,
-      now,
+      now
     )
     .run();
   return id;
@@ -146,12 +150,12 @@ export async function seedProjectMember(
   d1: D1Database,
   projectId: string,
   userId: string,
-  role: "admin" | "member" | "viewer" = "member",
+  role: "admin" | "member" | "viewer" = "member"
 ): Promise<string> {
   const id = crypto.randomUUID();
   await d1
     .prepare(
-      "INSERT INTO project_member (id, projectId, userId, role, addedAt) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO project_member (id, projectId, userId, role, addedAt) VALUES (?, ?, ?, ?, ?)"
     )
     .bind(id, projectId, userId, role, toSec(Date.now()))
     .run();
@@ -163,13 +167,11 @@ export async function seedLabel(
   d1: D1Database,
   projectId: string,
   name: string,
-  color = "#3b82f6",
+  color = "#3b82f6"
 ): Promise<string> {
   const id = crypto.randomUUID();
   await d1
-    .prepare(
-      "INSERT INTO label (id, projectId, name, color, createdAt) VALUES (?, ?, ?, ?, ?)",
-    )
+    .prepare("INSERT INTO label (id, projectId, name, color, createdAt) VALUES (?, ?, ?, ?, ?)")
     .bind(id, projectId, name, color, toSec(Date.now()))
     .run();
   return id;
@@ -179,12 +181,12 @@ export async function seedLabel(
 export async function seedTaskGroup(
   d1: D1Database,
   projectId: string,
-  opts?: { id?: string; name?: string; isCompletionGroup?: boolean; position?: string },
+  opts?: { id?: string; name?: string; isCompletionGroup?: boolean; position?: string }
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   await d1
     .prepare(
-      "INSERT INTO task_group (id, projectId, name, is_completion_group, position, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO task_group (id, projectId, name, is_completion_group, position, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(
       id,
@@ -193,7 +195,7 @@ export async function seedTaskGroup(
       opts?.isCompletionGroup ? 1 : 0,
       opts?.position ?? nextSeedPosition(),
       toSec(Date.now()),
-      toSec(Date.now()),
+      toSec(Date.now())
     )
     .run();
   return id;
@@ -218,14 +220,14 @@ export async function seedTask(
     icon?: string;
     coverImageKey?: string;
     coverUnsplash?: UnsplashCoverPayload;
-  },
+  }
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = toSec(Date.now());
   await d1
     .prepare(
       `INSERT INTO task (id, projectId, taskGroupId, title, completed, priority, assigneeId, startDate, dueDate, position, description, cost, icon, cover_image_key, cover_unsplash, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       id,
@@ -244,7 +246,7 @@ export async function seedTask(
       opts?.coverImageKey ?? null,
       opts?.coverUnsplash ? JSON.stringify(opts.coverUnsplash) : null,
       now,
-      now,
+      now
     )
     .run();
   return id;
@@ -255,13 +257,13 @@ export async function seedComment(
   d1: D1Database,
   taskId: string,
   authorId: string,
-  opts?: { id?: string; body?: string; createdAt?: Date },
+  opts?: { id?: string; body?: string; createdAt?: Date }
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = opts?.createdAt ? toSec(opts.createdAt) : toSec(Date.now());
   await d1
     .prepare(
-      "INSERT INTO comment (id, taskId, authorId, body, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO comment (id, taskId, authorId, body, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)"
     )
     .bind(id, taskId, authorId, opts?.body ?? "Test comment", now, now)
     .run();
@@ -272,12 +274,12 @@ export async function seedComment(
 export async function seedSubtask(
   d1: D1Database,
   taskId: string,
-  opts?: { id?: string; title?: string; completed?: boolean; position?: string },
+  opts?: { id?: string; title?: string; completed?: boolean; position?: string }
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   await d1
     .prepare(
-      "INSERT INTO subtask (id, taskId, title, completed, position, createdAt) VALUES (?, ?, ?, ?, ?, ?)",
+      "INSERT INTO subtask (id, taskId, title, completed, position, createdAt) VALUES (?, ?, ?, ?, ?, ?)"
     )
     .bind(
       id,
@@ -285,7 +287,7 @@ export async function seedSubtask(
       opts?.title ?? "Test Subtask",
       opts?.completed ? 1 : 0,
       opts?.position ?? nextSeedPosition(),
-      toSec(Date.now()),
+      toSec(Date.now())
     )
     .run();
   return id;
@@ -303,17 +305,15 @@ export async function seedInvitation(
     token?: string;
     status?: string;
     expiresAt?: Date;
-  },
+  }
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = toSec(Date.now());
-  const expiresAt = opts?.expiresAt
-    ? toSec(opts.expiresAt)
-    : now + 7 * 24 * 60 * 60; // 7 days in seconds
+  const expiresAt = opts?.expiresAt ? toSec(opts.expiresAt) : now + 7 * 24 * 60 * 60; // 7 days in seconds
   await d1
     .prepare(
       `INSERT INTO invitation (id, workspaceId, email, role, invitedBy, token, status, expiresAt, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       id,
@@ -324,7 +324,7 @@ export async function seedInvitation(
       opts?.token ?? crypto.randomUUID(),
       opts?.status ?? "pending",
       expiresAt,
-      now,
+      now
     )
     .run();
   return id;
@@ -334,13 +334,13 @@ export async function seedInvitation(
 export async function seedTeam(
   d1: D1Database,
   workspaceId: string,
-  opts?: { id?: string; name?: string },
+  opts?: { id?: string; name?: string }
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = toSec(Date.now());
   await d1
     .prepare(
-      "INSERT INTO team (id, workspaceId, name, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)",
+      "INSERT INTO team (id, workspaceId, name, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?)"
     )
     .bind(id, workspaceId, opts?.name ?? "Test Team", now, now)
     .run();
@@ -352,13 +352,11 @@ export async function seedTeamMember(
   d1: D1Database,
   teamId: string,
   userId: string,
-  role: "lead" | "member" = "member",
+  role: "lead" | "member" = "member"
 ): Promise<string> {
   const id = crypto.randomUUID();
   await d1
-    .prepare(
-      "INSERT INTO team_member (id, teamId, userId, role, joinedAt) VALUES (?, ?, ?, ?, ?)",
-    )
+    .prepare("INSERT INTO team_member (id, teamId, userId, role, joinedAt) VALUES (?, ?, ?, ?, ?)")
     .bind(id, teamId, userId, role, toSec(Date.now()))
     .run();
   return id;
@@ -377,14 +375,14 @@ export async function seedNotification(
     actorId?: string;
     workspaceId?: string;
     createdAt?: Date;
-  },
+  }
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = opts?.createdAt ? toSec(opts.createdAt) : toSec(Date.now());
   await d1
     .prepare(
       `INSERT INTO notification (id, userId, type, title, body, read, actorId, workspaceId, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       id,
@@ -395,7 +393,7 @@ export async function seedNotification(
       opts?.read ? 1 : 0,
       opts?.actorId ?? null,
       opts?.workspaceId ?? null,
-      now,
+      now
     )
     .run();
   return id;
@@ -414,14 +412,14 @@ export async function seedTaskActivity(
     newValue?: string;
     createdAt?: Date;
     apiTokenId?: string | null;
-  },
+  }
 ): Promise<string> {
   const id = opts?.id ?? crypto.randomUUID();
   const now = opts?.createdAt ? toSec(opts.createdAt) : toSec(Date.now());
   await d1
     .prepare(
       `INSERT INTO task_activity (id, taskId, actorId, action, field, oldValue, newValue, apiTokenId, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       id,
@@ -432,7 +430,7 @@ export async function seedTaskActivity(
       opts?.oldValue ?? null,
       opts?.newValue ?? null,
       opts?.apiTokenId ?? null,
-      now,
+      now
     )
     .run();
   return id;
@@ -453,7 +451,7 @@ export async function seedWebhook(
     projectId?: string;
     createdAt?: Date;
     updatedAt?: Date;
-  },
+  }
 ) {
   const id = opts?.id ?? crypto.randomUUID();
   const now = toSec(Date.now());
@@ -470,12 +468,36 @@ export async function seedWebhook(
   await d1
     .prepare(
       `INSERT INTO webhook (id, workspaceId, projectId, name, url, secret, events, active, consecutiveFailures, createdAt, updatedAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .bind(id, workspaceId, projectId, name, url, secret, events, active, consecutiveFailures, createdAt, updatedAt)
+    .bind(
+      id,
+      workspaceId,
+      projectId,
+      name,
+      url,
+      secret,
+      events,
+      active,
+      consecutiveFailures,
+      createdAt,
+      updatedAt
+    )
     .run();
 
-  return { id, workspaceId, projectId, name, url, secret, events, active, consecutiveFailures, createdAt, updatedAt };
+  return {
+    id,
+    workspaceId,
+    projectId,
+    name,
+    url,
+    secret,
+    events,
+    active,
+    consecutiveFailures,
+    createdAt,
+    updatedAt,
+  };
 }
 
 /** Create a webhook delivery record. Returns the created delivery object. */
@@ -494,7 +516,7 @@ export async function seedWebhookDelivery(
     nextRetryAt?: Date | null;
     createdAt?: Date;
     lastAttemptAt?: Date;
-  },
+  }
 ) {
   const id = opts?.id ?? crypto.randomUUID();
   const now = toSec(Date.now());
@@ -512,10 +534,36 @@ export async function seedWebhookDelivery(
   await d1
     .prepare(
       `INSERT INTO webhook_delivery (id, webhookId, event, payload, statusCode, response, success, attempts, maxAttempts, nextRetryAt, createdAt, lastAttemptAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
-    .bind(id, webhookId, event, payload, statusCode, response, success, attempts, maxAttempts, nextRetryAt, createdAt, lastAttemptAt)
+    .bind(
+      id,
+      webhookId,
+      event,
+      payload,
+      statusCode,
+      response,
+      success,
+      attempts,
+      maxAttempts,
+      nextRetryAt,
+      createdAt,
+      lastAttemptAt
+    )
     .run();
 
-  return { id, webhookId, event, payload, statusCode, response, success, attempts, maxAttempts, nextRetryAt, createdAt, lastAttemptAt };
+  return {
+    id,
+    webhookId,
+    event,
+    payload,
+    statusCode,
+    response,
+    success,
+    attempts,
+    maxAttempts,
+    nextRetryAt,
+    createdAt,
+    lastAttemptAt,
+  };
 }

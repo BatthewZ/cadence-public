@@ -38,7 +38,11 @@ describe("AuthGuard", () => {
       isPending: false,
     });
 
-    render(<AuthGuard><span>Protected</span></AuthGuard>);
+    render(
+      <AuthGuard>
+        <span>Protected</span>
+      </AuthGuard>
+    );
     expect(screen.getByText("Protected")).toBeInTheDocument();
   });
 
@@ -48,7 +52,11 @@ describe("AuthGuard", () => {
       isPending: false,
     });
 
-    render(<AuthGuard><span>Protected</span></AuthGuard>);
+    render(
+      <AuthGuard>
+        <span>Protected</span>
+      </AuthGuard>
+    );
     expect(mockOfflineProvider).toHaveBeenCalledWith("user-7");
   });
 
@@ -58,7 +66,11 @@ describe("AuthGuard", () => {
       isPending: false,
     });
 
-    render(<AuthGuard><span>Protected</span></AuthGuard>);
+    render(
+      <AuthGuard>
+        <span>Protected</span>
+      </AuthGuard>
+    );
     expect(screen.queryByText("Protected")).not.toBeInTheDocument();
     expect(mockNavigate).toHaveBeenCalledWith(
       expect.objectContaining({ to: "/login", replace: true })
@@ -71,7 +83,11 @@ describe("AuthGuard", () => {
       isPending: true,
     });
 
-    const { container } = render(<AuthGuard><span>Protected</span></AuthGuard>);
+    const { container } = render(
+      <AuthGuard>
+        <span>Protected</span>
+      </AuthGuard>
+    );
     expect(screen.queryByText("Protected")).not.toBeInTheDocument();
     // Should render Spinner inside Center
     expect(container.querySelector("[role='status']")).toBeTruthy();

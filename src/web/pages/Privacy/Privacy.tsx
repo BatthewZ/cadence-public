@@ -43,9 +43,9 @@ export function Privacy() {
           {/* Intro */}
           <section>
             <Text variant="body-1" color="secondary">
-              Cadence is an open-source project management tool built as a passion project.
-              This policy explains what data we collect, why, and what we do (and don't do) with it.
-              We believe in being straightforward — no legalese walls, no buried clauses.
+              Cadence is an open-source project management tool built as a passion project. This
+              policy explains what data we collect, why, and what we do (and don't do) with it. We
+              believe in being straightforward — no legalese walls, no buried clauses.
             </Text>
           </section>
 
@@ -82,8 +82,8 @@ export function Privacy() {
                 </Text>
                 <Text variant="body-1" color="secondary">
                   Everything you create within the Service: workspaces, projects, tasks, comments,
-                  labels, attachments, and any other content. This is your data — we store it so
-                  the app works.
+                  labels, attachments, and any other content. This is your data — we store it so the
+                  app works.
                 </Text>
               </div>
 
@@ -109,14 +109,14 @@ export function Privacy() {
             <ul className="list-disc space-y-2 pl-6">
               <li>
                 <Text variant="body-1" color="secondary" as="span">
-                  To provide and operate the Service — your workspaces, projects, and tasks need
-                  to live somewhere.
+                  To provide and operate the Service — your workspaces, projects, and tasks need to
+                  live somewhere.
                 </Text>
               </li>
               <li>
                 <Text variant="body-1" color="secondary" as="span">
-                  To send transactional emails (verification, password reset) via Resend when
-                  email delivery is configured.
+                  To send transactional emails (verification, password reset) via Resend when email
+                  delivery is configured.
                 </Text>
               </li>
               <li>
@@ -151,8 +151,8 @@ export function Privacy() {
               </li>
               <li>
                 <Text variant="body-1" color="secondary" as="span">
-                  <strong className="text-fg-primary">Passwords:</strong> Hashed and never stored
-                  in plain text. We cannot see your password.
+                  <strong className="text-fg-primary">Passwords:</strong> Hashed and never stored in
+                  plain text. We cannot see your password.
                 </Text>
               </li>
               <li>
@@ -179,14 +179,14 @@ export function Privacy() {
             <ul className="list-disc space-y-2 pl-6">
               <li>
                 <Text variant="body-1" color="secondary" as="span">
-                  <strong className="text-fg-primary">Cloudflare</strong> — hosting, database
-                  (D1), and file storage (R2). Your data lives on Cloudflare's infrastructure.
+                  <strong className="text-fg-primary">Cloudflare</strong> — hosting, database (D1),
+                  and file storage (R2). Your data lives on Cloudflare's infrastructure.
                 </Text>
               </li>
               <li>
                 <Text variant="body-1" color="secondary" as="span">
-                  <strong className="text-fg-primary">Resend</strong> — transactional email
-                  delivery only (verification, password reset), when configured.
+                  <strong className="text-fg-primary">Resend</strong> — transactional email delivery
+                  only (verification, password reset), when configured.
                 </Text>
               </li>
             </ul>
@@ -201,14 +201,14 @@ export function Privacy() {
               5. Data Retention &amp; Deletion
             </Text>
             <Text variant="body-1" color="secondary">
-              Your data is retained for as long as your account exists. There's no hidden
-              retention after deletion.
+              Your data is retained for as long as your account exists. There's no hidden retention
+              after deletion.
             </Text>
             <Text variant="body-1" color="secondary">
               You can delete your account at any time from{" "}
               <strong className="text-fg-primary">Settings</strong>. When you do, we permanently
-              delete your user record, sessions, workspace memberships, and all associated
-              content. This is a cascading, irreversible operation — once it's gone, it's gone.
+              delete your user record, sessions, workspace memberships, and all associated content.
+              This is a cascading, irreversible operation — once it's gone, it's gone.
             </Text>
           </section>
 
@@ -226,14 +226,14 @@ export function Privacy() {
               </li>
               <li>
                 <Text variant="body-1" color="secondary" as="span">
-                  <strong className="text-fg-primary">Deletion:</strong> You can delete your
-                  account and all associated data at any time.
+                  <strong className="text-fg-primary">Deletion:</strong> You can delete your account
+                  and all associated data at any time.
                 </Text>
               </li>
               <li>
                 <Text variant="body-1" color="secondary" as="span">
-                  <strong className="text-fg-primary">Export:</strong> We don't currently offer
-                  bulk data export, but this may be added in the future.
+                  <strong className="text-fg-primary">Export:</strong> We don't currently offer bulk
+                  data export, but this may be added in the future.
                 </Text>
               </li>
             </ul>

@@ -40,11 +40,13 @@ export function useRecents(workspaceId: string) {
         const updated = [{ ...item, timestamp: Date.now() }, ...filtered].slice(0, MAX_RECENTS);
         try {
           localStorage.setItem(getStorageKey(workspaceId), JSON.stringify(updated));
-        } catch { /* storage full */ }
+        } catch {
+          /* storage full */
+        }
         return updated;
       });
     },
-    [workspaceId],
+    [workspaceId]
   );
 
   return { recents, addRecent };

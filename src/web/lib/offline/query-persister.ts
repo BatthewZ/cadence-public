@@ -30,7 +30,7 @@ const BUSTER = __APP_VERSION__;
 export function mergeSavedCache(
   saved: PersistedClient | undefined,
   incoming: PersistedClient,
-  now: number = Date.now(),
+  now: number = Date.now()
 ): PersistedClient {
   const savedQueries = saved?.buster === incoming.buster ? saved.clientState?.queries : undefined;
   if (!Array.isArray(savedQueries)) return incoming;
@@ -56,7 +56,10 @@ function idbPersister(db: OfflineDb): Persister & { flush: () => Promise<void> }
     timer = null;
     const client = pending;
     pending = null;
-    if (client) await db.update<PersistedClient>(KV_STORE, CACHE_KEY, (saved) => mergeSavedCache(saved, client));
+    if (client)
+      await db.update<PersistedClient>(KV_STORE, CACHE_KEY, (saved) =>
+        mergeSavedCache(saved, client)
+      );
   };
 
   return {
@@ -79,7 +82,7 @@ function idbPersister(db: OfflineDb): Persister & { flush: () => Promise<void> }
 export async function persistQueryCache(
   queryClient: QueryClient,
   db: OfflineDb,
-  isCurrent: () => boolean = () => true,
+  isCurrent: () => boolean = () => true
 ): Promise<() => void> {
   const persister = idbPersister(db);
   try {
@@ -103,7 +106,8 @@ export async function persistQueryCache(
     persister,
     buster: BUSTER,
     dehydrateOptions: {
-      shouldDehydrateQuery: (query) => query.state.status === "success" && isOfflineQueryKey(query.queryKey),
+      shouldDehydrateQuery: (query) =>
+        query.state.status === "success" && isOfflineQueryKey(query.queryKey),
       shouldDehydrateMutation: () => false,
     },
   });

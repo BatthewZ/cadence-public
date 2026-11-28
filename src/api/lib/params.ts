@@ -10,7 +10,10 @@ export function requireParam(c: Context<AppEnv>, name: string): string {
   return value;
 }
 
-export function requireParams<K extends string>(c: Context<AppEnv>, ...names: K[]): Record<K, string> {
+export function requireParams<K extends string>(
+  c: Context<AppEnv>,
+  ...names: K[]
+): Record<K, string> {
   const result = {} as Record<K, string>;
   for (const name of names) {
     result[name] = requireParam(c, name);

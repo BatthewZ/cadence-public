@@ -30,11 +30,11 @@ import { DUE_DATE_SENTINEL, getPeriodCutoff } from "./helpers";
 function buildDueDateCondition(
   dueDateFrom: string | undefined,
   dueDateTo: string | undefined,
-  noDueDate: boolean,
+  noDueDate: boolean
 ): SQL | undefined {
   const range = and(
     dueDateFrom ? gte(task.dueDate, new Date(`${dueDateFrom}T00:00:00.000Z`)) : undefined,
-    dueDateTo ? lte(task.dueDate, new Date(`${dueDateTo}T23:59:59.999Z`)) : undefined,
+    dueDateTo ? lte(task.dueDate, new Date(`${dueDateTo}T23:59:59.999Z`)) : undefined
   );
   if (noDueDate) {
     return range ? or(isNull(task.dueDate), range) : isNull(task.dueDate);
@@ -140,25 +140,22 @@ export async function myTasks(c: Context<AppEnv>) {
           .select({ one: sql`1` })
           .from(taskLabel)
           .innerJoin(label, eq(taskLabel.labelId, label.id))
-          .where(
-            and(
-              eq(taskLabel.taskId, task.id),
-              inArray(sql`lower(${label.name})`, lowered),
-            ),
-          ),
-      ),
+          .where(and(eq(taskLabel.taskId, task.id), inArray(sql`lower(${label.name})`, lowered)))
+      )
     );
   }
   if (noLabel) {
     labelConditions.push(
       notExists(
-        db.select({ one: sql`1` }).from(taskLabel).where(eq(taskLabel.taskId, task.id)),
-      ),
+        db
+          .select({ one: sql`1` })
+          .from(taskLabel)
+          .where(eq(taskLabel.taskId, task.id))
+      )
     );
   }
   if (labelConditions.length > 0) {
-    const combined =
-      labelConditions.length === 1 ? labelConditions[0] : or(...labelConditions);
+    const combined = labelConditions.length === 1 ? labelConditions[0] : or(...labelConditions);
     if (combined) {
       conditions.push(combined);
     }

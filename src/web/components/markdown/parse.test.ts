@@ -137,10 +137,7 @@ describe("parseMarkdown — blocks", () => {
       {
         type: "list",
         ordered: true,
-        items: [
-          [{ type: "text", value: "alpha" }],
-          [{ type: "text", value: "beta" }],
-        ],
+        items: [[{ type: "text", value: "alpha" }], [{ type: "text", value: "beta" }]],
       },
       { type: "paragraph", children: [{ type: "text", value: "After the list." }] },
     ]);
@@ -197,12 +194,8 @@ describe("parseInline — inline constructs", () => {
     expect(parseInline("**b**")).toEqual([
       { type: "strong", children: [{ type: "text", value: "b" }] },
     ]);
-    expect(parseInline("_i_")).toEqual([
-      { type: "em", children: [{ type: "text", value: "i" }] },
-    ]);
-    expect(parseInline("*i*")).toEqual([
-      { type: "em", children: [{ type: "text", value: "i" }] },
-    ]);
+    expect(parseInline("_i_")).toEqual([{ type: "em", children: [{ type: "text", value: "i" }] }]);
+    expect(parseInline("*i*")).toEqual([{ type: "em", children: [{ type: "text", value: "i" }] }]);
     expect(parseInline("`c`")).toEqual([{ type: "code", value: "c" }]);
   });
 
@@ -262,9 +255,7 @@ describe("parseInline — inline constructs", () => {
   });
 
   it("inline code is atomic — no nested marks or mentions inside", () => {
-    expect(parseInline("`@bob **x**`")).toEqual([
-      { type: "code", value: "@bob **x**" },
-    ]);
+    expect(parseInline("`@bob **x**`")).toEqual([{ type: "code", value: "@bob **x**" }]);
   });
 
   it("a mention immediately inside backticks stays literal code text", () => {
@@ -296,9 +287,7 @@ describe("parseInline — adversarial / graceful degradation", () => {
 
   it("treats a malformed link as literal text", () => {
     expect(parseInline("[no href]")).toEqual([{ type: "text", value: "[no href]" }]);
-    expect(parseInline("[label](unclosed")).toEqual([
-      { type: "text", value: "[label](unclosed" },
-    ]);
+    expect(parseInline("[label](unclosed")).toEqual([{ type: "text", value: "[label](unclosed" }]);
   });
 
   it("treats a lone @ as literal text", () => {

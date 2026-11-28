@@ -17,7 +17,7 @@ import type { TaskDetail } from "@/web/pages/TaskDetail/types";
  */
 export function useTaskServerSync(
   taskFromServer: TaskDetail | null | undefined,
-  setLocalTask: React.Dispatch<React.SetStateAction<TaskDetail | null>>,
+  setLocalTask: React.Dispatch<React.SetStateAction<TaskDetail | null>>
 ): void {
   useEffect(() => {
     if (!taskFromServer) return;

@@ -17,7 +17,7 @@ function splitStatements(sql: string): string[] {
     .filter(
       (s) =>
         s.length > 0 &&
-        !s.split("\n").every((line) => line.trim().startsWith("--") || line.trim() === ""),
+        !s.split("\n").every((line) => line.trim().startsWith("--") || line.trim() === "")
     );
 }
 
@@ -44,7 +44,7 @@ async function seedUnverifiedUser(d1: D1Database, id: string, email: string) {
   const now = Math.floor(Date.now() / 1000);
   await d1
     .prepare(
-      "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, 0, NULL, ?, ?)",
+      "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, 0, NULL, ?, ?)"
     )
     .bind(id, `User ${id}`, email, now, now)
     .run();

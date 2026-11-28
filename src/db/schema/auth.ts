@@ -10,20 +10,22 @@ export const user = sqliteTable("user", {
   updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
 });
 
-export const session = sqliteTable("session", {
-  id: text("id").primaryKey(),
-  userId: text("userId")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  token: text("token").notNull().unique(),
-  expiresAt: integer("expiresAt", { mode: "timestamp" }).notNull(),
-  ipAddress: text("ipAddress"),
-  userAgent: text("userAgent"),
-  createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
-  updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
-}, (table) => [
-  index("session_user_idx").on(table.userId),
-]);
+export const session = sqliteTable(
+  "session",
+  {
+    id: text("id").primaryKey(),
+    userId: text("userId")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    expiresAt: integer("expiresAt", { mode: "timestamp" }).notNull(),
+    ipAddress: text("ipAddress"),
+    userAgent: text("userAgent"),
+    createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
+    updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
+  },
+  (table) => [index("session_user_idx").on(table.userId)]
+);
 
 export const account = sqliteTable("account", {
   id: text("id").primaryKey(),

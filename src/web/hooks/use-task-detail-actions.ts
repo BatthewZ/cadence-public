@@ -15,7 +15,7 @@ interface UseTaskDetailActionsOptions {
   setLocalTask: React.Dispatch<React.SetStateAction<TaskDetail | null>>;
   toast: (
     message: string,
-    options?: { variant?: "info" | "success" | "warning" | "error" },
+    options?: { variant?: "info" | "success" | "warning" | "error" }
   ) => string;
   workspaceId: string;
   projectId?: string;
@@ -68,7 +68,7 @@ export function useTaskDetailActions({
 
     try {
       const result = await sendWrite<TaskCompletionResponse>(
-        taskCompletionWrite({ id: taskId, title: localTask.title }, !wasCompleted),
+        taskCompletionWrite({ id: taskId, title: localTask.title }, !wasCompleted)
       );
       if (result.status === "queued") return;
       const res = result.data;
@@ -154,7 +154,16 @@ export function useTaskDetailActions({
       restore?.();
       toast("Failed to delete task", { variant: "error" });
     }
-  }, [qc, taskId, taskTitle, removeTaskFromContext, workspaceId, projectId, onDeleteSuccess, toast]);
+  }, [
+    qc,
+    taskId,
+    taskTitle,
+    removeTaskFromContext,
+    workspaceId,
+    projectId,
+    onDeleteSuccess,
+    toast,
+  ]);
 
   return {
     showDeleteDialog,

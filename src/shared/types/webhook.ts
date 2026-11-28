@@ -33,27 +33,24 @@ export type WebhookEventType = (typeof WEBHOOK_EVENT_TYPES)[number];
 
 /** Events that belong to a specific project (task.* and project.*). */
 export const PROJECT_SCOPED_EVENTS: ReadonlySet<WebhookEventType> = new Set(
-  WEBHOOK_EVENT_TYPES.filter(
-    (e) => e.startsWith("task.") || e.startsWith("project."),
-  ),
+  WEBHOOK_EVENT_TYPES.filter((e) => e.startsWith("task.") || e.startsWith("project."))
 );
 
 /** Events that are workspace-wide and have no project context (workspace.* and invitation.*). */
 export const WORKSPACE_SCOPED_EVENTS: ReadonlySet<WebhookEventType> = new Set(
-  WEBHOOK_EVENT_TYPES.filter(
-    (e) => e.startsWith("workspace.") || e.startsWith("invitation."),
-  ),
+  WEBHOOK_EVENT_TYPES.filter((e) => e.startsWith("workspace.") || e.startsWith("invitation."))
 );
 
 /** Groups derived from WEBHOOK_EVENT_TYPES by prefix so new events are automatically categorized. */
-export const WEBHOOK_EVENT_GROUPS = WEBHOOK_EVENT_TYPES.reduce<
-  Record<string, WebhookEventType[]>
->((groups, event) => {
-  const prefix = event.split(".")[0];
-  const label = prefix.charAt(0).toUpperCase() + prefix.slice(1);
-  (groups[label] ??= []).push(event);
-  return groups;
-}, {}) as Record<string, readonly WebhookEventType[]>;
+export const WEBHOOK_EVENT_GROUPS = WEBHOOK_EVENT_TYPES.reduce<Record<string, WebhookEventType[]>>(
+  (groups, event) => {
+    const prefix = event.split(".")[0];
+    const label = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+    (groups[label] ??= []).push(event);
+    return groups;
+  },
+  {}
+) as Record<string, readonly WebhookEventType[]>;
 
 export interface WebhookPayloadEnvelope {
   [key: string]: unknown;

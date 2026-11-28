@@ -85,10 +85,7 @@ export function UpcomingTasksSection({
                   <Badge variant="default" className="shrink-0">
                     {task.taskGroupName}
                   </Badge>
-                  <Text
-                    variant="body-3"
-                    className={`shrink-0 ${urgencyTextClass[urgency]}`}
-                  >
+                  <Text variant="body-3" className={`shrink-0 ${urgencyTextClass[urgency]}`}>
                     {formatDueDate(task.dueDate)}
                   </Text>
                 </button>
@@ -98,11 +95,7 @@ export function UpcomingTasksSection({
               <button
                 type="button"
                 className="flex items-center gap-r6 px-r4 py-r5 text-sm font-medium text-accent hover:text-accent-hover transition-colors cursor-pointer"
-                onClick={() =>
-                  void navigate(
-                    `/w/${workspaceSlug}/projects/${projectId}/board`,
-                  )
-                }
+                onClick={() => void navigate(`/w/${workspaceSlug}/projects/${projectId}/board`)}
               >
                 View all on Board
               </button>

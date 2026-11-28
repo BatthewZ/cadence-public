@@ -12,7 +12,14 @@ import { TASK_PRIORITIES } from "../types/roles";
 const csvSegments = z
   .string()
   .optional()
-  .transform((v) => (v ? v.split(",").map((s) => s.trim()).filter(Boolean) : []));
+  .transform((v) =>
+    v
+      ? v
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : []
+  );
 
 const csvIdList = csvSegments.pipe(z.array(z.string().min(1)).max(100));
 

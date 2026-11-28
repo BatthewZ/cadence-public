@@ -58,7 +58,7 @@ describe("FileUpload", () => {
     render(<FileUpload disabled />);
     expect(screen.getByRole("button", { name: "Upload file" })).toHaveAttribute(
       "aria-disabled",
-      "true",
+      "true"
     );
   });
 

@@ -92,17 +92,8 @@ const TONES = {
  * query.
  */
 export const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(function Toggle(
-  {
-    checked,
-    onCheckedChange,
-    disabled,
-    id,
-    tone = "accent",
-    size = "md",
-    className,
-    ...aria
-  },
-  ref,
+  { checked, onCheckedChange, disabled, id, tone = "accent", size = "md", className, ...aria },
+  ref
 ) {
   const sz = SIZES[size];
   return (
@@ -123,7 +114,7 @@ export const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(function Toggle
         "disabled:cursor-not-allowed disabled:opacity-50",
         sz.track,
         checked ? TONES[tone] : "bg-border-default",
-        className,
+        className
       )}
       {...aria}
     >
@@ -131,7 +122,7 @@ export const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(function Toggle
         className={cn(
           "inline-block transform rounded-full bg-white shadow-sm transition-transform",
           sz.thumb,
-          checked ? sz.thumbOn : sz.thumbOff,
+          checked ? sz.thumbOn : sz.thumbOff
         )}
       />
     </button>

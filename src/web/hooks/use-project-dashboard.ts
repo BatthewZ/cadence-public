@@ -66,8 +66,7 @@ export interface ProjectDashboardData {
 export function useProjectDashboard(projectId: string) {
   return useQuery({
     queryKey: queryKeys.projects.dashboard(projectId),
-    queryFn: () =>
-      api.get<ProjectDashboardData>(`/api/projects/${projectId}/dashboard`),
+    queryFn: () => api.get<ProjectDashboardData>(`/api/projects/${projectId}/dashboard`),
     staleTime: 30_000,
   });
 }

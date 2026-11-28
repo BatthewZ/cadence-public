@@ -32,12 +32,7 @@ interface RevealTokenPanelProps {
   onDone: () => void;
 }
 
-export function RevealTokenPanel({
-  plaintext,
-  heading,
-  banner,
-  onDone,
-}: RevealTokenPanelProps) {
+export function RevealTokenPanel({ plaintext, heading, banner, onDone }: RevealTokenPanelProps) {
   const [copied, setCopied] = useState(false);
   const [acknowledged, setAcknowledged] = useState(false);
 
@@ -63,7 +58,7 @@ export function RevealTokenPanel({
         "# behalf within the granted scopes.\n\n",
         `${plaintext}\n`,
       ],
-      { type: "text/plain" },
+      { type: "text/plain" }
     );
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -97,8 +92,8 @@ export function RevealTokenPanel({
               You won&apos;t see this token again.
             </Text>
             <Text variant="body-3" color="muted" as="span">
-              Copy it now and store it in a secrets manager. Anyone with this
-              value can act on your behalf within the granted scopes.
+              Copy it now and store it in a secrets manager. Anyone with this value can act on your
+              behalf within the granted scopes.
             </Text>
           </Stack>
         </Row>
@@ -106,12 +101,7 @@ export function RevealTokenPanel({
 
       <div className="bg-surface-2 rounded-md border border-border-default/60 p-r4">
         <Stack gap="r5">
-          <Text
-            variant="body-3"
-            color="muted"
-            as="span"
-            className="uppercase tracking-wide"
-          >
+          <Text variant="body-3" color="muted" as="span" className="uppercase tracking-wide">
             Personal Access Token
           </Text>
           <Row gap="r5" align="center">
@@ -164,19 +154,12 @@ export function RevealTokenPanel({
           className="mt-r6"
         />
         <Text variant="body-3" as="span">
-          I&apos;ve stored this token safely. I understand it will not be shown
-          again.
+          I&apos;ve stored this token safely. I understand it will not be shown again.
         </Text>
       </label>
 
       <Row justify="end" gap="r4" className="pt-r3">
-        <Button
-          type="button"
-          variant="primary"
-          size="md"
-          disabled={!acknowledged}
-          onClick={onDone}
-        >
+        <Button type="button" variant="primary" size="md" disabled={!acknowledged} onClick={onDone}>
           Done
         </Button>
       </Row>

@@ -33,10 +33,7 @@ import {
   updateProjectMemberRoleSchema,
   updateProjectSchema,
 } from "../../../shared/schemas/project";
-import {
-  createSavedViewSchema,
-  updateSavedViewSchema,
-} from "../../../shared/schemas/saved-view";
+import { createSavedViewSchema, updateSavedViewSchema } from "../../../shared/schemas/saved-view";
 import { unsplashCoverPayloadSchema } from "../../../shared/schemas/unsplash";
 import { createWebhookSchema, updateWebhookSchema } from "../../../shared/schemas/webhook";
 import type { AppEnv } from "../../env";
@@ -97,7 +94,7 @@ import {
  * webhooks routes for the rationale — runtime behavior is unchanged.
  */
 function asRouteHandler<R extends RouteConfig>(
-  fn: (c: Context<AppEnv>) => unknown,
+  fn: (c: Context<AppEnv>) => unknown
 ): RouteHandler<R, AppEnv> {
   return fn as unknown as RouteHandler<R, AppEnv>;
 }
@@ -332,7 +329,8 @@ const createLabelRoute = createRoute({
     403: forbiddenResponse,
     409: {
       content: { "application/json": { schema: apiErrorResponseSchema } },
-      description: "A label with this name already exists in the project, or the client-supplied `id` is taken (`code: id_conflict`)",
+      description:
+        "A label with this name already exists in the project, or the client-supplied `id` is taken (`code: id_conflict`)",
     },
   },
 });
@@ -342,7 +340,8 @@ const updateLabelRoute = createRoute({
   path: "/projects/{projectId}/labels/{labelId}",
   tags: ["Labels"],
   summary: "Update a label",
-  description: "Update a label's name and/or color. Name uniqueness is enforced case-insensitively.",
+  description:
+    "Update a label's name and/or color. Name uniqueness is enforced case-insensitively.",
   security,
   middleware: [requireAuth, requireProjectRole("admin", "member")],
   request: {
@@ -463,7 +462,7 @@ app.openapi(updateProjectRoute, asRouteHandler<typeof updateProjectRoute>(update
 app.openapi(listLabelsRoute, asRouteHandler<typeof listLabelsRoute>(listLabels));
 app.openapi(
   listWorkspaceLabelsRoute,
-  asRouteHandler<typeof listWorkspaceLabelsRoute>(listWorkspaceLabels),
+  asRouteHandler<typeof listWorkspaceLabelsRoute>(listWorkspaceLabels)
 );
 app.openapi(createLabelRoute, asRouteHandler<typeof createLabelRoute>(createLabel));
 app.openapi(updateLabelRoute, asRouteHandler<typeof updateLabelRoute>(updateLabel));
@@ -484,8 +483,13 @@ app.get(
   "/projects/:projectId/export/csv",
   requireAuth,
   requireProjectAccess(),
-  rateLimit({ max: 30, windowSeconds: 3600, prefix: "project-export-csv", keyFn: defaultRateLimitKey }),
-  exportProjectCsv,
+  rateLimit({
+    max: 30,
+    windowSeconds: 3600,
+    prefix: "project-export-csv",
+    keyFn: defaultRateLimitKey,
+  }),
+  exportProjectCsv
 );
 
 app.patch(
@@ -493,15 +497,10 @@ app.patch(
   requireAuth,
   requireProjectAccess(),
   validateBody(reorderProjectSchema),
-  reorderProject,
+  reorderProject
 );
 
-app.delete(
-  "/projects/:projectId",
-  requireAuth,
-  requireProjectRole("admin"),
-  deleteProject,
-);
+app.delete("/projects/:projectId", requireAuth, requireProjectRole("admin"), deleteProject);
 
 // Duplicating is a project-creating path, so it carries the workspace's
 // project-creation policy as well as the project-admin check. Without it the
@@ -517,7 +516,7 @@ app.post(
   requireProjectRole("admin"),
   requireProjectCreation(),
   validateBody(duplicateProjectSchema),
-  duplicateProject,
+  duplicateProject
 );
 
 // Project cover image routes
@@ -525,40 +524,45 @@ app.put(
   "/projects/:projectId/cover",
   requireAuth,
   requireProjectRole("admin"),
-  rateLimit({ max: 10, windowSeconds: 60, prefix: "project-cover-upload", keyFn: defaultRateLimitKey }),
-  uploadProjectCover,
+  rateLimit({
+    max: 10,
+    windowSeconds: 60,
+    prefix: "project-cover-upload",
+    keyFn: defaultRateLimitKey,
+  }),
+  uploadProjectCover
 );
 
 app.put(
   "/projects/:projectId/cover/unsplash",
   requireAuth,
   requireProjectRole("admin"),
-  rateLimit({ max: 10, windowSeconds: 60, prefix: "project-cover-unsplash", keyFn: defaultRateLimitKey }),
+  rateLimit({
+    max: 10,
+    windowSeconds: 60,
+    prefix: "project-cover-unsplash",
+    keyFn: defaultRateLimitKey,
+  }),
   validateBody(unsplashCoverPayloadSchema),
-  applyProjectUnsplashCover,
+  applyProjectUnsplashCover
 );
 
 app.delete(
   "/projects/:projectId/cover",
   requireAuth,
   requireProjectRole("admin"),
-  deleteProjectCover,
+  deleteProjectCover
 );
 
 // Project member routes
-app.get(
-  "/projects/:projectId/members",
-  requireAuth,
-  requireProjectAccess(),
-  listMembers,
-);
+app.get("/projects/:projectId/members", requireAuth, requireProjectAccess(), listMembers);
 
 app.post(
   "/projects/:projectId/members",
   requireAuth,
   requireProjectRole("admin"),
   validateBody(addProjectMemberSchema),
-  addMember,
+  addMember
 );
 
 app.patch(
@@ -566,14 +570,14 @@ app.patch(
   requireAuth,
   requireProjectRole("admin"),
   validateBody(updateProjectMemberRoleSchema),
-  updateMemberRole,
+  updateMemberRole
 );
 
 app.delete(
   "/projects/:projectId/members/:userId",
   requireAuth,
   requireProjectRole("admin"),
-  removeMember,
+  removeMember
 );
 
 // ---------------------------------------------------------------------------
@@ -584,50 +588,80 @@ app.get(
   "/projects/:projectId/webhooks",
   requireAuth,
   requireProjectRole("admin"),
-  rateLimit({ max: 60, windowSeconds: 60, prefix: "project-webhook-read", keyFn: defaultRateLimitKey }),
-  listProjectWebhooks,
+  rateLimit({
+    max: 60,
+    windowSeconds: 60,
+    prefix: "project-webhook-read",
+    keyFn: defaultRateLimitKey,
+  }),
+  listProjectWebhooks
 );
 
 app.post(
   "/projects/:projectId/webhooks",
   requireAuth,
   requireProjectRole("admin"),
-  rateLimit({ max: 20, windowSeconds: 60, prefix: "project-webhook-write", keyFn: defaultRateLimitKey }),
+  rateLimit({
+    max: 20,
+    windowSeconds: 60,
+    prefix: "project-webhook-write",
+    keyFn: defaultRateLimitKey,
+  }),
   validateBody(createWebhookSchema),
-  createProjectWebhook,
+  createProjectWebhook
 );
 
 app.get(
   "/projects/:projectId/webhooks/:webhookId",
   requireAuth,
   requireProjectRole("admin"),
-  rateLimit({ max: 60, windowSeconds: 60, prefix: "project-webhook-read", keyFn: defaultRateLimitKey }),
-  getProjectWebhook,
+  rateLimit({
+    max: 60,
+    windowSeconds: 60,
+    prefix: "project-webhook-read",
+    keyFn: defaultRateLimitKey,
+  }),
+  getProjectWebhook
 );
 
 app.patch(
   "/projects/:projectId/webhooks/:webhookId",
   requireAuth,
   requireProjectRole("admin"),
-  rateLimit({ max: 20, windowSeconds: 60, prefix: "project-webhook-write", keyFn: defaultRateLimitKey }),
+  rateLimit({
+    max: 20,
+    windowSeconds: 60,
+    prefix: "project-webhook-write",
+    keyFn: defaultRateLimitKey,
+  }),
   validateBody(updateWebhookSchema),
-  updateProjectWebhook,
+  updateProjectWebhook
 );
 
 app.delete(
   "/projects/:projectId/webhooks/:webhookId",
   requireAuth,
   requireProjectRole("admin"),
-  rateLimit({ max: 20, windowSeconds: 60, prefix: "project-webhook-write", keyFn: defaultRateLimitKey }),
-  deleteProjectWebhook,
+  rateLimit({
+    max: 20,
+    windowSeconds: 60,
+    prefix: "project-webhook-write",
+    keyFn: defaultRateLimitKey,
+  }),
+  deleteProjectWebhook
 );
 
 app.post(
   "/projects/:projectId/webhooks/:webhookId/test",
   requireAuth,
   requireProjectRole("admin"),
-  rateLimit({ max: 5, windowSeconds: 60, prefix: "project-webhook-test", keyFn: defaultRateLimitKey }),
-  testProjectWebhook,
+  rateLimit({
+    max: 5,
+    windowSeconds: 60,
+    prefix: "project-webhook-test",
+    keyFn: defaultRateLimitKey,
+  }),
+  testProjectWebhook
 );
 
 // ---------------------------------------------------------------------------
@@ -639,19 +673,14 @@ app.post(
 // scope every query by creatorId, so cross-user access yields 404 rather
 // than 403. See saved-views.handlers.ts for why that distinction matters.
 
-app.get(
-  "/projects/:projectId/views",
-  requireAuth,
-  requireProjectAccess(),
-  listSavedViews,
-);
+app.get("/projects/:projectId/views", requireAuth, requireProjectAccess(), listSavedViews);
 
 app.post(
   "/projects/:projectId/views",
   requireAuth,
   requireProjectAccess(),
   validateBody(createSavedViewSchema),
-  createSavedView,
+  createSavedView
 );
 
 app.patch(
@@ -659,14 +688,14 @@ app.patch(
   requireAuth,
   requireProjectAccess(),
   validateBody(updateSavedViewSchema),
-  updateSavedView,
+  updateSavedView
 );
 
 app.delete(
   "/projects/:projectId/views/:viewId",
   requireAuth,
   requireProjectAccess(),
-  deleteSavedView,
+  deleteSavedView
 );
 
 export default app;

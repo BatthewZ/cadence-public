@@ -121,7 +121,13 @@ export function GroupPicker({
   );
 }
 
-export function GroupPickerReadOnly({ value, taskGroups }: { value: string; taskGroups: TaskGroup[] }) {
+export function GroupPickerReadOnly({
+  value,
+  taskGroups,
+}: {
+  value: string;
+  taskGroups: TaskGroup[];
+}) {
   const currentGroup = taskGroups.find((g) => g.id === value);
   return (
     <div className="task-property-picker__trigger" style={{ cursor: "default" }}>

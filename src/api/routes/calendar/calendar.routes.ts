@@ -50,7 +50,7 @@ import {
  * pattern as the other OpenAPI route files.
  */
 function asRouteHandler<R extends RouteConfig>(
-  fn: (c: Context<AppEnv>) => unknown,
+  fn: (c: Context<AppEnv>) => unknown
 ): RouteHandler<R, AppEnv> {
   return fn as unknown as RouteHandler<R, AppEnv>;
 }
@@ -163,22 +163,16 @@ const calendarFeedStatusResponseSchema = z.object({
     description: "Whether the calling user has a live feed for this workspace.",
     example: true,
   }),
-  createdAt: z
-    .string()
-    .nullable()
-    .openapi({
-      description:
-        "When the current feed token was minted (ISO 8601), or null when no feed exists. Reset on regenerate.",
-      example: "2026-06-01T12:00:00.000Z",
-    }),
-  lastUsedAt: z
-    .string()
-    .nullable()
-    .openapi({
-      description:
-        "When a calendar client last fetched the feed (ISO 8601), or null if never fetched / no feed exists.",
-      example: "2026-06-11T08:30:00.000Z",
-    }),
+  createdAt: z.string().nullable().openapi({
+    description:
+      "When the current feed token was minted (ISO 8601), or null when no feed exists. Reset on regenerate.",
+    example: "2026-06-01T12:00:00.000Z",
+  }),
+  lastUsedAt: z.string().nullable().openapi({
+    description:
+      "When a calendar client last fetched the feed (ISO 8601), or null if never fetched / no feed exists.",
+    example: "2026-06-11T08:30:00.000Z",
+  }),
 });
 
 const createCalendarFeedResponseSchema = z.object({
@@ -280,15 +274,15 @@ app.get("/calendar/feed/:token", feedRateLimit, getCalendarFeed);
 
 app.openapi(
   getCalendarFeedStatusRoute,
-  asRouteHandler<typeof getCalendarFeedStatusRoute>(getCalendarFeedStatus),
+  asRouteHandler<typeof getCalendarFeedStatusRoute>(getCalendarFeedStatus)
 );
 app.openapi(
   createCalendarFeedRoute,
-  asRouteHandler<typeof createCalendarFeedRoute>(createCalendarFeed),
+  asRouteHandler<typeof createCalendarFeedRoute>(createCalendarFeed)
 );
 app.openapi(
   deleteCalendarFeedRoute,
-  asRouteHandler<typeof deleteCalendarFeedRoute>(deleteCalendarFeed),
+  asRouteHandler<typeof deleteCalendarFeedRoute>(deleteCalendarFeed)
 );
 
 export default app;

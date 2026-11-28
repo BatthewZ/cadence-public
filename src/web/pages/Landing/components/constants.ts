@@ -1,11 +1,4 @@
-import {
-  Layers,
-  Layout,
-  Palette,
-  Shield,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { Layers, Layout, Palette, Shield, Sparkles, Users } from "lucide-react";
 
 import type { Theme } from "@/shared/types/theme";
 import { THEMES as ALL_THEME_IDS } from "@/shared/types/theme";
@@ -78,9 +71,9 @@ const THEMES = FEATURED_THEME_IDS.map((id) => ({
 /**
  * Themes not featured in the showcase — used for the "+N more" footer text.
  */
-const REMAINING_THEMES = ALL_THEME_IDS.filter(
-  (id) => !FEATURED_THEME_IDS.includes(id),
-).map((id) => THEME_LABELS[id]);
+const REMAINING_THEMES = ALL_THEME_IDS.filter((id) => !FEATURED_THEME_IDS.includes(id)).map(
+  (id) => THEME_LABELS[id]
+);
 
 const MOCK_COLUMNS = [
   {

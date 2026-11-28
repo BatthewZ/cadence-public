@@ -7,7 +7,10 @@ vi.mock("./lib/password", () => ({
   createMigratingVerify: vi.fn(() => vi.fn()),
 }));
 
-import { IDEMPOTENCY_KEY_HEADER, IDEMPOTENT_REPLAYED_HEADER } from "../shared/constants/offline-sync";
+import {
+  IDEMPOTENCY_KEY_HEADER,
+  IDEMPOTENT_REPLAYED_HEADER,
+} from "../shared/constants/offline-sync";
 import type { AppBindings } from "./env";
 import worker from "./index";
 import { resetAllowedOriginCache, resolveAllowedOrigin } from "./lib/auth";
@@ -108,9 +111,7 @@ describe("CORS middleware", () => {
       headers: { Origin: "https://another.example.com" },
     });
 
-    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
-      "https://another.example.com"
-    );
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe("https://another.example.com");
   });
 
   it("works when TRUSTED_ORIGINS is undefined", async () => {
@@ -130,7 +131,10 @@ describe("the worker's CORS configuration", () => {
   });
 
   const env = { BETTER_AUTH_URL: BASE_URL } as unknown as AppBindings;
-  const executionCtx = { waitUntil: () => {}, passThroughOnException: () => {} } as unknown as ExecutionContext;
+  const executionCtx = {
+    waitUntil: () => {},
+    passThroughOnException: () => {},
+  } as unknown as ExecutionContext;
 
   it("lets an offline replay send PATCH with an Idempotency-Key", async () => {
     const res = await worker.fetch(
@@ -143,7 +147,7 @@ describe("the worker's CORS configuration", () => {
         },
       }),
       env,
-      executionCtx,
+      executionCtx
     );
 
     expect(res.status).toBe(204);
@@ -155,7 +159,7 @@ describe("the worker's CORS configuration", () => {
     const res = await worker.fetch(
       new Request(`${BASE_URL}/api/health`, { headers: { Origin: BASE_URL } }),
       env,
-      executionCtx,
+      executionCtx
     );
 
     expect(res.headers.get("Access-Control-Expose-Headers")).toContain(IDEMPOTENT_REPLAYED_HEADER);

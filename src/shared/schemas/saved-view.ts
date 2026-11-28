@@ -70,14 +70,8 @@ export const MULTI_VALUE_PARAM_KEYS = ["assignee", "priority", "label"] as const
 export const savedViewStateSchema = z.object({
   tab: z.string().min(1).max(20),
   params: z
-    .record(
-      z.string().min(1).max(40),
-      z.string().max(SAVED_VIEW_MAX_PARAM_LENGTH),
-    )
-    .refine(
-      (p) => Object.keys(p).length <= SAVED_VIEW_MAX_PARAMS,
-      "Too many view parameters",
-    ),
+    .record(z.string().min(1).max(40), z.string().max(SAVED_VIEW_MAX_PARAM_LENGTH))
+    .refine((p) => Object.keys(p).length <= SAVED_VIEW_MAX_PARAMS, "Too many view parameters"),
 });
 
 /**

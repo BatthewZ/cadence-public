@@ -37,14 +37,8 @@ export function apiTokenRevokedEmail(options: {
   revokedByAdmin: boolean;
   settingsUrl: string;
 }): { subject: string; html: string; text: string } {
-  const {
-    recipientName,
-    tokenName,
-    workspaceName,
-    revokedAt,
-    revokedByAdmin,
-    settingsUrl,
-  } = options;
+  const { recipientName, tokenName, workspaceName, revokedAt, revokedByAdmin, settingsUrl } =
+    options;
 
   const safeTokenName = escapeHtml(tokenName);
   const safeWorkspaceName = escapeHtml(workspaceName);

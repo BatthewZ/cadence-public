@@ -170,7 +170,7 @@ function appWith(token: ApiToken | null) {
       // never reaches the handler, and the allowed caller only has to get PAST
       // the scope gate, which a clean 404 for a key that does not exist proves.
       env: { STORAGE: { get: () => Promise.resolve(null) } },
-    }),
+    })
   );
   app.route("/", searchRoutes);
   app.route("/", dashboardRoutes);
@@ -243,11 +243,7 @@ describe("dashboard routes require task/project read scopes", () => {
   });
 
   it("GET /workspaces/:id/dashboard/my-tasks refuses a token without task:read", async () => {
-    await expectDenied(
-      UNRELATED,
-      { path: `/workspaces/${wsId}/dashboard/my-tasks` },
-      "task:read",
-    );
+    await expectDenied(UNRELATED, { path: `/workspaces/${wsId}/dashboard/my-tasks` }, "task:read");
   });
 
   it("GET /workspaces/:id/dashboard/my-tasks passes on task:read alone", async () => {
@@ -259,11 +255,7 @@ describe("dashboard routes require task/project read scopes", () => {
   });
 
   it("GET /workspaces/:id/dashboard/upcoming refuses a token without task:read", async () => {
-    await expectDenied(
-      UNRELATED,
-      { path: `/workspaces/${wsId}/dashboard/upcoming` },
-      "task:read",
-    );
+    await expectDenied(UNRELATED, { path: `/workspaces/${wsId}/dashboard/upcoming` }, "task:read");
   });
 
   it("GET /workspaces/:id/dashboard/upcoming passes on task:read alone", async () => {
@@ -285,11 +277,7 @@ describe("dashboard routes require task/project read scopes", () => {
   });
 
   it("GET /projects/:id/dashboard also refuses a task-only token (it returns the budget)", async () => {
-    await expectDenied(
-      ["task:read"],
-      { path: `/projects/${projectId}/dashboard` },
-      "project:read",
-    );
+    await expectDenied(["task:read"], { path: `/projects/${projectId}/dashboard` }, "project:read");
   });
 
   it("GET /projects/:id/dashboard passes with both scopes, and for a cookie session", async () => {
@@ -380,7 +368,7 @@ describe("notification routes require task scopes", () => {
     await expectDenied(
       ["task:read"],
       { path: `/notifications/${notifId}/read`, method: "PATCH" },
-      "task:write",
+      "task:write"
     );
   });
 
@@ -396,7 +384,7 @@ describe("notification routes require task scopes", () => {
     await expectDenied(
       ["task:read"],
       { path: "/notifications/mark-all-read", method: "POST" },
-      "task:write",
+      "task:write"
     );
   });
 
@@ -412,7 +400,7 @@ describe("notification routes require task scopes", () => {
     await expectDenied(
       ["task:read"],
       { path: `/notifications/${notifId}`, method: "DELETE" },
-      "task:write",
+      "task:write"
     );
   });
 
@@ -460,7 +448,11 @@ describe("upload routes require attachment scopes", () => {
     // No `attachment:delete` exists in the v1 grammar, so the mount omits
     // `allowDelete` and DELETE falls under `attachment:write`. If someone adds
     // the stronger scope, the second assertion turns red.
-    await expectDenied(["attachment:read"], { path: "/uploads/x", method: "DELETE" }, "attachment:write");
+    await expectDenied(
+      ["attachment:read"],
+      { path: "/uploads/x", method: "DELETE" },
+      "attachment:write"
+    );
     const res = await callAs(pat(["attachment:write"]), {
       path: "/uploads/x",
       method: "DELETE",

@@ -2,7 +2,13 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sessionState = vi.hoisted(() => ({
-  current: { data: null as unknown, error: null as unknown, isPending: true, isRefetching: false, refetch: () => undefined },
+  current: {
+    data: null as unknown,
+    error: null as unknown,
+    isPending: true,
+    isRefetching: false,
+    refetch: () => undefined,
+  },
 }));
 
 vi.mock("better-auth/react", () => ({
@@ -29,7 +35,13 @@ function setOnline(online: boolean) {
 beforeEach(() => {
   localStorage.clear();
   setOnline(true);
-  sessionState.current = { data: null, error: null, isPending: true, isRefetching: false, refetch: () => undefined };
+  sessionState.current = {
+    data: null,
+    error: null,
+    isPending: true,
+    isRefetching: false,
+    refetch: () => undefined,
+  };
 });
 
 afterEach(() => {
@@ -104,7 +116,10 @@ describe("useSession (offline-tolerant)", () => {
 
   it("does not trust an expired cached session", () => {
     const past = new Date(Date.now() - 1000).toISOString();
-    setServer({ data: { ...serverSession, session: { ...serverSession.session, expiresAt: past } }, isPending: false });
+    setServer({
+      data: { ...serverSession, session: { ...serverSession.session, expiresAt: past } },
+      isPending: false,
+    });
     renderHook(() => useSession()).unmount();
 
     setServer({ data: null, error: new TypeError("Failed to fetch"), isPending: false });

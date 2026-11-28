@@ -39,14 +39,10 @@ export function useRovingFocus(options: UseRovingFocusOptions): {
 
         switch (e.key) {
           case nextKey:
-            nextIndex = loop
-              ? (current + 1) % count
-              : Math.min(current + 1, count - 1);
+            nextIndex = loop ? (current + 1) % count : Math.min(current + 1, count - 1);
             break;
           case prevKey:
-            nextIndex = loop
-              ? (current - 1 + count) % count
-              : Math.max(current - 1, 0);
+            nextIndex = loop ? (current - 1 + count) % count : Math.max(current - 1, 0);
             break;
           case "Home":
             nextIndex = 0;

@@ -1,9 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarOff, Tag, UserX } from "lucide-react";
-import {
-  useCallback,
-  useMemo,
-} from "react";
+import { useCallback, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { Row, Stack } from "@/web/components/layout";
@@ -40,7 +37,8 @@ import { TimelineTaskRow } from "./components/TimelineTaskRow";
 /* ------------------------------------------------------------------ */
 
 export default function ProjectTimeline() {
-  const { project, tasks, updateTask, removeTask, members, taskGroups, tasksError, refetchTasks } = useProject();
+  const { project, tasks, updateTask, removeTask, members, taskGroups, tasksError, refetchTasks } =
+    useProject();
   // ProjectContext's type says `project: Project`, but the underlying React
   // Query fetch can transiently produce a null project (see the `!project`
   // spinner guard below and the loading-state test). Fall back to a bare
@@ -60,17 +58,20 @@ export default function ProjectTimeline() {
 
   const handleGroupByChange = useCallback(
     (mode: GroupingMode) => {
-      setSearchParams((prev) => {
-        const next = new URLSearchParams(prev);
-        if (mode === "dueDate") {
-          next.delete("groupBy");
-        } else {
-          next.set("groupBy", mode);
-        }
-        return next;
-      }, { replace: true });
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (mode === "dueDate") {
+            next.delete("groupBy");
+          } else {
+            next.set("groupBy", mode);
+          }
+          return next;
+        },
+        { replace: true }
+      );
     },
-    [setSearchParams],
+    [setSearchParams]
   );
 
   // Multi-select state
@@ -99,10 +100,7 @@ export default function ProjectTimeline() {
   }, [filteredTasks, excludeCompleted, groupBy, taskGroups, members]);
 
   // Determine which accordion sections to auto-expand
-  const defaultOpen = useMemo(
-    () => getDefaultOpenKeys(groupBy, groups),
-    [groupBy, groups],
-  );
+  const defaultOpen = useMemo(() => getDefaultOpenKeys(groupBy, groups), [groupBy, groups]);
 
   const handleToggleCompleted = useCallback(
     async (taskId: string, currentlyCompleted: boolean) => {
@@ -113,7 +111,7 @@ export default function ProjectTimeline() {
       const title = current?.title ?? "task";
       try {
         const result = await sendWrite<TaskCompletionResponse>(
-          taskCompletionWrite({ id: taskId, title }, !currentlyCompleted),
+          taskCompletionWrite({ id: taskId, title }, !currentlyCompleted)
         );
         if (result.status === "queued") return;
         const res = result.data;
@@ -123,7 +121,9 @@ export default function ProjectTimeline() {
         }
         if (project) {
           void qc.invalidateQueries({ queryKey: queryKeys.projects.dashboard(project.id) });
-          void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(project.workspaceId) });
+          void qc.invalidateQueries({
+            queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(project.workspaceId),
+          });
         }
       } catch {
         // Revert on failure
@@ -131,7 +131,7 @@ export default function ProjectTimeline() {
         toast("Failed to update task", { variant: "error" });
       }
     },
-    [tasks, updateTask, removeTask, toast, qc, project],
+    [tasks, updateTask, removeTask, toast, qc, project]
   );
 
   if (!project) {
@@ -143,9 +143,7 @@ export default function ProjectTimeline() {
   }
 
   if (tasksError) {
-    return (
-      <QueryErrorRetry message="Failed to load timeline data." onRetry={refetchTasks} />
-    );
+    return <QueryErrorRetry message="Failed to load timeline data." onRetry={refetchTasks} />;
   }
 
   return (
@@ -158,9 +156,7 @@ export default function ProjectTimeline() {
       {groups.length === 0 ? (
         <EmptyState size="md">
           <EmptyStateTitle>No tasks</EmptyStateTitle>
-          <EmptyStateDescription>
-            Create tasks to see them on the timeline
-          </EmptyStateDescription>
+          <EmptyStateDescription>Create tasks to see them on the timeline</EmptyStateDescription>
         </EmptyState>
       ) : (
         <Accordion key={groupBy} mode="multiple" defaultValue={defaultOpen}>
@@ -175,9 +171,7 @@ export default function ProjectTimeline() {
                 >
                   <Row gap="r5" align="center">
                     {/* Contextual leading icon based on grouping meta */}
-                    {isUnscheduled && (
-                      <CalendarOff size={14} className="text-fg-muted shrink-0" />
-                    )}
+                    {isUnscheduled && <CalendarOff size={14} className="text-fg-muted shrink-0" />}
                     {group.meta?.color && (
                       <span
                         className="size-2.5 rounded-full shrink-0"
@@ -185,11 +179,7 @@ export default function ProjectTimeline() {
                       />
                     )}
                     {group.meta?.avatarName && (
-                      <Avatar
-                        name={group.meta.avatarName}
-                        src={group.meta.avatarUrl}
-                        size="xs"
-                      />
+                      <Avatar name={group.meta.avatarName} src={group.meta.avatarUrl} size="xs" />
                     )}
                     {group.meta?.icon === "unassigned" && (
                       <UserX size={14} className="text-fg-muted shrink-0" />
@@ -199,9 +189,7 @@ export default function ProjectTimeline() {
                         color carries the "absence" semantics — labeled groups
                         render color dots, never tag icons, so this stays
                         unambiguous. */}
-                    {isUnlabeled && (
-                      <Tag size={14} className="text-fg-muted shrink-0" />
-                    )}
+                    {isUnlabeled && <Tag size={14} className="text-fg-muted shrink-0" />}
 
                     {/* Group label — for priority, render as a colored badge */}
                     {group.meta?.priority ? (
@@ -213,9 +201,7 @@ export default function ProjectTimeline() {
                     )}
 
                     {/* Task count badge */}
-                    <Badge variant={isOverdue ? "error" : "default"}>
-                      {group.tasks.length}
-                    </Badge>
+                    <Badge variant={isOverdue ? "error" : "default"}>{group.tasks.length}</Badge>
                   </Row>
                 </Accordion.Trigger>
                 <Accordion.Content>
@@ -224,7 +210,9 @@ export default function ProjectTimeline() {
                       <TimelineTaskRow
                         key={task.id}
                         task={task}
-                        onToggleCompleted={(taskId, completed) => { void handleToggleCompleted(taskId, completed); }}
+                        onToggleCompleted={(taskId, completed) => {
+                          void handleToggleCompleted(taskId, completed);
+                        }}
                         selected={selectedIds.has(task.id)}
                         onToggleSelect={handleToggleSelect}
                         canEditTasks={canEditTasks}

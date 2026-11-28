@@ -38,7 +38,11 @@ import { cleanupWebhookDeliveries } from "./webhook-cleanup";
  *    their retention window.
  */
 /** Run a cleanup task, logging results. Catches so one failure doesn't block the rest. */
-async function runTask(name: string, fn: () => Promise<number>, sink?: TelemetrySink): Promise<{ success: boolean }> {
+async function runTask(
+  name: string,
+  fn: () => Promise<number>,
+  sink?: TelemetrySink
+): Promise<{ success: boolean }> {
   const start = Date.now();
   try {
     const count = await fn();
@@ -66,10 +70,7 @@ async function runTask(name: string, fn: () => Promise<number>, sink?: Telemetry
   }
 }
 
-export async function handleScheduled(
-  _event: ScheduledEvent,
-  env: AppBindings,
-): Promise<void> {
+export async function handleScheduled(_event: ScheduledEvent, env: AppBindings): Promise<void> {
   const db = createDb(env.DB);
   const sink = createTelemetrySink(env);
   const cronStart = Date.now();

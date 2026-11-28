@@ -22,8 +22,7 @@ export function NotificationBell() {
 
   const { data: countData } = useQuery({
     queryKey: queryKeys.notifications.unreadCount,
-    queryFn: () =>
-      api.get<{ count: number }>("/api/notifications/unread-count"),
+    queryFn: () => api.get<{ count: number }>("/api/notifications/unread-count"),
     refetchInterval: jitteredInterval(30_000),
     staleTime: 15_000,
   });
@@ -31,10 +30,7 @@ export function NotificationBell() {
   // Fetch full list only when popover is open
   const { data: listData, isLoading } = useQuery({
     queryKey: queryKeys.notifications.list(),
-    queryFn: () =>
-      api.get<{ notifications: Notification[] }>(
-        "/api/notifications?limit=30",
-      ),
+    queryFn: () => api.get<{ notifications: Notification[] }>("/api/notifications?limit=30"),
     enabled: open,
   });
 
@@ -47,7 +43,7 @@ export function NotificationBell() {
 
   const slugMap = useMemo(
     () => new Map((wsData?.workspaces ?? []).map((ws) => [ws.id, ws.slug])),
-    [wsData],
+    [wsData]
   );
 
   const unreadCount = countData?.count ?? 0;
@@ -71,9 +67,7 @@ export function NotificationBell() {
 
       if (n.taskId && n.projectId) {
         const slug = resolveSlug(n.workspaceId);
-        void navigate(
-          `/w/${slug}/projects/${n.projectId}/board?task=${n.taskId}`,
-        );
+        void navigate(`/w/${slug}/projects/${n.projectId}/board?task=${n.taskId}`);
       } else if (n.invitationId) {
         void navigate("/workspaces");
       } else if (n.projectId) {
@@ -82,31 +76,20 @@ export function NotificationBell() {
         void navigate(`/w/${slug}/projects/${n.projectId}/board`);
       }
     },
-    [navigate, slugMap, workspace.slug],
+    [navigate, slugMap, workspace.slug]
   );
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={setOpen}
-      placement="bottom-end"
-      offset={4}
-    >
+    <Popover open={open} onOpenChange={setOpen} placement="bottom-end" offset={4}>
       <Popover.Trigger asChild>
         <button
           type="button"
           className="notification-bell"
-          aria-label={
-            unreadCount > 0
-              ? `Notifications (${unreadCount} unread)`
-              : "Notifications"
-          }
+          aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications"}
         >
           <Bell size={20} />
           {unreadCount > 0 && (
-            <span className="notification-badge">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
+            <span className="notification-badge">{unreadCount > 9 ? "9+" : unreadCount}</span>
           )}
         </button>
       </Popover.Trigger>
@@ -131,7 +114,9 @@ export function NotificationBell() {
             </div>
             <div className="notification-panel-empty" role="status">
               <WifiOff size={32} className="notification-panel-empty-icon" />
-              <span className="notification-panel-empty-text">Notifications need a connection.</span>
+              <span className="notification-panel-empty-text">
+                Notifications need a connection.
+              </span>
             </div>
           </div>
         )}

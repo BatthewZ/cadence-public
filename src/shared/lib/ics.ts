@@ -231,7 +231,7 @@ export function generateICS(opts: { calendarName: string; events: ICSEvent[] }):
       `DTSTAMP:${formatDtStampUtc(event.dtstamp)}`,
       `DTSTART;VALUE=DATE:${toBasicDate(event.startDate, "startDate")}`,
       `DTEND;VALUE=DATE:${toBasicDate(event.endDateExclusive, "endDateExclusive")}`,
-      `SUMMARY:${escapeText(event.summary)}`,
+      `SUMMARY:${escapeText(event.summary)}`
     );
     if (event.description) {
       lines.push(`DESCRIPTION:${escapeText(event.description)}`);

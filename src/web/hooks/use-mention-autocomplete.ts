@@ -53,7 +53,7 @@ const MIRROR_STYLE_PROPS = [
  */
 function getCaretCoordinates(
   textarea: HTMLTextAreaElement,
-  position: number,
+  position: number
 ): { top: number; left: number } {
   const mirror = document.createElement("div");
   const computed = getComputedStyle(textarea);
@@ -158,7 +158,7 @@ export function useMentionAutocomplete({
 
   const filtered = useMemo(
     () => members.filter((m) => m.user.name.toLowerCase().includes(query.toLowerCase())),
-    [members, query],
+    [members, query]
   );
 
   const closeMention = useCallback(() => {
@@ -206,7 +206,7 @@ export function useMentionAutocomplete({
         textarea.setSelectionRange(cursorPos, cursorPos);
       });
     },
-    [textareaRef, mentionStart, value, onChange, closeMention],
+    [textareaRef, mentionStart, value, onChange, closeMention]
   );
 
   const handleChange = useCallback(
@@ -246,7 +246,7 @@ export function useMentionAutocomplete({
 
       // Check if any members match.
       const hasMatches = members.some((m) =>
-        m.user.name.toLowerCase().includes(currentQuery.toLowerCase()),
+        m.user.name.toLowerCase().includes(currentQuery.toLowerCase())
       );
 
       if (hasMatches && currentQuery.length >= 0) {
@@ -271,7 +271,7 @@ export function useMentionAutocomplete({
         closeMention();
       }
     },
-    [onChange, members, query, closeMention],
+    [onChange, members, query, closeMention]
   );
 
   const handleKeyDown = useCallback(
@@ -300,7 +300,7 @@ export function useMentionAutocomplete({
           return false;
       }
     },
-    [menuOpen, filtered, activeIndex, insertMention, closeMention],
+    [menuOpen, filtered, activeIndex, insertMention, closeMention]
   );
 
   return {

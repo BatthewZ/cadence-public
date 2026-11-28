@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import {
-  isUniqueConstraintViolation,
-  retryOnPositionConflict,
-} from "./position-conflict";
+import { isUniqueConstraintViolation, retryOnPositionConflict } from "./position-conflict";
 
 /**
  * Unit tests for the UNIQUE-constraint predicate and the retry helper built on
@@ -26,21 +23,19 @@ import {
 describe("isUniqueConstraintViolation", () => {
   it("matches D1's UNIQUE constraint error message", () => {
     const err = new Error(
-      "D1_ERROR: UNIQUE constraint failed: task_group.projectId, task_group.position",
+      "D1_ERROR: UNIQUE constraint failed: task_group.projectId, task_group.position"
     );
     expect(isUniqueConstraintViolation(err)).toBe(true);
   });
 
   it("matches the bare SQLite phrasing without the D1_ERROR prefix", () => {
-    expect(
-      isUniqueConstraintViolation(new Error("UNIQUE constraint failed: task.position")),
-    ).toBe(true);
+    expect(isUniqueConstraintViolation(new Error("UNIQUE constraint failed: task.position"))).toBe(
+      true
+    );
   });
 
   it("is case-insensitive so it tolerates future driver changes", () => {
-    expect(
-      isUniqueConstraintViolation(new Error("unique constraint failed: foo")),
-    ).toBe(true);
+    expect(isUniqueConstraintViolation(new Error("unique constraint failed: foo"))).toBe(true);
   });
 
   it("does not match unrelated errors", () => {
@@ -99,9 +94,7 @@ describe("retryOnPositionConflict", () => {
 
   it("rethrows non-UNIQUE errors immediately without retrying", async () => {
     const fn = vi.fn().mockRejectedValue(new Error("FOREIGN KEY constraint failed"));
-    await expect(retryOnPositionConflict(fn, 5)).rejects.toThrow(
-      "FOREIGN KEY constraint failed",
-    );
+    await expect(retryOnPositionConflict(fn, 5)).rejects.toThrow("FOREIGN KEY constraint failed");
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
@@ -110,7 +103,7 @@ describe("retryOnPositionConflict", () => {
       .fn()
       .mockRejectedValue(new Error("UNIQUE constraint failed: task_group.position"));
     await expect(retryOnPositionConflict(fn, 3)).rejects.toThrow(
-      /Position conflict persisted after 3 attempts/,
+      /Position conflict persisted after 3 attempts/
     );
     expect(fn).toHaveBeenCalledTimes(3);
   });

@@ -105,20 +105,16 @@ export function WebhookListView({ hook }: { hook: UseWorkspaceWebhooksReturn }) 
         </Row>
 
         <AdminOnlyNotice>
-          Only workspace owners and admins can create or manage webhooks. Ask a
-          workspace admin if you need a webhook for this workspace.
+          Only workspace owners and admins can create or manage webhooks. Ask a workspace admin if
+          you need a webhook for this workspace.
         </AdminOnlyNotice>
 
         {roleUnavailable && (
-          <Alert variant="error">
-            {workspaceError || "Failed to load workspace permissions."}
-          </Alert>
+          <Alert variant="error">{workspaceError || "Failed to load workspace permissions."}</Alert>
         )}
 
         {canManageWorkspace && listError && !listUnavailableOffline && (
-          <Alert variant="error">
-            {listError.message || "Failed to load webhooks."}
-          </Alert>
+          <Alert variant="error">{listError.message || "Failed to load webhooks."}</Alert>
         )}
 
         {/* Reading the list is owner/admin-only, so a member has no list to be
@@ -187,9 +183,7 @@ export function WebhookListView({ hook }: { hook: UseWorkspaceWebhooksReturn }) 
                           {wh.active ? "Active" : "Disabled"}
                         </Badge>
                         {wh.consecutiveFailures > 0 && (
-                          <Badge variant="warning">
-                            {wh.consecutiveFailures} failures
-                          </Badge>
+                          <Badge variant="warning">{wh.consecutiveFailures} failures</Badge>
                         )}
                       </Row>
                     </Row>

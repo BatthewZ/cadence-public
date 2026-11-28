@@ -94,7 +94,11 @@ export const ScrollReveal = forwardRef<HTMLElement, ScrollRevealProps>(function 
         animating && animationClassMap[animation],
         className
       )}
-      style={animating && delay > 0 && !reducedMotion ? { animationDelay: `${delay}ms`, animationFillMode: "backwards" } : undefined}
+      style={
+        animating && delay > 0 && !reducedMotion
+          ? { animationDelay: `${delay}ms`, animationFillMode: "backwards" }
+          : undefined
+      }
       onAnimationEnd={handleAnimationEnd}
     >
       {children}

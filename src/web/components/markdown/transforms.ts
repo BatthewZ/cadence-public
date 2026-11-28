@@ -56,11 +56,7 @@ export function wrapInline(sel: MdSelection, marker: InlineMarker): MdSelection 
   }
 
   // Case B: the selection itself includes the markers, e.g. |**bold**|.
-  if (
-    selected.length >= len * 2 &&
-    selected.startsWith(marker) &&
-    selected.endsWith(marker)
-  ) {
+  if (selected.length >= len * 2 && selected.startsWith(marker) && selected.endsWith(marker)) {
     const inner = selected.slice(len, selected.length - len);
     const next = value.slice(0, start) + inner + value.slice(end);
     return { value: next, start, end: start + inner.length };
@@ -73,7 +69,11 @@ export function wrapInline(sel: MdSelection, marker: InlineMarker): MdSelection 
 }
 
 /** Inclusive `[lineStart, lineEnd)` range of the lines spanned by `[start, end]`. */
-function lineSpan(value: string, start: number, end: number): { lineStart: number; lineEnd: number } {
+function lineSpan(
+  value: string,
+  start: number,
+  end: number
+): { lineStart: number; lineEnd: number } {
   const lineStart = value.lastIndexOf("\n", start - 1) + 1;
   let lineEnd = value.indexOf("\n", end);
   if (lineEnd === -1) lineEnd = value.length;
@@ -91,10 +91,7 @@ function lineSpan(value: string, start: number, end: number): { lineStart: numbe
  * than guessing an interior caret) makes successive toggles predictable and lets
  * the editor re-toggle the same lines without the user re-selecting.
  */
-function transformLines(
-  sel: MdSelection,
-  transform: (lines: string[]) => string[],
-): MdSelection {
+function transformLines(sel: MdSelection, transform: (lines: string[]) => string[]): MdSelection {
   const { value, start, end } = sel;
   const { lineStart, lineEnd } = lineSpan(value, start, end);
   const block = value.slice(lineStart, lineEnd);
@@ -126,7 +123,7 @@ export function toggleHeading(sel: MdSelection, level: 0 | 1 | 2 | 3 | 4 | 5 | 6
     lines.map((line) => {
       const stripped = line.replace(HEADING_RE, "");
       return target === 0 ? stripped : "#".repeat(target) + " " + stripped;
-    }),
+    })
   );
 }
 

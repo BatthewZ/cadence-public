@@ -41,9 +41,7 @@ describe("DEFAULT_WORKSPACE_POLICY", () => {
     // The resolver iterates WORKSPACE_POLICY_KEYS. If a toggle were added to
     // the interface and the defaults but the key list drifted, that toggle
     // would silently ignore its stored value and always read as the default.
-    expect([...WORKSPACE_POLICY_KEYS].sort()).toEqual(
-      Object.keys(DEFAULT_WORKSPACE_POLICY).sort(),
-    );
+    expect([...WORKSPACE_POLICY_KEYS].sort()).toEqual(Object.keys(DEFAULT_WORKSPACE_POLICY).sort());
   });
 });
 
@@ -70,7 +68,7 @@ describe("resolveWorkspacePolicy — absence means default", () => {
     // code default. `{}` standing in for "a row from before this key existed".
     const resolved = resolveWorkspacePolicy(JSON.stringify({}));
     expect(resolved.allowMemberProjectCreation).toBe(
-      DEFAULT_WORKSPACE_POLICY.allowMemberProjectCreation,
+      DEFAULT_WORKSPACE_POLICY.allowMemberProjectCreation
     );
   });
 });
@@ -94,7 +92,7 @@ describe("resolveWorkspacePolicy — stored values win", () => {
     // shadows nothing is harmless, but one that collides with a future toggle
     // name would resurrect a setting nobody set.
     const resolved = resolveWorkspacePolicy(
-      '{"allowMemberProjectCreation":false,"somethingFromTheFuture":true}',
+      '{"allowMemberProjectCreation":false,"somethingFromTheFuture":true}'
     );
     expect(resolved).toEqual({ allowMemberProjectCreation: false });
   });
@@ -143,7 +141,7 @@ describe("resolveWorkspacePolicy — total over malformed input", () => {
     // to observe, so it is asserted through the unknown-key path: a bad
     // neighbour must not discard a good value.
     const resolved = resolveWorkspacePolicy(
-      '{"allowMemberProjectCreation":false,"futureToggle":"garbage"}',
+      '{"allowMemberProjectCreation":false,"futureToggle":"garbage"}'
     );
     expect(resolved.allowMemberProjectCreation).toBe(false);
   });

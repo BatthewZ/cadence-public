@@ -28,9 +28,7 @@ describe("escapeHtml", () => {
   });
 
   it("handles strings with multiple special characters", () => {
-    expect(escapeHtml(`<a href="test">&'`)).toBe(
-      "&lt;a href=&quot;test&quot;&gt;&amp;&#39;",
-    );
+    expect(escapeHtml(`<a href="test">&'`)).toBe("&lt;a href=&quot;test&quot;&gt;&amp;&#39;");
   });
 
   it("does not double-escape already-escaped entities", () => {

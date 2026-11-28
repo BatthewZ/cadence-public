@@ -35,11 +35,7 @@ interface ThemeControlProviderProps {
 }
 
 export function ThemeControlProvider({ value, children }: ThemeControlProviderProps) {
-  return (
-    <ThemeControlContext.Provider value={value}>
-      {children}
-    </ThemeControlContext.Provider>
-  );
+  return <ThemeControlContext.Provider value={value}>{children}</ThemeControlContext.Provider>;
 }
 
 /**
@@ -82,8 +78,6 @@ interface ThemeOverrideProviderProps {
 
 export function ThemeOverrideProvider({ children, onOverride }: ThemeOverrideProviderProps) {
   return (
-    <ThemeOverrideContext.Provider value={onOverride}>
-      {children}
-    </ThemeOverrideContext.Provider>
+    <ThemeOverrideContext.Provider value={onOverride}>{children}</ThemeOverrideContext.Provider>
   );
 }

@@ -28,33 +28,23 @@ interface AttachmentsResponse {
 export function optimisticAddAttachment(
   qc: QueryClient,
   taskId: string,
-  attachment: Attachment,
+  attachment: Attachment
 ): void {
   freshnessTracker.recordMutation("tasks");
-  qc.setQueryData<AttachmentsResponse>(
-    queryKeys.tasks.attachments(taskId),
-    (old) => {
-      if (!old) return { attachments: [attachment] };
-      return { attachments: [...old.attachments, attachment] };
-    },
-  );
+  qc.setQueryData<AttachmentsResponse>(queryKeys.tasks.attachments(taskId), (old) => {
+    if (!old) return { attachments: [attachment] };
+    return { attachments: [...old.attachments, attachment] };
+  });
 }
 
 /** Removes a previously-added optimistic attachment from the cache (rollback). */
-export function rollbackAddAttachment(
-  qc: QueryClient,
-  taskId: string,
-  optimisticId: string,
-): void {
-  qc.setQueryData<AttachmentsResponse>(
-    queryKeys.tasks.attachments(taskId),
-    (old) => {
-      if (!old) return old;
-      return {
-        attachments: old.attachments.filter((a) => a.id !== optimisticId),
-      };
-    },
-  );
+export function rollbackAddAttachment(qc: QueryClient, taskId: string, optimisticId: string): void {
+  qc.setQueryData<AttachmentsResponse>(queryKeys.tasks.attachments(taskId), (old) => {
+    if (!old) return old;
+    return {
+      attachments: old.attachments.filter((a) => a.id !== optimisticId),
+    };
+  });
 }
 
 /**
@@ -64,20 +54,17 @@ export function rollbackAddAttachment(
 export function optimisticRemoveAttachment(
   qc: QueryClient,
   taskId: string,
-  attachmentId: string,
+  attachmentId: string
 ): Attachment | undefined {
   freshnessTracker.recordMutation("tasks");
   let removed: Attachment | undefined;
-  qc.setQueryData<AttachmentsResponse>(
-    queryKeys.tasks.attachments(taskId),
-    (old) => {
-      if (!old) return old;
-      removed = old.attachments.find((a) => a.id === attachmentId);
-      return {
-        attachments: old.attachments.filter((a) => a.id !== attachmentId),
-      };
-    },
-  );
+  qc.setQueryData<AttachmentsResponse>(queryKeys.tasks.attachments(taskId), (old) => {
+    if (!old) return old;
+    removed = old.attachments.find((a) => a.id === attachmentId);
+    return {
+      attachments: old.attachments.filter((a) => a.id !== attachmentId),
+    };
+  });
   return removed;
 }
 
@@ -85,19 +72,16 @@ export function optimisticRemoveAttachment(
 export function rollbackRemoveAttachment(
   qc: QueryClient,
   taskId: string,
-  attachment: Attachment,
+  attachment: Attachment
 ): void {
-  qc.setQueryData<AttachmentsResponse>(
-    queryKeys.tasks.attachments(taskId),
-    (old) => {
-      if (!old) return { attachments: [attachment] };
-      // Re-insert in chronological order
-      const attachments = [...old.attachments, attachment].sort(
-        (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
-      );
-      return { attachments };
-    },
-  );
+  qc.setQueryData<AttachmentsResponse>(queryKeys.tasks.attachments(taskId), (old) => {
+    if (!old) return { attachments: [attachment] };
+    // Re-insert in chronological order
+    const attachments = [...old.attachments, attachment].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    );
+    return { attachments };
+  });
 }
 
 /**

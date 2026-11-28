@@ -57,8 +57,16 @@ describe("persistQueryCache across tabs", () => {
     const b = await openTab();
     connections.push(a.db, b.db);
 
-    b.client.setQueryData(tasksKey("p1"), { tasks: [{ id: "t1", title: "Old" }] }, { updatedAt: 1_000 });
-    a.client.setQueryData(tasksKey("p1"), { tasks: [{ id: "t1", title: "New" }] }, { updatedAt: 2_000 });
+    b.client.setQueryData(
+      tasksKey("p1"),
+      { tasks: [{ id: "t1", title: "Old" }] },
+      { updatedAt: 1_000 }
+    );
+    a.client.setQueryData(
+      tasksKey("p1"),
+      { tasks: [{ id: "t1", title: "New" }] },
+      { updatedAt: 2_000 }
+    );
     a.stop();
     await saved();
     b.stop();
@@ -69,7 +77,10 @@ describe("persistQueryCache across tabs", () => {
   });
 });
 
-function client(queries: { key: unknown[]; updatedAt: number; data?: unknown }[], buster = "v1"): PersistedClient {
+function client(
+  queries: { key: unknown[]; updatedAt: number; data?: unknown }[],
+  buster = "v1"
+): PersistedClient {
   return {
     timestamp: 0,
     buster,
@@ -106,7 +117,9 @@ describe("mergeSavedCache", () => {
   it("is this tab's cache when nothing is saved, or the saved copy is from another build or unreadable", () => {
     const incoming = client([{ key: tasksKey("p1"), updatedAt: now }]);
     expect(mergeSavedCache(undefined, incoming, now)).toBe(incoming);
-    expect(mergeSavedCache(client([{ key: tasksKey("p2"), updatedAt: now }], "v0"), incoming, now)).toBe(incoming);
+    expect(
+      mergeSavedCache(client([{ key: tasksKey("p2"), updatedAt: now }], "v0"), incoming, now)
+    ).toBe(incoming);
     expect(mergeSavedCache({ buster: "v1" } as PersistedClient, incoming, now)).toBe(incoming);
   });
 
@@ -122,7 +135,7 @@ describe("mergeSavedCache", () => {
         { key: tasksKey("shared"), updatedAt: now - 20, data: "mine, older" },
         { key: tasksKey("mine-newer"), updatedAt: now - 10, data: "mine, newer" },
       ]),
-      now,
+      now
     );
     expect(dataByKey(merged)).toEqual({
       [JSON.stringify(tasksKey("shared"))]: "saved, newer",
@@ -135,7 +148,7 @@ describe("mergeSavedCache", () => {
     const merged = mergeSavedCache(
       client([{ key: ["workspaces", "w1", "search", "secret"], updatedAt: now }]),
       client([]),
-      now,
+      now
     );
     expect(merged.clientState.queries).toEqual([]);
   });

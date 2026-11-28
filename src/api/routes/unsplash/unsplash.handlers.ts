@@ -17,10 +17,7 @@
 
 import type { Context } from "hono";
 
-import {
-  unsplashCuratedQuerySchema,
-  unsplashSearchSchema,
-} from "../../../shared/schemas/unsplash";
+import { unsplashCuratedQuerySchema, unsplashSearchSchema } from "../../../shared/schemas/unsplash";
 import type { AppEnv } from "../../env";
 import { errorResponse } from "../../lib/error-response";
 import { createUnsplashService, UnsplashError } from "../../lib/unsplash";
@@ -41,7 +38,7 @@ function handleUnsplashError(c: Context<AppEnv>, err: unknown, context: string) 
   if (err instanceof UnsplashError) {
     const status = mapUpstreamStatus(err.status);
     console.error(
-      `[Unsplash] ${context} upstream error: status=${err.status} → returning ${status}`,
+      `[Unsplash] ${context} upstream error: status=${err.status} → returning ${status}`
     );
     return errorResponse(c, "Unsplash request failed", status, {
       upstreamStatus: err.status,

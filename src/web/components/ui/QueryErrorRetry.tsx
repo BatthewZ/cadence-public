@@ -16,7 +16,13 @@ export function QueryErrorRetry({ message, onRetry }: QueryErrorRetryProps) {
   return (
     <Stack gap="r3" className="items-center py-r6">
       <Alert variant="error">{message}</Alert>
-      <Button variant="ghost" size="sm" onClick={() => { void onRetry(); }}>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => {
+          void onRetry();
+        }}
+      >
         Retry
       </Button>
     </Stack>

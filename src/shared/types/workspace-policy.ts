@@ -84,9 +84,9 @@ export const DEFAULT_WORKSPACE_POLICY: WorkspacePolicy = {
  * z.ZodType<WorkspacePolicy>` clause instead, because Zod needs a per-key type
  * that a key list cannot supply.
  */
-export const WORKSPACE_POLICY_KEYS = Object.keys(
-  DEFAULT_WORKSPACE_POLICY,
-) as ReadonlyArray<keyof WorkspacePolicy>;
+export const WORKSPACE_POLICY_KEYS = Object.keys(DEFAULT_WORKSPACE_POLICY) as ReadonlyArray<
+  keyof WorkspacePolicy
+>;
 
 /**
  * Resolve the stored `workspace.policy` column into a complete policy object.
@@ -111,9 +111,7 @@ export const WORKSPACE_POLICY_KEYS = Object.keys(
  * with five toggles should not discard four valid ones because a fifth was
  * written as a string.
  */
-export function resolveWorkspacePolicy(
-  stored: string | null | undefined,
-): WorkspacePolicy {
+export function resolveWorkspacePolicy(stored: string | null | undefined): WorkspacePolicy {
   if (!stored) return { ...DEFAULT_WORKSPACE_POLICY };
 
   let parsed: unknown;

@@ -49,10 +49,7 @@ export function CalendarGrid({
       {/* Weekday header */}
       <div className="grid grid-cols-7 border-b border-border-default bg-surface-1">
         {WEEKDAY_LABELS.map((label) => (
-          <div
-            key={label}
-            className="py-r6 text-center text-body-3 text-fg-muted"
-          >
+          <div key={label} className="py-r6 text-center text-body-3 text-fg-muted">
             {label}
           </div>
         ))}
@@ -108,9 +105,7 @@ export function CalendarGrid({
                     seg.clippedLeft ? "rounded-l-none" : "ml-0.5 rounded-l",
                     seg.clippedRight ? "rounded-r-none" : "mr-0.5 rounded-r",
                     !color && "bg-surface-3",
-                    seg.task.completed
-                      ? "line-through text-fg-muted"
-                      : "text-fg-primary",
+                    seg.task.completed ? "line-through text-fg-muted" : "text-fg-primary"
                   )}
                   style={{
                     gridColumn: `${seg.colStart} / ${seg.colEnd + 1}`,

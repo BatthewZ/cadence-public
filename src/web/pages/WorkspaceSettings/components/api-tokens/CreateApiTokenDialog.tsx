@@ -182,8 +182,8 @@ function CreateApiTokenForm({
             New API Token
           </Text>
           <Text variant="body-3" color="muted">
-            Generate a Personal Access Token for integrating Cadence with Slack
-            bots, GitHub Actions, or your own tools.
+            Generate a Personal Access Token for integrating Cadence with Slack bots, GitHub
+            Actions, or your own tools.
           </Text>
         </Stack>
 
@@ -281,19 +281,11 @@ function CreateApiTokenForm({
           </Text>
         </Field>
 
-        {submitAttempted && validationError && (
-          <Alert variant="error">{validationError}</Alert>
-        )}
+        {submitAttempted && validationError && <Alert variant="error">{validationError}</Alert>}
         {errorMessage && <Alert variant="error">{errorMessage}</Alert>}
 
         <Row gap="r4" justify="end" className="pt-r3">
-          <Button
-            type="button"
-            variant="ghost"
-            size="md"
-            onClick={onClose}
-            disabled={isPending}
-          >
+          <Button type="button" variant="ghost" size="md" onClick={onClose} disabled={isPending}>
             Cancel
           </Button>
           <Button type="submit" variant="primary" size="md" disabled={isPending}>

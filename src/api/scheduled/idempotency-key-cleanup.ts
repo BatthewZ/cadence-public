@@ -23,7 +23,7 @@ export async function cleanupIdempotencyKeys(db: Database): Promise<number> {
     const deleted = await db
       .delete(idempotencyKey)
       .where(
-        sql`rowid IN (SELECT rowid FROM ${idempotencyKey} WHERE ${lt(idempotencyKey.createdAt, cutoff)} LIMIT ${DELETE_BATCH_SIZE})`,
+        sql`rowid IN (SELECT rowid FROM ${idempotencyKey} WHERE ${lt(idempotencyKey.createdAt, cutoff)} LIMIT ${DELETE_BATCH_SIZE})`
       )
       .returning({ key: idempotencyKey.key });
     batchDeleted = deleted.length;

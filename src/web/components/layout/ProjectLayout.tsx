@@ -1,9 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, CalendarDays, CalendarRange, Download, FolderKanban, LayoutGrid, List, Settings, Upload, X } from "lucide-react";
+import {
+  BarChart3,
+  CalendarDays,
+  CalendarRange,
+  Download,
+  FolderKanban,
+  LayoutGrid,
+  List,
+  Settings,
+  Upload,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, useLocation, useNavigate, useParams } from "react-router-dom";
 
-import { type Theme,THEMES } from "@/shared/types/theme";
+import { type Theme, THEMES } from "@/shared/types/theme";
 import { Input } from "@/web/components/form/Input";
 import { Row, Stack } from "@/web/components/layout";
 import { ImportIcsDialog } from "@/web/components/project/ImportIcsDialog";
@@ -59,15 +70,14 @@ function ProjectLayoutInner() {
     project.coverUnsplash,
     updateProject,
     refetch,
-    refetch,
+    refetch
   );
 
   // Query project members to determine the current user's role
   const currentUserId = session?.user?.id;
   const { data: membersData, error: membersError } = useQuery({
     queryKey: queryKeys.projects.members(project.id),
-    queryFn: () =>
-      api.get<{ members: ProjectMember[] }>(`/api/projects/${project.id}/members`),
+    queryFn: () => api.get<{ members: ProjectMember[] }>(`/api/projects/${project.id}/members`),
   });
   useEffect(() => {
     if (membersError) {
@@ -108,14 +118,17 @@ function ProjectLayoutInner() {
   const raw = project.theme ?? workspace.theme ?? "default";
   const effectiveTheme: Theme = THEMES.includes(raw as Theme) ? (raw as Theme) : "default";
 
-  const projectThemeControl = useMemo<ThemeControlValue>(() => ({
-    scope: "project",
-    canEdit: canEditTheme ?? false,
-    effectiveTheme,
-    setTheme: (theme: Theme | null) => updateTheme(theme),
-    hasProjectOverride: project.theme != null,
-    isPending: themePending,
-  }), [canEditTheme, effectiveTheme, updateTheme, project.theme, themePending]);
+  const projectThemeControl = useMemo<ThemeControlValue>(
+    () => ({
+      scope: "project",
+      canEdit: canEditTheme ?? false,
+      effectiveTheme,
+      setTheme: (theme: Theme | null) => updateTheme(theme),
+      hasProjectOverride: project.theme != null,
+      isPending: themePending,
+    }),
+    [canEditTheme, effectiveTheme, updateTheme, project.theme, themePending]
+  );
 
   // Push project theme control up to WorkspaceLayout via ThemeOverrideContext.
   // On mount: set the project override so navbar ThemeSwitcher sees project scope.
@@ -167,10 +180,16 @@ function ProjectLayoutInner() {
       updateProject({ name: trimmed });
       // Also optimistically update the workspace projects cache (drives sidebar)
       const wpKey = queryKeys.workspaces.projects(project.workspaceId);
-      qc.setQueryData(wpKey, (old: { projects: Array<{ id: string; name: string }> } | undefined) =>
-        old
-          ? { projects: old.projects.map((p) => (p.id === project.id ? { ...p, name: trimmed } : p)) }
-          : old,
+      qc.setQueryData(
+        wpKey,
+        (old: { projects: Array<{ id: string; name: string }> } | undefined) =>
+          old
+            ? {
+                projects: old.projects.map((p) =>
+                  p.id === project.id ? { ...p, name: trimmed } : p
+                ),
+              }
+            : old
       );
       try {
         await sendWrite({
@@ -185,7 +204,16 @@ function ProjectLayoutInner() {
         void qc.invalidateQueries({ queryKey: wpKey });
       }
     }
-  }, [titleValue, project.name, project.id, project.workspaceId, updateProject, qc, toast, refetch]);
+  }, [
+    titleValue,
+    project.name,
+    project.id,
+    project.workspaceId,
+    updateProject,
+    qc,
+    toast,
+    refetch,
+  ]);
 
   // --- Inline icon editing ---
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
@@ -196,10 +224,16 @@ function ProjectLayoutInner() {
       updateProject({ icon: newIcon });
       // Also optimistically update the workspace projects cache (drives sidebar)
       const wpKey = queryKeys.workspaces.projects(project.workspaceId);
-      qc.setQueryData(wpKey, (old: { projects: Array<{ id: string; icon?: string | null }> } | undefined) =>
-        old
-          ? { projects: old.projects.map((p) => (p.id === project.id ? { ...p, icon: newIcon } : p)) }
-          : old,
+      qc.setQueryData(
+        wpKey,
+        (old: { projects: Array<{ id: string; icon?: string | null }> } | undefined) =>
+          old
+            ? {
+                projects: old.projects.map((p) =>
+                  p.id === project.id ? { ...p, icon: newIcon } : p
+                ),
+              }
+            : old
       );
       try {
         await sendWrite({
@@ -240,7 +274,9 @@ function ProjectLayoutInner() {
   // Determine active tab from current path
   const segments = location.pathname.split("/");
   const lastSegment = segments[segments.length - 1];
-  const activeTab = ["dashboard", "board", "list", "timeline", "calendar", "settings"].includes(lastSegment)
+  const activeTab = ["dashboard", "board", "list", "timeline", "calendar", "settings"].includes(
+    lastSegment
+  )
     ? lastSegment
     : "board";
 
@@ -255,7 +291,9 @@ function ProjectLayoutInner() {
   return (
     <Stack gap="r3" className="py-r2">
       <Breadcrumbs>
-        <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>{workspace.name}</Breadcrumbs.Item>
+        <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>
+          {workspace.name}
+        </Breadcrumbs.Item>
         <Breadcrumbs.Item href={`/w/${workspace.slug}/projects`}>Projects</Breadcrumbs.Item>
         <Breadcrumbs.Item href={basePath}>{project.name}</Breadcrumbs.Item>
         <Breadcrumbs.Item current>
@@ -267,8 +305,12 @@ function ProjectLayoutInner() {
         coverSrcSet={coverSrcSet}
         coverAttribution={coverAttribution}
         onUpload={handleCoverUpload}
-        onApplyUnsplash={(payload) => { void handleCoverApplyUnsplash(payload); }}
-        onRemove={() => { void handleCoverRemove(); }}
+        onApplyUnsplash={(payload) => {
+          void handleCoverApplyUnsplash(payload);
+        }}
+        onRemove={() => {
+          void handleCoverRemove();
+        }}
         uploading={uploading}
         editable={isProjectAdmin && onlineOnly.online}
         position={project.coverImagePosition}
@@ -337,7 +379,14 @@ function ProjectLayoutInner() {
               variant="h3"
               weight="bold"
               className={isProjectAdmin ? "cursor-pointer hover:text-accent duration-fast" : ""}
-              onClick={isProjectAdmin ? () => { setTitleValue(project.name); setEditingTitle(true); } : undefined}
+              onClick={
+                isProjectAdmin
+                  ? () => {
+                      setTitleValue(project.name);
+                      setEditingTitle(true);
+                    }
+                  : undefined
+              }
               title={isProjectAdmin ? "Click to edit" : undefined}
             >
               {project.name}
@@ -347,11 +396,18 @@ function ProjectLayoutInner() {
               autoFocus
               value={titleValue}
               onChange={(e) => setTitleValue(e.target.value)}
-              onFocus={() => { titleDirty.current = true; }}
-              onBlur={() => { void handleTitleSave(); }}
+              onFocus={() => {
+                titleDirty.current = true;
+              }}
+              onBlur={() => {
+                void handleTitleSave();
+              }}
               onKeyDown={(e) => {
                 if (e.key === "Enter") void handleTitleSave();
-                if (e.key === "Escape") { setEditingTitle(false); titleDirty.current = false; }
+                if (e.key === "Escape") {
+                  setEditingTitle(false);
+                  titleDirty.current = false;
+                }
               }}
               className="text-h3 font-bold bg-transparent px-r6 py-0 rounded border-none"
             />
@@ -365,7 +421,12 @@ function ProjectLayoutInner() {
       </div>
 
       <div className="flex items-center justify-between gap-4 min-w-0">
-        <Tabs value={activeTab} onValueChange={handleTabChange} defaultValue="board" className="min-w-0">
+        <Tabs
+          value={activeTab}
+          onValueChange={handleTabChange}
+          defaultValue="board"
+          className="min-w-0"
+        >
           <Tabs.List>
             <Tabs.Tab value="dashboard">
               <span className="inline-flex items-center gap-r6">

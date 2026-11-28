@@ -25,7 +25,7 @@ export interface WorkspaceTaskGroup {
 export function useWorkspaceTaskGroups(
   workspaceId: string,
   projectIds: string[],
-  options?: { enabled?: boolean },
+  options?: { enabled?: boolean }
 ) {
   const sortedIds = [...projectIds].sort();
   const hasProjects = sortedIds.length > 0;
@@ -35,7 +35,7 @@ export function useWorkspaceTaskGroups(
     queryFn: () => {
       const params = new URLSearchParams({ projectIds: sortedIds.join(",") });
       return api.get<{ taskGroups: WorkspaceTaskGroup[] }>(
-        `/api/workspaces/${workspaceId}/task-groups?${params.toString()}`,
+        `/api/workspaces/${workspaceId}/task-groups?${params.toString()}`
       );
     },
     enabled: hasProjects && options?.enabled !== false,

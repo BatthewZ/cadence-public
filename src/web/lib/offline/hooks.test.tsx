@@ -31,9 +31,9 @@ beforeEach(() => {
         new Response(JSON.stringify({ error: "Task not found" }), {
           status: 404,
           headers: { "Content-Type": "application/json" },
-        }),
-      ),
-    ),
+        })
+      )
+    )
   );
   onlineManager.setOnline(true);
   queryClient = new QueryClient();
@@ -79,13 +79,19 @@ describe("useSyncRefusals", () => {
     await queueOffline("u1 edit");
     act(() => onlineManager.setOnline(true));
     await waitFor(() => expect(onRefusal).toHaveBeenCalledTimes(1));
-    expect(onRefusal.mock.calls[0][0]).toMatchObject({ status: 404, write: { label: "Rename to “u1 edit”" } });
+    expect(onRefusal.mock.calls[0][0]).toMatchObject({
+      status: 404,
+      write: { label: "Rename to “u1 edit”" },
+    });
 
     await act(() => startOfflineRuntime("u2", queryClient));
     await queueOffline("u2 edit");
     act(() => onlineManager.setOnline(true));
     await waitFor(() => expect(onRefusal).toHaveBeenCalledTimes(2));
-    expect(onRefusal.mock.calls[1][0]).toMatchObject({ status: 404, write: { label: "Rename to “u2 edit”" } });
+    expect(onRefusal.mock.calls[1][0]).toMatchObject({
+      status: 404,
+      write: { label: "Rename to “u2 edit”" },
+    });
 
     unmount();
     await queueOffline("after unmount");

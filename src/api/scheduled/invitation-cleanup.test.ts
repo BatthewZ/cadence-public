@@ -11,13 +11,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createDb, type Database } from "../../db";
-import {
-  createTestD1,
-  seedInvitation,
-  seedUser,
-  seedWorkspace,
-  TEST_USER,
-} from "../test-utils";
+import { createTestD1, seedInvitation, seedUser, seedWorkspace, TEST_USER } from "../test-utils";
 import { cleanupInvitations } from "./invitation-cleanup";
 
 // ---------------------------------------------------------------------------
@@ -164,23 +158,27 @@ describe("cleanupInvitations", () => {
     expect(deleted).toBe(0);
   });
 
-  it("handles batching with more than 100 expired accepted invitations", { timeout: 15_000 }, async () => {
-    const promises: Promise<string>[] = [];
-    for (let i = 0; i < 150; i++) {
-      promises.push(
-        seedInvitation(d1, workspaceId, {
-          status: "accepted",
-          expiresAt: daysAgo(1),
-        }),
-      );
+  it(
+    "handles batching with more than 100 expired accepted invitations",
+    { timeout: 15_000 },
+    async () => {
+      const promises: Promise<string>[] = [];
+      for (let i = 0; i < 150; i++) {
+        promises.push(
+          seedInvitation(d1, workspaceId, {
+            status: "accepted",
+            expiresAt: daysAgo(1),
+          })
+        );
+      }
+      await Promise.all(promises);
+
+      const deleted = await cleanupInvitations(db);
+
+      expect(deleted).toBe(150);
+      expect(await countInvitations()).toBe(0);
     }
-    await Promise.all(promises);
-
-    const deleted = await cleanupInvitations(db);
-
-    expect(deleted).toBe(150);
-    expect(await countInvitations()).toBe(0);
-  });
+  );
 
   it("cleans up mixed statuses correctly in a single run", async () => {
     // Should be deleted: accepted+expired, expired+expired, pending+expired>7d

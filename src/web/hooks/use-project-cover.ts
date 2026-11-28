@@ -1,13 +1,7 @@
 import { useCallback } from "react";
 
-import {
-  buildUnsplashDisplaySrcSet,
-  buildUnsplashDisplayUrl,
-} from "@/shared/lib/unsplash-display";
-import type {
-  StoredUnsplashCoverPayload,
-  UnsplashCoverPayload,
-} from "@/shared/schemas/unsplash";
+import { buildUnsplashDisplaySrcSet, buildUnsplashDisplayUrl } from "@/shared/lib/unsplash-display";
+import type { StoredUnsplashCoverPayload, UnsplashCoverPayload } from "@/shared/schemas/unsplash";
 import { useOnlineOnly } from "@/web/components/sync/use-online-only";
 import { useFileUpload } from "@/web/hooks/use-file-upload";
 import { api } from "@/web/lib/api/client";
@@ -38,7 +32,7 @@ export function resolveCoverDisplay(
   // The STORED (lenient) shape: this resolves covers read back from the
   // server, where `rawUrl` may be absent on legacy rows — the display
   // builders below fall back to the pre-baked URLs for exactly that case.
-  coverUnsplash: StoredUnsplashCoverPayload | null | undefined,
+  coverUnsplash: StoredUnsplashCoverPayload | null | undefined
 ): {
   coverUrl: string | null;
   /** Multi-width `<img srcSet>` for Unsplash covers — lets the browser pick
@@ -102,7 +96,7 @@ export function useProjectCover(
     coverUnsplash?: StoredUnsplashCoverPayload | null;
   }) => void,
   onRemoveError?: () => void,
-  onApplyError?: () => void,
+  onApplyError?: () => void
 ) {
   const { state: uploadState, upload } = useFileUpload<{ coverImageKey: string }>();
   const coverOnlineOnly = useOnlineOnly();
@@ -110,7 +104,7 @@ export function useProjectCover(
 
   const { coverUrl, coverSrcSet, coverAttribution } = resolveCoverDisplay(
     coverImageKey,
-    coverUnsplash,
+    coverUnsplash
   );
 
   const uploading = uploadState === "uploading";
@@ -131,7 +125,7 @@ export function useProjectCover(
         }
       });
     },
-    [upload, projectId, updateProject],
+    [upload, projectId, updateProject]
   );
 
   // Offline the optimistic change could never be confirmed or rolled back (the refetch is paused).
@@ -154,13 +148,13 @@ export function useProjectCover(
       try {
         await api.put<{ coverUnsplash: UnsplashCoverPayload }>(
           `/api/projects/${projectId}/cover/unsplash`,
-          payload,
+          payload
         );
       } catch {
         onApplyError?.();
       }
     },
-    [online, projectId, updateProject, onApplyError],
+    [online, projectId, updateProject, onApplyError]
   );
 
   return {

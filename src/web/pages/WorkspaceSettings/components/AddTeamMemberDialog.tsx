@@ -2,11 +2,7 @@ import type { FormEvent } from "react";
 
 import { Field, Label, Select } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
-import {
-  Button,
-  Dialog,
-  Text,
-} from "@/web/components/ui";
+import { Button, Dialog, Text } from "@/web/components/ui";
 import type { WorkspaceMember } from "@/web/contexts/WorkspaceContext";
 
 export function AddTeamMemberDialog({
@@ -32,10 +28,7 @@ export function AddTeamMemberDialog({
   }
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-    >
+    <Dialog open={open} onClose={onClose}>
       <form onSubmit={(e) => void handleSubmit(e)}>
         <Stack gap="r4">
           <Text variant="h5">Add Member to {teamName}</Text>
@@ -57,20 +50,10 @@ export function AddTeamMemberDialog({
           </Field>
 
           <Row gap="r4" justify="end">
-            <Button
-              variant="ghost"
-              size="md"
-              type="button"
-              onClick={onClose}
-            >
+            <Button variant="ghost" size="md" type="button" onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="md"
-              disabled={!selectedMemberId}
-            >
+            <Button type="submit" variant="primary" size="md" disabled={!selectedMemberId}>
               Add Member
             </Button>
           </Row>

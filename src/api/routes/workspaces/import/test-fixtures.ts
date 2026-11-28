@@ -8,10 +8,7 @@ import type {
   ExportedUser,
   WorkspaceExport,
 } from "../../../../shared/schemas/workspace-export";
-import {
-  EXPORT_FORMAT,
-  EXPORT_FORMAT_VERSION,
-} from "../../../../shared/schemas/workspace-export";
+import { EXPORT_FORMAT, EXPORT_FORMAT_VERSION } from "../../../../shared/schemas/workspace-export";
 import type { ImportDocument } from "../../../../shared/schemas/workspace-import";
 import { importDocumentSchema } from "../../../../shared/schemas/workspace-import";
 
@@ -91,10 +88,7 @@ export function makeComment(overrides: Partial<ExportedComment> = {}): ExportedC
   };
 }
 
-export function makeTask(
-  taskGroupId: string,
-  overrides: Partial<ExportedTask> = {},
-): ExportedTask {
+export function makeTask(taskGroupId: string, overrides: Partial<ExportedTask> = {}): ExportedTask {
   return {
     id: nextId("src-task"),
     taskGroupId,
@@ -154,10 +148,7 @@ export function makeProject(overrides: Partial<ExportedProject> = {}): ExportedP
  * schema so a fixture that drifts from the contract fails the test that
  * uses it instead of silently testing an impossible input.
  */
-export function makeDoc(
-  projects: ExportedProject[],
-  users: ExportedUser[] = [],
-): ImportDocument {
+export function makeDoc(projects: ExportedProject[], users: ExportedUser[] = []): ImportDocument {
   return importDocumentSchema.parse({ users, projects });
 }
 

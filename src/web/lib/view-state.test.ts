@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  type SavedViewState,
-  TASK_VIEW_PARAM_KEYS,
-} from "@/shared/schemas/saved-view";
+import { type SavedViewState, TASK_VIEW_PARAM_KEYS } from "@/shared/schemas/saved-view";
 
 import {
   captureViewState,
@@ -50,9 +47,7 @@ describe("captureViewState", () => {
   });
 
   it("covers all TASK_VIEW_PARAM_KEYS (guards against a new key being added but untested)", () => {
-    const params = new URLSearchParams(
-      TASK_VIEW_PARAM_KEYS.map((key) => [key, `value-${key}`]),
-    );
+    const params = new URLSearchParams(TASK_VIEW_PARAM_KEYS.map((key) => [key, `value-${key}`]));
     const state = captureViewState("list", params);
     expect(Object.keys(state.params).sort()).toEqual([...TASK_VIEW_PARAM_KEYS].sort());
   });
@@ -93,10 +88,7 @@ describe("captureViewState", () => {
 
 describe("viewStateToSearch", () => {
   it("serializes params plus view=<id>", () => {
-    const search = viewStateToSearch(
-      { tab: "board", params: { priority: "high" } },
-      "sv-1",
-    );
+    const search = viewStateToSearch({ tab: "board", params: { priority: "high" } }, "sv-1");
     const parsed = new URLSearchParams(search);
     expect(parsed.get("priority")).toBe("high");
     expect(parsed.get("view")).toBe("sv-1");
@@ -115,30 +107,25 @@ describe("viewStateToSearch", () => {
           priority: "high",
         },
       },
-      "sv-1",
+      "sv-1"
     );
-    expect(search).toBe(
-      "assignee=u1&priority=high&groupBy=assignee&alpha=a&zeta=z&view=sv-1",
-    );
+    expect(search).toBe("assignee=u1&priority=high&groupBy=assignee&alpha=a&zeta=z&view=sv-1");
   });
 
   it("is byte-stable for equal states regardless of param insertion order", () => {
     const a = viewStateToSearch(
       { tab: "board", params: { priority: "high", assignee: "u1" } },
-      "sv-1",
+      "sv-1"
     );
     const b = viewStateToSearch(
       { tab: "board", params: { assignee: "u1", priority: "high" } },
-      "sv-1",
+      "sv-1"
     );
     expect(a).toBe(b);
   });
 
   it("writes unknown stored keys verbatim (forward compatibility for future clients)", () => {
-    const search = viewStateToSearch(
-      { tab: "board", params: { sort: "dueDate:asc" } },
-      "sv-1",
-    );
+    const search = viewStateToSearch({ tab: "board", params: { sort: "dueDate:asc" } }, "sv-1");
     expect(new URLSearchParams(search).get("sort")).toBe("dueDate:asc");
   });
 
@@ -167,7 +154,7 @@ describe("viewStateToSearch", () => {
   it("URL-encodes values safely (comma lists survive a parse round-trip)", () => {
     const search = viewStateToSearch(
       { tab: "board", params: { label: "bug,none", dueDateFrom: "2026-06-01" } },
-      "sv 1",
+      "sv 1"
     );
     const parsed = new URLSearchParams(search);
     expect(parsed.get("label")).toBe("bug,none");
@@ -177,7 +164,7 @@ describe("viewStateToSearch", () => {
   it("skips empty-string values (mirrors capture's absent == empty rule)", () => {
     const search = viewStateToSearch(
       { tab: "board", params: { assignee: "", priority: "high" } },
-      "sv-1",
+      "sv-1"
     );
     expect(search).toBe("priority=high&view=sv-1");
   });
@@ -185,7 +172,7 @@ describe("viewStateToSearch", () => {
   it("drops a stored view key so the applied id cannot be shadowed by a stale one", () => {
     const search = viewStateToSearch(
       { tab: "board", params: { view: "stale-id", priority: "high" } },
-      "sv-1",
+      "sv-1"
     );
     const parsed = new URLSearchParams(search);
     expect(parsed.getAll("view")).toEqual(["sv-1"]);

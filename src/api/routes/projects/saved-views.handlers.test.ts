@@ -98,13 +98,13 @@ function createApp(user: TestUser) {
     "/projects/:projectId/views",
     auth,
     validateBody(createSavedViewSchema),
-    createSavedView,
+    createSavedView
   );
   app.patch(
     "/projects/:projectId/views/:viewId",
     auth,
     validateBody(updateSavedViewSchema),
-    updateSavedView,
+    updateSavedView
   );
   app.delete("/projects/:projectId/views/:viewId", auth, deleteSavedView);
 
@@ -120,11 +120,11 @@ async function createView(
   app: Hono<AppEnv>,
   pid: string,
   name: string,
-  state: SavedViewState = baseState,
+  state: SavedViewState = baseState
 ): Promise<SavedView> {
   const res = await app.request(
     `/projects/${pid}/views`,
-    jsonRequest("POST", `/projects/${pid}/views`, { name, state }),
+    jsonRequest("POST", `/projects/${pid}/views`, { name, state })
   );
   expect(res.status).toBe(201);
   const body = await res.json<{ view: SavedView }>();
@@ -148,13 +148,13 @@ async function seedSavedViewRow(
   pid: string,
   creatorId: string,
   name: string,
-  position: string,
+  position: string
 ): Promise<string> {
   const id = crypto.randomUUID();
   const now = Math.floor(Date.now() / 1000);
   await d1
     .prepare(
-      "INSERT INTO saved_view (id, projectId, creatorId, name, state, position, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO saved_view (id, projectId, creatorId, name, state, position, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(id, pid, creatorId, name, JSON.stringify(baseState), position, now, now)
     .run();
@@ -203,7 +203,7 @@ describe("createSavedView", () => {
       jsonRequest("POST", `/projects/${pid}/views`, {
         name: "SPRINT focus",
         state: baseState,
-      }),
+      })
     );
     expect(res.status).toBe(409);
   });
@@ -225,12 +225,7 @@ describe("createSavedView", () => {
     const pid = await seedProject(d1, workspaceId, { name: "Cap Project" });
 
     for (let i = 1; i <= MAX_SAVED_VIEWS_PER_PROJECT_USER; i++) {
-      await seedSavedViewRow(
-        pid,
-        TEST_USER.id,
-        `Cap View ${i}`,
-        `a${String(i).padStart(6, "0")}`,
-      );
+      await seedSavedViewRow(pid, TEST_USER.id, `Cap View ${i}`, `a${String(i).padStart(6, "0")}`);
     }
 
     const app = createApp(TEST_USER);
@@ -239,7 +234,7 @@ describe("createSavedView", () => {
       jsonRequest("POST", `/projects/${pid}/views`, {
         name: "One Too Many",
         state: baseState,
-      }),
+      })
     );
     expect(res.status).toBe(400);
 
@@ -260,11 +255,11 @@ describe("createSavedView", () => {
       `/projects/${projectId}/views/${created.id}`,
       jsonRequest("PATCH", `/projects/${projectId}/views/${created.id}`, {
         name: "Freshness Probe 2",
-      }),
+      })
     );
     await app.request(
       `/projects/${projectId}/views/${created.id}`,
-      jsonRequest("DELETE", `/projects/${projectId}/views/${created.id}`),
+      jsonRequest("DELETE", `/projects/${projectId}/views/${created.id}`)
     );
 
     const after = await d1
@@ -322,7 +317,7 @@ describe("updateSavedView", () => {
       `/projects/${pid}/views/${created.id}`,
       jsonRequest("PATCH", `/projects/${pid}/views/${created.id}`, {
         name: "New Name",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -340,18 +335,9 @@ describe("updateSavedView", () => {
     const oldSec = Math.floor(new Date("2025-01-01T00:00:00Z").getTime() / 1000);
     await d1
       .prepare(
-        "INSERT INTO saved_view (id, projectId, creatorId, name, state, position, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO saved_view (id, projectId, creatorId, name, state, position, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
       )
-      .bind(
-        id,
-        pid,
-        TEST_USER.id,
-        "Stale View",
-        JSON.stringify(baseState),
-        "a0",
-        oldSec,
-        oldSec,
-      )
+      .bind(id, pid, TEST_USER.id, "Stale View", JSON.stringify(baseState), "a0", oldSec, oldSec)
       .run();
 
     const app = createApp(TEST_USER);
@@ -362,7 +348,7 @@ describe("updateSavedView", () => {
 
     const res = await app.request(
       `/projects/${pid}/views/${id}`,
-      jsonRequest("PATCH", `/projects/${pid}/views/${id}`, { state: newState }),
+      jsonRequest("PATCH", `/projects/${pid}/views/${id}`, { state: newState })
     );
 
     expect(res.status).toBe(200);
@@ -370,7 +356,7 @@ describe("updateSavedView", () => {
     expect(body.view.state).toEqual(newState);
     expect(body.view.name).toBe("Stale View");
     expect(new Date(body.view.updatedAt).getTime()).toBeGreaterThan(
-      new Date(body.view.createdAt).getTime(),
+      new Date(body.view.createdAt).getTime()
     );
 
     // And the new snapshot (unknown key included) survives a storage read.
@@ -389,7 +375,7 @@ describe("updateSavedView", () => {
       `/projects/${pid}/views/${viewB.id}`,
       jsonRequest("PATCH", `/projects/${pid}/views/${viewB.id}`, {
         name: "view a",
-      }),
+      })
     );
     expect(res.status).toBe(409);
   });
@@ -406,7 +392,7 @@ describe("updateSavedView", () => {
       `/projects/${pid}/views/${created.id}`,
       jsonRequest("PATCH", `/projects/${pid}/views/${created.id}`, {
         name: "My Urgent",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -423,7 +409,7 @@ describe("updateSavedView", () => {
       `/projects/${pid}/views/${created.id}`,
       jsonRequest("PATCH", `/projects/${pid}/views/${created.id}`, {
         name: "Same Name",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -441,7 +427,7 @@ describe("updateSavedView", () => {
       `/projects/${pid}/views/${mine.id}`,
       jsonRequest("PATCH", `/projects/${pid}/views/${mine.id}`, {
         name: "Shared Name",
-      }),
+      })
     );
 
     // Uniqueness is per-creator, so colliding with a TEAMMATE'S private
@@ -457,7 +443,7 @@ describe("updateSavedView", () => {
       `/projects/${pid}/views/${theirs.id}`,
       jsonRequest("PATCH", `/projects/${pid}/views/${theirs.id}`, {
         name: "Hijacked",
-      }),
+      })
     );
 
     // 404, NOT 403: a 403 would confirm to user1 that the guessed id exists.
@@ -474,7 +460,7 @@ describe("updateSavedView", () => {
       `/projects/${projectId}/views/nonexistent`,
       jsonRequest("PATCH", `/projects/${projectId}/views/nonexistent`, {
         name: "Nope",
-      }),
+      })
     );
     expect(res.status).toBe(404);
   });
@@ -487,7 +473,7 @@ describe("updateSavedView", () => {
       `/projects/${otherProjectId}/views/${created.id}`,
       jsonRequest("PATCH", `/projects/${otherProjectId}/views/${created.id}`, {
         name: "Nope",
-      }),
+      })
     );
     expect(res.status).toBe(404);
   });
@@ -501,7 +487,7 @@ describe("deleteSavedView", () => {
 
     const res = await app.request(
       `/projects/${pid}/views/${created.id}`,
-      jsonRequest("DELETE", `/projects/${pid}/views/${created.id}`),
+      jsonRequest("DELETE", `/projects/${pid}/views/${created.id}`)
     );
 
     expect(res.status).toBe(200);
@@ -509,10 +495,7 @@ describe("deleteSavedView", () => {
     expect(body.ok).toBe(true);
     expect(body.deletedId).toBe(created.id);
 
-    const row = await d1
-      .prepare("SELECT id FROM saved_view WHERE id = ?")
-      .bind(created.id)
-      .first();
+    const row = await d1.prepare("SELECT id FROM saved_view WHERE id = ?").bind(created.id).first();
     expect(row).toBeNull();
   });
 
@@ -522,14 +505,11 @@ describe("deleteSavedView", () => {
 
     const res = await createApp(TEST_USER).request(
       `/projects/${pid}/views/${theirs.id}`,
-      jsonRequest("DELETE", `/projects/${pid}/views/${theirs.id}`),
+      jsonRequest("DELETE", `/projects/${pid}/views/${theirs.id}`)
     );
     expect(res.status).toBe(404);
 
-    const row = await d1
-      .prepare("SELECT id FROM saved_view WHERE id = ?")
-      .bind(theirs.id)
-      .first();
+    const row = await d1.prepare("SELECT id FROM saved_view WHERE id = ?").bind(theirs.id).first();
     expect(row).not.toBeNull();
   });
 
@@ -537,7 +517,7 @@ describe("deleteSavedView", () => {
     const app = createApp(TEST_USER);
     const res = await app.request(
       `/projects/${projectId}/views/nonexistent`,
-      jsonRequest("DELETE", `/projects/${projectId}/views/nonexistent`),
+      jsonRequest("DELETE", `/projects/${projectId}/views/nonexistent`)
     );
     expect(res.status).toBe(404);
   });
@@ -548,7 +528,7 @@ describe("deleteSavedView", () => {
 
     const res = await app.request(
       `/projects/${otherProjectId}/views/${created.id}`,
-      jsonRequest("DELETE", `/projects/${otherProjectId}/views/${created.id}`),
+      jsonRequest("DELETE", `/projects/${otherProjectId}/views/${created.id}`)
     );
     expect(res.status).toBe(404);
   });

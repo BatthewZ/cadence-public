@@ -12,7 +12,11 @@ import type { RouteConfig, RouteHandler } from "@hono/zod-openapi";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import type { Context } from "hono";
 
-import { createCommentSchema, listCommentsQuerySchema, updateCommentSchema } from "../../../shared/schemas/comment";
+import {
+  createCommentSchema,
+  listCommentsQuerySchema,
+  updateCommentSchema,
+} from "../../../shared/schemas/comment";
 import { assignLabelSchema } from "../../../shared/schemas/label";
 import {
   apiErrorResponseSchema,
@@ -24,7 +28,13 @@ import {
   updateTaskResponseSchema,
 } from "../../../shared/schemas/openapi-responses";
 import { createSubtaskSchema, updateSubtaskSchema } from "../../../shared/schemas/subtask";
-import { createTaskSchema, importTasksSchema, listActivityQuerySchema, moveTaskSchema, updateTaskSchema } from "../../../shared/schemas/task";
+import {
+  createTaskSchema,
+  importTasksSchema,
+  listActivityQuerySchema,
+  moveTaskSchema,
+  updateTaskSchema,
+} from "../../../shared/schemas/task";
 import { unsplashCoverPayloadSchema } from "../../../shared/schemas/unsplash";
 import type { AppEnv } from "../../env";
 import {
@@ -69,7 +79,7 @@ import {
  * narrow `RouteHandler<R, AppEnv>` that `app.openapi()` expects.
  */
 function asRouteHandler<R extends RouteConfig>(
-  fn: (c: Context<AppEnv>) => unknown,
+  fn: (c: Context<AppEnv>) => unknown
 ): RouteHandler<R, AppEnv> {
   return fn as unknown as RouteHandler<R, AppEnv>;
 }
@@ -95,31 +105,49 @@ const taskIdParam = z.object({
 });
 
 const listTasksQuerySchema = z.object({
-  taskGroupId: z.string().optional().openapi({
-    param: { name: "taskGroupId", in: "query" },
-    description: "Filter to tasks in this task group only",
-  }),
-  assigneeId: z.string().optional().openapi({
-    param: { name: "assigneeId", in: "query" },
-    description: "Filter to tasks assigned to this user",
-  }),
-  completed: z.enum(["true", "false"]).optional().openapi({
-    param: { name: "completed", in: "query" },
-    description: "Filter by completion status",
-  }),
-  priority: z.string().optional().openapi({
-    param: { name: "priority", in: "query" },
-    description: "Filter by priority (urgent | high | medium | low | none)",
-  }),
-  labelId: z.string().optional().openapi({
-    param: { name: "labelId", in: "query" },
-    description: "Comma-separated list of label IDs; tasks matching any are returned",
-  }),
-  include: z.enum(["subtasks"]).optional().openapi({
-    param: { name: "include", in: "query" },
-    description:
-      "`subtasks` adds each task's subtask rows (ordered as `GET /tasks/{taskId}` returns them), so one request carries every task's detail. The web app uses it to keep projects readable offline.",
-  }),
+  taskGroupId: z
+    .string()
+    .optional()
+    .openapi({
+      param: { name: "taskGroupId", in: "query" },
+      description: "Filter to tasks in this task group only",
+    }),
+  assigneeId: z
+    .string()
+    .optional()
+    .openapi({
+      param: { name: "assigneeId", in: "query" },
+      description: "Filter to tasks assigned to this user",
+    }),
+  completed: z
+    .enum(["true", "false"])
+    .optional()
+    .openapi({
+      param: { name: "completed", in: "query" },
+      description: "Filter by completion status",
+    }),
+  priority: z
+    .string()
+    .optional()
+    .openapi({
+      param: { name: "priority", in: "query" },
+      description: "Filter by priority (urgent | high | medium | low | none)",
+    }),
+  labelId: z
+    .string()
+    .optional()
+    .openapi({
+      param: { name: "labelId", in: "query" },
+      description: "Comma-separated list of label IDs; tasks matching any are returned",
+    }),
+  include: z
+    .enum(["subtasks"])
+    .optional()
+    .openapi({
+      param: { name: "include", in: "query" },
+      description:
+        "`subtasks` adds each task's subtask rows (ordered as `GET /tasks/{taskId}` returns them), so one request carries every task's detail. The web app uses it to keep projects readable offline.",
+    }),
 });
 
 const unauthorizedResponse = {
@@ -300,7 +328,8 @@ const updateTaskRoute = createRoute({
     404: taskNotFoundResponse,
     409: {
       content: { "application/json": { schema: apiErrorResponseSchema } },
-      description: "`descriptionBase` no longer matches the stored description (`code: description_conflict`); nothing was applied and the body carries the current `task`",
+      description:
+        "`descriptionBase` no longer matches the stored description (`code: description_conflict`); nothing was applied and the body carries the current `task`",
     },
   },
 });
@@ -374,44 +403,34 @@ app.openapi(updateTaskRoute, asRouteHandler<typeof updateTaskRoute>(updateTask))
 // Remaining plain-Hono routes (not yet documented)
 // ---------------------------------------------------------------------------
 
-app.delete(
-  "/tasks/:taskId",
-  requireAuth,
-  requireTaskRole("admin", "member"),
-  deleteTask,
-);
+app.delete("/tasks/:taskId", requireAuth, requireTaskRole("admin", "member"), deleteTask);
 
 app.patch(
   "/tasks/:taskId/move",
   requireAuth,
   requireTaskRole("admin", "member"),
   validateBody(moveTaskSchema),
-  moveTask,
+  moveTask
 );
 
 app.post(
   "/tasks/:taskId/duplicate",
   requireAuth,
   requireTaskRole("admin", "member"),
-  duplicateTask,
+  duplicateTask
 );
 
 // ---------------------------------------------------------------------------
 // Task completion routes
 // ---------------------------------------------------------------------------
 
-app.post(
-  "/tasks/:taskId/complete",
-  requireAuth,
-  requireTaskRole("admin", "member"),
-  completeTask,
-);
+app.post("/tasks/:taskId/complete", requireAuth, requireTaskRole("admin", "member"), completeTask);
 
 app.post(
   "/tasks/:taskId/uncomplete",
   requireAuth,
   requireTaskRole("admin", "member"),
-  uncompleteTask,
+  uncompleteTask
 );
 
 // ---------------------------------------------------------------------------
@@ -423,7 +442,7 @@ app.get(
   requireAuth,
   requireTaskAccess(),
   validateQuery(listActivityQuerySchema),
-  getTaskActivity,
+  getTaskActivity
 );
 
 // ---------------------------------------------------------------------------
@@ -434,24 +453,34 @@ app.put(
   "/tasks/:taskId/cover",
   requireAuth,
   requireTaskRole("admin", "member"),
-  rateLimit({ max: 10, windowSeconds: 60, prefix: "task-cover-upload", keyFn: defaultRateLimitKey }),
-  uploadTaskCover,
+  rateLimit({
+    max: 10,
+    windowSeconds: 60,
+    prefix: "task-cover-upload",
+    keyFn: defaultRateLimitKey,
+  }),
+  uploadTaskCover
 );
 
 app.put(
   "/tasks/:taskId/cover/unsplash",
   requireAuth,
   requireTaskRole("admin", "member"),
-  rateLimit({ max: 10, windowSeconds: 60, prefix: "task-cover-unsplash", keyFn: defaultRateLimitKey }),
+  rateLimit({
+    max: 10,
+    windowSeconds: 60,
+    prefix: "task-cover-unsplash",
+    keyFn: defaultRateLimitKey,
+  }),
   validateBody(unsplashCoverPayloadSchema),
-  applyTaskUnsplashCover,
+  applyTaskUnsplashCover
 );
 
 app.delete(
   "/tasks/:taskId/cover",
   requireAuth,
   requireTaskRole("admin", "member"),
-  deleteTaskCover,
+  deleteTaskCover
 );
 
 // ---------------------------------------------------------------------------
@@ -463,7 +492,7 @@ app.post(
   requireAuth,
   requireTaskRole("admin", "member"),
   validateBody(createSubtaskSchema),
-  createSubtask,
+  createSubtask
 );
 
 // Subtask PATCH/DELETE resolve the parent task's project and check access
@@ -472,18 +501,9 @@ app.post(
 // themselves: the `task:*` middleware mounted above is capability scope, not
 // project selection, so without that call a PAT narrowed to one project — or
 // bound to a different workspace — would be unconstrained on these routes.
-app.patch(
-  "/subtasks/:subtaskId",
-  requireAuth,
-  validateBody(updateSubtaskSchema),
-  updateSubtask,
-);
+app.patch("/subtasks/:subtaskId", requireAuth, validateBody(updateSubtaskSchema), updateSubtask);
 
-app.delete(
-  "/subtasks/:subtaskId",
-  requireAuth,
-  deleteSubtask,
-);
+app.delete("/subtasks/:subtaskId", requireAuth, deleteSubtask);
 
 // ---------------------------------------------------------------------------
 // Comment routes
@@ -494,7 +514,7 @@ app.get(
   requireAuth,
   requireTaskAccess(),
   validateQuery(listCommentsQuerySchema),
-  listComments,
+  listComments
 );
 
 app.post(
@@ -502,50 +522,41 @@ app.post(
   requireAuth,
   requireTaskRole("admin", "member"),
   validateBody(createCommentSchema),
-  createComment,
+  createComment
 );
 
 // Comment PATCH/DELETE resolve the parent task's project and check access
 // inline in handlers (no taskId in URL to use requireTaskAccess middleware),
 // and likewise call `enforceTokenProjectBinding` themselves — see the note on
 // the subtask routes above.
-app.patch(
-  "/comments/:commentId",
-  requireAuth,
-  validateBody(updateCommentSchema),
-  updateComment,
-);
+app.patch("/comments/:commentId", requireAuth, validateBody(updateCommentSchema), updateComment);
 
-app.delete(
-  "/comments/:commentId",
-  requireAuth,
-  deleteComment,
-);
+app.delete("/comments/:commentId", requireAuth, deleteComment);
 
 // ---------------------------------------------------------------------------
 // Task attachment routes
 // ---------------------------------------------------------------------------
 
-app.get(
-  "/tasks/:taskId/attachments",
-  requireAuth,
-  requireTaskAccess(),
-  listAttachments,
-);
+app.get("/tasks/:taskId/attachments", requireAuth, requireTaskAccess(), listAttachments);
 
 app.post(
   "/tasks/:taskId/attachments",
   requireAuth,
   requireTaskRole("admin", "member"),
-  rateLimit({ max: 20, windowSeconds: 60, prefix: "task-attachment-upload", keyFn: defaultRateLimitKey }),
-  uploadAttachment,
+  rateLimit({
+    max: 20,
+    windowSeconds: 60,
+    prefix: "task-attachment-upload",
+    keyFn: defaultRateLimitKey,
+  }),
+  uploadAttachment
 );
 
 app.delete(
   "/tasks/:taskId/attachments/:attachmentId",
   requireAuth,
   requireTaskAccess(),
-  deleteAttachment,
+  deleteAttachment
 );
 
 // ---------------------------------------------------------------------------
@@ -557,14 +568,14 @@ app.post(
   requireAuth,
   requireTaskRole("admin", "member"),
   validateBody(assignLabelSchema),
-  assignLabel,
+  assignLabel
 );
 
 app.delete(
   "/tasks/:taskId/labels/:labelId",
   requireAuth,
   requireTaskRole("admin", "member"),
-  unassignLabel,
+  unassignLabel
 );
 
 export default app;

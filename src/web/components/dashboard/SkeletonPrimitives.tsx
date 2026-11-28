@@ -6,13 +6,7 @@ import { Card, Skeleton } from "@/web/components/ui";
  * dashboard metric cards. Both workspace and project dashboard skeletons
  * share this pattern (with different grid classes and card counts).
  */
-function SkeletonStatGrid({
-  count,
-  gridClassName,
-}: {
-  count: number;
-  gridClassName: string;
-}) {
+function SkeletonStatGrid({ count, gridClassName }: { count: number; gridClassName: string }) {
   return (
     <div className={gridClassName}>
       {Array.from({ length: count }, (_, i) => (
@@ -36,10 +30,7 @@ function SkeletonBreakdownCard() {
     <Card>
       <Stack gap="r5">
         <Skeleton variant="text" className="h-5 w-36" />
-        <Skeleton
-          variant="rectangular"
-          className="h-3 w-full rounded-full"
-        />
+        <Skeleton variant="rectangular" className="h-3 w-full rounded-full" />
         <Row gap="r5">
           {Array.from({ length: 4 }, (_, i) => (
             <Skeleton key={i} variant="text" className="h-4 w-16" />
@@ -71,10 +62,7 @@ function SkeletonBarListCard({
               <Skeleton variant="text" className="h-4 w-24" />
               <Skeleton variant="text" className="h-4 w-8" />
             </Row>
-            <Skeleton
-              variant="rectangular"
-              className="h-2 w-full rounded"
-            />
+            <Skeleton variant="rectangular" className="h-2 w-full rounded" />
           </Stack>
         ))}
       </Stack>

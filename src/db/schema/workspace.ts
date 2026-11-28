@@ -1,10 +1,4 @@
-import {
-  index,
-  integer,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import type { WorkspaceRole } from "../../shared/types/roles";
 import { user } from "./auth";
@@ -34,9 +28,7 @@ export const workspace = sqliteTable(
      */
     policy: text("policy"),
   },
-  (table) => [
-    uniqueIndex("workspace_owner_slug_unique").on(table.ownerId, table.slug),
-  ],
+  (table) => [uniqueIndex("workspace_owner_slug_unique").on(table.ownerId, table.slug)]
 );
 
 export const workspaceMember = sqliteTable(
@@ -56,10 +48,7 @@ export const workspaceMember = sqliteTable(
     joinedAt: integer("joinedAt", { mode: "timestamp" }).notNull(),
   },
   (table) => [
-    uniqueIndex("workspace_member_workspace_user_unique").on(
-      table.workspaceId,
-      table.userId,
-    ),
+    uniqueIndex("workspace_member_workspace_user_unique").on(table.workspaceId, table.userId),
     index("workspace_member_user_idx").on(table.userId),
-  ],
+  ]
 );

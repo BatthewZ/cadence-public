@@ -31,12 +31,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vites
 import { createDb, type Database } from "../../db";
 import type { AppBindings } from "../env";
 import type { TelemetryEvent, TelemetrySink } from "../lib/telemetry/types";
-import {
-  createTestD1,
-  seedUser,
-  seedWorkspace,
-  TEST_USER,
-} from "../test-utils";
+import { createTestD1, seedUser, seedWorkspace, TEST_USER } from "../test-utils";
 import { processScheduledTokenRevocations } from "./api-token-revocation";
 import { handleScheduled } from "./index";
 
@@ -98,7 +93,7 @@ async function seedApiToken(opts: {
   await d1
     .prepare(
       `INSERT INTO api_token (id, userId, workspaceId, name, tokenHash, tokenPrefix, scopes, projectScope, projectIds, lastUsedAt, expiresAt, revokeAt, revokedAt, rotatedToId, createdAt)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
     )
     .bind(
       id,
@@ -115,7 +110,7 @@ async function seedApiToken(opts: {
       toSec(opts.revokeAt ?? null),
       toSec(opts.revokedAt ?? null),
       null,
-      now,
+      now
     )
     .run();
   return id;
@@ -151,9 +146,7 @@ describe("processScheduledTokenRevocations", () => {
     const revokedAt = await readRevokedAt(id);
     expect(revokedAt).not.toBeNull();
     // The stamped timestamp should be close to now (within 60s of run start).
-    expect(revokedAt).toBeGreaterThan(
-      Math.floor(Date.now() / 1000) - 60,
-    );
+    expect(revokedAt).toBeGreaterThan(Math.floor(Date.now() / 1000) - 60);
   });
 
   it("leaves a token whose revokeAt is in the future untouched", async () => {
@@ -239,9 +232,7 @@ describe("processScheduledTokenRevocations", () => {
     // `createTelemetrySink(env)`. We intercept that module so the test can
     // observe events without standing up the Analytics Engine binding.
     const telemetryModule = await import("../lib/telemetry");
-    const spy = vi
-      .spyOn(telemetryModule, "createTelemetrySink")
-      .mockReturnValue(fakeSink);
+    const spy = vi.spyOn(telemetryModule, "createTelemetrySink").mockReturnValue(fakeSink);
 
     try {
       const env: AppBindings = {
@@ -261,7 +252,7 @@ describe("processScheduledTokenRevocations", () => {
       await handleScheduled(scheduledEvent, env);
 
       const tokenEvent = events.find(
-        (e) => e.type === "cron_task" && e.taskName === "api-token-revocation",
+        (e) => e.type === "cron_task" && e.taskName === "api-token-revocation"
       );
       expect(tokenEvent).toBeDefined();
       if (tokenEvent && tokenEvent.type === "cron_task") {

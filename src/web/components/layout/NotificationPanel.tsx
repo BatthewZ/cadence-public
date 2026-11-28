@@ -94,11 +94,7 @@ export function NotificationPanel({
       </div>
 
       <div className="notification-panel-footer">
-        <Link
-          to={viewAllHref}
-          className="notification-panel-footer-link"
-          onClick={onClose}
-        >
+        <Link to={viewAllHref} className="notification-panel-footer-link" onClick={onClose}>
           View all notifications
         </Link>
       </div>

@@ -37,7 +37,7 @@ export function useWorkspaceActivity(workspaceId: string) {
       const params = new URLSearchParams({ limit: String(ACTIVITY_LIMIT) });
       if (pageParam) params.set("cursor", pageParam as string);
       return api.get<WorkspaceActivityPage>(
-        `/api/workspaces/${workspaceId}/activity?${params.toString()}`,
+        `/api/workspaces/${workspaceId}/activity?${params.toString()}`
       );
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,

@@ -11,9 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const mockNavigate = vi.fn();
 
 vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual<typeof import("react-router-dom")>(
-    "react-router-dom",
-  );
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -30,9 +28,8 @@ const mockApiGet = vi.fn<(...args: unknown[]) => Promise<unknown>>();
 const mockApiPost = vi.fn<(...args: unknown[]) => Promise<unknown>>();
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   const apiFn = Object.assign(vi.fn(), {
     get: (...args: unknown[]) => mockApiGet(...args),
     post: (...args: unknown[]) => mockApiPost(...args),
@@ -43,7 +40,10 @@ vi.mock("@/web/lib/api/client", async () => {
   return { ...actual, api: apiFn };
 });
 
-let mockSessionData: { user: { id: string; name: string; email: string; image: null }; session: { id: string } } | null = null;
+let mockSessionData: {
+  user: { id: string; name: string; email: string; image: null };
+  session: { id: string };
+} | null = null;
 
 vi.mock("@/web/lib/auth/auth-client", () => ({
   useSession: () => ({
@@ -88,7 +88,7 @@ function renderInviteAccept(token = "test-token") {
           <Route path="/invite/:token" element={<InviteAccept />} />
         </Routes>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
   return { user };
 }
@@ -129,9 +129,7 @@ describe("InviteAccept", () => {
     mockApiGet.mockReturnValue(new Promise(() => {}));
     renderInviteAccept();
 
-    expect(
-      screen.getByRole("heading", { name: "You're Invited!" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "You're Invited!" })).toBeInTheDocument();
   });
 
   it("displays invitation details after loading", async () => {
@@ -152,9 +150,7 @@ describe("InviteAccept", () => {
     renderInviteAccept();
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Someone invited you to join"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Someone invited you to join")).toBeInTheDocument();
     });
   });
 
@@ -177,41 +173,29 @@ describe("InviteAccept", () => {
     renderInviteAccept();
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Accept Invitation" }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Accept Invitation" })).toBeInTheDocument();
     });
 
-    expect(
-      screen.getByRole("button", { name: "Decline" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Decline" })).toBeInTheDocument();
   });
 
   it("calls accept API and navigates to /workspaces on accept", async () => {
     const { user } = renderInviteAccept();
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Accept Invitation" }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Accept Invitation" })).toBeInTheDocument();
     });
 
-    await user.click(
-      screen.getByRole("button", { name: "Accept Invitation" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Accept Invitation" }));
 
     await waitFor(() => {
-      expect(mockApiPost).toHaveBeenCalledWith(
-        "/api/invitations/accept",
-        { token: "test-token" },
-      );
+      expect(mockApiPost).toHaveBeenCalledWith("/api/invitations/accept", { token: "test-token" });
     });
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(
-        "You have joined the workspace!",
-        { variant: "success" },
-      );
+      expect(mockToast).toHaveBeenCalledWith("You have joined the workspace!", {
+        variant: "success",
+      });
     });
 
     expect(mockNavigate).toHaveBeenCalledWith("/workspaces");
@@ -221,9 +205,7 @@ describe("InviteAccept", () => {
     const { user } = renderInviteAccept();
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Decline" }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Decline" })).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole("button", { name: "Decline" }));
@@ -240,20 +222,15 @@ describe("InviteAccept", () => {
     const { user } = renderInviteAccept();
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Accept Invitation" }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Accept Invitation" })).toBeInTheDocument();
     });
 
-    await user.click(
-      screen.getByRole("button", { name: "Accept Invitation" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Accept Invitation" }));
 
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(
-        "Failed to accept invitation. Please try again.",
-        { variant: "error" },
-      );
+      expect(mockToast).toHaveBeenCalledWith("Failed to accept invitation. Please try again.", {
+        variant: "error",
+      });
     });
   });
 
@@ -267,18 +244,12 @@ describe("InviteAccept", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          "Sign in or create an account to accept this invitation",
-        ),
+        screen.getByText("Sign in or create an account to accept this invitation")
       ).toBeInTheDocument();
     });
 
-    expect(
-      screen.getByRole("button", { name: "Sign In" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Create Account" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign In" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create Account" })).toBeInTheDocument();
   });
 
   it("navigates to /login with redirect when unauthenticated user clicks Sign In", async () => {
@@ -286,16 +257,12 @@ describe("InviteAccept", () => {
     const { user } = renderInviteAccept();
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Sign In" }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Sign In" })).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole("button", { name: "Sign In" }));
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      "/login?redirect=%2Finvite%2Ftest-token",
-    );
+    expect(mockNavigate).toHaveBeenCalledWith("/login?redirect=%2Finvite%2Ftest-token");
   });
 
   it("navigates to /register with redirect when unauthenticated user clicks Create Account", async () => {
@@ -303,16 +270,12 @@ describe("InviteAccept", () => {
     const { user } = renderInviteAccept();
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Create Account" }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Create Account" })).toBeInTheDocument();
     });
 
     await user.click(screen.getByRole("button", { name: "Create Account" }));
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      "/register?redirect=%2Finvite%2Ftest-token",
-    );
+    expect(mockNavigate).toHaveBeenCalledWith("/register?redirect=%2Finvite%2Ftest-token");
   });
 
   // -----------------------------------------------------------------------
@@ -329,15 +292,11 @@ describe("InviteAccept", () => {
   });
 
   it("displays error alert when invitation token is expired", async () => {
-    mockApiGet.mockRejectedValue(
-      new Error("This invitation has expired"),
-    );
+    mockApiGet.mockRejectedValue(new Error("This invitation has expired"));
     renderInviteAccept();
 
     await waitFor(() => {
-      expect(
-        screen.getByText("This invitation has expired"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("This invitation has expired")).toBeInTheDocument();
     });
   });
 
@@ -351,25 +310,19 @@ describe("InviteAccept", () => {
       () =>
         new Promise<{ ok: boolean; workspaceId: string }>((resolve) => {
           resolveAccept = resolve;
-        }),
+        })
     );
 
     const { user } = renderInviteAccept();
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Accept Invitation" }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Accept Invitation" })).toBeInTheDocument();
     });
 
-    await user.click(
-      screen.getByRole("button", { name: "Accept Invitation" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Accept Invitation" }));
 
     await waitFor(() => {
-      expect(
-        screen.getByRole("button", { name: "Accepting..." }),
-      ).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Accepting..." })).toBeDisabled();
     });
 
     resolveAccept({ ok: true, workspaceId: "ws-1" });

@@ -61,7 +61,7 @@ const WORKSPACE_ROLE_RANK: Record<WorkspaceRole, number> = {
  */
 export function outranks(
   actor: { role: WorkspaceRole } | undefined,
-  target: { role: WorkspaceRole },
+  target: { role: WorkspaceRole }
 ): boolean {
   if (!actor) return false;
   return WORKSPACE_ROLE_RANK[actor.role] > WORKSPACE_ROLE_RANK[target.role];
@@ -117,9 +117,7 @@ const ADMIN_GRANT_MIN_RANK = WORKSPACE_ROLE_RANK.owner;
  * them; what they lose is the ability to enlarge the tier that outranks their
  * own peers.
  */
-export function mayGrantAdmin(
-  actor: { role: WorkspaceRole } | undefined,
-): boolean {
+export function mayGrantAdmin(actor: { role: WorkspaceRole } | undefined): boolean {
   if (!actor) return false;
   return WORKSPACE_ROLE_RANK[actor.role] >= ADMIN_GRANT_MIN_RANK;
 }

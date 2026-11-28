@@ -141,10 +141,7 @@ function ActivityFeed<T extends BaseActivityItem>({
                 const { activity, message } = row;
                 const tokenAttribution = formatTokenAttribution(activity);
                 return (
-                  <div
-                    key={row.key}
-                    className="relative flex items-start gap-r5"
-                  >
+                  <div key={row.key} className="relative flex items-start gap-r5">
                     <div className="relative z-10 shrink-0 rounded-full bg-surface-0">
                       <Avatar
                         size="xs"
@@ -154,9 +151,7 @@ function ActivityFeed<T extends BaseActivityItem>({
                     </div>
                     <div className="min-w-0 flex-1 pt-px">
                       <Text variant="body-3">
-                        <span className="font-semibold">
-                          {activity.actorName ?? "Someone"}
-                        </span>
+                        <span className="font-semibold">{activity.actorName ?? "Someone"}</span>
                         {tokenAttribution && (
                           <>
                             {" "}
@@ -174,11 +169,7 @@ function ActivityFeed<T extends BaseActivityItem>({
                           {activity.taskTitle}
                         </button>
                         {renderExtra && (
-                          <Text
-                            variant="body-3"
-                            color="muted"
-                            className="shrink-0 text-[0.625rem]"
-                          >
+                          <Text variant="body-3" color="muted" className="shrink-0 text-[0.625rem]">
                             {renderExtra(activity)}
                           </Text>
                         )}

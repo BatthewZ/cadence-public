@@ -42,10 +42,7 @@ import {
   MAX_IMPORT_FILE_BYTES,
   type WorkspaceExport,
 } from "../../../shared/schemas/workspace-export";
-import {
-  importPreviewSchema,
-  importResultSchema,
-} from "../../../shared/schemas/workspace-import";
+import { importPreviewSchema, importResultSchema } from "../../../shared/schemas/workspace-import";
 import type { AppEnv } from "../../env";
 import { requireWorkspaceRole } from "../../middleware/authorize";
 import { defaultRateLimitKey, rateLimit } from "../../middleware/rate-limit";
@@ -114,7 +111,7 @@ function createGuardedApp(user?: typeof TEST_USER | typeof TEST_USER_2) {
     "/workspaces/:workspaceId/import",
     requireAuth,
     requireWorkspaceRole("owner", "admin"),
-    importWorkspaceData,
+    importWorkspaceData
   );
   return app;
 }
@@ -127,7 +124,7 @@ function uploadRequest(
   // constructs a plain ArrayBuffer-backed array — narrowing the param keeps
   // File construction typed without a cast.
   content: string | Uint8Array<ArrayBuffer> | object,
-  filename = "export.json",
+  filename = "export.json"
 ): Request {
   const payload =
     typeof content === "string" || content instanceof Uint8Array
@@ -165,30 +162,18 @@ async function contentCounts(wsId: string) {
   const inProjects = "(SELECT id FROM project WHERE workspaceId = ?)";
   const inTasks = `(SELECT id FROM task WHERE projectId IN ${inProjects})`;
   return {
-    projects: await countOne(
-      "SELECT COUNT(*) AS n FROM project WHERE workspaceId = ?",
-      wsId,
-    ),
+    projects: await countOne("SELECT COUNT(*) AS n FROM project WHERE workspaceId = ?", wsId),
     taskGroups: await countOne(
       `SELECT COUNT(*) AS n FROM task_group WHERE projectId IN ${inProjects}`,
-      wsId,
+      wsId
     ),
     labels: await countOne(
       `SELECT COUNT(*) AS n FROM label WHERE projectId IN ${inProjects}`,
-      wsId,
+      wsId
     ),
-    tasks: await countOne(
-      `SELECT COUNT(*) AS n FROM task WHERE projectId IN ${inProjects}`,
-      wsId,
-    ),
-    subtasks: await countOne(
-      `SELECT COUNT(*) AS n FROM subtask WHERE taskId IN ${inTasks}`,
-      wsId,
-    ),
-    comments: await countOne(
-      `SELECT COUNT(*) AS n FROM comment WHERE taskId IN ${inTasks}`,
-      wsId,
-    ),
+    tasks: await countOne(`SELECT COUNT(*) AS n FROM task WHERE projectId IN ${inProjects}`, wsId),
+    subtasks: await countOne(`SELECT COUNT(*) AS n FROM subtask WHERE taskId IN ${inTasks}`, wsId),
+    comments: await countOne(`SELECT COUNT(*) AS n FROM comment WHERE taskId IN ${inTasks}`, wsId),
   };
 }
 
@@ -203,9 +188,7 @@ const ZERO_CONTENT = {
 
 /** Poll for the deferred audit insert (deferWork runs inline but unawaited
  *  in the test env — same rationale as export.handlers.test.ts). */
-async function waitForImportAuditRow(
-  workspaceId: string,
-): Promise<Record<string, unknown> | null> {
+async function waitForImportAuditRow(workspaceId: string): Promise<Record<string, unknown> | null> {
   for (let attempt = 0; attempt < 50; attempt++) {
     const row = await d1
       .prepare("SELECT * FROM audit_log WHERE workspaceId = ? AND action = 'import'")
@@ -220,7 +203,7 @@ async function waitForImportAuditRow(
 async function countImportAuditRows(workspaceId: string): Promise<number> {
   return countOne(
     "SELECT COUNT(*) AS n FROM audit_log WHERE workspaceId = ? AND action = 'import'",
-    workspaceId,
+    workspaceId
   );
 }
 
@@ -329,7 +312,7 @@ describe("POST /workspaces/:workspaceId/import?dryRun=true", () => {
 
     const res = await req(
       app,
-      uploadRequest(`/workspaces/${wsId}/import?dryRun=true`, makeRichExportFile()),
+      uploadRequest(`/workspaces/${wsId}/import?dryRun=true`, makeRichExportFile())
     );
     expect(res.status).toBe(200);
     const body = importPreviewSchema.parse(await res.json());
@@ -395,7 +378,7 @@ describe("POST /workspaces/:workspaceId/import — commit", () => {
     });
     const file = makeRichExportFile();
     file.projects.push(
-      makeProject({ name: "Recurrence Project", taskGroups: [group], tasks: [parent, child] }),
+      makeProject({ name: "Recurrence Project", taskGroups: [group], tasks: [parent, child] })
     );
 
     const res = await req(app, uploadRequest(`/workspaces/${wsId}/import`, file));
@@ -441,15 +424,15 @@ describe("POST /workspaces/:workspaceId/import — commit", () => {
       await countOne(
         `SELECT COUNT(*) AS n FROM task WHERE projectId IN ${inProjects} AND taskGroupId NOT IN (SELECT id FROM task_group WHERE projectId IN ${inProjects})`,
         wsId,
-        wsId,
-      ),
+        wsId
+      )
     ).toBe(0);
     expect(
       await countOne(
         `SELECT COUNT(*) AS n FROM task_label WHERE taskId IN (SELECT id FROM task WHERE projectId IN ${inProjects}) AND labelId NOT IN (SELECT id FROM label WHERE projectId IN ${inProjects})`,
         wsId,
-        wsId,
-      ),
+        wsId
+      )
     ).toBe(0);
 
     // Recurrence links: child points at the parent's NEW id; the shared
@@ -460,7 +443,7 @@ describe("POST /workspaces/:workspaceId/import — commit", () => {
       .first<{ id: string; seriesId: string }>();
     const childRow = await d1
       .prepare(
-        "SELECT recurrence_parent_id AS parentId, recurrence_series_id AS seriesId FROM task WHERE title = ?",
+        "SELECT recurrence_parent_id AS parentId, recurrence_series_id AS seriesId FROM task WHERE title = ?"
       )
       .bind("Recurring child")
       .first<{ parentId: string; seriesId: string }>();
@@ -474,8 +457,8 @@ describe("POST /workspaces/:workspaceId/import — commit", () => {
       await countOne(
         `SELECT COUNT(*) AS n FROM project_member WHERE projectId IN ${inProjects} AND userId = ? AND role = 'admin'`,
         wsId,
-        TEST_USER.id,
-      ),
+        TEST_USER.id
+      )
     ).toBe(2);
 
     // The ingress IS audited (commit only — the dry-run test pins the
@@ -496,10 +479,7 @@ describe("POST /workspaces/:workspaceId/import — commit", () => {
     const wsId = await seedTargetWorkspace();
     const app = createHandlerApp();
 
-    const res = await req(
-      app,
-      uploadRequest(`/workspaces/${wsId}/import`, makeRichExportFile()),
-    );
+    const res = await req(app, uploadRequest(`/workspaces/${wsId}/import`, makeRichExportFile()));
     expect(res.status).toBe(200);
     const body = importResultSchema.parse(await res.json());
 
@@ -569,14 +549,14 @@ describe("POST /workspaces/:workspaceId/import — commit", () => {
     expect(
       await countOne(
         "SELECT COUNT(*) AS n FROM project WHERE workspaceId = ? AND name = 'Bad Project'",
-        wsId,
-      ),
+        wsId
+      )
     ).toBe(0);
     expect(
       await countOne(
         "SELECT COUNT(*) AS n FROM project WHERE workspaceId = ? AND name = 'Good Project'",
-        wsId,
-      ),
+        wsId
+      )
     ).toBe(1);
     expect(await countOne("SELECT COUNT(*) AS n FROM task WHERE title = 'Dup A'")).toBe(0);
   });
@@ -641,10 +621,7 @@ describe("POST /workspaces/:workspaceId/import — Trello file", () => {
       members: [{ id: "mem-1", fullName: "Alice Trello", username: "alice" }],
     };
 
-    const res = await req(
-      app,
-      uploadRequest(`/workspaces/${wsId}/import`, board, "board.json"),
-    );
+    const res = await req(app, uploadRequest(`/workspaces/${wsId}/import`, board, "board.json"));
     expect(res.status).toBe(200);
     const body = importResultSchema.parse(await res.json());
 
@@ -672,7 +649,9 @@ describe("POST /workspaces/:workspaceId/import — Trello file", () => {
 
     const tasks = (
       await d1
-        .prepare("SELECT id, title, dueDate, completed FROM task WHERE projectId = ? ORDER BY position")
+        .prepare(
+          "SELECT id, title, dueDate, completed FROM task WHERE projectId = ? ORDER BY position"
+        )
         .bind(project!.id)
         .all<{ id: string; title: string; dueDate: number | null; completed: number }>()
     ).results;
@@ -687,10 +666,7 @@ describe("POST /workspaces/:workspaceId/import — Trello file", () => {
     ).results;
     expect(labels.map((l) => l.name)).toEqual(["Later", "Urgent"]);
     expect(
-      await countOne(
-        "SELECT COUNT(*) AS n FROM task_label WHERE taskId = ?",
-        tasks[0].id,
-      ),
+      await countOne("SELECT COUNT(*) AS n FROM task_label WHERE taskId = ?", tasks[0].id)
     ).toBe(2);
 
     // Checklist items → subtasks (state mapped to completed).
@@ -749,10 +725,7 @@ describe("POST /workspaces/:workspaceId/import — invalid uploads", () => {
     const wsId = await seedTargetWorkspace();
     const app = createHandlerApp();
 
-    const res = await req(
-      app,
-      uploadRequest(`/workspaces/${wsId}/import`, { hello: "world" }),
-    );
+    const res = await req(app, uploadRequest(`/workspaces/${wsId}/import`, { hello: "world" }));
     expect(res.status).toBe(400);
     const body = errorBodySchema.parse(await res.json());
     expect(body.errors[0]).toContain("Unsupported file format");
@@ -793,7 +766,7 @@ describe("POST /workspaces/:workspaceId/import — invalid uploads", () => {
       new Request(`http://localhost/workspaces/${wsId}/import`, {
         method: "POST",
         body: emptyForm,
-      }),
+      })
     );
     expect(missing.status).toBe(400);
 
@@ -805,7 +778,7 @@ describe("POST /workspaces/:workspaceId/import — invalid uploads", () => {
       new Request(`http://localhost/workspaces/${wsId}/import`, {
         method: "POST",
         body: stringForm,
-      }),
+      })
     );
     expect(stringField.status).toBe(400);
 
@@ -816,7 +789,7 @@ describe("POST /workspaces/:workspaceId/import — invalid uploads", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(makeExportFile()),
-      }),
+      })
     );
     expect(rawJson.status).toBe(400);
   });
@@ -841,10 +814,7 @@ describe("POST /workspaces/:workspaceId/import — authorization", () => {
     // reserved for owner/admin, exactly like export's egress.
     const app = createGuardedApp(TEST_USER_2);
 
-    const res = await req(
-      app,
-      uploadRequest(`/workspaces/${wsId}/import`, makeRichExportFile()),
-    );
+    const res = await req(app, uploadRequest(`/workspaces/${wsId}/import`, makeRichExportFile()));
     expect(res.status).toBe(403);
     expect(await contentCounts(wsId)).toEqual(ZERO_CONTENT);
   });
@@ -855,7 +825,7 @@ describe("POST /workspaces/:workspaceId/import — authorization", () => {
 
     const res = await req(
       app,
-      uploadRequest(`/workspaces/${wsId}/import?dryRun=true`, makeExportFile()),
+      uploadRequest(`/workspaces/${wsId}/import?dryRun=true`, makeExportFile())
     );
     expect(res.status).toBe(200);
     importPreviewSchema.parse(await res.json());
@@ -882,20 +852,20 @@ describe("POST /workspaces/:workspaceId/import — rate limit", () => {
         prefix: "workspace-import-test",
         keyFn: defaultRateLimitKey,
       }),
-      importWorkspaceData,
+      importWorkspaceData
     );
 
     for (let i = 0; i < 10; i++) {
       const res = await req(
         app,
-        uploadRequest(`/workspaces/${wsId}/import?dryRun=true`, makeExportFile()),
+        uploadRequest(`/workspaces/${wsId}/import?dryRun=true`, makeExportFile())
       );
       expect(res.status).toBe(200);
     }
 
     const blocked = await req(
       app,
-      uploadRequest(`/workspaces/${wsId}/import?dryRun=true`, makeExportFile()),
+      uploadRequest(`/workspaces/${wsId}/import?dryRun=true`, makeExportFile())
     );
     expect(blocked.status).toBe(429);
     expect(blocked.headers.get("X-RateLimit-Limit")).toBe("10");
@@ -915,18 +885,16 @@ describe("POST /workspaces/:workspaceId/import — subrequest-budget warning", (
     const app = createHandlerApp();
 
     const projects = Array.from({ length: 41 }, (_, i) =>
-      makeProject({ name: `Bulk project ${i + 1}` }),
+      makeProject({ name: `Bulk project ${i + 1}` })
     );
     const res = await req(
       app,
-      uploadRequest(`/workspaces/${wsId}/import?dryRun=true`, makeExportFile({ projects })),
+      uploadRequest(`/workspaces/${wsId}/import?dryRun=true`, makeExportFile({ projects }))
     );
     expect(res.status).toBe(200);
     const body = importPreviewSchema.parse(await res.json());
     expect(body.counts.projects).toBe(41);
-    expect(
-      body.warnings.some((w) => w.includes("more than 40 projects")),
-    ).toBe(true);
+    expect(body.warnings.some((w) => w.includes("more than 40 projects"))).toBe(true);
   });
 
   it("does not warn at or below the 40-project threshold", async () => {
@@ -934,11 +902,11 @@ describe("POST /workspaces/:workspaceId/import — subrequest-budget warning", (
     const app = createHandlerApp();
 
     const projects = Array.from({ length: 2 }, (_, i) =>
-      makeProject({ name: `Small project ${i + 1}` }),
+      makeProject({ name: `Small project ${i + 1}` })
     );
     const res = await req(
       app,
-      uploadRequest(`/workspaces/${wsId}/import?dryRun=true`, makeExportFile({ projects })),
+      uploadRequest(`/workspaces/${wsId}/import?dryRun=true`, makeExportFile({ projects }))
     );
     expect(res.status).toBe(200);
     const body = importPreviewSchema.parse(await res.json());

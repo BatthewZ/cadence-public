@@ -41,11 +41,7 @@ function CostSummaryCard({
           </Stack>
         </div>
         {totalCost > 0 && (
-          <ProgressBar
-            value={(completedCost / totalCost) * 100}
-            size="sm"
-            color="accent"
-          />
+          <ProgressBar value={(completedCost / totalCost) * 100} size="sm" color="accent" />
         )}
       </Stack>
     </Card>

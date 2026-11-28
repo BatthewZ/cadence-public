@@ -8,7 +8,7 @@ export function errorResponse(
   c: Context<AppEnv>,
   message: string,
   status: ContentfulStatusCode,
-  extra?: Record<string, unknown>,
+  extra?: Record<string, unknown>
 ) {
   const requestId = c.get("requestId") ?? "unknown";
   return c.json({ error: message, requestId, ...extra }, status);

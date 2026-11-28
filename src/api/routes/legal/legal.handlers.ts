@@ -20,10 +20,7 @@ export async function getTosStatus(c: Context<AppEnv>) {
     .select({ id: legalAcceptance.id })
     .from(legalAcceptance)
     .where(
-      and(
-        eq(legalAcceptance.userId, user.id),
-        eq(legalAcceptance.tosVersion, CURRENT_TOS_VERSION),
-      ),
+      and(eq(legalAcceptance.userId, user.id), eq(legalAcceptance.tosVersion, CURRENT_TOS_VERSION))
     )
     .limit(1);
 
@@ -51,10 +48,7 @@ export async function acceptTos(c: Context<AppEnv>) {
     .select({ id: legalAcceptance.id })
     .from(legalAcceptance)
     .where(
-      and(
-        eq(legalAcceptance.userId, user.id),
-        eq(legalAcceptance.tosVersion, CURRENT_TOS_VERSION),
-      ),
+      and(eq(legalAcceptance.userId, user.id), eq(legalAcceptance.tosVersion, CURRENT_TOS_VERSION))
     )
     .limit(1);
 

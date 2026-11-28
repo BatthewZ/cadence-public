@@ -158,7 +158,7 @@ export function sniffFormat(value: unknown): ImportSourceFormat | null {
  */
 export function parseImportFile(
   raw: string | Uint8Array | ArrayBuffer,
-  options: ParseImportOptions,
+  options: ParseImportOptions
 ): ParseImportResult {
   const size = byteLength(raw);
   if (size > MAX_IMPORT_FILE_BYTES) {
@@ -166,9 +166,7 @@ export function parseImportFile(
     return {
       ok: false,
       reason: "too-large",
-      errors: [
-        `Import file is ${formatBytes(size)}, which exceeds the ${maxMb} MB limit.`,
-      ],
+      errors: [`Import file is ${formatBytes(size)}, which exceeds the ${maxMb} MB limit.`],
     };
   }
 
@@ -196,9 +194,7 @@ export function parseImportFile(
     };
   }
 
-  return format === "cadence"
-    ? parseCadence(parsed)
-    : parseTrello(parsed, options.convertTrello);
+  return format === "cadence" ? parseCadence(parsed) : parseTrello(parsed, options.convertTrello);
 }
 
 function parseCadence(parsed: unknown): ParseImportResult {
@@ -330,9 +326,7 @@ export function validateDocumentIntegrity(doc: ImportDocument): string[] {
   const seenRefs = new Set<string>();
   for (const u of doc.users) {
     if (seenRefs.has(u.ref)) {
-      errors.push(
-        `users: duplicate ref "${u.ref}" — user matching would be ambiguous`,
-      );
+      errors.push(`users: duplicate ref "${u.ref}" — user matching would be ambiguous`);
     }
     seenRefs.add(u.ref);
   }
@@ -343,7 +337,7 @@ export function validateDocumentIntegrity(doc: ImportDocument): string[] {
       if (errors.length >= MAX_REPORTED_ERRORS) return;
       if (!groupIds.has(t.taskGroupId)) {
         errors.push(
-          `projects[${pi}].tasks[${ti}] ("${t.title}"): references task group "${t.taskGroupId}", which does not exist in project "${p.name}"`,
+          `projects[${pi}].tasks[${ti}] ("${t.title}"): references task group "${t.taskGroupId}", which does not exist in project "${p.name}"`
         );
       }
     });
@@ -382,7 +376,7 @@ function buildParseWarnings(doc: ImportDocument): string[] {
   }
   if (coverImages > 0) {
     warnings.push(
-      `${coverImages} uploaded cover image${coverImages === 1 ? "" : "s"} will not be imported — binary content does not round-trip; download them from the source instance via the manifest URLs.`,
+      `${coverImages} uploaded cover image${coverImages === 1 ? "" : "s"} will not be imported — binary content does not round-trip; download them from the source instance via the manifest URLs.`
     );
   }
   return warnings;
@@ -397,7 +391,7 @@ function formatZodIssues(error: z.ZodError): string[] {
   const lines = error.issues
     .slice(0, MAX_REPORTED_ERRORS)
     .map((issue) =>
-      issue.path.length > 0 ? `${formatPath(issue.path)}: ${issue.message}` : issue.message,
+      issue.path.length > 0 ? `${formatPath(issue.path)}: ${issue.message}` : issue.message
     );
   const remaining = error.issues.length - MAX_REPORTED_ERRORS;
   if (remaining > 0) {

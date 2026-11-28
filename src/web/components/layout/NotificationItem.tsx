@@ -38,8 +38,7 @@ export function NotificationItem({
   onClick,
   actions,
 }: NotificationItemProps) {
-  const date =
-    createdAt instanceof Date ? createdAt : new Date(createdAt);
+  const date = createdAt instanceof Date ? createdAt : new Date(createdAt);
 
   const content = (
     <>
@@ -50,34 +49,22 @@ export function NotificationItem({
       <div className="notification-item-content">
         <div className="notification-item-title">{title}</div>
         {body && <div className="notification-item-body">{body}</div>}
-        <div className="notification-item-time">
-          {formatRelativeTime(date)}
-        </div>
-        {actions && (
-          <div className="notification-item-actions">{actions}</div>
-        )}
+        <div className="notification-item-time">{formatRelativeTime(date)}</div>
+        {actions && <div className="notification-item-actions">{actions}</div>}
       </div>
     </>
   );
 
   if (actions) {
     return (
-      <div
-        className="notification-item"
-        data-unread={!read}
-      >
+      <div className="notification-item" data-unread={!read}>
         {content}
       </div>
     );
   }
 
   return (
-    <button
-      type="button"
-      className="notification-item"
-      data-unread={!read}
-      onClick={onClick}
-    >
+    <button type="button" className="notification-item" data-unread={!read} onClick={onClick}>
       {content}
     </button>
   );

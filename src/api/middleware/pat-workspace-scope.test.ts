@@ -67,8 +67,8 @@ import type { EmailMessage, EmailSendResult } from "../lib/email/types";
 
 // The webhook-created security email is an external boundary this file does
 // not own; stub it so `createWebhook` runs its real logic without SMTP.
-const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<EmailSendResult>>(
-  () => Promise.resolve({ id: "test-email-id" }),
+const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<EmailSendResult>>(() =>
+  Promise.resolve({ id: "test-email-id" })
 );
 vi.mock("../lib/email", () => ({
   createEmailService: vi.fn(() => ({ send: mockEmailSend })),
@@ -183,12 +183,8 @@ beforeAll(async () => {
     newValue: "secret-sibling-value",
   });
 
-  whSelected = (
-    await seedWebhook(d1, wsA, { name: "wh-selected", projectId: projSelected })
-  ).id;
-  whSibling = (
-    await seedWebhook(d1, wsA, { name: "wh-sibling", projectId: projSibling })
-  ).id;
+  whSelected = (await seedWebhook(d1, wsA, { name: "wh-selected", projectId: projSelected })).id;
+  whSibling = (await seedWebhook(d1, wsA, { name: "wh-sibling", projectId: projSibling })).id;
   whWorkspace = (await seedWebhook(d1, wsA, { name: "wh-workspace" })).id;
 
   // --- Workspace B, plus one notification per row shape ------------------
@@ -243,7 +239,7 @@ async function seedNotificationRow(opts: {
   await d1
     .prepare(
       `INSERT INTO notification (id, userId, type, title, body, read, workspaceId, projectId, taskId, createdAt)
-       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
+       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`
     )
     .bind(
       id,
@@ -254,7 +250,7 @@ async function seedNotificationRow(opts: {
       opts.workspaceId ?? null,
       opts.projectId ?? null,
       opts.taskId ?? null,
-      Math.floor(Date.now() / 1000),
+      Math.floor(Date.now() / 1000)
     )
     .run();
   return id;
@@ -293,8 +289,7 @@ const narrowToken = () =>
   });
 
 /** Narrowed to NOTHING. The fail-closed edge: must see zero, never all. */
-const emptyToken = () =>
-  pat({ id: "tok_empty", projectScope: "selected", projectIds: "[]" });
+const emptyToken = () => pat({ id: "tok_empty", projectScope: "selected", projectIds: "[]" });
 
 /** Unnarrowed token — the control that proves the change is opt-in. */
 const allToken = () => pat({ id: "tok_all", projectScope: "all" });
@@ -319,10 +314,7 @@ const allToken = () => pat({ id: "tok_all", projectScope: "all" });
  */
 function appWith(token: ApiToken | null) {
   const app = new Hono<AppEnv>();
-  app.use(
-    "*",
-    fakeAuth(d1, TEST_USER, { apiToken: token, requestId: "pat-ws-scope-test" }),
-  );
+  app.use("*", fakeAuth(d1, TEST_USER, { apiToken: token, requestId: "pat-ws-scope-test" }));
   app.route("/", searchRoutes);
   app.route("/", dashboardRoutes);
   app.route("/", taskGroupRoutes);
@@ -333,7 +325,7 @@ function appWith(token: ApiToken | null) {
     "/workspaces/:workspaceId/export",
     requireAuth,
     requireWorkspaceRole("owner", "admin"),
-    exportWorkspace,
+    exportWorkspace
   );
   return app;
 }
@@ -391,28 +383,18 @@ describe("GET /workspaces/:id/search", () => {
     }>(`/workspaces/${wsA}/search?q=Alpha`);
 
     expect(r.allStatus).toBe(200);
-    expect(sorted(r.all.projects.map((p) => p.id))).toEqual(
-      sorted([projSelected, projSibling]),
-    );
-    expect(sorted(r.all.tasks.map((t) => t.id))).toEqual(
-      sorted([taskSelected, taskSibling]),
-    );
+    expect(sorted(r.all.projects.map((p) => p.id))).toEqual(sorted([projSelected, projSibling]));
+    expect(sorted(r.all.tasks.map((t) => t.id))).toEqual(sorted([taskSelected, taskSibling]));
 
     expect(r.cookieStatus).toBe(200);
-    expect(sorted(r.cookie.projects.map((p) => p.id))).toEqual(
-      sorted([projSelected, projSibling]),
-    );
-    expect(sorted(r.cookie.tasks.map((t) => t.id))).toEqual(
-      sorted([taskSelected, taskSibling]),
-    );
+    expect(sorted(r.cookie.projects.map((p) => p.id))).toEqual(sorted([projSelected, projSibling]));
+    expect(sorted(r.cookie.tasks.map((t) => t.id))).toEqual(sorted([taskSelected, taskSibling]));
   });
 
   it("returns nothing at all for a token narrowed to an empty list", async () => {
     // The fail-closed edge. An empty `IN ()` compiled to a no-op would hand
     // this token the entire workspace.
-    const res = await appWith(emptyToken()).request(
-      `/workspaces/${wsA}/search?q=Alpha`,
-    );
+    const res = await appWith(emptyToken()).request(`/workspaces/${wsA}/search?q=Alpha`);
     expect(res.status).toBe(200);
     const body = await res.json<{ projects: unknown[]; tasks: unknown[] }>();
     expect(body.projects).toEqual([]);
@@ -442,41 +424,31 @@ describe("GET /workspaces/:id/dashboard", () => {
     }>(`/workspaces/${wsA}/dashboard`);
 
     expect(r.allStatus).toBe(200);
-    expect(sorted(r.all.projects.map((p) => p.id))).toEqual(
-      sorted([projSelected, projSibling]),
-    );
+    expect(sorted(r.all.projects.map((p) => p.id))).toEqual(sorted([projSelected, projSibling]));
     expect(r.all.taskCounts.totalCount).toBe(2);
 
     expect(r.cookieStatus).toBe(200);
-    expect(sorted(r.cookie.projects.map((p) => p.id))).toEqual(
-      sorted([projSelected, projSibling]),
-    );
+    expect(sorted(r.cookie.projects.map((p) => p.id))).toEqual(sorted([projSelected, projSibling]));
     expect(r.cookie.taskCounts.totalCount).toBe(2);
   });
 });
 
 describe("GET /workspaces/:id/dashboard/my-tasks", () => {
   it("returns only the narrow token's tasks", async () => {
-    const r = await getAsAll<{ tasks: { id: string }[] }>(
-      `/workspaces/${wsA}/dashboard/my-tasks`,
-    );
+    const r = await getAsAll<{ tasks: { id: string }[] }>(`/workspaces/${wsA}/dashboard/my-tasks`);
 
     expect(r.narrowStatus).toBe(200);
     expect(r.narrow.tasks.map((t) => t.id)).toEqual([taskSelected]);
 
-    expect(sorted(r.all.tasks.map((t) => t.id))).toEqual(
-      sorted([taskSelected, taskSibling]),
-    );
-    expect(sorted(r.cookie.tasks.map((t) => t.id))).toEqual(
-      sorted([taskSelected, taskSibling]),
-    );
+    expect(sorted(r.all.tasks.map((t) => t.id))).toEqual(sorted([taskSelected, taskSibling]));
+    expect(sorted(r.cookie.tasks.map((t) => t.id))).toEqual(sorted([taskSelected, taskSibling]));
   });
 
   it("intersects with — never overrides — the caller's own projectIds filter", async () => {
     // A narrowed token explicitly ASKING for the sibling project must get
     // nothing, not the sibling project. The two filters must intersect.
     const res = await appWith(narrowToken()).request(
-      `/workspaces/${wsA}/dashboard/my-tasks?projectIds=${projSibling}`,
+      `/workspaces/${wsA}/dashboard/my-tasks?projectIds=${projSibling}`
     );
     expect(res.status).toBe(200);
     expect((await res.json<{ tasks: unknown[] }>()).tasks).toEqual([]);
@@ -484,7 +456,7 @@ describe("GET /workspaces/:id/dashboard/my-tasks", () => {
     // Same request on a cookie session still works — proof the intersection
     // is token-driven, not a blanket rejection of the query parameter.
     const human = await appWith(null).request(
-      `/workspaces/${wsA}/dashboard/my-tasks?projectIds=${projSibling}`,
+      `/workspaces/${wsA}/dashboard/my-tasks?projectIds=${projSibling}`
     );
     const humanTasks = await human.json<{ tasks: { id: string }[] }>();
     expect(humanTasks.tasks.map((t) => t.id)).toEqual([taskSibling]);
@@ -494,11 +466,15 @@ describe("GET /workspaces/:id/dashboard/my-tasks", () => {
 describe("GET /workspaces/:id/dashboard/upcoming", () => {
   it("buckets only the narrow token's tasks", async () => {
     const r = await getAsAll<{ buckets: Record<string, { id: string }[]> }>(
-      `/workspaces/${wsA}/dashboard/upcoming`,
+      `/workspaces/${wsA}/dashboard/upcoming`
     );
 
     const ids = (b: Record<string, { id: string }[]>) =>
-      sorted(Object.values(b).flat().map((t) => t.id));
+      sorted(
+        Object.values(b)
+          .flat()
+          .map((t) => t.id)
+      );
 
     expect(r.narrowStatus).toBe(200);
     expect(ids(r.narrow.buckets)).toEqual([taskSelected]);
@@ -510,7 +486,7 @@ describe("GET /workspaces/:id/dashboard/upcoming", () => {
 describe("GET /workspaces/:id/activity", () => {
   it("returns only the narrow token's project history", async () => {
     const r = await getAsAll<{ activities: { taskId: string; newValue: string }[] }>(
-      `/workspaces/${wsA}/activity`,
+      `/workspaces/${wsA}/activity`
     );
 
     expect(r.narrowStatus).toBe(200);
@@ -521,27 +497,25 @@ describe("GET /workspaces/:id/activity", () => {
     expect(JSON.stringify(r.narrow)).toContain("secret-selected-value");
 
     expect(sorted(r.all.activities.map((a) => a.taskId))).toEqual(
-      sorted([taskSelected, taskSibling]),
+      sorted([taskSelected, taskSibling])
     );
     expect(sorted(r.cookie.activities.map((a) => a.taskId))).toEqual(
-      sorted([taskSelected, taskSibling]),
+      sorted([taskSelected, taskSibling])
     );
   });
 });
 
 describe("GET /workspaces/:id/labels", () => {
   it("returns only the narrow token's project labels", async () => {
-    const r = await getAsAll<{ labels: { name: string }[] }>(
-      `/workspaces/${wsA}/labels`,
-    );
+    const r = await getAsAll<{ labels: { name: string }[] }>(`/workspaces/${wsA}/labels`);
 
     expect(r.narrowStatus).toBe(200);
     expect(r.narrow.labels.map((l) => l.name)).toEqual(["label-selected"]);
     expect(sorted(r.all.labels.map((l) => l.name))).toEqual(
-      sorted(["label-selected", "label-sibling"]),
+      sorted(["label-selected", "label-sibling"])
     );
     expect(sorted(r.cookie.labels.map((l) => l.name))).toEqual(
-      sorted(["label-selected", "label-sibling"]),
+      sorted(["label-selected", "label-sibling"])
     );
   });
 });
@@ -554,16 +528,16 @@ describe("GET /workspaces/:id/task-groups", () => {
     expect(r.narrowStatus).toBe(200);
     expect(r.narrow.taskGroups.map((g) => g.id)).toEqual([groupSelected]);
     expect(sorted(r.all.taskGroups.map((g) => g.id))).toEqual(
-      sorted([groupSelected, groupSibling]),
+      sorted([groupSelected, groupSibling])
     );
     expect(sorted(r.cookie.taskGroups.map((g) => g.id))).toEqual(
-      sorted([groupSelected, groupSibling]),
+      sorted([groupSelected, groupSibling])
     );
   });
 
   it("returns an empty list when the narrow token asks only for a denied project", async () => {
     const res = await appWith(narrowToken()).request(
-      `/workspaces/${wsA}/task-groups?projectIds=${projSibling}`,
+      `/workspaces/${wsA}/task-groups?projectIds=${projSibling}`
     );
     expect(res.status).toBe(200);
     expect((await res.json<{ taskGroups: unknown[] }>()).taskGroups).toEqual([]);
@@ -573,19 +547,15 @@ describe("GET /workspaces/:id/task-groups", () => {
 describe("GET /workspaces/:id/projects", () => {
   it("lists only the narrow token's project", async () => {
     const r = await getAsAll<{ projects: { id: string; name: string }[] }>(
-      `/workspaces/${wsA}/projects`,
+      `/workspaces/${wsA}/projects`
     );
 
     expect(r.narrowStatus).toBe(200);
     expect(r.narrow.projects.map((p) => p.id)).toEqual([projSelected]);
     expect(JSON.stringify(r.narrow)).not.toContain("Alpha Sibling Project");
 
-    expect(sorted(r.all.projects.map((p) => p.id))).toEqual(
-      sorted([projSelected, projSibling]),
-    );
-    expect(sorted(r.cookie.projects.map((p) => p.id))).toEqual(
-      sorted([projSelected, projSibling]),
-    );
+    expect(sorted(r.all.projects.map((p) => p.id))).toEqual(sorted([projSelected, projSibling]));
+    expect(sorted(r.cookie.projects.map((p) => p.id))).toEqual(sorted([projSelected, projSibling]));
   });
 });
 
@@ -614,9 +584,7 @@ const SEEDED_WEBHOOKS = () => sorted([whSelected, whSibling, whWorkspace]);
 
 describe("GET /workspaces/:id/webhooks", () => {
   it("lists only webhooks targeting the narrow token's project", async () => {
-    const r = await getAsAll<{ webhooks: { id: string }[] }>(
-      `/workspaces/${wsA}/webhooks`,
-    );
+    const r = await getAsAll<{ webhooks: { id: string }[] }>(`/workspaces/${wsA}/webhooks`);
 
     expect(r.narrowStatus).toBe(200);
     // The workspace-wide webhook is excluded too: its event stream covers
@@ -631,18 +599,14 @@ describe("GET /workspaces/:id/webhooks", () => {
 describe("GET /workspaces/:id/webhooks/:webhookId", () => {
   it("refuses the narrow token on a sibling-project and a workspace-wide webhook", async () => {
     for (const id of [whSibling, whWorkspace]) {
-      const res = await appWith(narrowToken()).request(
-        `/workspaces/${wsA}/webhooks/${id}`,
-      );
+      const res = await appWith(narrowToken()).request(`/workspaces/${wsA}/webhooks/${id}`);
       expect(res.status).toBe(403);
       expect(await res.json()).toMatchObject({ error: "Forbidden" });
     }
   });
 
   it("serves the narrow token its own project's webhook, and everyone else all three", async () => {
-    const own = await appWith(narrowToken()).request(
-      `/workspaces/${wsA}/webhooks/${whSelected}`,
-    );
+    const own = await appWith(narrowToken()).request(`/workspaces/${wsA}/webhooks/${whSelected}`);
     expect(own.status).toBe(200);
     expect(await own.json<{ webhook: { id: string } }>()).toMatchObject({
       webhook: { id: whSelected },
@@ -677,7 +641,7 @@ describe("POST /workspaces/:id/webhooks", () => {
   it("refuses to persist a webhook targeting a project outside the token's list", async () => {
     const before = await webhookIds();
     const res = await appWith(narrowToken()).request(
-      jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body(projSibling)),
+      jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body(projSibling))
     );
 
     expect(res.status).toBe(403);
@@ -692,7 +656,7 @@ describe("POST /workspaces/:id/webhooks", () => {
     // would register a null-project webhook and receive P2's events anyway.
     const before = await webhookIds();
     const res = await appWith(narrowToken()).request(
-      jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body()),
+      jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body())
     );
 
     expect(res.status).toBe(403);
@@ -708,17 +672,17 @@ describe("POST /workspaces/:id/webhooks", () => {
     const unknownId = crypto.randomUUID();
     const [offList, unknown] = await Promise.all([
       appWith(narrowToken()).request(
-        jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body(projSibling)),
+        jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body(projSibling))
       ),
       appWith(narrowToken()).request(
-        jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body(unknownId)),
+        jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body(unknownId))
       ),
     ]);
 
     expect(offList.status).toBe(unknown.status);
     expect(offList.status).toBe(403);
     expect(await offList.json<{ error: string }>()).toEqual(
-      await unknown.json<{ error: string }>(),
+      await unknown.json<{ error: string }>()
     );
   });
 
@@ -726,7 +690,7 @@ describe("POST /workspaces/:id/webhooks", () => {
     // The oracle only has to be closed for callers that could be enumerating.
     // A human already knows which projects exist, so they keep the diagnostic.
     const res = await appWith(null).request(
-      jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body(crypto.randomUUID())),
+      jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body(crypto.randomUUID()))
     );
     expect(res.status).toBe(400);
     expect(await res.json<{ error: string }>()).toMatchObject({
@@ -736,7 +700,7 @@ describe("POST /workspaces/:id/webhooks", () => {
 
   it("still persists a webhook for a project ON the token's list", async () => {
     const res = await appWith(narrowToken()).request(
-      jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body(projSelected)),
+      jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body(projSelected))
     );
     expect(res.status).toBe(201);
 
@@ -749,7 +713,7 @@ describe("POST /workspaces/:id/webhooks", () => {
     for (const token of [allToken(), null]) {
       for (const projectId of [projSibling, undefined]) {
         const res = await appWith(token).request(
-          jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body(projectId)),
+          jsonRequest("POST", `/workspaces/${wsA}/webhooks`, body(projectId))
         );
         expect(res.status).toBe(201);
         const created = await res.json<{ webhook: { id: string } }>();
@@ -777,7 +741,7 @@ describe("PATCH /workspaces/:id/webhooks/:webhookId", () => {
     const res = await appWith(narrowToken()).request(
       jsonRequest("PATCH", `/workspaces/${wsA}/webhooks/${whSibling}`, {
         name: "hijacked",
-      }),
+      })
     );
     expect(res.status).toBe(403);
     expect((await readWebhook(whSibling))?.name).toBe("wh-sibling");
@@ -787,7 +751,7 @@ describe("PATCH /workspaces/:id/webhooks/:webhookId", () => {
     const res = await appWith(narrowToken()).request(
       jsonRequest("PATCH", `/workspaces/${wsA}/webhooks/${whSelected}`, {
         projectId: projSibling,
-      }),
+      })
     );
     expect(res.status).toBe(403);
     expect((await readWebhook(whSelected))?.projectId).toBe(projSelected);
@@ -797,7 +761,7 @@ describe("PATCH /workspaces/:id/webhooks/:webhookId", () => {
     const res = await appWith(narrowToken()).request(
       jsonRequest("PATCH", `/workspaces/${wsA}/webhooks/${whSelected}`, {
         projectId: null,
-      }),
+      })
     );
     expect(res.status).toBe(403);
     expect((await readWebhook(whSelected))?.projectId).toBe(projSelected);
@@ -816,7 +780,7 @@ describe("PATCH /workspaces/:id/webhooks/:webhookId", () => {
         name: "stolen",
         url: "https://attacker.example.com/hook",
         regenerateSecret: true,
-      }),
+      })
     );
     expect(res.status).toBe(403);
 
@@ -830,7 +794,7 @@ describe("PATCH /workspaces/:id/webhooks/:webhookId", () => {
     const res = await appWith(narrowToken()).request(
       jsonRequest("PATCH", `/workspaces/${wsA}/webhooks/${whSelected}`, {
         name: "renamed-in-scope",
-      }),
+      })
     );
     expect(res.status).toBe(200);
     expect((await readWebhook(whSelected))?.name).toBe("renamed-in-scope");
@@ -840,7 +804,7 @@ describe("PATCH /workspaces/:id/webhooks/:webhookId", () => {
     const viaToken = await appWith(allToken()).request(
       jsonRequest("PATCH", `/workspaces/${wsA}/webhooks/${whSibling}`, {
         name: "renamed-by-all-token",
-      }),
+      })
     );
     expect(viaToken.status).toBe(200);
     expect((await readWebhook(whSibling))?.name).toBe("renamed-by-all-token");
@@ -848,7 +812,7 @@ describe("PATCH /workspaces/:id/webhooks/:webhookId", () => {
     const viaCookie = await appWith(null).request(
       jsonRequest("PATCH", `/workspaces/${wsA}/webhooks/${whSibling}`, {
         name: "renamed-by-cookie",
-      }),
+      })
     );
     expect(viaCookie.status).toBe(200);
     expect((await readWebhook(whSibling))?.name).toBe("renamed-by-cookie");
@@ -860,18 +824,17 @@ describe("DELETE /workspaces/:id/webhooks/:webhookId", () => {
     // Deleting another project's webhook is a denial of service on that
     // project's integrations, so it is bound exactly like a read.
     const res = await appWith(narrowToken()).request(
-      jsonRequest("DELETE", `/workspaces/${wsA}/webhooks/${whSibling}`),
+      jsonRequest("DELETE", `/workspaces/${wsA}/webhooks/${whSibling}`)
     );
     expect(res.status).toBe(403);
     expect(await readWebhook(whSibling)).not.toBeNull();
   });
 
   it("lets a cookie session delete a throwaway webhook in the sibling project", async () => {
-    const throwaway = (
-      await seedWebhook(d1, wsA, { name: "wh-throwaway", projectId: projSibling })
-    ).id;
+    const throwaway = (await seedWebhook(d1, wsA, { name: "wh-throwaway", projectId: projSibling }))
+      .id;
     const res = await appWith(null).request(
-      jsonRequest("DELETE", `/workspaces/${wsA}/webhooks/${throwaway}`),
+      jsonRequest("DELETE", `/workspaces/${wsA}/webhooks/${throwaway}`)
     );
     expect(res.status).toBe(204);
     expect(await readWebhook(throwaway)).toBeNull();
@@ -884,7 +847,7 @@ describe("POST /workspaces/:id/webhooks/:webhookId/test", () => {
     vi.stubGlobal("fetch", fetchSpy);
     try {
       const res = await appWith(narrowToken()).request(
-        jsonRequest("POST", `/workspaces/${wsA}/webhooks/${whSibling}/test`),
+        jsonRequest("POST", `/workspaces/${wsA}/webhooks/${whSibling}/test`)
       );
       expect(res.status).toBe(403);
       // `/test` sends a real signed request to the subscriber, so a denial that
@@ -900,7 +863,7 @@ describe("POST /workspaces/:id/webhooks/:webhookId/test", () => {
     vi.stubGlobal("fetch", fetchSpy);
     try {
       const res = await appWith(null).request(
-        jsonRequest("POST", `/workspaces/${wsA}/webhooks/${whSibling}/test`),
+        jsonRequest("POST", `/workspaces/${wsA}/webhooks/${whSibling}/test`)
       );
       expect(res.status).toBe(200);
       expect(fetchSpy).toHaveBeenCalled();
@@ -932,7 +895,7 @@ describe("GET /workspaces/:id/export", () => {
       expect(res.status).toBe(200);
       const doc = await res.json<{ projects: { name: string }[] }>();
       expect(sorted(doc.projects.map((p) => p.name))).toEqual(
-        sorted(["Alpha Selected Project", "Alpha Sibling Project"]),
+        sorted(["Alpha Selected Project", "Alpha Sibling Project"])
       );
     }
   });
@@ -960,7 +923,7 @@ describe("GET /notifications", () => {
     const body = await res.json<{ notifications: { id: string }[] }>();
 
     expect(sorted(body.notifications.map((n) => n.id))).toEqual(
-      sorted([notifSelected, notifWorkspaceLevel, notifUntethered]),
+      sorted([notifSelected, notifWorkspaceLevel, notifUntethered])
     );
     // The sibling project's task title and comment excerpt are the payload
     // that made this a real leak rather than an id disclosure.
@@ -979,12 +942,10 @@ describe("GET /notifications", () => {
     const body = await res.json<{ notifications: { id: string }[] }>();
 
     expect(sorted(body.notifications.map((n) => n.id))).toEqual(
-      sorted([notifSelected, notifSibling, notifWorkspaceLevel, notifUntethered]),
+      sorted([notifSelected, notifSibling, notifWorkspaceLevel, notifUntethered])
     );
     expect(body.notifications.map((n) => n.id)).not.toContain(notifOtherWorkspace);
-    expect(body.notifications.map((n) => n.id)).not.toContain(
-      notifForeignWorkspaceLevel,
-    );
+    expect(body.notifications.map((n) => n.id)).not.toContain(notifForeignWorkspaceLevel);
   });
 
   it("leaves a cookie session seeing the entire inbox across every workspace", async () => {
@@ -1000,7 +961,7 @@ describe("GET /notifications", () => {
         notifWorkspaceLevel,
         notifForeignWorkspaceLevel,
         notifUntethered,
-      ]),
+      ])
     );
   });
 
@@ -1010,7 +971,7 @@ describe("GET /notifications", () => {
     const res = await appWith(emptyToken()).request("/notifications");
     const body = await res.json<{ notifications: { id: string }[] }>();
     expect(sorted(body.notifications.map((n) => n.id))).toEqual(
-      sorted([notifWorkspaceLevel, notifUntethered]),
+      sorted([notifWorkspaceLevel, notifUntethered])
     );
   });
 });
@@ -1051,7 +1012,7 @@ describe("notification mutations", () => {
     // 404 rather than 403 on purpose: the row is invisible to this token, and
     // a distinct status would confirm the id exists.
     const res = await appWith(narrowToken()).request(
-      jsonRequest("PATCH", `/notifications/${notifSibling}/read`),
+      jsonRequest("PATCH", `/notifications/${notifSibling}/read`)
     );
     expect(res.status).toBe(404);
     expect(await isRead(notifSibling)).toBe(false);
@@ -1059,7 +1020,7 @@ describe("notification mutations", () => {
 
   it("still lets a narrowed token mark its OWN project's notification read", async () => {
     const res = await appWith(narrowToken()).request(
-      jsonRequest("PATCH", `/notifications/${notifSelected}/read`),
+      jsonRequest("PATCH", `/notifications/${notifSelected}/read`)
     );
     expect(res.status).toBe(200);
     expect(await isRead(notifSelected)).toBe(true);
@@ -1067,7 +1028,7 @@ describe("notification mutations", () => {
 
   it("404s a narrowed token deleting a sibling notification, and the row survives", async () => {
     const res = await appWith(narrowToken()).request(
-      jsonRequest("DELETE", `/notifications/${notifSibling}`),
+      jsonRequest("DELETE", `/notifications/${notifSibling}`)
     );
     expect(res.status).toBe(404);
     const row = await d1
@@ -1081,7 +1042,7 @@ describe("notification mutations", () => {
     // The destructive case: an unscoped sweep would mark a human's entire
     // inbox read on behalf of a token that cannot even read most of it.
     const res = await appWith(narrowToken()).request(
-      jsonRequest("POST", "/notifications/mark-all-read"),
+      jsonRequest("POST", "/notifications/mark-all-read")
     );
     expect(res.status).toBe(200);
 
@@ -1094,9 +1055,7 @@ describe("notification mutations", () => {
   });
 
   it("leaves a cookie session sweeping its whole inbox", async () => {
-    const res = await appWith(null).request(
-      jsonRequest("POST", "/notifications/mark-all-read"),
-    );
+    const res = await appWith(null).request(jsonRequest("POST", "/notifications/mark-all-read"));
     expect(res.status).toBe(200);
     for (const id of [
       notifSelected,
@@ -1140,9 +1099,7 @@ describe("a token narrowed to an empty list sees nothing anywhere", () => {
 
   for (const [label, template, extract] of cases) {
     it(`returns an empty ${label} collection`, async () => {
-      const res = await appWith(emptyToken()).request(
-        template.replace("{ws}", wsA),
-      );
+      const res = await appWith(emptyToken()).request(template.replace("{ws}", wsA));
       expect(res.status).toBe(200);
       expect(extract(await res.json<Record<string, unknown>>())).toEqual([]);
     });
@@ -1150,7 +1107,7 @@ describe("a token narrowed to an empty list sees nothing anywhere", () => {
 
   it("returns no task groups even when explicitly asked for both projects", async () => {
     const res = await appWith(emptyToken()).request(
-      `/workspaces/${wsA}/task-groups?projectIds=${projSelected},${projSibling}`,
+      `/workspaces/${wsA}/task-groups?projectIds=${projSelected},${projSibling}`
     );
     expect(res.status).toBe(200);
     expect((await res.json<{ taskGroups: unknown[] }>()).taskGroups).toEqual([]);

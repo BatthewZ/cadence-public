@@ -45,12 +45,7 @@ import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
 
 import type { Database } from "../../db";
-import {
-  type ApiToken,
-  apiToken,
-  user,
-  workspaceMember,
-} from "../../db/schema";
+import { type ApiToken, apiToken, user, workspaceMember } from "../../db/schema";
 import type { WorkspaceRole } from "../../shared/types/roles";
 import type { AppEnv } from "../env";
 import { deferWork } from "./defer";
@@ -126,7 +121,7 @@ export const KNOWN_SCOPES: ReadonlySet<string> = Object.freeze(
     "webhook:write",
     "read:*",
     "write:*",
-  ]),
+  ])
 );
 
 // ---------------------------------------------------------------------------
@@ -221,7 +216,7 @@ function bufferToHex(buf: ArrayBuffer): string {
 export function requireTokenHashPepper(pepper: string | undefined): string {
   if (!pepper || pepper.length === 0) {
     throw new Error(
-      "[api-tokens] TOKEN_HASH_PEPPER is required for PAT hashing — refusing to mint or verify with an unpeppered hash",
+      "[api-tokens] TOKEN_HASH_PEPPER is required for PAT hashing — refusing to mint or verify with an unpeppered hash"
     );
   }
   return pepper;
@@ -247,7 +242,7 @@ export function requireTokenHashPepper(pepper: string | undefined): string {
  */
 export async function mintToken(
   prefix: string,
-  pepper: string,
+  pepper: string
 ): Promise<{
   plaintext: string;
   hash: string;
@@ -308,7 +303,7 @@ export async function hashToken(plaintext: string, pepper: string): Promise<stri
     encoder.encode(pepper),
     { name: "HMAC", hash: "SHA-256" },
     false,
-    ["sign"],
+    ["sign"]
   );
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(plaintext));
   return bufferToHex(signature);
@@ -348,7 +343,7 @@ export function newApiTokenId(): string {
 export async function verifyToken(
   db: Database,
   plaintext: string,
-  pepper: string,
+  pepper: string
 ): Promise<VerifyResult | null> {
   // Cheap reject: garbage Authorization headers must not cost us a hash.
   if (typeof plaintext !== "string" || !plaintext.startsWith(TOKEN_PREFIX)) {
@@ -369,8 +364,8 @@ export async function verifyToken(
       workspaceMember,
       and(
         eq(workspaceMember.workspaceId, apiToken.workspaceId),
-        eq(workspaceMember.userId, apiToken.userId),
-      ),
+        eq(workspaceMember.userId, apiToken.userId)
+      )
     )
     .where(eq(apiToken.tokenHash, hash))
     .limit(1);
@@ -382,10 +377,7 @@ export async function verifyToken(
 
   // Past-expiry tokens are dead even if revokedAt is still null. We compare
   // by epoch ms so a freshly-set expiresAt in the past correctly fails.
-  if (
-    row.token.expiresAt !== null &&
-    row.token.expiresAt.getTime() < Date.now()
-  ) {
+  if (row.token.expiresAt !== null && row.token.expiresAt.getTime() < Date.now()) {
     return null;
   }
 
@@ -488,10 +480,7 @@ export function hasScope(token: ApiToken, required: string): boolean {
  * row written by a future schema with an unknown scope mode cannot
  * accidentally over-grant.
  */
-export function canAccessProject(
-  token: ApiToken,
-  projectId: string,
-): boolean {
+export function canAccessProject(token: ApiToken, projectId: string): boolean {
   if (token.projectScope === "all") return true;
   if (token.projectScope === "selected") {
     return parseProjectIds(token.projectIds).includes(projectId);
@@ -511,17 +500,11 @@ export function canAccessProject(
  * "Never used" indicator in the UI), and we never want a flaky write to
  * derail an otherwise successful API call.
  */
-export function bumpLastUsedAt(
-  c: Context<AppEnv>,
-  tokenId: string,
-): void {
+export function bumpLastUsedAt(c: Context<AppEnv>, tokenId: string): void {
   deferWork(c, async () => {
     try {
       const db = c.get("db");
-      await db
-        .update(apiToken)
-        .set({ lastUsedAt: new Date() })
-        .where(eq(apiToken.id, tokenId));
+      await db.update(apiToken).set({ lastUsedAt: new Date() }).where(eq(apiToken.id, tokenId));
     } catch (err) {
       console.error(
         JSON.stringify({
@@ -530,7 +513,7 @@ export function bumpLastUsedAt(
           op: "bumpLastUsedAt",
           tokenId,
           error: err instanceof Error ? err.message : String(err),
-        }),
+        })
       );
     }
   });

@@ -11,7 +11,11 @@
 import { Hono } from "hono";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { addTeamMemberSchema, createTeamSchema, updateTeamSchema } from "../../../shared/schemas/team";
+import {
+  addTeamMemberSchema,
+  createTeamSchema,
+  updateTeamSchema,
+} from "../../../shared/schemas/team";
 import type { AppEnv } from "../../env";
 import { validateBody } from "../../middleware/validate";
 import {
@@ -73,7 +77,7 @@ describe("createTeam", () => {
       "/workspaces/:workspaceId/teams",
       fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }),
       validateBody(createTeamSchema),
-      createTeam,
+      createTeam
     );
     return app;
   }
@@ -85,11 +89,13 @@ describe("createTeam", () => {
       jsonRequest("POST", `/workspaces/${workspaceId}/teams`, {
         name: "Engineering",
         description: "The engineering team",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ team: { id: string; name: string; description: string; workspaceId: string } }>();
+    const body = await res.json<{
+      team: { id: string; name: string; description: string; workspaceId: string };
+    }>();
     expect(body.team).toMatchObject({
       name: "Engineering",
       description: "The engineering team",
@@ -104,7 +110,7 @@ describe("createTeam", () => {
       `/workspaces/${workspaceId}/teams`,
       jsonRequest("POST", `/workspaces/${workspaceId}/teams`, {
         name: "Design",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -119,7 +125,7 @@ describe("createTeam", () => {
     const app = createApp();
     const res = await app.request(
       `/workspaces/${workspaceId}/teams`,
-      jsonRequest("POST", `/workspaces/${workspaceId}/teams`, {}),
+      jsonRequest("POST", `/workspaces/${workspaceId}/teams`, {})
     );
 
     expect(res.status).toBe(400);
@@ -132,7 +138,7 @@ describe("createTeam", () => {
     const app = createApp();
     const res = await app.request(
       `/workspaces/${workspaceId}/teams`,
-      jsonRequest("POST", `/workspaces/${workspaceId}/teams`, { name: "" }),
+      jsonRequest("POST", `/workspaces/${workspaceId}/teams`, { name: "" })
     );
 
     expect(res.status).toBe(400);
@@ -151,7 +157,7 @@ describe("listTeams", () => {
     app.get(
       "/workspaces/:workspaceId/teams",
       fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }),
-      listTeams,
+      listTeams
     );
     return app;
   }
@@ -183,7 +189,7 @@ describe("listTeams", () => {
     app.get(
       "/workspaces/:workspaceId/teams",
       fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-empty", role: "owner" } }),
-      listTeams,
+      listTeams
     );
 
     const res = await app.request(`/workspaces/${emptyWsId}/teams`);
@@ -214,19 +220,24 @@ describe("getTeamDetail", () => {
     app.get(
       "/workspaces/:workspaceId/teams/:teamId",
       fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }),
-      getTeamDetail,
+      getTeamDetail
     );
     return app;
   }
 
   it("returns team detail with members", async () => {
     const app = createApp();
-    const res = await app.request(
-      `/workspaces/${workspaceId}/teams/${detailTeamId}`,
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/teams/${detailTeamId}`);
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ name: string; members: { userId: string; role: string; user: { id: string; name: string; email: string } }[] }>();
+    const body = await res.json<{
+      name: string;
+      members: {
+        userId: string;
+        role: string;
+        user: { id: string; name: string; email: string };
+      }[];
+    }>();
     expect(body.name).toBe("Detail Team");
     expect(Array.isArray(body.members)).toBe(true);
     expect(body.members.length).toBe(1);
@@ -241,9 +252,7 @@ describe("getTeamDetail", () => {
 
   it("returns 404 for nonexistent team", async () => {
     const app = createApp();
-    const res = await app.request(
-      `/workspaces/${workspaceId}/teams/nonexistent-id`,
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/teams/nonexistent-id`);
 
     expect(res.status).toBe(404);
     const body = await res.json<{ error: string }>();
@@ -255,9 +264,7 @@ describe("getTeamDetail", () => {
     const otherTeamId = await seedTeam(d1, otherWsId, { name: "Other WS Team" });
 
     const app = createApp();
-    const res = await app.request(
-      `/workspaces/${workspaceId}/teams/${otherTeamId}`,
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/teams/${otherTeamId}`);
 
     expect(res.status).toBe(404);
     const body = await res.json<{ error: string }>();
@@ -285,7 +292,7 @@ describe("updateTeam", () => {
       "/workspaces/:workspaceId/teams/:teamId",
       fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }),
       validateBody(updateTeamSchema),
-      updateTeam,
+      updateTeam
     );
     return app;
   }
@@ -296,7 +303,7 @@ describe("updateTeam", () => {
       `/workspaces/${workspaceId}/teams/${updateTeamId}`,
       jsonRequest("PATCH", `/workspaces/${workspaceId}/teams/${updateTeamId}`, {
         name: "Updated Name",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -310,7 +317,7 @@ describe("updateTeam", () => {
       `/workspaces/${workspaceId}/teams/${updateTeamId}`,
       jsonRequest("PATCH", `/workspaces/${workspaceId}/teams/${updateTeamId}`, {
         description: "A new description",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -324,7 +331,7 @@ describe("updateTeam", () => {
       `/workspaces/${workspaceId}/teams/${updateTeamId}`,
       jsonRequest("PATCH", `/workspaces/${workspaceId}/teams/${updateTeamId}`, {
         description: null,
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -338,7 +345,7 @@ describe("updateTeam", () => {
       `/workspaces/${workspaceId}/teams/nonexistent`,
       jsonRequest("PATCH", `/workspaces/${workspaceId}/teams/nonexistent`, {
         name: "Whatever",
-      }),
+      })
     );
 
     expect(res.status).toBe(404);
@@ -357,7 +364,7 @@ describe("deleteTeam", () => {
     app.delete(
       "/workspaces/:workspaceId/teams/:teamId",
       fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }),
-      deleteTeam,
+      deleteTeam
     );
     return app;
   }
@@ -366,10 +373,9 @@ describe("deleteTeam", () => {
     const teamId = await seedTeam(d1, workspaceId, { name: "Deletable Team" });
 
     const app = createApp();
-    const res = await app.request(
-      `/workspaces/${workspaceId}/teams/${teamId}`,
-      { method: "DELETE" },
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/teams/${teamId}`, {
+      method: "DELETE",
+    });
 
     expect(res.status).toBe(200);
     const body = await res.json<{ ok: boolean }>();
@@ -380,21 +386,18 @@ describe("deleteTeam", () => {
     getApp.get(
       "/workspaces/:workspaceId/teams/:teamId",
       fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }),
-      getTeamDetail,
+      getTeamDetail
     );
 
-    const verifyRes = await getApp.request(
-      `/workspaces/${workspaceId}/teams/${teamId}`,
-    );
+    const verifyRes = await getApp.request(`/workspaces/${workspaceId}/teams/${teamId}`);
     expect(verifyRes.status).toBe(404);
   });
 
   it("returns 404 for nonexistent team", async () => {
     const app = createApp();
-    const res = await app.request(
-      `/workspaces/${workspaceId}/teams/nonexistent`,
-      { method: "DELETE" },
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/teams/nonexistent`, {
+      method: "DELETE",
+    });
 
     expect(res.status).toBe(404);
     const body = await res.json<{ error: string }>();
@@ -422,7 +425,7 @@ describe("addTeamMember", () => {
       "/workspaces/:workspaceId/teams/:teamId/members",
       fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }),
       validateBody(addTeamMemberSchema),
-      addTeamMember,
+      addTeamMember
     );
     return app;
   }
@@ -431,15 +434,16 @@ describe("addTeamMember", () => {
     const app = createApp();
     const res = await app.request(
       `/workspaces/${workspaceId}/teams/${memberTeamId}/members`,
-      jsonRequest(
-        "POST",
-        `/workspaces/${workspaceId}/teams/${memberTeamId}/members`,
-        { userId: TEST_USER_2.id, role: "member" },
-      ),
+      jsonRequest("POST", `/workspaces/${workspaceId}/teams/${memberTeamId}/members`, {
+        userId: TEST_USER_2.id,
+        role: "member",
+      })
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ member: { id: string; teamId: string; userId: string; role: string } }>();
+    const body = await res.json<{
+      member: { id: string; teamId: string; userId: string; role: string };
+    }>();
     expect(body.member).toMatchObject({
       teamId: memberTeamId,
       userId: TEST_USER_2.id,
@@ -453,11 +457,9 @@ describe("addTeamMember", () => {
     const app = createApp();
     const res = await app.request(
       `/workspaces/${workspaceId}/teams/${memberTeamId}/members`,
-      jsonRequest(
-        "POST",
-        `/workspaces/${workspaceId}/teams/${memberTeamId}/members`,
-        { userId: TEST_USER_2.id },
-      ),
+      jsonRequest("POST", `/workspaces/${workspaceId}/teams/${memberTeamId}/members`, {
+        userId: TEST_USER_2.id,
+      })
     );
 
     expect(res.status).toBe(409);
@@ -469,11 +471,9 @@ describe("addTeamMember", () => {
     const app = createApp();
     const res = await app.request(
       `/workspaces/${workspaceId}/teams/${memberTeamId}/members`,
-      jsonRequest(
-        "POST",
-        `/workspaces/${workspaceId}/teams/${memberTeamId}/members`,
-        { userId: "non-workspace-user" },
-      ),
+      jsonRequest("POST", `/workspaces/${workspaceId}/teams/${memberTeamId}/members`, {
+        userId: "non-workspace-user",
+      })
     );
 
     expect(res.status).toBe(400);
@@ -485,11 +485,9 @@ describe("addTeamMember", () => {
     const app = createApp();
     const res = await app.request(
       `/workspaces/${workspaceId}/teams/nonexistent/members`,
-      jsonRequest(
-        "POST",
-        `/workspaces/${workspaceId}/teams/nonexistent/members`,
-        { userId: TEST_USER.id },
-      ),
+      jsonRequest("POST", `/workspaces/${workspaceId}/teams/nonexistent/members`, {
+        userId: TEST_USER.id,
+      })
     );
 
     expect(res.status).toBe(404);
@@ -501,11 +499,7 @@ describe("addTeamMember", () => {
     const app = createApp();
     const res = await app.request(
       `/workspaces/${workspaceId}/teams/${memberTeamId}/members`,
-      jsonRequest(
-        "POST",
-        `/workspaces/${workspaceId}/teams/${memberTeamId}/members`,
-        {},
-      ),
+      jsonRequest("POST", `/workspaces/${workspaceId}/teams/${memberTeamId}/members`, {})
     );
 
     expect(res.status).toBe(400);
@@ -535,7 +529,7 @@ describe("removeTeamMember", () => {
     app.delete(
       "/workspaces/:workspaceId/teams/:teamId/members/:userId",
       fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }),
-      removeTeamMember,
+      removeTeamMember
     );
     return app;
   }
@@ -544,7 +538,7 @@ describe("removeTeamMember", () => {
     const app = createApp();
     const res = await app.request(
       `/workspaces/${workspaceId}/teams/${removeTeamId}/members/${TEST_USER_2.id}`,
-      { method: "DELETE" },
+      { method: "DELETE" }
     );
 
     expect(res.status).toBe(200);
@@ -556,16 +550,14 @@ describe("removeTeamMember", () => {
     detailApp.get(
       "/workspaces/:workspaceId/teams/:teamId",
       fakeAuth(d1, TEST_USER, { workspaceMembership: { id: "wm-1", role: "owner" } }),
-      getTeamDetail,
+      getTeamDetail
     );
 
-    const verifyRes = await detailApp.request(
-      `/workspaces/${workspaceId}/teams/${removeTeamId}`,
-    );
+    const verifyRes = await detailApp.request(`/workspaces/${workspaceId}/teams/${removeTeamId}`);
     expect(verifyRes.status).toBe(200);
     const detail = await verifyRes.json<{ members: { userId: string }[] }>();
     const removedMember = detail.members.find(
-      (m: { userId: string }) => m.userId === TEST_USER_2.id,
+      (m: { userId: string }) => m.userId === TEST_USER_2.id
     );
     expect(removedMember).toBeUndefined();
   });
@@ -574,7 +566,7 @@ describe("removeTeamMember", () => {
     const app = createApp();
     const res = await app.request(
       `/workspaces/${workspaceId}/teams/${removeTeamId}/members/nonexistent-user`,
-      { method: "DELETE" },
+      { method: "DELETE" }
     );
 
     expect(res.status).toBe(404);
@@ -586,7 +578,7 @@ describe("removeTeamMember", () => {
     const app = createApp();
     const res = await app.request(
       `/workspaces/${workspaceId}/teams/nonexistent/members/${TEST_USER.id}`,
-      { method: "DELETE" },
+      { method: "DELETE" }
     );
 
     expect(res.status).toBe(404);

@@ -77,7 +77,7 @@ beforeAll(async () => {
   await seedUser(d1, TEST_USER_2);
   await d1
     .prepare(
-      "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(
       TEST_USER_3.id,
@@ -86,7 +86,7 @@ beforeAll(async () => {
       TEST_USER_3.emailVerified ? 1 : 0,
       TEST_USER_3.image,
       Math.floor(TEST_USER_3.createdAt.getTime() / 1000),
-      Math.floor(TEST_USER_3.updatedAt.getTime() / 1000),
+      Math.floor(TEST_USER_3.updatedAt.getTime() / 1000)
     )
     .run();
 
@@ -145,14 +145,14 @@ describe("createTaskGroup", () => {
       "/projects/:projectId/task-groups",
       adminAuth(),
       validateBody(createTaskGroupSchema),
-      createTaskGroup,
+      createTaskGroup
     );
 
     const res = await app.request(
       `/projects/${projectId}/task-groups`,
       jsonRequest("POST", `/projects/${projectId}/task-groups`, {
         name: "Backlog",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -168,7 +168,7 @@ describe("createTaskGroup", () => {
       "/projects/:projectId/task-groups",
       adminAuth(),
       validateBody(createTaskGroupSchema),
-      createTaskGroup,
+      createTaskGroup
     );
 
     const res = await app.request(
@@ -176,7 +176,7 @@ describe("createTaskGroup", () => {
       jsonRequest("POST", `/projects/${projectId}/task-groups`, {
         name: "In Progress",
         color: "#FF5733",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -190,14 +190,14 @@ describe("createTaskGroup", () => {
       "/projects/:projectId/task-groups",
       adminAuth(),
       validateBody(createTaskGroupSchema),
-      createTaskGroup,
+      createTaskGroup
     );
 
     const res = await app.request(
       `/projects/${projectId}/task-groups`,
       jsonRequest("POST", `/projects/${projectId}/task-groups`, {
         name: "No Color Group",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -211,18 +211,27 @@ describe("createTaskGroup", () => {
       "/projects/:projectId/task-groups",
       adminAuth(),
       validateBody(createTaskGroupSchema),
-      createTaskGroup,
+      createTaskGroup
     );
 
     const res = await app.request(
       `/projects/${projectId}/task-groups`,
       jsonRequest("POST", `/projects/${projectId}/task-groups`, {
         name: "Status Check Group",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ taskGroup: { id: string; projectId: string; name: string; isCompletionGroup: boolean; createdAt: string; updatedAt: string } }>();
+    const body = await res.json<{
+      taskGroup: {
+        id: string;
+        projectId: string;
+        name: string;
+        isCompletionGroup: boolean;
+        createdAt: string;
+        updatedAt: string;
+      };
+    }>();
     expect(body.taskGroup.id).toBeTruthy();
     expect(body.taskGroup.projectId).toBe(projectId);
     expect(body.taskGroup.name).toBe("Status Check Group");
@@ -261,7 +270,7 @@ describe("createTaskGroup", () => {
       "/projects/:projectId/task-groups",
       adminAuth(),
       validateBody(createTaskGroupSchema),
-      createTaskGroup,
+      createTaskGroup
     );
 
     const N = 8;
@@ -271,9 +280,9 @@ describe("createTaskGroup", () => {
           `/projects/${raceProjectId}/task-groups`,
           jsonRequest("POST", `/projects/${raceProjectId}/task-groups`, {
             name: `Race Group ${i}`,
-          }),
-        ),
-      ),
+          })
+        )
+      )
     );
 
     for (const res of responses) {
@@ -281,7 +290,7 @@ describe("createTaskGroup", () => {
     }
 
     const bodies = await Promise.all(
-      responses.map((r) => r.json<{ taskGroup: { id: string; position: string } }>()),
+      responses.map((r) => r.json<{ taskGroup: { id: string; position: string } }>())
     );
     const positions = bodies.map((b) => b.taskGroup.position);
 
@@ -312,7 +321,7 @@ describe("listTaskGroups", () => {
 
     const res = await app.request(
       `/projects/${emptyProjectId}/task-groups`,
-      jsonRequest("GET", `/projects/${emptyProjectId}/task-groups`),
+      jsonRequest("GET", `/projects/${emptyProjectId}/task-groups`)
     );
 
     expect(res.status).toBe(200);
@@ -353,7 +362,7 @@ describe("listTaskGroups", () => {
 
     const res = await app.request(
       `/projects/${countProjectId}/task-groups`,
-      jsonRequest("GET", `/projects/${countProjectId}/task-groups`),
+      jsonRequest("GET", `/projects/${countProjectId}/task-groups`)
     );
 
     expect(res.status).toBe(200);
@@ -377,7 +386,7 @@ describe("listTaskGroups", () => {
 
     const res = await app.request(
       `/projects/${bareProjectId}/task-groups`,
-      jsonRequest("GET", `/projects/${bareProjectId}/task-groups`),
+      jsonRequest("GET", `/projects/${bareProjectId}/task-groups`)
     );
 
     expect(res.status).toBe(200);
@@ -396,16 +405,13 @@ describe("listWorkspaceTaskGroups", () => {
    * Owners/admins see all projects in the workspace; non-elevated members
    * only see task groups for projects they directly belong to.
    */
-  function wsApp(
-    user: typeof TEST_USER | typeof TEST_USER_2,
-    role: "owner" | "admin" | "member",
-  ) {
+  function wsApp(user: typeof TEST_USER | typeof TEST_USER_2, role: "owner" | "admin" | "member") {
     const app = new Hono<AppEnv>();
     app.get(
       "/workspaces/:workspaceId/task-groups",
       fakeAuth(d1, user, { workspaceMembership: { id: "wm-fake", role } }),
       validateQuery(workspaceTaskGroupsQuerySchema),
-      listWorkspaceTaskGroups,
+      listWorkspaceTaskGroups
     );
     return app;
   }
@@ -428,7 +434,7 @@ describe("listWorkspaceTaskGroups", () => {
 
     const app = wsApp(TEST_USER, "owner");
     const res = await app.request(
-      `/workspaces/${workspaceId}/task-groups?projectIds=${projectId},${otherProjectId}`,
+      `/workspaces/${workspaceId}/task-groups?projectIds=${projectId},${otherProjectId}`
     );
 
     expect(res.status).toBe(200);
@@ -451,9 +457,7 @@ describe("listWorkspaceTaskGroups", () => {
     // (only user1 and user3 are). Requesting that project's groups should
     // yield an empty list — no 403, no leak of group metadata.
     const app = wsApp(TEST_USER_2, "member");
-    const res = await app.request(
-      `/workspaces/${workspaceId}/task-groups?projectIds=${projectId}`,
-    );
+    const res = await app.request(`/workspaces/${workspaceId}/task-groups?projectIds=${projectId}`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ taskGroups: unknown[] }>();
@@ -490,14 +494,14 @@ describe("updateTaskGroup", () => {
       "/task-groups/:taskGroupId",
       adminAuth(),
       validateBody(updateTaskGroupSchema),
-      updateTaskGroup,
+      updateTaskGroup
     );
 
     const res = await app.request(
       `/task-groups/${updateGroupId}`,
       jsonRequest("PATCH", `/task-groups/${updateGroupId}`, {
         name: "Updated Name",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -511,14 +515,14 @@ describe("updateTaskGroup", () => {
       "/task-groups/:taskGroupId",
       adminAuth(),
       validateBody(updateTaskGroupSchema),
-      updateTaskGroup,
+      updateTaskGroup
     );
 
     const res = await app.request(
       `/task-groups/${updateGroupId}`,
       jsonRequest("PATCH", `/task-groups/${updateGroupId}`, {
         color: "#00FF00",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -532,14 +536,14 @@ describe("updateTaskGroup", () => {
       "/task-groups/:taskGroupId",
       adminAuth(),
       validateBody(updateTaskGroupSchema),
-      updateTaskGroup,
+      updateTaskGroup
     );
 
     const res = await app.request(
       `/task-groups/${updateGroupId}`,
       jsonRequest("PATCH", `/task-groups/${updateGroupId}`, {
         isCompletionGroup: true,
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -554,7 +558,7 @@ describe("updateTaskGroup", () => {
       "/task-groups/:taskGroupId",
       adminAuth(),
       validateBody(updateTaskGroupSchema),
-      updateTaskGroup,
+      updateTaskGroup
     );
 
     const fakeId = crypto.randomUUID();
@@ -562,7 +566,7 @@ describe("updateTaskGroup", () => {
       `/task-groups/${fakeId}`,
       jsonRequest("PATCH", `/task-groups/${fakeId}`, {
         name: "Ghost",
-      }),
+      })
     );
 
     expect(res.status).toBe(404);
@@ -576,14 +580,14 @@ describe("updateTaskGroup", () => {
       "/task-groups/:taskGroupId",
       noAccessAuth(),
       validateBody(updateTaskGroupSchema),
-      updateTaskGroup,
+      updateTaskGroup
     );
 
     const res = await app.request(
       `/task-groups/${updateGroupId}`,
       jsonRequest("PATCH", `/task-groups/${updateGroupId}`, {
         name: "Unauthorized",
-      }),
+      })
     );
 
     expect(res.status).toBe(404);
@@ -595,14 +599,14 @@ describe("updateTaskGroup", () => {
       "/task-groups/:taskGroupId",
       viewerAuth(),
       validateBody(updateTaskGroupSchema),
-      updateTaskGroup,
+      updateTaskGroup
     );
 
     const res = await app.request(
       `/task-groups/${updateGroupId}`,
       jsonRequest("PATCH", `/task-groups/${updateGroupId}`, {
         name: "Viewer Attempt",
-      }),
+      })
     );
 
     expect(res.status).toBe(403);
@@ -638,10 +642,7 @@ describe("deleteTaskGroup", () => {
 
     const res = await app.request(
       `/task-groups/${deleteGroupId}?targetGroupId=${targetGroupId}`,
-      jsonRequest(
-        "DELETE",
-        `/task-groups/${deleteGroupId}?targetGroupId=${targetGroupId}`,
-      ),
+      jsonRequest("DELETE", `/task-groups/${deleteGroupId}?targetGroupId=${targetGroupId}`)
     );
 
     expect(res.status).toBe(200);
@@ -654,7 +655,7 @@ describe("deleteTaskGroup", () => {
     listApp.get("/projects/:projectId/task-groups", adminAuth(), listTaskGroups);
     const listRes = await listApp.request(
       `/projects/${projectId}/task-groups`,
-      jsonRequest("GET", `/projects/${projectId}/task-groups`),
+      jsonRequest("GET", `/projects/${projectId}/task-groups`)
     );
     const listBody = await listRes.json<{ taskGroups: { id: string; taskCount: number }[] }>();
     // Deleted group should no longer exist
@@ -676,7 +677,7 @@ describe("deleteTaskGroup", () => {
 
     const res = await app.request(
       `/task-groups/${groupId}`,
-      jsonRequest("DELETE", `/task-groups/${groupId}`),
+      jsonRequest("DELETE", `/task-groups/${groupId}`)
     );
 
     expect(res.status).toBe(400);
@@ -695,10 +696,7 @@ describe("deleteTaskGroup", () => {
 
     const res = await app.request(
       `/task-groups/${groupId}?targetGroupId=${groupId}`,
-      jsonRequest(
-        "DELETE",
-        `/task-groups/${groupId}?targetGroupId=${groupId}`,
-      ),
+      jsonRequest("DELETE", `/task-groups/${groupId}?targetGroupId=${groupId}`)
     );
 
     expect(res.status).toBe(400);
@@ -718,10 +716,7 @@ describe("deleteTaskGroup", () => {
 
     const res = await app.request(
       `/task-groups/${groupId}?targetGroupId=${fakeTargetId}`,
-      jsonRequest(
-        "DELETE",
-        `/task-groups/${groupId}?targetGroupId=${fakeTargetId}`,
-      ),
+      jsonRequest("DELETE", `/task-groups/${groupId}?targetGroupId=${fakeTargetId}`)
     );
 
     expect(res.status).toBe(404);
@@ -749,10 +744,7 @@ describe("deleteTaskGroup", () => {
 
     const res = await app.request(
       `/task-groups/${groupId}?targetGroupId=${otherGroupId}`,
-      jsonRequest(
-        "DELETE",
-        `/task-groups/${groupId}?targetGroupId=${otherGroupId}`,
-      ),
+      jsonRequest("DELETE", `/task-groups/${groupId}?targetGroupId=${otherGroupId}`)
     );
 
     expect(res.status).toBe(404);
@@ -772,10 +764,7 @@ describe("deleteTaskGroup", () => {
 
     const res = await app.request(
       `/task-groups/${fakeId}?targetGroupId=${validTarget}`,
-      jsonRequest(
-        "DELETE",
-        `/task-groups/${fakeId}?targetGroupId=${validTarget}`,
-      ),
+      jsonRequest("DELETE", `/task-groups/${fakeId}?targetGroupId=${validTarget}`)
     );
 
     expect(res.status).toBe(404);
@@ -798,10 +787,7 @@ describe("deleteTaskGroup", () => {
 
     const res = await app.request(
       `/task-groups/${groupId}?targetGroupId=${validTarget}`,
-      jsonRequest(
-        "DELETE",
-        `/task-groups/${groupId}?targetGroupId=${validTarget}`,
-      ),
+      jsonRequest("DELETE", `/task-groups/${groupId}?targetGroupId=${validTarget}`)
     );
 
     expect(res.status).toBe(403);
@@ -830,7 +816,7 @@ describe("reorderTaskGroup", () => {
       "/task-groups/:taskGroupId/reorder",
       adminAuth(),
       validateBody(reorderTaskGroupSchema),
-      reorderTaskGroup,
+      reorderTaskGroup
     );
 
     // Position chosen to avoid colliding with any other task_group seeded
@@ -841,7 +827,7 @@ describe("reorderTaskGroup", () => {
       `/task-groups/${reorderGroupId}/reorder`,
       jsonRequest("PATCH", `/task-groups/${reorderGroupId}/reorder`, {
         position: "zz0",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -856,7 +842,7 @@ describe("reorderTaskGroup", () => {
       "/task-groups/:taskGroupId/reorder",
       adminAuth(),
       validateBody(reorderTaskGroupSchema),
-      reorderTaskGroup,
+      reorderTaskGroup
     );
 
     const fakeId = crypto.randomUUID();
@@ -864,7 +850,7 @@ describe("reorderTaskGroup", () => {
       `/task-groups/${fakeId}/reorder`,
       jsonRequest("PATCH", `/task-groups/${fakeId}/reorder`, {
         position: "z0",
-      }),
+      })
     );
 
     expect(res.status).toBe(404);
@@ -878,14 +864,14 @@ describe("reorderTaskGroup", () => {
       "/task-groups/:taskGroupId/reorder",
       viewerAuth(),
       validateBody(reorderTaskGroupSchema),
-      reorderTaskGroup,
+      reorderTaskGroup
     );
 
     const res = await app.request(
       `/task-groups/${reorderGroupId}/reorder`,
       jsonRequest("PATCH", `/task-groups/${reorderGroupId}/reorder`, {
         position: "z0",
-      }),
+      })
     );
 
     expect(res.status).toBe(403);
@@ -904,11 +890,18 @@ describe("reorderTaskGroup", () => {
     ];
 
     const app = new Hono<AppEnv>();
-    app.patch("/task-groups/:taskGroupId/reorder", adminAuth(), validateBody(reorderTaskGroupSchema), reorderTaskGroup);
+    app.patch(
+      "/task-groups/:taskGroupId/reorder",
+      adminAuth(),
+      validateBody(reorderTaskGroupSchema),
+      reorderTaskGroup
+    );
 
     const positions: string[] = [];
     for (const id of movers) {
-      const res = await app.request(jsonRequest("PATCH", `/task-groups/${id}/reorder`, { position: "a0" }));
+      const res = await app.request(
+        jsonRequest("PATCH", `/task-groups/${id}/reorder`, { position: "a0" })
+      );
       expect(res.status).toBe(200);
       positions.push((await res.json<{ taskGroup: { position: string } }>()).taskGroup.position);
     }

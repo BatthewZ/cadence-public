@@ -1,15 +1,10 @@
 import { Check, MoreHorizontal, UserPlus, UserX } from "lucide-react";
-import {
-  type MouseEvent,
-} from "react";
+import { type MouseEvent } from "react";
 import { useSearchParams } from "react-router-dom";
 
 import { TaskCheckbox } from "@/web/components/form/TaskCheckbox";
 import { Row } from "@/web/components/layout";
-import {
-  Avatar,
-  Badge,
-} from "@/web/components/ui";
+import { Avatar, Badge } from "@/web/components/ui";
 import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
 import { DropdownMenu } from "@/web/components/ui/DropdownMenu";
 import { DueDatePopover } from "@/web/components/ui/DueDatePopover";
@@ -18,7 +13,12 @@ import { TaskContextMenuItems } from "@/web/components/ui/TaskContextMenuItems";
 import { useProject } from "@/web/contexts/ProjectContext";
 import { useTaskActions } from "@/web/hooks/use-task-actions";
 import { formatDueDate, isOverdue } from "@/web/util/date";
-import { getPriorityBadgeVariant, getPriorityLabel, PRIORITY_DOT_CLASS, PRIORITY_OPTIONS } from "@/web/util/task-display";
+import {
+  getPriorityBadgeVariant,
+  getPriorityLabel,
+  PRIORITY_DOT_CLASS,
+  PRIORITY_OPTIONS,
+} from "@/web/util/task-display";
 
 import type { TimelineTask } from "./grouping";
 
@@ -52,7 +52,13 @@ export function TimelineTaskRow({
   canEditTasks?: boolean;
 }) {
   const [, setSearchParams] = useSearchParams();
-  const { project, updateTask: ctxUpdateTask, removeTask: ctxRemoveTask, members, taskGroups } = useProject();
+  const {
+    project,
+    updateTask: ctxUpdateTask,
+    removeTask: ctxRemoveTask,
+    members,
+    taskGroups,
+  } = useProject();
   const {
     handlePriorityChange,
     handleAssigneeChange,
@@ -112,9 +118,7 @@ export function TimelineTaskRow({
 
         <span
           className={`flex-1 text-left font-medium truncate ${
-            task.completed
-              ? "line-through text-fg-muted"
-              : "text-fg-primary"
+            task.completed ? "line-through text-fg-muted" : "text-fg-primary"
           }`}
         >
           {task.title}
@@ -138,11 +142,7 @@ export function TimelineTaskRow({
               <DropdownMenu.Trigger asChild>
                 {task.assigneeName ? (
                   <button type="button" className="shrink-0" aria-label="Change assigned person">
-                    <Avatar
-                      name={task.assigneeName}
-                      src={task.assigneeAvatarUrl}
-                      size="xs"
-                    />
+                    <Avatar name={task.assigneeName} src={task.assigneeAvatarUrl} size="xs" />
                   </button>
                 ) : (
                   <button
@@ -161,15 +161,15 @@ export function TimelineTaskRow({
                   icon={<UserX size={14} className="text-fg-muted" />}
                   onSelect={() => void handleAssigneeChange(null)}
                 >
-                  <span className={!task.assigneeId ? "font-semibold" : ""}>
-                    Unassigned
-                  </span>
+                  <span className={!task.assigneeId ? "font-semibold" : ""}>Unassigned</span>
                 </DropdownMenu.Item>
                 {members.map((member, i) => (
                   <DropdownMenu.Item
                     key={member.userId}
                     index={i + 1}
-                    icon={<Avatar size="xs" name={member.name} src={member.image} className="!size-4" />}
+                    icon={
+                      <Avatar size="xs" name={member.name} src={member.image} className="!size-4" />
+                    }
                     onSelect={() => void handleAssigneeChange(member.userId, member.name)}
                   >
                     <span className={task.assigneeId === member.userId ? "font-semibold" : ""}>
@@ -202,11 +202,7 @@ export function TimelineTaskRow({
                     </Badge>
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    className="shrink-0 hover-reveal"
-                    aria-label="Set priority"
-                  >
+                  <button type="button" className="shrink-0 hover-reveal" aria-label="Set priority">
                     <Badge variant="default">Priority</Badge>
                   </button>
                 )}
@@ -271,10 +267,7 @@ export function TimelineTaskRow({
 
         {/* Quick actions three-dot menu — editors only */}
         {canEditTasks && (
-          <div
-            className="shrink-0 hover-reveal"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="shrink-0 hover-reveal" onClick={(e) => e.stopPropagation()}>
             <DropdownMenu placement="bottom-end">
               <DropdownMenu.Trigger asChild>
                 <IconButton

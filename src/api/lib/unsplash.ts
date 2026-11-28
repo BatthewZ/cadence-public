@@ -127,7 +127,7 @@ export function appendUtm(url: string, appName: string): string {
     // against malformed upstream payloads.
     const separator = url.includes("?") ? "&" : "?";
     const utm = `utm_source=${encodeURIComponent(appName)}&utm_medium=${encodeURIComponent(
-      UNSPLASH_UTM_MEDIUM,
+      UNSPLASH_UTM_MEDIUM
     )}`;
     return `${url}${separator}${utm}`;
   }
@@ -137,10 +137,7 @@ export function appendUtm(url: string, appName: string): string {
  * Normalises a raw Unsplash photo into our stored/wire shape, applying UTM
  * params to every user-visible outbound URL (profileUrl, photoUrl).
  */
-export function toCoverPayload(
-  photo: RawUnsplashPhoto,
-  appName: string,
-): UnsplashCoverPayload {
+export function toCoverPayload(photo: RawUnsplashPhoto, appName: string): UnsplashCoverPayload {
   const profileBase = `https://unsplash.com/@${photo.user.username}`;
   return {
     id: photo.id,
@@ -166,10 +163,7 @@ export function toCoverPayload(
 // HTTP plumbing
 // ---------------------------------------------------------------------------
 
-async function unsplashFetch(
-  url: string,
-  accessKey: string,
-): Promise<Response> {
+async function unsplashFetch(url: string, accessKey: string): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -215,9 +209,7 @@ async function readError(res: Response, context: string): Promise<never> {
     // ignore
   }
   console.error(
-    `[Unsplash] ${context} failed: status=${res.status}${
-      body ? ` body=${body.slice(0, 500)}` : ""
-    }`,
+    `[Unsplash] ${context} failed: status=${res.status}${body ? ` body=${body.slice(0, 500)}` : ""}`
   );
   throw new UnsplashError(`Unsplash request failed (${context})`, res.status);
 }
@@ -226,9 +218,7 @@ async function readError(res: Response, context: string): Promise<never> {
 // Factory
 // ---------------------------------------------------------------------------
 
-export function createUnsplashService(
-  env: AppBindings,
-): UnsplashService | null {
+export function createUnsplashService(env: AppBindings): UnsplashService | null {
   const accessKey = env.UNSPLASH_ACCESS_KEY;
   if (!accessKey || accessKey.trim() === "") {
     return null;
@@ -280,7 +270,7 @@ export function createUnsplashService(
         const res = await unsplashFetch(downloadLocation, accessKey);
         if (!res.ok) {
           console.error(
-            `[Unsplash] trackDownload non-OK: status=${res.status} url=${downloadLocation}`,
+            `[Unsplash] trackDownload non-OK: status=${res.status} url=${downloadLocation}`
           );
         }
       } catch (err) {

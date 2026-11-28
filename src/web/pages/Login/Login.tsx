@@ -47,7 +47,7 @@ export function Login() {
           setError(
             signInError.code === EMAIL_NOT_VERIFIED
               ? "Verify your email address before signing in. We've just sent a new verification link to your inbox."
-              : (signInError.message ?? "Failed to sign in"),
+              : (signInError.message ?? "Failed to sign in")
           );
           return;
         }

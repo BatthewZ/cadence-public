@@ -119,8 +119,8 @@ export function AuthLayout({ children, className }: AuthLayoutProps) {
             Cadence
           </Link>
           <p className="text-lg leading-relaxed text-white/55">
-            Beautiful tools that get out of your way — so you can focus on the
-            work that matters to you.
+            Beautiful tools that get out of your way — so you can focus on the work that matters to
+            you.
           </p>
 
           <RhythmBars />

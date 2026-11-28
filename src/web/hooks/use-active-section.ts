@@ -35,7 +35,7 @@ export function useActiveSection(sectionIds: string[]): string | null {
           }
         }
       },
-      { rootMargin: "-80px 0px -40% 0px" },
+      { rootMargin: "-80px 0px -40% 0px" }
     );
 
     for (const el of elements) {

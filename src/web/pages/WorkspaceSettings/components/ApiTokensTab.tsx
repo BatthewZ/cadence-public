@@ -25,10 +25,7 @@ import { api } from "@/web/lib/api/client";
 
 import { AdminOnlyNotice } from "./AdminOnlyNotice";
 import { ApiTokenList } from "./api-tokens/ApiTokenList";
-import {
-  CreateApiTokenDialog,
-  type CreateApiTokenInput,
-} from "./api-tokens/CreateApiTokenDialog";
+import { CreateApiTokenDialog, type CreateApiTokenInput } from "./api-tokens/CreateApiTokenDialog";
 import { RevokeTokenConfirmation } from "./api-tokens/RevokeTokenConfirmation";
 import { RotateTokenDialog } from "./api-tokens/RotateTokenDialog";
 import {
@@ -110,7 +107,7 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
         // semantics.
         showRevoked
           ? `/api/workspaces/${workspaceId}/api-tokens?includeRevoked=true`
-          : `/api/workspaces/${workspaceId}/api-tokens`,
+          : `/api/workspaces/${workspaceId}/api-tokens`
       ),
     enabled: !!workspaceId,
     staleTime: 30_000,
@@ -139,10 +136,7 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
 
   const createMutation = useMutation({
     mutationFn: (input: CreateApiTokenInput) =>
-      api.post<ApiTokenCreatedResponse>(
-        `/api/workspaces/${workspaceId}/api-tokens`,
-        input,
-      ),
+      api.post<ApiTokenCreatedResponse>(`/api/workspaces/${workspaceId}/api-tokens`, input),
     onSuccess: (result) => {
       invalidateTokenList();
       setCreatedPlaintext(result.token.plaintext);
@@ -153,7 +147,7 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
     mutationFn: (tokenId: string) =>
       api.post<ApiTokenCreatedResponse>(
         `/api/workspaces/${workspaceId}/api-tokens/${tokenId}/rotate`,
-        {},
+        {}
       ),
     onSuccess: (result) => {
       invalidateTokenList();
@@ -263,8 +257,8 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
             API Tokens
           </Text>
           <Text variant="body-2" color="secondary">
-            Personal Access Tokens for integrating Cadence with Slack bots,
-            GitHub Actions, and other tools.{" "}
+            Personal Access Tokens for integrating Cadence with Slack bots, GitHub Actions, and
+            other tools.{" "}
             <a
               href="/api/docs"
               target="_blank"
@@ -278,8 +272,8 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
         </Stack>
 
         <AdminOnlyNotice>
-          Only workspace owners and admins can create or rotate API tokens. Ask a
-          workspace admin if you need a token for an integration.
+          Only workspace owners and admins can create or rotate API tokens. Ask a workspace admin if
+          you need a token for an integration.
         </AdminOnlyNotice>
 
         {/* Action bar: "New Token" pinned to the far left, "Show revoked"
@@ -368,9 +362,7 @@ export function ApiTokensTab({ workspaceId }: ApiTokensTabProps) {
         )}
 
         {revokeMutation.error && (
-          <Alert variant="error">
-            {revokeMutation.error.message || "Failed to revoke token."}
-          </Alert>
+          <Alert variant="error">{revokeMutation.error.message || "Failed to revoke token."}</Alert>
         )}
       </Stack>
 

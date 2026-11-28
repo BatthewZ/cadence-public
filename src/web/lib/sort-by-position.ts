@@ -11,9 +11,7 @@
  * Server-side list queries apply the same `(position, id)` ordering, so
  * hydrated server data and optimistic client-side state agree.
  */
-export function sortByPosition<T extends { position: string; id: string }>(
-  items: T[],
-): T[] {
+export function sortByPosition<T extends { position: string; id: string }>(items: T[]): T[] {
   return [...items].sort((a, b) => {
     if (a.position < b.position) return -1;
     if (a.position > b.position) return 1;

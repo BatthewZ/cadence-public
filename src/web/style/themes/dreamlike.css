@@ -61,9 +61,14 @@
   --RADIUS-XL: 2rem;
 
   /* Shadows — soft pink-purple glow, very diffuse, like light through fog */
-  --SHADOW-SM: 0 2px 12px 0 oklch(0.6842 0.0631 348.61 / 0.1), 0 0 6px 0 oklch(0.7684 0.0762 182.83 / 0.04);
-  --SHADOW-MD: 0 4px 24px -4px oklch(0.6842 0.0631 348.61 / 0.15), 0 0 12px -2px oklch(0.7684 0.0762 182.83 / 0.06);
-  --SHADOW-LG: 0 8px 48px -8px oklch(0.6842 0.0631 348.61 / 0.2), 0 0 24px -4px oklch(0.7684 0.0762 182.83 / 0.08);
+  --SHADOW-SM:
+    0 2px 12px 0 oklch(0.6842 0.0631 348.61 / 0.1), 0 0 6px 0 oklch(0.7684 0.0762 182.83 / 0.04);
+  --SHADOW-MD:
+    0 4px 24px -4px oklch(0.6842 0.0631 348.61 / 0.15),
+    0 0 12px -2px oklch(0.7684 0.0762 182.83 / 0.06);
+  --SHADOW-LG:
+    0 8px 48px -8px oklch(0.6842 0.0631 348.61 / 0.2),
+    0 0 24px -4px oklch(0.7684 0.0762 182.83 / 0.08);
 
   /* Typography — light and airy, dreamy weights */
   --Bold-Weight: 600;

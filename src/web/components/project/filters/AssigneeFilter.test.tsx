@@ -24,22 +24,17 @@ import { AssigneeFilter } from "./AssigneeFilter";
 
 /** Six members so the search input renders (gated on `members.length > 5`). */
 function makeMembers(): ProjectMember[] {
-  return [
-    "Alice Anders",
-    "Bob Brown",
-    "Cara Cole",
-    "Dan Drake",
-    "Eve Ember",
-    "Finn Frost",
-  ].map((name, i) => ({
-    id: `m${i + 1}`,
-    userId: `u${i + 1}`,
-    name,
-    email: `${name.split(" ")[0].toLowerCase()}@example.com`,
-    image: null,
-    role: "member" as ProjectMember["role"],
-    joinedAt: "2026-01-01T00:00:00.000Z",
-  }));
+  return ["Alice Anders", "Bob Brown", "Cara Cole", "Dan Drake", "Eve Ember", "Finn Frost"].map(
+    (name, i) => ({
+      id: `m${i + 1}`,
+      userId: `u${i + 1}`,
+      name,
+      email: `${name.split(" ")[0].toLowerCase()}@example.com`,
+      image: null,
+      role: "member" as ProjectMember["role"],
+      joinedAt: "2026-01-01T00:00:00.000Z",
+    })
+  );
 }
 
 /**
@@ -48,9 +43,7 @@ function makeMembers(): ProjectMember[] {
  * keeps these tests focused on the component's contract: what it reads from
  * `filters` and what it passes to `setFilter`.
  */
-function makeFiltersReturn(
-  overrides: Partial<TaskFilters> = {},
-): UseTaskFiltersReturn {
+function makeFiltersReturn(overrides: Partial<TaskFilters> = {}): UseTaskFiltersReturn {
   const filters: TaskFilters = {
     assigneeIds: [],
     priorities: [],
@@ -92,8 +85,7 @@ describe("AssigneeFilter — pinned Unassigned option", () => {
     const unassigned = screen.getByRole("checkbox", { name: "Unassigned" });
     const firstMember = screen.getByRole("checkbox", { name: "Alice Anders" });
     expect(
-      unassigned.compareDocumentPosition(firstMember) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
+      unassigned.compareDocumentPosition(firstMember) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });
 
@@ -103,13 +95,9 @@ describe("AssigneeFilter — pinned Unassigned option", () => {
     await user.type(screen.getByRole("searchbox"), "zzz-no-such-member");
 
     expect(screen.getByText("No members found")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("checkbox", { name: "Alice Anders" }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "Alice Anders" })).not.toBeInTheDocument();
     // The pinned option is outside the search filter, so it survives.
-    expect(
-      screen.getByRole("checkbox", { name: "Unassigned" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Unassigned" })).toBeInTheDocument();
   });
 
   it("toggling on XORs FILTER_NONE into assigneeIds via setFilter", async () => {
@@ -118,10 +106,10 @@ describe("AssigneeFilter — pinned Unassigned option", () => {
 
     await user.click(screen.getByRole("checkbox", { name: "Unassigned" }));
 
-    expect(filtersReturn.setFilter).toHaveBeenCalledExactlyOnceWith(
-      "assigneeIds",
-      ["u1", FILTER_NONE],
-    );
+    expect(filtersReturn.setFilter).toHaveBeenCalledExactlyOnceWith("assigneeIds", [
+      "u1",
+      FILTER_NONE,
+    ]);
   });
 
   it("toggling off XORs FILTER_NONE out of assigneeIds via setFilter", async () => {
@@ -135,10 +123,7 @@ describe("AssigneeFilter — pinned Unassigned option", () => {
 
     await user.click(unassigned);
 
-    expect(filtersReturn.setFilter).toHaveBeenCalledExactlyOnceWith(
-      "assigneeIds",
-      ["u1"],
-    );
+    expect(filtersReturn.setFilter).toHaveBeenCalledExactlyOnceWith("assigneeIds", ["u1"]);
   });
 
   it("counts FILTER_NONE in the trigger badge like any member selection", () => {
@@ -146,7 +131,7 @@ describe("AssigneeFilter — pinned Unassigned option", () => {
       <AssigneeFilter
         members={makeMembers()}
         filtersReturn={makeFiltersReturn({ assigneeIds: ["u1", FILTER_NONE] })}
-      />,
+      />
     );
 
     const trigger = screen.getByRole("button", { name: /assigned to/i });

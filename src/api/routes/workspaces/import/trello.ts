@@ -236,7 +236,7 @@ const TRELLO_FALLBACK_LABEL_COLOR: (typeof LABEL_COLORS)[number] = "#6b7280";
 
 /** Maps a Trello color token (or null) into the `LABEL_COLORS` palette. */
 export function trelloColorToLabelColor(
-  color: string | null | undefined,
+  color: string | null | undefined
 ): (typeof LABEL_COLORS)[number] {
   if (!color) return TRELLO_FALLBACK_LABEL_COLOR;
   const base = color.toLowerCase().replace(/_(dark|light)$/, "");
@@ -417,7 +417,7 @@ interface TruncationCounts {
  */
 export function trelloToImportDocument(
   board: TrelloBoard,
-  options: TrelloConvertOptions = {},
+  options: TrelloConvertOptions = {}
 ): TrelloConversionResult {
   const nowIso = (options.now ?? new Date()).toISOString();
   const warnings: string[] = [];
@@ -468,7 +468,7 @@ export function trelloToImportDocument(
       LABEL_NAME_MAX,
       () => {
         truncated.labelNames += 1;
-      },
+      }
     );
     let name = baseName;
     if (usedLabelNames.has(name)) {
@@ -656,7 +656,7 @@ export function trelloToImportDocument(
   }
   if (truncated.cardDescriptions > 0) {
     warnings.push(
-      truncationWarning(truncated.cardDescriptions, "card description", TASK_DESCRIPTION_MAX),
+      truncationWarning(truncated.cardDescriptions, "card description", TASK_DESCRIPTION_MAX)
     );
   }
   if (truncated.labelNames > 0) {
@@ -671,26 +671,26 @@ export function trelloToImportDocument(
   if (duplicateLabelNames > 0) {
     warnings.push(
       `${duplicateLabelNames} duplicate label ${plural(duplicateLabelNames, "name")} ` +
-        `renamed with a numeric suffix (label names must be unique within a project).`,
+        `renamed with a numeric suffix (label names must be unique within a project).`
     );
   }
   if (invalidDueDates > 0) {
     warnings.push(
       `${invalidDueDates} card due ${plural(invalidDueDates, "date")} could not be parsed and ` +
-        `${invalidDueDates === 1 ? "was" : "were"} cleared.`,
+        `${invalidDueDates === 1 ? "was" : "were"} cleared.`
     );
   }
   if (cardsMissingList > 0) {
     warnings.push(
       `${cardsMissingList} ${plural(cardsMissingList, "card")} referenced a list that is not in ` +
-        `the export and ${cardsMissingList === 1 ? "was" : "were"} skipped.`,
+        `the export and ${cardsMissingList === 1 ? "was" : "were"} skipped.`
     );
   }
   if (board.members.length > 0) {
     warnings.push(
       `Board has ${board.members.length} ${plural(board.members.length, "member")}; Trello ` +
         `exports do not include email addresses, so all imported tasks are unassigned and ` +
-        `comment authors are noted in the comment text.`,
+        `comment authors are noted in the comment text.`
     );
   }
 
@@ -725,7 +725,7 @@ export function convertTrelloBoard(raw: unknown): {
   warnings: string[];
 } {
   const { document, closedItemsSkipped, warnings } = trelloToImportDocument(
-    trelloBoardSchema.parse(raw),
+    trelloBoardSchema.parse(raw)
   );
   return { doc: document, skipped: { closedItems: closedItemsSkipped }, warnings };
 }
@@ -744,7 +744,7 @@ export function convertTrelloBoard(raw: unknown): {
 function buildSubtasks(
   checklists: TrelloBoard["checklists"],
   nowIso: string,
-  truncated: TruncationCounts,
+  truncated: TruncationCounts
 ): ExportedSubtask[] {
   const ordered = byPos(checklists);
   const usePrefix = ordered.length > 1;

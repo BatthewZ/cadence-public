@@ -6,7 +6,11 @@ import { Center } from "@/web/components/layout";
 import { OfflineUnavailable } from "@/web/components/sync/OfflineUnavailable";
 import { isUnavailableOffline } from "@/web/components/sync/use-online-only";
 import { Spinner, Text } from "@/web/components/ui";
-import { findWorkspaceBySlug, type Workspace, type WorkspacesResponse } from "@/web/contexts/WorkspaceContext";
+import {
+  findWorkspaceBySlug,
+  type Workspace,
+  type WorkspacesResponse,
+} from "@/web/contexts/WorkspaceContext";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
 

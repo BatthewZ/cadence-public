@@ -39,7 +39,7 @@ import type { Context } from "hono";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createDb } from "../../db";
-import { type ApiToken,apiToken } from "../../db/schema";
+import { type ApiToken, apiToken } from "../../db/schema";
 import type { AppEnv } from "../env";
 import {
   createTestD1,
@@ -209,10 +209,7 @@ describe("generateApiToken", () => {
 
 describe("mintToken", () => {
   it("produces cdn_cal_ + 43 base64url chars for the calendar feed prefix", async () => {
-    const { plaintext } = await mintToken(
-      CALENDAR_FEED_TOKEN_PREFIX,
-      TEST_TOKEN_HASH_PEPPER,
-    );
+    const { plaintext } = await mintToken(CALENDAR_FEED_TOKEN_PREFIX, TEST_TOKEN_HASH_PEPPER);
     expect(plaintext.startsWith(CALENDAR_FEED_TOKEN_PREFIX)).toBe(true);
     const body = plaintext.slice(CALENDAR_FEED_TOKEN_PREFIX.length);
     // 32 bytes → ceil(32 * 8 / 6) = 43 base64url characters (no padding).
@@ -223,10 +220,7 @@ describe("mintToken", () => {
   it("returns a hash equal to hashToken(plaintext, pepper)", async () => {
     // The stored hash and the verification-time hash must be the same
     // peppered HMAC — a drift here would orphan every minted feed token.
-    const { plaintext, hash } = await mintToken(
-      CALENDAR_FEED_TOKEN_PREFIX,
-      TEST_TOKEN_HASH_PEPPER,
-    );
+    const { plaintext, hash } = await mintToken(CALENDAR_FEED_TOKEN_PREFIX, TEST_TOKEN_HASH_PEPPER);
     const recomputed = await hashToken(plaintext, TEST_TOKEN_HASH_PEPPER);
     expect(hash).toBe(recomputed);
   });
@@ -325,12 +319,12 @@ describe("parseScopes", () => {
   });
 
   it("returns [] when JSON is not an array", () => {
-    expect(parseScopes("\"task:read\"")).toEqual([]);
+    expect(parseScopes('"task:read"')).toEqual([]);
     expect(parseScopes("{}")).toEqual([]);
   });
 
   it("filters non-string entries", () => {
-    expect(parseScopes("[\"task:read\", 42, null]")).toEqual(["task:read"]);
+    expect(parseScopes('["task:read", 42, null]')).toEqual(["task:read"]);
   });
 });
 
@@ -509,10 +503,7 @@ describe("verifyToken", () => {
     // authenticated through verifyToken, a leaked calendar URL would become
     // a leaked API credential. The prefix check must reject it before the
     // hash + DB lookup, exactly like any other foreign token.
-    const { plaintext } = await mintToken(
-      CALENDAR_FEED_TOKEN_PREFIX,
-      TEST_TOKEN_HASH_PEPPER,
-    );
+    const { plaintext } = await mintToken(CALENDAR_FEED_TOKEN_PREFIX, TEST_TOKEN_HASH_PEPPER);
 
     const db = createDb(d1);
     const selectSpy = vi.spyOn(db, "select");
@@ -636,10 +627,7 @@ describe("bumpLastUsedAt", () => {
     // Yield to let the inline promise settle.
     await new Promise((r) => setTimeout(r, 10));
 
-    const [row] = await db
-      .select()
-      .from(apiToken)
-      .where(eq(apiToken.id, tokenId));
+    const [row] = await db.select().from(apiToken).where(eq(apiToken.id, tokenId));
     expect(row.lastUsedAt).not.toBeNull();
     expect(row.lastUsedAt instanceof Date).toBe(true);
   });
@@ -651,9 +639,7 @@ describe("bumpLastUsedAt", () => {
         throw new Error("boom");
       },
     };
-    const errorSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => undefined);
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const c = {
       get: (key: string) => (key === "db" ? fakeDb : undefined),
@@ -675,4 +661,3 @@ describe("bumpLastUsedAt", () => {
     errorSpy.mockRestore();
   });
 });
-

@@ -167,7 +167,9 @@ export function SessionsSection() {
             <Stack gap="r4">
               {error && <Alert variant="error">{error}</Alert>}
 
-              <div className={hasMoreSessions && showAll ? "max-h-[25rem] overflow-y-auto pr-r6" : ""}>
+              <div
+                className={hasMoreSessions && showAll ? "max-h-[25rem] overflow-y-auto pr-r6" : ""}
+              >
                 <Stack gap="r5">
                   {visibleSessions.map((session) => {
                     const isCurrent = session.id === currentSessionId;
@@ -212,21 +214,13 @@ export function SessionsSection() {
               </div>
 
               {hasMoreSessions && !showAll && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAll(true)}
-                >
+                <Button variant="ghost" size="sm" onClick={() => setShowAll(true)}>
                   Show all ({sessions.length})
                 </Button>
               )}
 
               {hasMoreSessions && showAll && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAll(false)}
-                >
+                <Button variant="ghost" size="sm" onClick={() => setShowAll(false)}>
                   Show fewer
                 </Button>
               )}

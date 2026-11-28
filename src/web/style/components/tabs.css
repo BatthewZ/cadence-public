@@ -52,16 +52,8 @@
 }
 
 .tabs-list[data-scroll-left="false"][data-scroll-right="true"] {
-  -webkit-mask-image: linear-gradient(
-    to right,
-    black calc(100% - 2.5rem),
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    to right,
-    black calc(100% - 2.5rem),
-    transparent 100%
-  );
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 2.5rem), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 2.5rem), transparent 100%);
 }
 
 /* Underline variant */

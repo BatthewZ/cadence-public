@@ -21,21 +21,22 @@ export async function assignLabel(c: Context<AppEnv>) {
 
   // Batch all 4 lookups: task, label, existing assignment, label count
   const [taskResult, labelResult, assignmentResult, [{ value: labelCount }]] = await db.batch([
-    db.select({ id: task.id, projectId: task.projectId })
+    db
+      .select({ id: task.id, projectId: task.projectId })
       .from(task)
       .where(eq(task.id, taskId))
       .limit(1),
-    db.select({ id: label.id, name: label.name, projectId: label.projectId })
+    db
+      .select({ id: label.id, name: label.name, projectId: label.projectId })
       .from(label)
       .where(eq(label.id, body.labelId))
       .limit(1),
-    db.select({ id: taskLabel.id })
+    db
+      .select({ id: taskLabel.id })
       .from(taskLabel)
       .where(and(eq(taskLabel.taskId, taskId), eq(taskLabel.labelId, body.labelId)))
       .limit(1),
-    db.select({ value: count() })
-      .from(taskLabel)
-      .where(eq(taskLabel.taskId, taskId)),
+    db.select({ value: count() }).from(taskLabel).where(eq(taskLabel.taskId, taskId)),
   ] as const);
 
   const foundTask = taskResult[0];
@@ -76,20 +77,33 @@ export async function assignLabel(c: Context<AppEnv>) {
   ] as const);
 
   const assignApiTokenId = c.get("apiToken")?.id ?? null;
-  deferWork(c, () => logActivity(db, {
-    taskId,
-    actorId: user.id,
-    action: "label_added",
-    newValue: foundLabel.name,
-    apiTokenId: assignApiTokenId,
-  }));
+  deferWork(c, () =>
+    logActivity(db, {
+      taskId,
+      actorId: user.id,
+      action: "label_added",
+      newValue: foundLabel.name,
+      apiTokenId: assignApiTokenId,
+    })
+  );
 
   // Non-blocking webhook dispatch for task.label_added
   const assignWorkspaceId = c.get("currentProject")?.workspaceId;
   if (assignWorkspaceId) {
-    fireWebhookEvent(db, () => c.executionCtx, { workspaceId: assignWorkspaceId, actorId: user.id, projectId: foundTask.projectId }, [
-      { event: "task.label_added", data: { task: { id: foundTask.id, projectId: foundTask.projectId }, label: { id: foundLabel.id, name: foundLabel.name } } },
-    ]);
+    fireWebhookEvent(
+      db,
+      () => c.executionCtx,
+      { workspaceId: assignWorkspaceId, actorId: user.id, projectId: foundTask.projectId },
+      [
+        {
+          event: "task.label_added",
+          data: {
+            task: { id: foundTask.id, projectId: foundTask.projectId },
+            label: { id: foundLabel.id, name: foundLabel.name },
+          },
+        },
+      ]
+    );
   }
 
   return c.json({ ok: true }, 201);
@@ -102,14 +116,12 @@ export async function unassignLabel(c: Context<AppEnv>) {
 
   // Batch assignment check and label name lookup
   const [assignmentResult, labelResult] = await db.batch([
-    db.select({ id: taskLabel.id, labelId: taskLabel.labelId })
+    db
+      .select({ id: taskLabel.id, labelId: taskLabel.labelId })
       .from(taskLabel)
       .where(and(eq(taskLabel.taskId, taskId), eq(taskLabel.labelId, labelIdParam)))
       .limit(1),
-    db.select({ name: label.name })
-      .from(label)
-      .where(eq(label.id, labelIdParam))
-      .limit(1),
+    db.select({ name: label.name }).from(label).where(eq(label.id, labelIdParam)).limit(1),
   ] as const);
 
   const assignment = assignmentResult[0];
@@ -121,25 +133,44 @@ export async function unassignLabel(c: Context<AppEnv>) {
 
   const now = new Date();
   await db.batch([
-    db.delete(taskLabel).where(and(eq(taskLabel.taskId, taskId), eq(taskLabel.labelId, labelIdParam))),
+    db
+      .delete(taskLabel)
+      .where(and(eq(taskLabel.taskId, taskId), eq(taskLabel.labelId, labelIdParam))),
     db.update(task).set({ updatedAt: now }).where(eq(task.id, taskId)),
   ] as const);
 
   const unassignApiTokenId = c.get("apiToken")?.id ?? null;
-  deferWork(c, () => logActivity(db, {
-    taskId,
-    actorId: user.id,
-    action: "label_removed",
-    newValue: foundLabel?.name ?? "unknown",
-    apiTokenId: unassignApiTokenId,
-  }));
+  deferWork(c, () =>
+    logActivity(db, {
+      taskId,
+      actorId: user.id,
+      action: "label_removed",
+      newValue: foundLabel?.name ?? "unknown",
+      apiTokenId: unassignApiTokenId,
+    })
+  );
 
   // Non-blocking webhook dispatch for task.label_removed
   const unassignWorkspaceId = c.get("currentProject")?.workspaceId;
   if (unassignWorkspaceId) {
-    fireWebhookEvent(db, () => c.executionCtx, { workspaceId: unassignWorkspaceId, actorId: user.id, projectId: c.get("currentProject")!.id }, [
-      { event: "task.label_removed", data: { task: { id: taskId, projectId: c.get("currentProject")!.id }, label: { id: labelIdParam, name: foundLabel?.name ?? "unknown" } } },
-    ]);
+    fireWebhookEvent(
+      db,
+      () => c.executionCtx,
+      {
+        workspaceId: unassignWorkspaceId,
+        actorId: user.id,
+        projectId: c.get("currentProject")!.id,
+      },
+      [
+        {
+          event: "task.label_removed",
+          data: {
+            task: { id: taskId, projectId: c.get("currentProject")!.id },
+            label: { id: labelIdParam, name: foundLabel?.name ?? "unknown" },
+          },
+        },
+      ]
+    );
   }
 
   return c.json({ ok: true });

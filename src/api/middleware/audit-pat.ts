@@ -73,7 +73,7 @@ export type DerivedAuditFields = {
  */
 export function deriveAuditFields(
   routePath: string,
-  method: string,
+  method: string
 ): DerivedAuditFields & { idParamName: string | null } {
   const segments = routePath.split("/").filter((s) => s.length > 0);
 
@@ -180,7 +180,7 @@ export const auditPatMutations = createMiddleware<AppEnv>(async (c, next) => {
   const derived = deriveAuditFields(matchedRoute, method);
   const params = c.req.param() as Record<string, string>;
 
-  const resourceId = derived.idParamName ? params[derived.idParamName] ?? null : null;
+  const resourceId = derived.idParamName ? (params[derived.idParamName] ?? null) : null;
 
   // Drop the resourceId-shaped param out of the metadata bag so we don't
   // duplicate it; the rest of the params (project id, workspace id, etc.)

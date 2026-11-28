@@ -1,11 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  CheckCircle2,
-  Copy,
-  SmilePlus,
-  Trash2,
-  X,
-} from "lucide-react";
+import { CheckCircle2, Copy, SmilePlus, Trash2, X } from "lucide-react";
 import { useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 
@@ -275,7 +269,18 @@ export function TaskDetailPanelInner({
       resetCommentState();
       setShowDeleteDialog(false);
     });
-  }, [taskId, qc, dirtyFields, resetLocalTask, setEditingTitle, setTitleValue, setCostDisplay, setNewSubtaskTitle, resetCommentState, setShowDeleteDialog]);
+  }, [
+    taskId,
+    qc,
+    dirtyFields,
+    resetLocalTask,
+    setEditingTitle,
+    setTitleValue,
+    setCostDisplay,
+    setNewSubtaskTitle,
+    resetCommentState,
+    setShowDeleteDialog,
+  ]);
 
   // Keyboard escape to close
   useEffect(() => {
@@ -312,7 +317,9 @@ export function TaskDetailPanelInner({
             uploading={coverUploading}
             editable={canEditTasks}
             position={task.coverImagePosition}
-            onPositionChange={(pos) => { void handleCoverPositionChange(pos); }}
+            onPositionChange={(pos) => {
+              void handleCoverPositionChange(pos);
+            }}
             roundedTop={false}
           />
         )}
@@ -451,9 +458,7 @@ export function TaskDetailPanelInner({
                   }}
                   onGroupChange={(newGroupId) => {
                     const oldGroupId = task.taskGroupId;
-                    setLocalTask((prev) =>
-                      prev ? { ...prev, taskGroupId: newGroupId } : prev
-                    );
+                    setLocalTask((prev) => (prev ? { ...prev, taskGroupId: newGroupId } : prev));
                     updateTaskInContext(taskId, { taskGroupId: newGroupId });
                     void (async () => {
                       try {
@@ -519,12 +524,22 @@ export function TaskDetailPanelInner({
                   activeSubtask={activeSubtask}
                   newSubtaskTitle={newSubtaskTitle}
                   setNewSubtaskTitle={setNewSubtaskTitle}
-                  onToggle={(s) => { void handleSubtaskToggle(s); }}
-                  onDelete={(id) => { void handleDeleteSubtask(id); }}
-                  onRename={(id, title) => { void handleRenameSubtask(id, title); }}
-                  onAddSubtask={() => { void handleAddSubtask(); }}
+                  onToggle={(s) => {
+                    void handleSubtaskToggle(s);
+                  }}
+                  onDelete={(id) => {
+                    void handleDeleteSubtask(id);
+                  }}
+                  onRename={(id, title) => {
+                    void handleRenameSubtask(id, title);
+                  }}
+                  onAddSubtask={() => {
+                    void handleAddSubtask();
+                  }}
                   onDragStart={handleSubtaskDragStart}
-                  onDragEnd={(event) => { void handleSubtaskDragEnd(event); }}
+                  onDragEnd={(event) => {
+                    void handleSubtaskDragEnd(event);
+                  }}
                   canEdit={canEditTasks}
                 />
               </div>

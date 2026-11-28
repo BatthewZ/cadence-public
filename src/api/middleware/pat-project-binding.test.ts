@@ -156,10 +156,7 @@ const workspaceAToken = () => pat({ workspaceId: wsA, projectScope: "all" });
  */
 function appWith(token: ApiToken | null) {
   const app = new Hono<AppEnv>();
-  app.use(
-    "*",
-    fakeAuth(d1, TEST_USER, { apiToken: token, requestId: "pat-binding-test" }),
-  );
+  app.use("*", fakeAuth(d1, TEST_USER, { apiToken: token, requestId: "pat-binding-test" }));
   app.route("/", taskRoutes);
   app.route("/", taskGroupRoutes);
   return app;
@@ -203,7 +200,7 @@ describe("PAT project selection on inline-resolving routes", () => {
 
     const res = await appWith(narrowToken()).request(
       `/subtasks/${subtaskId}`,
-      jsonRequest("PATCH", `/subtasks/${subtaskId}`, { title: "hijacked" }),
+      jsonRequest("PATCH", `/subtasks/${subtaskId}`, { title: "hijacked" })
     );
 
     expect(res.status).toBe(403);
@@ -232,7 +229,7 @@ describe("PAT project selection on inline-resolving routes", () => {
 
     const res = await appWith(narrowToken()).request(
       `/comments/${commentId}`,
-      jsonRequest("PATCH", `/comments/${commentId}`, { body: "hijacked" }),
+      jsonRequest("PATCH", `/comments/${commentId}`, { body: "hijacked" })
     );
 
     expect(res.status).toBe(403);
@@ -261,7 +258,7 @@ describe("PAT project selection on inline-resolving routes", () => {
 
     const res = await appWith(narrowToken()).request(
       `/task-groups/${groupId}`,
-      jsonRequest("PATCH", `/task-groups/${groupId}`, { name: "hijacked" }),
+      jsonRequest("PATCH", `/task-groups/${groupId}`, { name: "hijacked" })
     );
 
     expect(res.status).toBe(403);
@@ -273,7 +270,7 @@ describe("PAT project selection on inline-resolving routes", () => {
 
     const res = await appWith(narrowToken()).request(
       `/task-groups/${groupId}/reorder`,
-      jsonRequest("PATCH", `/task-groups/${groupId}/reorder`, { position: "zz" }),
+      jsonRequest("PATCH", `/task-groups/${groupId}/reorder`, { position: "zz" })
     );
 
     expect(res.status).toBe(403);
@@ -290,7 +287,7 @@ describe("PAT project selection on inline-resolving routes", () => {
 
     const res = await appWith(narrowToken()).request(
       `/task-groups/${groupId}?targetGroupId=${target}`,
-      { method: "DELETE" },
+      { method: "DELETE" }
     );
 
     expect(res.status).toBe(403);
@@ -311,7 +308,7 @@ describe("PAT workspace binding on inline-resolving routes", () => {
 
     const res = await appWith(workspaceAToken()).request(
       `/subtasks/${subtaskId}`,
-      jsonRequest("PATCH", `/subtasks/${subtaskId}`, { title: "hijacked" }),
+      jsonRequest("PATCH", `/subtasks/${subtaskId}`, { title: "hijacked" })
     );
 
     expect(res.status).toBe(403);
@@ -325,7 +322,7 @@ describe("PAT workspace binding on inline-resolving routes", () => {
 
     const res = await appWith(workspaceAToken()).request(
       `/comments/${commentId}`,
-      jsonRequest("PATCH", `/comments/${commentId}`, { body: "hijacked" }),
+      jsonRequest("PATCH", `/comments/${commentId}`, { body: "hijacked" })
     );
 
     expect(res.status).toBe(403);
@@ -337,7 +334,7 @@ describe("PAT workspace binding on inline-resolving routes", () => {
 
     const res = await appWith(workspaceAToken()).request(
       `/task-groups/${groupId}`,
-      jsonRequest("PATCH", `/task-groups/${groupId}`, { name: "hijacked" }),
+      jsonRequest("PATCH", `/task-groups/${groupId}`, { name: "hijacked" })
     );
 
     expect(res.status).toBe(403);
@@ -355,7 +352,7 @@ describe("a correctly scoped PAT still works", () => {
 
     const res = await appWith(narrowToken()).request(
       `/subtasks/${subtaskId}`,
-      jsonRequest("PATCH", `/subtasks/${subtaskId}`, { title: "after" }),
+      jsonRequest("PATCH", `/subtasks/${subtaskId}`, { title: "after" })
     );
 
     expect(res.status).toBe(200);
@@ -369,7 +366,7 @@ describe("a correctly scoped PAT still works", () => {
 
     const res = await appWith(narrowToken()).request(
       `/comments/${commentId}`,
-      jsonRequest("PATCH", `/comments/${commentId}`, { body: "after" }),
+      jsonRequest("PATCH", `/comments/${commentId}`, { body: "after" })
     );
 
     expect(res.status).toBe(200);
@@ -381,7 +378,7 @@ describe("a correctly scoped PAT still works", () => {
 
     const res = await appWith(narrowToken()).request(
       `/task-groups/${groupId}`,
-      jsonRequest("PATCH", `/task-groups/${groupId}`, { name: "after" }),
+      jsonRequest("PATCH", `/task-groups/${groupId}`, { name: "after" })
     );
 
     expect(res.status).toBe(200);
@@ -410,7 +407,7 @@ describe("cookie sessions are unaffected by the PAT binding policy", () => {
 
     const res = await appWith(null).request(
       `/subtasks/${subtaskId}`,
-      jsonRequest("PATCH", `/subtasks/${subtaskId}`, { title: "after" }),
+      jsonRequest("PATCH", `/subtasks/${subtaskId}`, { title: "after" })
     );
 
     expect(res.status).toBe(200);
@@ -424,7 +421,7 @@ describe("cookie sessions are unaffected by the PAT binding policy", () => {
 
     const res = await appWith(null).request(
       `/comments/${commentId}`,
-      jsonRequest("PATCH", `/comments/${commentId}`, { body: "after" }),
+      jsonRequest("PATCH", `/comments/${commentId}`, { body: "after" })
     );
 
     expect(res.status).toBe(200);
@@ -436,14 +433,14 @@ describe("cookie sessions are unaffected by the PAT binding policy", () => {
 
     const patchRes = await appWith(null).request(
       `/task-groups/${groupId}`,
-      jsonRequest("PATCH", `/task-groups/${groupId}`, { name: "after" }),
+      jsonRequest("PATCH", `/task-groups/${groupId}`, { name: "after" })
     );
     expect(patchRes.status).toBe(200);
     expect(await readGroupName(groupId)).toBe("after");
 
     const deleteRes = await appWith(null).request(
       `/task-groups/${groupId}?targetGroupId=${groupOther}`,
-      { method: "DELETE" },
+      { method: "DELETE" }
     );
     expect(deleteRes.status).toBe(200);
     expect(await readGroupName(groupId)).toBeNull();

@@ -25,15 +25,15 @@ const VALID_CREATE = {
 
 describe("createTaskSchema dueDate", () => {
   it("accepts a valid YYYY-MM-DD calendar date", () => {
-    expect(
-      createTaskSchema.safeParse({ ...VALID_CREATE, dueDate: "2030-03-15" }).success,
-    ).toBe(true);
+    expect(createTaskSchema.safeParse({ ...VALID_CREATE, dueDate: "2030-03-15" }).success).toBe(
+      true
+    );
   });
 
   it("accepts a leap-day date in a leap year", () => {
-    expect(
-      createTaskSchema.safeParse({ ...VALID_CREATE, dueDate: "2024-02-29" }).success,
-    ).toBe(true);
+    expect(createTaskSchema.safeParse({ ...VALID_CREATE, dueDate: "2024-02-29" }).success).toBe(
+      true
+    );
   });
 
   it("accepts a full ISO 8601 datetime (documented API format)", () => {
@@ -41,7 +41,7 @@ describe("createTaskSchema dueDate", () => {
       createTaskSchema.safeParse({
         ...VALID_CREATE,
         dueDate: "2030-03-15T00:00:00.000Z",
-      }).success,
+      }).success
     ).toBe(true);
   });
 
@@ -50,7 +50,7 @@ describe("createTaskSchema dueDate", () => {
       createTaskSchema.safeParse({
         ...VALID_CREATE,
         dueDate: "2030-03-15T10:30:00+05:30",
-      }).success,
+      }).success
     ).toBe(true);
   });
 
@@ -92,9 +92,9 @@ describe("recurrenceRuleSchema endDate", () => {
   const VALID_RULE = { frequency: "daily", interval: 1 } as const;
 
   it("accepts a valid YYYY-MM-DD end date and an omitted one", () => {
-    expect(
-      recurrenceRuleSchema.safeParse({ ...VALID_RULE, endDate: "2030-03-15" }).success,
-    ).toBe(true);
+    expect(recurrenceRuleSchema.safeParse({ ...VALID_RULE, endDate: "2030-03-15" }).success).toBe(
+      true
+    );
     expect(recurrenceRuleSchema.safeParse(VALID_RULE).success).toBe(true);
   });
 

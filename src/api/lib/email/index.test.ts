@@ -19,9 +19,7 @@ describe("createEmailService", () => {
   it("warns when RESEND_API_KEY is set but EMAIL_FROM is not", () => {
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     createEmailService({ RESEND_API_KEY: "re_test_123" });
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("EMAIL_FROM is not configured"),
-    );
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("EMAIL_FROM is not configured"));
     warnSpy.mockRestore();
   });
 
@@ -35,9 +33,7 @@ describe("createEmailService", () => {
     // fallback fires on, or it is worse than no warning.
     const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     createEmailService({ RESEND_API_KEY: "re_test_123", EMAIL_FROM: "   " });
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("EMAIL_FROM is not configured"),
-    );
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("EMAIL_FROM is not configured"));
     warnSpy.mockRestore();
   });
 
@@ -63,7 +59,7 @@ describe("createEmailService", () => {
       new Response(JSON.stringify({ id: "msg_1" }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      }),
+      })
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -71,9 +67,7 @@ describe("createEmailService", () => {
     await service.send({ to: "a@example.com", subject: "s", html: "<p>h</p>" });
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect((JSON.parse(init.body as string) as { from: string }).from).toBe(
-      DEFAULT_EMAIL_FROM,
-    );
+    expect((JSON.parse(init.body as string) as { from: string }).from).toBe(DEFAULT_EMAIL_FROM);
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -83,7 +77,7 @@ describe("createEmailService", () => {
       new Response(JSON.stringify({ id: "msg_2" }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
-      }),
+      })
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -94,9 +88,7 @@ describe("createEmailService", () => {
     await service.send({ to: "a@example.com", subject: "s", html: "<p>h</p>" });
 
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect((JSON.parse(init.body as string) as { from: string }).from).toBe(
-      "ops@cadence.app",
-    );
+    expect((JSON.parse(init.body as string) as { from: string }).from).toBe("ops@cadence.app");
     vi.unstubAllGlobals();
   });
 });

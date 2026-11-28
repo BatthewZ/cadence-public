@@ -99,11 +99,7 @@ function PopoverRoot({
   const dismiss = useDismiss(context);
   const role = useRole(context, { role: "dialog" });
 
-  const { getReferenceProps, getFloatingProps } = useInteractions([
-    click,
-    dismiss,
-    role,
-  ]);
+  const { getReferenceProps, getFloatingProps } = useInteractions([click, dismiss, role]);
 
   const value = useMemo(
     () => ({
@@ -130,9 +126,7 @@ function PopoverRoot({
     ]
   );
 
-  return (
-    <PopoverContext.Provider value={value}>{children}</PopoverContext.Provider>
-  );
+  return <PopoverContext.Provider value={value}>{children}</PopoverContext.Provider>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -144,35 +138,36 @@ type PopoverTriggerProps = ComponentPropsWithRef<"button"> & {
   asChild?: boolean;
 };
 
-const PopoverTrigger = forwardRef<HTMLButtonElement, PopoverTriggerProps>(
-  function PopoverTrigger({ children, className, asChild = false, ...props }, ref) {
-    const { open, refs, getReferenceProps, contentId } = usePopoverContext();
-    const triggerProps = {
-      // eslint-disable-next-line react-hooks/refs -- mergeRefs defers ref assignment to the returned callback
-      ref: mergeRefs(ref, refs.setReference),
-      "aria-expanded": open,
-      "aria-haspopup": "dialog" as const,
-      "aria-controls": open ? contentId : undefined,
-      ...getReferenceProps(props),
-    };
+const PopoverTrigger = forwardRef<HTMLButtonElement, PopoverTriggerProps>(function PopoverTrigger(
+  { children, className, asChild = false, ...props },
+  ref
+) {
+  const { open, refs, getReferenceProps, contentId } = usePopoverContext();
+  const triggerProps = {
+    // eslint-disable-next-line react-hooks/refs -- mergeRefs defers ref assignment to the returned callback
+    ref: mergeRefs(ref, refs.setReference),
+    "aria-expanded": open,
+    "aria-haspopup": "dialog" as const,
+    "aria-controls": open ? contentId : undefined,
+    ...getReferenceProps(props),
+  };
 
-    if (asChild && isValidElement(children)) {
-      return cloneElement(children as ReactElement<Record<string, unknown>>, {
-        ...triggerProps,
-        className: cn(
-          (children.props as Record<string, unknown>).className as string | undefined,
-          className
-        ),
-      });
-    }
-
-    return (
-      <button className={cn("popover-trigger", className)} {...triggerProps}>
-        {children}
-      </button>
-    );
+  if (asChild && isValidElement(children)) {
+    return cloneElement(children as ReactElement<Record<string, unknown>>, {
+      ...triggerProps,
+      className: cn(
+        (children.props as Record<string, unknown>).className as string | undefined,
+        className
+      ),
+    });
   }
-);
+
+  return (
+    <button className={cn("popover-trigger", className)} {...triggerProps}>
+      {children}
+    </button>
+  );
+});
 
 /* ------------------------------------------------------------------ */
 /*  Content                                                           */
@@ -180,39 +175,40 @@ const PopoverTrigger = forwardRef<HTMLButtonElement, PopoverTriggerProps>(
 
 type PopoverContentProps = ComponentPropsWithRef<"div">;
 
-const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
-  function PopoverContent({ children, className, style, ...props }, ref) {
-    const { refs, floatingStyles, context, getFloatingProps, contentId, portal } =
-      usePopoverContext();
+const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(function PopoverContent(
+  { children, className, style, ...props },
+  ref
+) {
+  const { refs, floatingStyles, context, getFloatingProps, contentId, portal } =
+    usePopoverContext();
 
-    const { isMounted, styles: transitionStyles } = useTransitionStyles(context, {
-      duration: 150,
-      initial: { opacity: 0 },
-    });
+  const { isMounted, styles: transitionStyles } = useTransitionStyles(context, {
+    duration: 150,
+    initial: { opacity: 0 },
+  });
 
-    if (!isMounted) return null;
+  if (!isMounted) return null;
 
-    const content = (
-      <FloatingFocusManager context={context}>
-        <div
-          ref={mergeRefs(ref, refs.setFloating)}
-          id={contentId}
-          className={cn("popover-content", className)}
-          style={{ ...floatingStyles, ...transitionStyles, ...style }}
-          {...getFloatingProps(props)}
-        >
-          {children}
-        </div>
-      </FloatingFocusManager>
-    );
+  const content = (
+    <FloatingFocusManager context={context}>
+      <div
+        ref={mergeRefs(ref, refs.setFloating)}
+        id={contentId}
+        className={cn("popover-content", className)}
+        style={{ ...floatingStyles, ...transitionStyles, ...style }}
+        {...getFloatingProps(props)}
+      >
+        {children}
+      </div>
+    </FloatingFocusManager>
+  );
 
-    if (portal) {
-      return <FloatingPortal>{content}</FloatingPortal>;
-    }
-
-    return content;
+  if (portal) {
+    return <FloatingPortal>{content}</FloatingPortal>;
   }
-);
+
+  return content;
+});
 
 /* ------------------------------------------------------------------ */
 /*  Export                                                            */

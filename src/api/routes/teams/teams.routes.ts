@@ -1,6 +1,10 @@
 import { Hono } from "hono";
 
-import { addTeamMemberSchema, createTeamSchema, updateTeamSchema } from "../../../shared/schemas/team";
+import {
+  addTeamMemberSchema,
+  createTeamSchema,
+  updateTeamSchema,
+} from "../../../shared/schemas/team";
 import type { AppEnv } from "../../env";
 import {
   requireReadScopeForResource,
@@ -44,23 +48,18 @@ app.post(
   requireAuth,
   requireWorkspaceRole("owner", "admin"),
   validateBody(createTeamSchema),
-  createTeam,
+  createTeam
 );
 
 // List teams in workspace
-app.get(
-  "/workspaces/:workspaceId/teams",
-  requireAuth,
-  requireWorkspaceMember(),
-  listTeams,
-);
+app.get("/workspaces/:workspaceId/teams", requireAuth, requireWorkspaceMember(), listTeams);
 
 // Get team detail
 app.get(
   "/workspaces/:workspaceId/teams/:teamId",
   requireAuth,
   requireWorkspaceMember(),
-  getTeamDetail,
+  getTeamDetail
 );
 
 // Update team
@@ -69,7 +68,7 @@ app.patch(
   requireAuth,
   requireWorkspaceRole("owner", "admin"),
   validateBody(updateTeamSchema),
-  updateTeam,
+  updateTeam
 );
 
 // Delete team
@@ -77,7 +76,7 @@ app.delete(
   "/workspaces/:workspaceId/teams/:teamId",
   requireAuth,
   requireWorkspaceRole("owner", "admin"),
-  deleteTeam,
+  deleteTeam
 );
 
 // Add team member
@@ -86,7 +85,7 @@ app.post(
   requireAuth,
   requireWorkspaceRole("owner", "admin"),
   validateBody(addTeamMemberSchema),
-  addTeamMember,
+  addTeamMember
 );
 
 // Remove team member
@@ -94,7 +93,7 @@ app.delete(
   "/workspaces/:workspaceId/teams/:teamId/members/:userId",
   requireAuth,
   requireWorkspaceRole("owner", "admin"),
-  removeTeamMember,
+  removeTeamMember
 );
 
 export default app;

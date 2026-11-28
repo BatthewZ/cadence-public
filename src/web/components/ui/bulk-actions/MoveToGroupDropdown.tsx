@@ -29,10 +29,7 @@ export function MoveToGroupDropdown({
               group.isCompletionGroup ? (
                 <span className="size-2 rounded-full bg-status-success" />
               ) : group.color ? (
-                <span
-                  className="size-2 rounded-full"
-                  style={{ backgroundColor: group.color }}
-                />
+                <span className="size-2 rounded-full" style={{ backgroundColor: group.color }} />
               ) : (
                 <span className="size-2 rounded-full bg-surface-3" />
               )

@@ -2,12 +2,7 @@ import type { FormEvent } from "react";
 
 import { Field, Input, Label, Textarea } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
-import {
-  Alert,
-  Button,
-  Dialog,
-  Text,
-} from "@/web/components/ui";
+import { Alert, Button, Dialog, Text } from "@/web/components/ui";
 
 interface TeamFormDialogProps {
   mode: "create" | "edit";
@@ -53,7 +48,8 @@ export function TeamFormDialog({
   error,
   onSubmit,
 }: TeamFormDialogProps) {
-  const { title, submitText, loadingText, idPrefix, namePlaceholder, descPlaceholder } = CONFIG[mode];
+  const { title, submitText, loadingText, idPrefix, namePlaceholder, descPlaceholder } =
+    CONFIG[mode];
 
   return (
     <Dialog open={open} onClose={onClose}>
@@ -85,12 +81,7 @@ export function TeamFormDialog({
           {error && <Alert variant="error">{error}</Alert>}
 
           <Row gap="r4" justify="end">
-            <Button
-              variant="ghost"
-              size="md"
-              type="button"
-              onClick={onClose}
-            >
+            <Button variant="ghost" size="md" type="button" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" variant="primary" size="md" disabled={loading}>

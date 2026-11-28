@@ -37,7 +37,8 @@ const mockApiPost = vi.fn<(...args: unknown[]) => Promise<unknown>>();
 const mockApiDelete = vi.fn<(...args: unknown[]) => Promise<unknown>>();
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   const apiFn = Object.assign(vi.fn(), {
     get: (...args: unknown[]) => mockApiGet(...args),
     post: (...args: unknown[]) => mockApiPost(...args),
@@ -132,7 +133,8 @@ class IntersectionObserverStub {
   unobserve() {}
   disconnect() {}
 }
-globalThis.IntersectionObserver = IntersectionObserverStub as unknown as typeof IntersectionObserver;
+globalThis.IntersectionObserver =
+  IntersectionObserverStub as unknown as typeof IntersectionObserver;
 
 Object.defineProperty(window, "matchMedia", {
   writable: true,
@@ -172,7 +174,7 @@ function makeTaskGroup(
   id: string,
   name: string,
   position: string,
-  overrides: Partial<TaskGroup> = {},
+  overrides: Partial<TaskGroup> = {}
 ): TaskGroup {
   return {
     id,
@@ -190,7 +192,7 @@ function makeProjectMember(
   userId: string,
   name: string,
   email: string,
-  role: string = "member",
+  role: string = "member"
 ) {
   return { id, userId, name, email, image: null, role, joinedAt: "2024-01-01T00:00:00Z" };
 }
@@ -199,19 +201,21 @@ function makeProjectMember(
 // Default mock setup
 // ---------------------------------------------------------------------------
 
-function setupDefaultMocks(overrides: {
-  project?: Record<string, unknown>;
-  members?: ReturnType<typeof makeProjectMember>[];
-  taskGroups?: TaskGroup[];
-  isProjectAdmin?: boolean;
-  /**
-   * Mirrors `ProjectPermissions.isResolved`. Defaults to `true` because every
-   * test below is about the settled page; pass `false` to exercise the
-   * roster-still-loading branch, where `isProjectAdmin: false` is the
-   * permissive placeholder rather than a refusal.
-   */
-  isResolved?: boolean;
-} = {}) {
+function setupDefaultMocks(
+  overrides: {
+    project?: Record<string, unknown>;
+    members?: ReturnType<typeof makeProjectMember>[];
+    taskGroups?: TaskGroup[];
+    isProjectAdmin?: boolean;
+    /**
+     * Mirrors `ProjectPermissions.isResolved`. Defaults to `true` because every
+     * test below is about the settled page; pass `false` to exercise the
+     * roster-still-loading branch, where `isProjectAdmin: false` is the
+     * permissive placeholder rather than a refusal.
+     */
+    isResolved?: boolean;
+  } = {}
+) {
   const project = makeProject(overrides.project);
   const members = overrides.members ?? [
     makeProjectMember("pm-1", "user-1", "Alice", "alice@test.com", "admin"),
@@ -284,7 +288,7 @@ function renderPage() {
   render(
     <Wrapper>
       <ProjectSettings />
-    </Wrapper>,
+    </Wrapper>
   );
   return { user };
 }
@@ -340,7 +344,7 @@ describe("ProjectSettings", () => {
       renderPage();
 
       expect(
-        screen.getByText("You do not have permission to manage project settings."),
+        screen.getByText("You do not have permission to manage project settings.")
       ).toBeInTheDocument();
     });
 
@@ -366,7 +370,7 @@ describe("ProjectSettings", () => {
 
       expect(screen.getByRole("status")).toBeInTheDocument();
       expect(
-        screen.queryByText("You do not have permission to manage project settings."),
+        screen.queryByText("You do not have permission to manage project settings.")
       ).not.toBeInTheDocument();
     });
 
@@ -477,7 +481,7 @@ describe("ProjectSettings", () => {
             description: "A test project",
             status: "active",
             budget: null,
-          }),
+          })
         );
       });
     });
@@ -502,7 +506,7 @@ describe("ProjectSettings", () => {
           expect.objectContaining({
             name: "Trimmed Name",
             description: "Trimmed Desc",
-          }),
+          })
         );
       });
     });
@@ -548,7 +552,7 @@ describe("ProjectSettings", () => {
         () =>
           new Promise((resolve) => {
             resolveApi = resolve;
-          }),
+          })
       );
       setupDefaultMocks();
       const { user } = renderPage();
@@ -577,7 +581,7 @@ describe("ProjectSettings", () => {
           "/api/projects/proj-1",
           expect.objectContaining({
             budget: 25050,
-          }),
+          })
         );
       });
     });
@@ -596,7 +600,7 @@ describe("ProjectSettings", () => {
           "/api/projects/proj-1",
           expect.objectContaining({
             budget: null,
-          }),
+          })
         );
       });
     });
@@ -705,7 +709,7 @@ describe("ProjectSettings", () => {
      */
     function dialogButton(dialog: HTMLElement, label: string) {
       const button = Array.from(dialog.querySelectorAll("button")).find(
-        (b) => b.textContent?.trim() === label,
+        (b) => b.textContent?.trim() === label
       );
       expect(button).toBeDefined();
       return button!;
@@ -727,9 +731,7 @@ describe("ProjectSettings", () => {
 
       await user.click(screen.getByRole("button", { name: "Actions for Charlie" }));
 
-      expect(
-        await screen.findByRole("menuitem", { name: "Change Role" }),
-      ).toBeInTheDocument();
+      expect(await screen.findByRole("menuitem", { name: "Change Role" })).toBeInTheDocument();
     });
 
     /**
@@ -801,7 +803,7 @@ describe("ProjectSettings", () => {
       setupDefaultMocks();
       seedTwoMembers();
       mockApiPatch.mockRejectedValue(
-        new Error("This member's role changed while you were editing. Please retry."),
+        new Error("This member's role changed while you were editing. Please retry.")
       );
       const user = await openMembersTab();
 
@@ -815,9 +817,7 @@ describe("ProjectSettings", () => {
       await user.click(dialogButton(dialog, "Update Role"));
 
       expect(
-        await screen.findByText(
-          "This member's role changed while you were editing. Please retry.",
-        ),
+        await screen.findByText("This member's role changed while you were editing. Please retry.")
       ).toBeInTheDocument();
       expect(dialog).toHaveAttribute("open");
     });
@@ -909,17 +909,16 @@ describe("ProjectSettings", () => {
       await waitFor(() => {
         expect(screen.getByText("No task groups")).toBeInTheDocument();
         expect(
-          screen.getByText("Create task groups to organize your project tasks into columns or categories."),
+          screen.getByText(
+            "Create task groups to organize your project tasks into columns or categories."
+          )
         ).toBeInTheDocument();
       });
     });
 
     it("renders edit and delete buttons for each group", async () => {
       setupDefaultMocks({
-        taskGroups: [
-          makeTaskGroup("tg-1", "To Do", "a"),
-          makeTaskGroup("tg-2", "Done", "b"),
-        ],
+        taskGroups: [makeTaskGroup("tg-1", "To Do", "a"), makeTaskGroup("tg-2", "Done", "b")],
       });
       const { user } = renderPage();
 
@@ -962,8 +961,8 @@ describe("ProjectSettings", () => {
         expect(screen.getByText("Project Theme")).toBeInTheDocument();
         expect(
           screen.getByText(
-            "Override the workspace theme for this project. All project members will see this theme when viewing the project.",
-          ),
+            "Override the workspace theme for this project. All project members will see this theme when viewing the project."
+          )
         ).toBeInTheDocument();
       });
     });
@@ -986,9 +985,7 @@ describe("ProjectSettings", () => {
       await user.click(screen.getByRole("tab", { name: "Appearance" }));
 
       await waitFor(() => {
-        expect(
-          screen.getByRole("button", { name: /Use Workspace Theme/ }),
-        ).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Use Workspace Theme/ })).toBeInTheDocument();
       });
     });
 
@@ -1005,10 +1002,7 @@ describe("ProjectSettings", () => {
       await user.click(screen.getByRole("button", { name: /Use Workspace Theme/ }));
 
       await waitFor(() => {
-        expect(mockApiPatch).toHaveBeenCalledWith(
-          "/api/projects/proj-1",
-          { theme: null },
-        );
+        expect(mockApiPatch).toHaveBeenCalledWith("/api/projects/proj-1", { theme: null });
       });
     });
 
@@ -1028,10 +1022,7 @@ describe("ProjectSettings", () => {
       await user.click(noirButton!);
 
       await waitFor(() => {
-        expect(mockApiPatch).toHaveBeenCalledWith(
-          "/api/projects/proj-1",
-          { theme: "noir" },
-        );
+        expect(mockApiPatch).toHaveBeenCalledWith("/api/projects/proj-1", { theme: "noir" });
       });
     });
   });

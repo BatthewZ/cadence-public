@@ -11,9 +11,16 @@ import { WRITE_ERROR_CODES } from "../../../../shared/constants/offline-sync";
 import { generateKeyBetween } from "../../../../shared/lib/fractional-index";
 import { parseRecurrenceRule } from "../../../../shared/lib/recurrence";
 import type { TaskLabelInfo } from "../../../../shared/schemas/label";
-import { createTaskSchema, dateRangeError, updateTaskSchema } from "../../../../shared/schemas/task";
+import {
+  createTaskSchema,
+  dateRangeError,
+  updateTaskSchema,
+} from "../../../../shared/schemas/task";
 import type { AppEnv } from "../../../env";
-import { ASSIGNEE_NOT_ASSIGNABLE_MESSAGE, canUserBeAssigned } from "../../../lib/assignee-validation";
+import {
+  ASSIGNEE_NOT_ASSIGNABLE_MESSAGE,
+  canUserBeAssigned,
+} from "../../../lib/assignee-validation";
 import { clientIdConflict } from "../../../lib/client-id";
 import { deferWork } from "../../../lib/defer";
 import { errorResponse } from "../../../lib/error-response";
@@ -47,16 +54,13 @@ export async function createTask(c: Context<AppEnv>) {
   // it must be re-read on every retry attempt inside the position-conflict
   // loop below.
   const [groupResult, projectResult] = await db.batch([
-    db.select()
+    db
+      .select()
       .from(taskGroup)
-      .where(
-        and(
-          eq(taskGroup.id, body.taskGroupId),
-          eq(taskGroup.projectId, projectId),
-        ),
-      )
+      .where(and(eq(taskGroup.id, body.taskGroupId), eq(taskGroup.projectId, projectId)))
       .limit(1),
-    db.select({ autoAssignCreator: project.autoAssignCreator })
+    db
+      .select({ autoAssignCreator: project.autoAssignCreator })
       .from(project)
       .where(eq(project.id, projectId))
       .limit(1),
@@ -75,9 +79,12 @@ export async function createTask(c: Context<AppEnv>) {
 
   const isCompleted = group.isCompletionGroup;
 
-  const assigneeId = body.assigneeId !== undefined
-    ? (body.assigneeId ?? null)
-    : (projectResult[0]?.autoAssignCreator ? user.id : null);
+  const assigneeId =
+    body.assigneeId !== undefined
+      ? (body.assigneeId ?? null)
+      : projectResult[0]?.autoAssignCreator
+        ? user.id
+        : null;
 
   // The assignee must be someone who can actually open this project. Without
   // this, any user id in the payload got a "task_assigned" notification
@@ -89,8 +96,11 @@ export async function createTask(c: Context<AppEnv>) {
   // (`requireProjectRole`) already proved they can reach this project, so
   // re-resolving it would add a query to the two most common cases —
   // self-assign and autoAssignCreator — for no security gain.
-  if (assigneeId !== null && assigneeId !== user.id
-    && !(await canUserBeAssigned(db, projectId, assigneeId))) {
+  if (
+    assigneeId !== null &&
+    assigneeId !== user.id &&
+    !(await canUserBeAssigned(db, projectId, assigneeId))
+  ) {
     return errorResponse(c, ASSIGNEE_NOT_ASSIGNABLE_MESSAGE, 400);
   }
 
@@ -103,7 +113,9 @@ export async function createTask(c: Context<AppEnv>) {
   // existed so it cannot catch it.
   const dueDate = body.dueDate
     ? new Date(body.dueDate)
-    : (body.recurrenceRule && !body.startDate ? now : null);
+    : body.recurrenceRule && !body.startDate
+      ? now
+      : null;
 
   // startDate is independently optional (it may be set without a dueDate); the
   // only cross-field rule, start <= due when both are present, is enforced by
@@ -180,9 +192,18 @@ export async function createTask(c: Context<AppEnv>) {
   });
 
   // Non-blocking webhook dispatch for task.created
-  const createdEnrichment = await resolveTaskEnrichment(db, newTask as Parameters<typeof resolveTaskEnrichment>[1]);
+  const createdEnrichment = await resolveTaskEnrichment(
+    db,
+    newTask as Parameters<typeof resolveTaskEnrichment>[1]
+  );
   dispatchWebhook(c, projectId, [
-    { event: "task.created", data: buildTaskEventData(newTask as Parameters<typeof buildTaskEventData>[0], createdEnrichment) },
+    {
+      event: "task.created",
+      data: buildTaskEventData(
+        newTask as Parameters<typeof buildTaskEventData>[0],
+        createdEnrichment
+      ),
+    },
   ]);
 
   // Enrich response with assignee display fields so the frontend can render
@@ -209,7 +230,17 @@ export async function createTask(c: Context<AppEnv>) {
   // Parse recurrenceRule back from JSON string for the response
   const { recurrenceRule: rawRecurrenceRule, ...newTaskFields } = newTask;
 
-  return c.json({ task: { ...newTaskFields, recurrenceRule: parseRecurrenceRule(rawRecurrenceRule), assigneeName, assigneeAvatarUrl } }, 201);
+  return c.json(
+    {
+      task: {
+        ...newTaskFields,
+        recurrenceRule: parseRecurrenceRule(rawRecurrenceRule),
+        assigneeName,
+        assigneeAvatarUrl,
+      },
+    },
+    201
+  );
 }
 
 export async function listTasks(c: Context<AppEnv>) {
@@ -242,13 +273,11 @@ export async function listTasks(c: Context<AppEnv>) {
     if (labelIds.length > 0) {
       conditions.push(
         exists(
-          db.select({ x: sql`1` })
+          db
+            .select({ x: sql`1` })
             .from(taskLabel)
-            .where(and(
-              eq(taskLabel.taskId, task.id),
-              inArray(taskLabel.labelId, labelIds),
-            )),
-        ),
+            .where(and(eq(taskLabel.taskId, task.id), inArray(taskLabel.labelId, labelIds)))
+        )
       );
     }
   }
@@ -258,7 +287,9 @@ export async function listTasks(c: Context<AppEnv>) {
     .select({
       taskId: subtask.taskId,
       cnt: sql<number>`COUNT(*)`.as("subtask_cnt"),
-      completed: sql<number>`SUM(CASE WHEN ${subtask.completed} = 1 THEN 1 ELSE 0 END)`.as("subtask_completed"),
+      completed: sql<number>`SUM(CASE WHEN ${subtask.completed} = 1 THEN 1 ELSE 0 END)`.as(
+        "subtask_completed"
+      ),
     })
     .from(subtask)
     .groupBy(subtask.taskId)
@@ -286,7 +317,10 @@ export async function listTasks(c: Context<AppEnv>) {
   const taskLabelsSubquery = db
     .select({
       taskId: taskLabel.taskId,
-      labelsJson: sql<string>`JSON_GROUP_ARRAY(JSON_OBJECT('id', ${label.id}, 'name', ${label.name}, 'color', ${label.color}))`.as("labels_json"),
+      labelsJson:
+        sql<string>`JSON_GROUP_ARRAY(JSON_OBJECT('id', ${label.id}, 'name', ${label.name}, 'color', ${label.color}))`.as(
+          "labels_json"
+        ),
     })
     .from(taskLabel)
     .innerJoin(label, eq(taskLabel.labelId, label.id))
@@ -299,7 +333,9 @@ export async function listTasks(c: Context<AppEnv>) {
       assigneeName: userTable.name,
       assigneeAvatarUrl: userTable.image,
       subtaskCount: sql<number>`COALESCE(${subtaskCounts.cnt}, 0)`.as("subtaskCount"),
-      subtaskCompletedCount: sql<number>`COALESCE(${subtaskCounts.completed}, 0)`.as("subtaskCompletedCount"),
+      subtaskCompletedCount: sql<number>`COALESCE(${subtaskCounts.completed}, 0)`.as(
+        "subtaskCompletedCount"
+      ),
       commentCount: sql<number>`COALESCE(${commentCounts.cnt}, 0)`.as("commentCount"),
       attachmentCount: sql<number>`COALESCE(${attachmentCounts.cnt}, 0)`.as("attachmentCount"),
       labelsJson: taskLabelsSubquery.labelsJson,
@@ -344,7 +380,9 @@ export async function listTasks(c: Context<AppEnv>) {
       }
     }
     const withLabels = { ...rest, recurrenceRule: parseRecurrenceRule(recurrenceRuleJson), labels };
-    return subtasksByTask ? { ...withLabels, subtasks: subtasksByTask.get(t.id) ?? [] } : withLabels;
+    return subtasksByTask
+      ? { ...withLabels, subtasks: subtasksByTask.get(t.id) ?? [] }
+      : withLabels;
   });
 
   return c.json({ tasks: tasksWithLabels });
@@ -354,13 +392,18 @@ export async function listTasks(c: Context<AppEnv>) {
 async function loadTaskDetail(db: Database, taskId: string) {
   const [taskResult, subtasks, [{ value: commentCount }], taskLabels] = await db.batch([
     db.select().from(task).where(eq(task.id, taskId)).limit(1),
-    db.select().from(subtask).where(eq(subtask.taskId, taskId)).orderBy(asc(subtask.position), asc(subtask.id)),
+    db
+      .select()
+      .from(subtask)
+      .where(eq(subtask.taskId, taskId))
+      .orderBy(asc(subtask.position), asc(subtask.id)),
     db.select({ value: count() }).from(comment).where(eq(comment.taskId, taskId)),
-    db.select({
-      id: label.id,
-      name: label.name,
-      color: label.color,
-    })
+    db
+      .select({
+        id: label.id,
+        name: label.name,
+        color: label.color,
+      })
       .from(taskLabel)
       .innerJoin(label, eq(taskLabel.labelId, label.id))
       .where(eq(taskLabel.taskId, taskId)),
@@ -406,11 +449,7 @@ export async function updateTask(c: Context<AppEnv>) {
   const body = validJson(c, updateTaskSchema);
 
   // Fetch current task for activity logging
-  const [currentTask] = await db
-    .select()
-    .from(task)
-    .where(eq(task.id, taskId))
-    .limit(1);
+  const [currentTask] = await db.select().from(task).where(eq(task.id, taskId)).limit(1);
 
   if (!currentTask) {
     return errorResponse(c, "Task not found", 404);
@@ -434,12 +473,12 @@ export async function updateTask(c: Context<AppEnv>) {
   // so there is nothing to auto-clear.
   // -------------------------------------------------------------------------
   if (body.startDate !== undefined || body.dueDate !== undefined) {
-    const effectiveStart = body.startDate !== undefined
-      ? body.startDate
-      : (currentTask.startDate?.toISOString() ?? null);
-    const effectiveDue = body.dueDate !== undefined
-      ? body.dueDate
-      : (currentTask.dueDate?.toISOString() ?? null);
+    const effectiveStart =
+      body.startDate !== undefined
+        ? body.startDate
+        : (currentTask.startDate?.toISOString() ?? null);
+    const effectiveDue =
+      body.dueDate !== undefined ? body.dueDate : (currentTask.dueDate?.toISOString() ?? null);
 
     const rangeError = dateRangeError(effectiveStart, effectiveDue);
     if (rangeError) {
@@ -463,11 +502,11 @@ export async function updateTask(c: Context<AppEnv>) {
   //   * self — the route guard already proved the caller can reach the project.
   // -------------------------------------------------------------------------
   if (
-    body.assigneeId !== undefined
-    && body.assigneeId !== null
-    && body.assigneeId !== currentTask.assigneeId
-    && body.assigneeId !== user.id
-    && !(await canUserBeAssigned(db, currentTask.projectId, body.assigneeId))
+    body.assigneeId !== undefined &&
+    body.assigneeId !== null &&
+    body.assigneeId !== currentTask.assigneeId &&
+    body.assigneeId !== user.id &&
+    !(await canUserBeAssigned(db, currentTask.projectId, body.assigneeId))
   ) {
     return errorResponse(c, ASSIGNEE_NOT_ASSIGNABLE_MESSAGE, 400);
   }
@@ -480,7 +519,9 @@ export async function updateTask(c: Context<AppEnv>) {
     ...(body.description !== undefined && { description: body.description }),
     ...(body.assigneeId !== undefined && { assigneeId: body.assigneeId }),
     ...(body.priority !== undefined && { priority: body.priority }),
-    ...(body.startDate !== undefined && { startDate: body.startDate ? new Date(body.startDate) : null }),
+    ...(body.startDate !== undefined && {
+      startDate: body.startDate ? new Date(body.startDate) : null,
+    }),
     ...(body.dueDate !== undefined && { dueDate: body.dueDate ? new Date(body.dueDate) : null }),
     ...(body.cost !== undefined && { cost: body.cost }),
     ...(body.icon !== undefined && { icon: body.icon }),
@@ -497,20 +538,25 @@ export async function updateTask(c: Context<AppEnv>) {
     ...(body.recurrenceRule !== undefined && {
       recurrenceRule: body.recurrenceRule ? JSON.stringify(body.recurrenceRule) : null,
     }),
-    ...(body.recurrenceRule !== undefined && body.recurrenceRule !== null && !currentTask.recurrenceSeriesId && {
-      recurrenceSeriesId: crypto.randomUUID(),
-    }),
+    ...(body.recurrenceRule !== undefined &&
+      body.recurrenceRule !== null &&
+      !currentTask.recurrenceSeriesId && {
+        recurrenceSeriesId: crypto.randomUUID(),
+      }),
   };
 
-  const descriptionBase = body.descriptionBase !== undefined && body.description !== undefined
-    ? body.descriptionBase ?? ""
-    : null;
+  const descriptionBase =
+    body.descriptionBase !== undefined && body.description !== undefined
+      ? (body.descriptionBase ?? "")
+      : null;
   const [updated] = await db
     .update(task)
     .set(updateData)
-    .where(descriptionBase === null
-      ? eq(task.id, taskId)
-      : and(eq(task.id, taskId), sql`COALESCE(${task.description}, '') = ${descriptionBase}`))
+    .where(
+      descriptionBase === null
+        ? eq(task.id, taskId)
+        : and(eq(task.id, taskId), sql`COALESCE(${task.description}, '') = ${descriptionBase}`)
+    )
     .returning();
 
   // No row: the stored description no longer equals `descriptionBase`, or the task is gone (404).
@@ -609,7 +655,10 @@ export async function updateTask(c: Context<AppEnv>) {
       }
     }
 
-    const assigneeForNotification = body.assigneeId !== undefined && body.assigneeId !== currentTask.assigneeId ? body.assigneeId : null;
+    const assigneeForNotification =
+      body.assigneeId !== undefined && body.assigneeId !== currentTask.assigneeId
+        ? body.assigneeId
+        : null;
     const taskTitle = currentTask.title;
     const projectId = currentTask.projectId;
 
@@ -647,7 +696,19 @@ export async function updateTask(c: Context<AppEnv>) {
     const changes = computeChanges(
       currentTask as Record<string, unknown>,
       updated as Record<string, unknown>,
-      ["title", "description", "assigneeId", "priority", "startDate", "dueDate", "cost", "icon", "taskGroupId", "coverImagePosition", "recurrenceRule"],
+      [
+        "title",
+        "description",
+        "assigneeId",
+        "priority",
+        "startDate",
+        "dueDate",
+        "cost",
+        "icon",
+        "taskGroupId",
+        "coverImagePosition",
+        "recurrenceRule",
+      ]
     );
 
     // Enrich ID-only changes with human-readable objects
@@ -671,7 +732,7 @@ export async function updateTask(c: Context<AppEnv>) {
     const additionalEvents = detectAdditionalEvents(
       "task.updated",
       currentTask as Record<string, unknown>,
-      updated as Record<string, unknown>,
+      updated as Record<string, unknown>
     );
     dispatchWebhook(c, currentTask.projectId, [
       { event: "task.updated", data, changes },
@@ -681,7 +742,9 @@ export async function updateTask(c: Context<AppEnv>) {
 
   const { recurrenceRule: updatedRuleJson, ...updatedFields } = updated;
 
-  return c.json({ task: { ...updatedFields, recurrenceRule: parseRecurrenceRule(updatedRuleJson) } });
+  return c.json({
+    task: { ...updatedFields, recurrenceRule: parseRecurrenceRule(updatedRuleJson) },
+  });
 }
 
 export async function deleteTask(c: Context<AppEnv>) {
@@ -689,11 +752,7 @@ export async function deleteTask(c: Context<AppEnv>) {
   const taskId = requireParam(c, "taskId");
 
   // Fetch full task before deletion for webhook payload
-  const [found] = await db
-    .select()
-    .from(task)
-    .where(eq(task.id, taskId))
-    .limit(1);
+  const [found] = await db.select().from(task).where(eq(task.id, taskId)).limit(1);
 
   if (!found) {
     return errorResponse(c, "Task not found", 404);

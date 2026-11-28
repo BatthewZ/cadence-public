@@ -68,7 +68,7 @@ export function webhookCreatedEmail(options: {
   const eventsSummary = events.length > 0 ? events.join(", ") : "no events";
   const safeEventsSummary = escapeHtml(eventsSummary);
   const safeScope = escapeHtml(
-    projectName ? `Project: ${projectName}` : "Workspace-wide (all matching events)",
+    projectName ? `Project: ${projectName}` : "Workspace-wide (all matching events)"
   );
   const safeCreatedVia =
     createdVia.kind === "cookie"

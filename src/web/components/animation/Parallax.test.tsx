@@ -20,7 +20,11 @@ describe("Parallax", () => {
   });
 
   it("merges custom className", () => {
-    render(<Parallax className="custom-class" data-testid="parallax">Styled</Parallax>);
+    render(
+      <Parallax className="custom-class" data-testid="parallax">
+        Styled
+      </Parallax>
+    );
     expect(screen.getByTestId("parallax").className).toContain("custom-class");
   });
 

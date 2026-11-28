@@ -1,6 +1,4 @@
-import {
-  Flag,
-} from "lucide-react";
+import { Flag } from "lucide-react";
 
 import { TASK_PRIORITIES, type TaskPriority } from "@/shared/types/roles";
 import { Checkbox } from "@/web/components/form/Checkbox";
@@ -57,14 +55,8 @@ export function PriorityFilter({ selected, onChange }: PriorityFilterProps) {
         </Text>
         <div className="task-filter-bar__popover-list">
           {TASK_PRIORITIES.map((priority) => (
-            <label
-              key={priority}
-              className="task-filter-bar__option"
-            >
-              <Checkbox
-                checked={selected.includes(priority)}
-                onChange={() => toggle(priority)}
-              />
+            <label key={priority} className="task-filter-bar__option">
+              <Checkbox checked={selected.includes(priority)} onChange={() => toggle(priority)} />
               <Badge variant={getPriorityBadgeVariant(priority)}>
                 {getPriorityLabel(priority)}
               </Badge>

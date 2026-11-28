@@ -31,14 +31,9 @@ export function CalendarTaskChip({
       title={task.title}
       className="flex w-full min-w-0 cursor-pointer items-center gap-r6 rounded px-r6 py-0.5 text-left text-body-3 duration-fast hover:bg-surface-2"
     >
+      <span className={`size-1.5 shrink-0 rounded-full ${dotClass}`} aria-hidden="true" />
       <span
-        className={`size-1.5 shrink-0 rounded-full ${dotClass}`}
-        aria-hidden="true"
-      />
-      <span
-        className={`truncate ${
-          task.completed ? "line-through text-fg-muted" : "text-fg-primary"
-        }`}
+        className={`truncate ${task.completed ? "line-through text-fg-muted" : "text-fg-primary"}`}
       >
         {task.title}
       </span>

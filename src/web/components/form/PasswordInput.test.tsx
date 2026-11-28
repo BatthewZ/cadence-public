@@ -56,13 +56,7 @@ describe("PasswordInput", () => {
   });
 
   it("passes props through to the underlying input", () => {
-    render(
-      <PasswordInput
-        id="my-password"
-        placeholder="Enter password"
-        aria-label="Password"
-      />
-    );
+    render(<PasswordInput id="my-password" placeholder="Enter password" aria-label="Password" />);
     const input = screen.getByLabelText("Password");
     expect(input).toHaveAttribute("id", "my-password");
     expect(input).toHaveAttribute("placeholder", "Enter password");

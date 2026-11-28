@@ -1,14 +1,20 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { EmptyState, EmptyStateActions, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from "./EmptyState";
+import {
+  EmptyState,
+  EmptyStateActions,
+  EmptyStateDescription,
+  EmptyStateIcon,
+  EmptyStateTitle,
+} from "./EmptyState";
 
 describe("EmptyState", () => {
   it("renders root with children", () => {
     render(
       <EmptyState>
         <EmptyStateTitle>No results</EmptyStateTitle>
-      </EmptyState>,
+      </EmptyState>
     );
     expect(screen.getByText("No results")).toBeInTheDocument();
   });
@@ -17,48 +23,36 @@ describe("EmptyState", () => {
     const { container } = render(
       <EmptyState size="sm">
         <EmptyStateTitle>Small</EmptyStateTitle>
-      </EmptyState>,
+      </EmptyState>
     );
-    expect(container.querySelector(".empty-state")).toHaveAttribute(
-      "data-size",
-      "sm",
-    );
+    expect(container.querySelector(".empty-state")).toHaveAttribute("data-size", "sm");
   });
 
   it("applies data-size for md", () => {
     const { container } = render(
       <EmptyState size="md">
         <EmptyStateTitle>Medium</EmptyStateTitle>
-      </EmptyState>,
+      </EmptyState>
     );
-    expect(container.querySelector(".empty-state")).toHaveAttribute(
-      "data-size",
-      "md",
-    );
+    expect(container.querySelector(".empty-state")).toHaveAttribute("data-size", "md");
   });
 
   it("applies data-size for lg", () => {
     const { container } = render(
       <EmptyState size="lg">
         <EmptyStateTitle>Large</EmptyStateTitle>
-      </EmptyState>,
+      </EmptyState>
     );
-    expect(container.querySelector(".empty-state")).toHaveAttribute(
-      "data-size",
-      "lg",
-    );
+    expect(container.querySelector(".empty-state")).toHaveAttribute("data-size", "lg");
   });
 
   it("defaults to size md", () => {
     const { container } = render(
       <EmptyState>
         <EmptyStateTitle>Default</EmptyStateTitle>
-      </EmptyState>,
+      </EmptyState>
     );
-    expect(container.querySelector(".empty-state")).toHaveAttribute(
-      "data-size",
-      "md",
-    );
+    expect(container.querySelector(".empty-state")).toHaveAttribute("data-size", "md");
   });
 
   it("EmptyState.Icon has aria-hidden true", () => {
@@ -67,7 +61,7 @@ describe("EmptyState", () => {
         <EmptyStateIcon>
           <svg data-testid="icon" />
         </EmptyStateIcon>
-      </EmptyState>,
+      </EmptyState>
     );
     const iconWrapper = container.querySelector("[aria-hidden='true']");
     expect(iconWrapper).toBeInTheDocument();
@@ -78,7 +72,7 @@ describe("EmptyState", () => {
     render(
       <EmptyState>
         <EmptyStateTitle>Nothing here</EmptyStateTitle>
-      </EmptyState>,
+      </EmptyState>
     );
     const title = screen.getByText("Nothing here");
     expect(title).toBeInTheDocument();
@@ -89,7 +83,7 @@ describe("EmptyState", () => {
     render(
       <EmptyState>
         <EmptyStateDescription>Try adjusting filters</EmptyStateDescription>
-      </EmptyState>,
+      </EmptyState>
     );
     const description = screen.getByText("Try adjusting filters");
     expect(description).toBeInTheDocument();
@@ -103,7 +97,7 @@ describe("EmptyState", () => {
           <button>Retry</button>
           <button>Go back</button>
         </EmptyStateActions>
-      </EmptyState>,
+      </EmptyState>
     );
     expect(screen.getByText("Retry")).toBeInTheDocument();
     expect(screen.getByText("Go back")).toBeInTheDocument();
@@ -119,7 +113,7 @@ describe("EmptyState", () => {
     const { container } = render(
       <EmptyState className="custom-class">
         <EmptyStateTitle>Styled</EmptyStateTitle>
-      </EmptyState>,
+      </EmptyState>
     );
     expect(container.querySelector(".empty-state")).toHaveClass("custom-class");
   });

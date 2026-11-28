@@ -1,7 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Search,
-} from "lucide-react";
+import { Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 
@@ -22,7 +20,11 @@ import {
   type ThemeControlValue,
   ThemeOverrideProvider,
 } from "@/web/contexts/ThemeControlContext";
-import { useWorkspace, type Workspace, type WorkspacesResponse } from "@/web/contexts/WorkspaceContext";
+import {
+  useWorkspace,
+  type Workspace,
+  type WorkspacesResponse,
+} from "@/web/contexts/WorkspaceContext";
 import { useFavorites } from "@/web/hooks/use-favorites";
 import { useChordIndicator, useHotkey, useHotkeyChord } from "@/web/hooks/use-hotkey";
 import { useWorkspacePermissions } from "@/web/hooks/use-permissions";
@@ -45,18 +47,24 @@ export function WorkspaceLayout() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const storageKey = `cadence:sidebar-projects-expanded:${workspace.id}`;
   const [showAllProjects, setShowAllProjects] = useState(() => {
-    try { return localStorage.getItem(storageKey) === "true"; } catch { return false; }
+    try {
+      return localStorage.getItem(storageKey) === "true";
+    } catch {
+      return false;
+    }
   });
   useEffect(() => {
-    try { localStorage.setItem(storageKey, String(showAllProjects)); } catch { /* noop */ }
+    try {
+      localStorage.setItem(storageKey, String(showAllProjects));
+    } catch {
+      /* noop */
+    }
   }, [showAllProjects, storageKey]);
-  const activeProjects = useMemo(
-    () => projects.filter((p) => p.status === "active"),
-    [projects],
-  );
-  const visibleProjects = showAllProjects || activeProjects.length <= SIDEBAR_PROJECT_LIMIT
-    ? activeProjects
-    : activeProjects.slice(0, SIDEBAR_PROJECT_LIMIT);
+  const activeProjects = useMemo(() => projects.filter((p) => p.status === "active"), [projects]);
+  const visibleProjects =
+    showAllProjects || activeProjects.length <= SIDEBAR_PROJECT_LIMIT
+      ? activeProjects
+      : activeProjects.slice(0, SIDEBAR_PROJECT_LIMIT);
   const openSearch = useCallback(() => setSearchOpen(true), []);
   useHotkey("k", openSearch, { ctrlOrMeta: true });
 
@@ -66,11 +74,21 @@ export function WorkspaceLayout() {
   useHotkey("?", openShortcuts);
 
   // Navigation chord shortcuts (g then d/m/p/s)
-  const navToDashboard = useCallback(() => { void navigate(`/w/${workspace.slug}/dashboard`); }, [navigate, workspace.slug]);
-  const navToMyTasks = useCallback(() => { void navigate(`/w/${workspace.slug}/my-tasks`); }, [navigate, workspace.slug]);
-  const navToProjects = useCallback(() => { void navigate(`/w/${workspace.slug}/projects`); }, [navigate, workspace.slug]);
-  const navToSettings = useCallback(() => { void navigate(`/w/${workspace.slug}/settings`); }, [navigate, workspace.slug]);
-  const navToMembers = useCallback(() => { void navigate(`/w/${workspace.slug}/settings/members`); }, [navigate, workspace.slug]);
+  const navToDashboard = useCallback(() => {
+    void navigate(`/w/${workspace.slug}/dashboard`);
+  }, [navigate, workspace.slug]);
+  const navToMyTasks = useCallback(() => {
+    void navigate(`/w/${workspace.slug}/my-tasks`);
+  }, [navigate, workspace.slug]);
+  const navToProjects = useCallback(() => {
+    void navigate(`/w/${workspace.slug}/projects`);
+  }, [navigate, workspace.slug]);
+  const navToSettings = useCallback(() => {
+    void navigate(`/w/${workspace.slug}/settings`);
+  }, [navigate, workspace.slug]);
+  const navToMembers = useCallback(() => {
+    void navigate(`/w/${workspace.slug}/settings/members`);
+  }, [navigate, workspace.slug]);
   useHotkeyChord("g", "d", navToDashboard);
   useHotkeyChord("g", "m", navToMyTasks);
   useHotkeyChord("g", "p", navToProjects);
@@ -111,7 +129,7 @@ export function WorkspaceLayout() {
       qc.setQueryData(
         queryKeys.workspaces.detail(workspace.id),
         (old: { workspace: Workspace } | undefined) =>
-          old ? { workspace: { ...old.workspace, theme: newTheme } } : old,
+          old ? { workspace: { ...old.workspace, theme: newTheme } } : old
       );
       return { previousData };
     },
@@ -130,29 +148,35 @@ export function WorkspaceLayout() {
   });
 
   // Command palette action handler
-  const handlePaletteAction = useCallback((action: string) => {
-    switch (action) {
-      case "create-project":
-        setCreateDialogOpen(true);
-        break;
-      case "toggle-theme":
-        if (canEditTheme) {
-          const nextTheme = (workspace.theme ?? "default") === "default" ? "noir" : "default";
-          updateTheme(nextTheme as Theme);
-        }
-        break;
-    }
-    setSearchOpen(false);
-  }, [canEditTheme, workspace.theme, updateTheme]);
+  const handlePaletteAction = useCallback(
+    (action: string) => {
+      switch (action) {
+        case "create-project":
+          setCreateDialogOpen(true);
+          break;
+        case "toggle-theme":
+          if (canEditTheme) {
+            const nextTheme = (workspace.theme ?? "default") === "default" ? "noir" : "default";
+            updateTheme(nextTheme as Theme);
+          }
+          break;
+      }
+      setSearchOpen(false);
+    },
+    [canEditTheme, workspace.theme, updateTheme]
+  );
 
-  const workspaceThemeControl = useMemo<ThemeControlValue>(() => ({
-    scope: "workspace",
-    canEdit: canEditTheme ?? false,
-    effectiveTheme: (workspace.theme ?? "default") as Theme,
-    setTheme: (theme: Theme | null) => updateTheme(theme),
-    hasProjectOverride: false,
-    isPending: themePending,
-  }), [canEditTheme, workspace.theme, updateTheme, themePending]);
+  const workspaceThemeControl = useMemo<ThemeControlValue>(
+    () => ({
+      scope: "workspace",
+      canEdit: canEditTheme ?? false,
+      effectiveTheme: (workspace.theme ?? "default") as Theme,
+      setTheme: (theme: Theme | null) => updateTheme(theme),
+      hasProjectOverride: false,
+      isPending: themePending,
+    }),
+    [canEditTheme, workspace.theme, updateTheme, themePending]
+  );
 
   // When a project is active, use its override; otherwise use workspace control.
   const activeControl = projectOverride ?? workspaceThemeControl;
@@ -160,16 +184,13 @@ export function WorkspaceLayout() {
   // Single theme application point — always uses the active control's effective theme.
   // When projectOverride is set, this applies the project theme.
   // When projectOverride is cleared (unmount), this reverts to workspace theme.
-  useThemeApplication(
-    workspace.theme,
-    projectOverride ? projectOverride.effectiveTheme : null,
-  );
+  useThemeApplication(workspace.theme, projectOverride ? projectOverride.effectiveTheme : null);
 
   const basePath = `/w/${workspace.slug}`;
   const { favorites, isFavorite, toggleFavorite } = useFavorites(workspace.id);
-  const favoriteProjects = useMemo(() =>
-    projects.filter((p) => favorites.includes(p.id) && p.status === "active"),
-    [projects, favorites],
+  const favoriteProjects = useMemo(
+    () => projects.filter((p) => favorites.includes(p.id) && p.status === "active"),
+    [projects, favorites]
   );
 
   return (
@@ -191,7 +212,10 @@ export function WorkspaceLayout() {
                 <Search size={14} />
                 <span className="command-palette-trigger__text">Search...</span>
                 <kbd className="command-palette-trigger__kbd">
-                  {typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent) ? "\u2318" : "Ctrl"}K
+                  {typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent)
+                    ? "\u2318"
+                    : "Ctrl"}
+                  K
                 </kbd>
               </button>
               {chordPrefix && (
@@ -240,10 +264,7 @@ export function WorkspaceLayout() {
             />
           )}
           {shortcutsOpen && (
-            <KeyboardShortcutsDialog
-              open
-              onClose={() => setShortcutsOpen(false)}
-            />
+            <KeyboardShortcutsDialog open onClose={() => setShortcutsOpen(false)} />
           )}
           <CreateProjectDialog
             workspaceId={workspace.id}

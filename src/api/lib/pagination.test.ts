@@ -1,7 +1,13 @@
 import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 
-import { computeCompoundNextCursor, computeNextCursor, parseCompoundCursor, parseCursorDate, parseCursorParams } from "./pagination";
+import {
+  computeCompoundNextCursor,
+  computeNextCursor,
+  parseCompoundCursor,
+  parseCursorDate,
+  parseCursorParams,
+} from "./pagination";
 
 /**
  * Tests for the shared cursor-based pagination utility library.
@@ -22,7 +28,7 @@ function createPaginationApp(opts: { defaultLimit: number; maxLimit: number }) {
 
 async function fetchParams(
   qs: string,
-  opts: { defaultLimit: number; maxLimit: number } = { defaultLimit: 20, maxLimit: 100 },
+  opts: { defaultLimit: number; maxLimit: number } = { defaultLimit: 20, maxLimit: 100 }
 ) {
   const app = createPaginationApp(opts);
   const res = await app.request(`/test${qs ? `?${qs}` : ""}`);
@@ -42,7 +48,9 @@ describe("parseCursorParams", () => {
   });
 
   it("clamps limit to maxLimit when exceeding max", async () => {
-    const result = (await fetchParams("limit=200", { defaultLimit: 20, maxLimit: 100 })) as { limit: number };
+    const result = (await fetchParams("limit=200", { defaultLimit: 20, maxLimit: 100 })) as {
+      limit: number;
+    };
     expect(result.limit).toBe(100);
   });
 
@@ -58,7 +66,9 @@ describe("parseCursorParams", () => {
   });
 
   it("falls back to defaultLimit when limit is non-numeric", async () => {
-    const result = (await fetchParams("limit=abc", { defaultLimit: 15, maxLimit: 100 })) as { limit: number };
+    const result = (await fetchParams("limit=abc", { defaultLimit: 15, maxLimit: 100 })) as {
+      limit: number;
+    };
     expect(result.limit).toBe(15);
   });
 
@@ -117,19 +127,13 @@ describe("computeNextCursor", () => {
 
   it("returns ISO string when items.length === limit and getDate returns Date", () => {
     const date = new Date("2025-06-15T12:00:00.000Z");
-    const items = [
-      { createdAt: new Date("2025-06-14T12:00:00.000Z") },
-      { createdAt: date },
-    ];
+    const items = [{ createdAt: new Date("2025-06-14T12:00:00.000Z") }, { createdAt: date }];
     const result = computeNextCursor(items, 2, (i) => i.createdAt);
     expect(result).toBe("2025-06-15T12:00:00.000Z");
   });
 
   it("returns string directly when items.length === limit and getDate returns string", () => {
-    const items = [
-      { cursor: "2025-01-01T00:00:00.000Z" },
-      { cursor: "2025-01-02T00:00:00.000Z" },
-    ];
+    const items = [{ cursor: "2025-01-01T00:00:00.000Z" }, { cursor: "2025-01-02T00:00:00.000Z" }];
     const result = computeNextCursor(items, 2, (i) => i.cursor);
     expect(result).toBe("2025-01-02T00:00:00.000Z");
   });
@@ -207,7 +211,12 @@ describe("parseCompoundCursor", () => {
 describe("computeCompoundNextCursor", () => {
   it("returns null when items.length < limit (no more pages)", () => {
     const items = [{ createdAt: new Date("2025-01-01"), id: "a" }];
-    const result = computeCompoundNextCursor(items, 10, (i) => i.createdAt, (i) => i.id);
+    const result = computeCompoundNextCursor(
+      items,
+      10,
+      (i) => i.createdAt,
+      (i) => i.id
+    );
     expect(result).toBeNull();
   });
 
@@ -216,7 +225,12 @@ describe("computeCompoundNextCursor", () => {
       { createdAt: new Date("2025-06-14T12:00:00.000Z"), id: "task-1" },
       { createdAt: new Date("2025-06-15T12:00:00.000Z"), id: "task-2" },
     ];
-    const result = computeCompoundNextCursor(items, 2, (i) => i.createdAt, (i) => i.id);
+    const result = computeCompoundNextCursor(
+      items,
+      2,
+      (i) => i.createdAt,
+      (i) => i.id
+    );
     expect(result).toBe("2025-06-15T12:00:00.000Z|task-2");
   });
 
@@ -226,26 +240,44 @@ describe("computeCompoundNextCursor", () => {
       { date: "2025-02-01T00:00:00.000Z", id: "b" },
       { date: "2025-03-01T00:00:00.000Z", id: "c" },
     ];
-    const result = computeCompoundNextCursor(items, 3, (i) => i.date, (i) => i.id);
+    const result = computeCompoundNextCursor(
+      items,
+      3,
+      (i) => i.date,
+      (i) => i.id
+    );
     expect(result).toBe("2025-03-01T00:00:00.000Z|c");
   });
 
   it("returns null for empty items array", () => {
-    const result = computeCompoundNextCursor([], 10, () => new Date(), () => "x");
+    const result = computeCompoundNextCursor(
+      [],
+      10,
+      () => new Date(),
+      () => "x"
+    );
     expect(result).toBeNull();
   });
 
   it("handles limit of 1 with exactly 1 item", () => {
     const items = [{ ts: new Date("2025-12-31T23:59:59.999Z"), id: "only" }];
-    const result = computeCompoundNextCursor(items, 1, (i) => i.ts, (i) => i.id);
+    const result = computeCompoundNextCursor(
+      items,
+      1,
+      (i) => i.ts,
+      (i) => i.id
+    );
     expect(result).toBe("2025-12-31T23:59:59.999Z|only");
   });
 
   it("round-trips through parseCompoundCursor", () => {
-    const items = [
-      { date: new Date("2025-06-15T00:00:00.000Z"), id: "task-42" },
-    ];
-    const cursor = computeCompoundNextCursor(items, 1, (i) => i.date, (i) => i.id);
+    const items = [{ date: new Date("2025-06-15T00:00:00.000Z"), id: "task-42" }];
+    const cursor = computeCompoundNextCursor(
+      items,
+      1,
+      (i) => i.date,
+      (i) => i.id
+    );
     expect(cursor).not.toBeNull();
     const parsed = parseCompoundCursor(cursor!);
     expect(parsed).not.toBeNull();

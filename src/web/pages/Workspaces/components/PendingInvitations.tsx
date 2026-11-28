@@ -4,11 +4,7 @@ import { Mail } from "lucide-react";
 import type { Invitation } from "@/shared/types/invitations";
 import { Row, Stack } from "@/web/components/layout";
 import { useOnlineOnly } from "@/web/components/sync/use-online-only";
-import {
-  Badge,
-  Button,
-  Text,
-} from "@/web/components/ui";
+import { Badge, Button, Text } from "@/web/components/ui";
 import { useInvitationActions } from "@/web/hooks/use-invitation-actions";
 import { api } from "@/web/lib/api/client";
 import { queryKeys } from "@/web/lib/query-keys";
@@ -16,8 +12,7 @@ import { queryKeys } from "@/web/lib/query-keys";
 export function PendingInvitations() {
   const { data } = useQuery({
     queryKey: queryKeys.invitations.pending,
-    queryFn: () =>
-      api.get<{ invitations: Invitation[] }>("/api/invitations/pending"),
+    queryFn: () => api.get<{ invitations: Invitation[] }>("/api/invitations/pending"),
     staleTime: 2 * 60_000,
   });
 
@@ -38,10 +33,7 @@ export function PendingInvitations() {
       </Row>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-r4">
         {invitations.map((inv) => (
-          <div
-            key={inv.id}
-            className="bg-surface-0 rounded-xl border border-accent/20 p-r4"
-          >
+          <div key={inv.id} className="bg-surface-0 rounded-xl border border-accent/20 p-r4">
             <Stack gap="r5">
               <Row gap="r4" align="start">
                 <div className="w-11 h-11 rounded-lg bg-accent-subtle flex items-center justify-center flex-shrink-0">

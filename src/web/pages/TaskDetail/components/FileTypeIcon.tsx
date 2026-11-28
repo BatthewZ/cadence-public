@@ -1,10 +1,4 @@
-import {
-  File,
-  FileArchive,
-  FileSpreadsheet,
-  FileText,
-  Presentation,
-} from "lucide-react";
+import { File, FileArchive, FileSpreadsheet, FileText, Presentation } from "lucide-react";
 
 export function FileTypeIcon({ mimeType }: { mimeType: string }) {
   let Icon = File;

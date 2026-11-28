@@ -14,9 +14,7 @@ export const label = sqliteTable(
     color: text("color").notNull(),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
   },
-  (table) => [
-    uniqueIndex("label_project_name_idx").on(table.projectId, table.name),
-  ],
+  (table) => [uniqueIndex("label_project_name_idx").on(table.projectId, table.name)]
 );
 
 export const taskLabel = sqliteTable(
@@ -34,5 +32,5 @@ export const taskLabel = sqliteTable(
   (table) => [
     uniqueIndex("task_label_task_label_idx").on(table.taskId, table.labelId),
     index("task_label_label_idx").on(table.labelId),
-  ],
+  ]
 );

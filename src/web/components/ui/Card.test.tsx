@@ -26,25 +26,41 @@ describe("Card", () => {
   });
 
   it("applies custom padding", () => {
-    render(<Card padding="r5" data-testid="card">Padded</Card>);
+    render(
+      <Card padding="r5" data-testid="card">
+        Padded
+      </Card>
+    );
     const card = screen.getByTestId("card");
     expect(card.className).toContain("p-r5");
   });
 
   it("applies custom shadow", () => {
-    render(<Card shadow="lg" data-testid="card">Shadow</Card>);
+    render(
+      <Card shadow="lg" data-testid="card">
+        Shadow
+      </Card>
+    );
     const card = screen.getByTestId("card");
     expect(card.className).toContain("shadow-lg");
   });
 
   it("applies small shadow", () => {
-    render(<Card shadow="sm" data-testid="card">Small shadow</Card>);
+    render(
+      <Card shadow="sm" data-testid="card">
+        Small shadow
+      </Card>
+    );
     const card = screen.getByTestId("card");
     expect(card.className).toContain("shadow-sm");
   });
 
   it("forwards className prop", () => {
-    render(<Card className="custom-card" data-testid="card">Styled</Card>);
+    render(
+      <Card className="custom-card" data-testid="card">
+        Styled
+      </Card>
+    );
     const card = screen.getByTestId("card");
     expect(card.className).toContain("custom-card");
   });
@@ -56,7 +72,11 @@ describe("Card", () => {
   });
 
   it("passes through additional div props", () => {
-    render(<Card id="my-card" data-testid="card">Props</Card>);
+    render(
+      <Card id="my-card" data-testid="card">
+        Props
+      </Card>
+    );
     const card = screen.getByTestId("card");
     expect(card).toHaveAttribute("id", "my-card");
   });
@@ -67,7 +87,7 @@ describe("Card", () => {
         <header>Header section</header>
         <div>Body section</div>
         <footer>Footer section</footer>
-      </Card>,
+      </Card>
     );
     expect(screen.getByText("Header section")).toBeInTheDocument();
     expect(screen.getByText("Body section")).toBeInTheDocument();

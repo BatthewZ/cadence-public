@@ -60,7 +60,11 @@ export function EditWebhookDialog({
       {regeneratedSecret ? (
         <Stack gap="r4">
           <Text variant="h5">Secret Regenerated</Text>
-          <SecretDisplay secret={regeneratedSecret} label="New Webhook Secret" onCopied={onCopiedSecret} />
+          <SecretDisplay
+            secret={regeneratedSecret}
+            label="New Webhook Secret"
+            onCopied={onCopiedSecret}
+          />
           <Row justify="end" className="pt-r3">
             <Button variant="primary" size="md" onClick={onClose}>
               Done
@@ -108,29 +112,17 @@ export function EditWebhookDialog({
               </Button>
             </Row>
 
-            {errorMessage && (
-              <Alert variant="error">{errorMessage}</Alert>
-            )}
+            {errorMessage && <Alert variant="error">{errorMessage}</Alert>}
 
             <Row gap="r4" justify="end" className="pt-r3">
-              <Button
-                variant="ghost"
-                size="md"
-                type="button"
-                onClick={onClose}
-              >
+              <Button variant="ghost" size="md" type="button" onClick={onClose}>
                 Cancel
               </Button>
               <Button
                 type="submit"
                 variant="primary"
                 size="md"
-                disabled={
-                  isPending ||
-                  !name.trim() ||
-                  !url.trim() ||
-                  events.length === 0
-                }
+                disabled={isPending || !name.trim() || !url.trim() || events.length === 0}
               >
                 {isPending ? "Saving..." : "Save Changes"}
               </Button>

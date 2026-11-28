@@ -94,16 +94,42 @@ export async function uploadAvatar(c: Context<AppEnv>) {
     ] as const);
   } catch (error) {
     // Clean up orphaned R2 object and any partially-inserted upload record
-    await deleteObject(storage, key).catch((err) => console.error("Failed to clean up orphaned avatar R2 object:", { userId: user.id, key }, err));
-    await db.delete(upload).where(eq(upload.id, id)).catch((err) => console.error("Failed to clean up orphaned avatar upload record:", { userId: user.id, uploadId: id }, err));
+    await deleteObject(storage, key).catch((err) =>
+      console.error("Failed to clean up orphaned avatar R2 object:", { userId: user.id, key }, err)
+    );
+    await db
+      .delete(upload)
+      .where(eq(upload.id, id))
+      .catch((err) =>
+        console.error(
+          "Failed to clean up orphaned avatar upload record:",
+          { userId: user.id, uploadId: id },
+          err
+        )
+      );
     console.error("Failed to save upload record:", { userId: user.id, uploadId: id, key }, error);
     return errorResponse(c, "Failed to save upload", 500);
   }
 
   // Clean up old avatar AFTER new one is fully saved
   if (oldAvatar) {
-    await deleteObject(storage, oldAvatar.key).catch((err) => console.error("Failed to delete old avatar R2 object:", { userId: user.id, key: oldAvatar.key }, err));
-    await db.delete(upload).where(eq(upload.id, oldAvatar.id)).catch((err) => console.error("Failed to delete old avatar upload record:", { userId: user.id, uploadId: oldAvatar.id }, err));
+    await deleteObject(storage, oldAvatar.key).catch((err) =>
+      console.error(
+        "Failed to delete old avatar R2 object:",
+        { userId: user.id, key: oldAvatar.key },
+        err
+      )
+    );
+    await db
+      .delete(upload)
+      .where(eq(upload.id, oldAvatar.id))
+      .catch((err) =>
+        console.error(
+          "Failed to delete old avatar upload record:",
+          { userId: user.id, uploadId: oldAvatar.id },
+          err
+        )
+      );
   }
 
   return c.json({
@@ -173,7 +199,7 @@ const PUBLIC_UPLOAD_PURPOSE = "avatar";
  */
 function patPermitsProject(
   c: Context<AppEnv>,
-  owner: { id: string; workspaceId: string },
+  owner: { id: string; workspaceId: string }
 ): boolean {
   return tokenAllowsProject(c.get("apiToken"), owner);
 }
@@ -255,7 +281,7 @@ const MAX_COVER_CLAIMS_EXAMINED = 8;
 async function resolveCoverOwner<TRow extends { id: string }>(
   claims: TRow[],
   getUploaderId: () => Promise<string | null>,
-  uploaderCanReach: (entityId: string, uploaderId: string) => Promise<boolean>,
+  uploaderCanReach: (entityId: string, uploaderId: string) => Promise<boolean>
 ): Promise<TRow | null> {
   if (claims.length === 0) return null;
   if (claims.length === 1) return claims[0];
@@ -284,11 +310,7 @@ async function resolveCoverOwner<TRow extends { id: string }>(
  * this key. Returns `null` when there is no record, or when the uploader's
  * account has since been deleted (`ON DELETE SET NULL`).
  */
-async function uploaderOfKey(
-  db: Database,
-  key: string,
-  purpose: string,
-): Promise<string | null> {
+async function uploaderOfKey(db: Database, key: string, purpose: string): Promise<string | null> {
   const [row] = await db
     .select({ userId: upload.userId })
     .from(upload)
@@ -342,7 +364,7 @@ async function isUploadAuthorized(
   db: Database,
   purpose: string,
   key: string,
-  userId: string,
+  userId: string
 ): Promise<boolean> {
   switch (purpose) {
     case PUBLIC_UPLOAD_PURPOSE:
@@ -384,7 +406,7 @@ async function isUploadAuthorized(
         async (taskId, uploaderId) => {
           const r = await resolveTaskAccess(db, taskId, uploaderId);
           return r.found && r.access !== null;
-        },
+        }
       );
       if (!row) return false;
 
@@ -402,7 +424,7 @@ async function isUploadAuthorized(
           .limit(MAX_COVER_CLAIMS_EXAMINED),
         () => uploaderOfKey(db, key, purpose),
         async (projectId, uploaderId) =>
-          (await resolveProjectAccess(db, projectId, uploaderId)) !== null,
+          (await resolveProjectAccess(db, projectId, uploaderId)) !== null
       );
       if (!row) return false;
 
@@ -492,10 +514,7 @@ export async function serveUpload(c: Context<AppEnv>) {
   }
 
   const isPublic = purpose === PUBLIC_UPLOAD_PURPOSE;
-  c.header(
-    "Cache-Control",
-    `${isPublic ? "public" : "private"}, max-age=31536000, immutable`,
-  );
+  c.header("Cache-Control", `${isPublic ? "public" : "private"}, max-age=31536000, immutable`);
 
   const contentType = object.httpMetadata?.contentType ?? "application/octet-stream";
   c.header("Content-Type", contentType);
@@ -537,7 +556,11 @@ export async function deleteUpload(c: Context<AppEnv>) {
   }
 
   await deleteObject(storage, record.key).catch((err) => {
-    console.error("Failed to delete object from storage:", { userId: user.id, uploadId: id, key: record.key }, err);
+    console.error(
+      "Failed to delete object from storage:",
+      { userId: user.id, uploadId: id, key: record.key },
+      err
+    );
   });
 
   return c.json({ ok: true });

@@ -1,15 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  Search,
-} from "lucide-react";
-import {
-  type KeyboardEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Search } from "lucide-react";
+import { type KeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useOnlineOnly } from "@/web/components/sync/use-online-only";
@@ -78,16 +69,20 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
   const debouncedQuery = useDebounce(query, 200);
   const { recents, addRecent } = useRecents(workspace.id);
   const { favorites } = useFavorites(workspace.id);
-  const favoriteProjects = useMemo(() =>
-    projects.filter((p) => favorites.includes(p.id)),
-    [projects, favorites],
+  const favoriteProjects = useMemo(
+    () => projects.filter((p) => favorites.includes(p.id)),
+    [projects, favorites]
   );
 
-  const { data, isFetching, isError: isSearchError } = useQuery({
+  const {
+    data,
+    isFetching,
+    isError: isSearchError,
+  } = useQuery({
     queryKey: queryKeys.workspaces.search(workspace.id, debouncedQuery),
     queryFn: () =>
       api.get<SearchResponse>(
-        `/api/workspaces/${workspace.id}/search?q=${encodeURIComponent(debouncedQuery)}&limit=20`,
+        `/api/workspaces/${workspace.id}/search?q=${encodeURIComponent(debouncedQuery)}&limit=20`
       ),
     enabled: open && online && debouncedQuery.length >= 1,
   });
@@ -142,9 +137,10 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
     // broken empty. Nothing is hidden by this: the Projects page and dashboard
     // still explain the policy in words.
     // Offline counts as refused for the same reason: creating a project needs a connection.
-    const available = canCreateProject && online
-      ? QUICK_ACTIONS
-      : QUICK_ACTIONS.filter((item) => item.action !== "create-project");
+    const available =
+      canCreateProject && online
+        ? QUICK_ACTIONS
+        : QUICK_ACTIONS.filter((item) => item.action !== "create-project");
     if (!query.trim()) return available;
     const q = query.toLowerCase();
     return available.filter((item) => item.label.toLowerCase().includes(q));
@@ -276,7 +272,7 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
       }
       onClose();
     },
-    [workspace.slug, navigate, onClose, onAction, addRecent],
+    [workspace.slug, navigate, onClose, onAction, addRecent]
   );
 
   const handleKeyDown = useCallback(
@@ -292,7 +288,7 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
         handleSelect(allItems[activeIndex]);
       }
     },
-    [allItems, activeIndex, handleSelect],
+    [allItems, activeIndex, handleSelect]
   );
 
   return (
@@ -305,7 +301,10 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
             ref={inputRef}
             type="text"
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setActiveIndex(0); }}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setActiveIndex(0);
+            }}
             placeholder="Search or jump to..."
             className="command-palette__input"
             role="combobox"
@@ -329,13 +328,17 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
             </div>
           )}
 
-          {!searchOffline && !isSearchError && debouncedQuery.length >= 1 && !isFetching && allItems.length === 0 && (
-            <div className="command-palette__empty">
-              <Text variant="body-3" color="muted">
-                No results for &ldquo;{debouncedQuery}&rdquo;
-              </Text>
-            </div>
-          )}
+          {!searchOffline &&
+            !isSearchError &&
+            debouncedQuery.length >= 1 &&
+            !isFetching &&
+            allItems.length === 0 && (
+              <div className="command-palette__empty">
+                <Text variant="body-3" color="muted">
+                  No results for &ldquo;{debouncedQuery}&rdquo;
+                </Text>
+              </div>
+            )}
 
           {!query.trim() && allItems.length === 0 && (
             <div className="command-palette__empty">
@@ -371,12 +374,12 @@ export function CommandPalette({ open, onClose, onAction }: CommandPaletteProps)
                 >
                   {renderItemIcon(item)}
                   <div className="command-palette__item-content">
-                    <span className="command-palette__item-title">
-                      {getItemLabel(item)}
-                    </span>
+                    <span className="command-palette__item-title">{getItemLabel(item)}</span>
                     {(() => {
                       const ctx = getItemContext(item);
-                      return ctx ? <span className="command-palette__item-context">{ctx}</span> : null;
+                      return ctx ? (
+                        <span className="command-palette__item-context">{ctx}</span>
+                      ) : null;
                     })()}
                   </div>
                   {renderItemBadge(item)}

@@ -94,7 +94,7 @@ describe("jitteredInterval", () => {
     "rejects a base of %s rather than producing a hot timer",
     (base) => {
       expect(() => jitteredInterval(base)).toThrow(RangeError);
-    },
+    }
   );
 
   it.each([-0.1, 1, 1.5, NaN, Infinity])("rejects a ratio of %s", (ratio) => {

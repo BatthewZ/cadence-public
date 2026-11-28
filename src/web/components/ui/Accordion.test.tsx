@@ -5,10 +5,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { Accordion } from "./Accordion";
 
-function renderAccordion(props: {
-  mode?: "single" | "multiple";
-  defaultValue?: string | string[];
-} = {}) {
+function renderAccordion(
+  props: {
+    mode?: "single" | "multiple";
+    defaultValue?: string | string[];
+  } = {}
+) {
   const { mode, defaultValue } = props;
   return render(
     <Accordion mode={mode} defaultValue={defaultValue}>
@@ -24,7 +26,7 @@ function renderAccordion(props: {
         <Accordion.Trigger>Section C</Accordion.Trigger>
         <Accordion.Content>Content C</Accordion.Content>
       </Accordion.Item>
-    </Accordion>,
+    </Accordion>
   );
 }
 
@@ -102,17 +104,35 @@ describe("Accordion", () => {
   it("defaultExpanded prop opens items initially", () => {
     renderAccordion({ defaultValue: "b" });
 
-    expect(screen.getByRole("button", { name: "Section A" })).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByRole("button", { name: "Section B" })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: "Section C" })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Section A" })).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    );
+    expect(screen.getByRole("button", { name: "Section B" })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
+    expect(screen.getByRole("button", { name: "Section C" })).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    );
   });
 
   it("defaultValue accepts array for multiple mode", () => {
     renderAccordion({ mode: "multiple", defaultValue: ["a", "c"] });
 
-    expect(screen.getByRole("button", { name: "Section A" })).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: "Section B" })).toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByRole("button", { name: "Section C" })).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: "Section A" })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
+    expect(screen.getByRole("button", { name: "Section B" })).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    );
+    expect(screen.getByRole("button", { name: "Section C" })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
   });
 
   it("trigger has aria-expanded attribute matching state", async () => {
@@ -171,7 +191,7 @@ describe("Accordion", () => {
           <Accordion.Trigger>Disabled Section</Accordion.Trigger>
           <Accordion.Content>Disabled Content</Accordion.Content>
         </Accordion.Item>
-      </Accordion>,
+      </Accordion>
     );
 
     const trigger = screen.getByRole("button", { name: "Disabled Section" });
@@ -192,7 +212,7 @@ describe("Accordion", () => {
           <Accordion.Trigger>Section A</Accordion.Trigger>
           <Accordion.Content>Content A</Accordion.Content>
         </Accordion.Item>
-      </Accordion>,
+      </Accordion>
     );
 
     expect(ref.current).toBeInstanceOf(HTMLDivElement);
@@ -221,7 +241,7 @@ describe("Accordion", () => {
           <Accordion.Trigger>Section A</Accordion.Trigger>
           <Accordion.Content>Content A</Accordion.Content>
         </Accordion.Item>
-      </Accordion>,
+      </Accordion>
     );
 
     await user.click(screen.getByRole("button", { name: "Section A" }));

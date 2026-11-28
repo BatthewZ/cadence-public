@@ -32,14 +32,16 @@ function daysAgoSeconds(days: number): number {
 async function seedKey(key: string, ageDays: number, status: number | null = 201): Promise<void> {
   await d1
     .prepare(
-      "INSERT INTO idempotency_key (userId, key, method, path, fingerprint, status, responseBody, createdAt) VALUES (?, ?, 'POST', '/api/x', 'f', ?, '{}', ?)",
+      "INSERT INTO idempotency_key (userId, key, method, path, fingerprint, status, responseBody, createdAt) VALUES (?, ?, 'POST', '/api/x', 'f', ?, '{}', ?)"
     )
     .bind(TEST_USER.id, key, status, daysAgoSeconds(ageDays))
     .run();
 }
 
 async function remainingKeys(): Promise<string[]> {
-  const { results } = await d1.prepare("SELECT key FROM idempotency_key ORDER BY key").all<{ key: string }>();
+  const { results } = await d1
+    .prepare("SELECT key FROM idempotency_key ORDER BY key")
+    .all<{ key: string }>();
   return results.map((r) => r.key);
 }
 
@@ -60,7 +62,9 @@ describe("cleanupIdempotencyKeys", () => {
   });
 
   it("deletes past a single batch", { timeout: 15_000 }, async () => {
-    await Promise.all(Array.from({ length: 150 }, (_, i) => seedKey(`k${i}`, IDEMPOTENCY_TTL_DAYS + 2)));
+    await Promise.all(
+      Array.from({ length: 150 }, (_, i) => seedKey(`k${i}`, IDEMPOTENCY_TTL_DAYS + 2))
+    );
 
     expect(await cleanupIdempotencyKeys(createDb(d1))).toBe(150);
     expect(await remainingKeys()).toEqual([]);
@@ -76,7 +80,10 @@ describe("cleanupIdempotencyKeys", () => {
       TOKEN_HASH_PEPPER: "test-pepper",
       ASSETS: {} as Fetcher,
     };
-    await handleScheduled({ scheduledTime: Date.now(), cron: "*/5 * * * *" } as ScheduledEvent, env);
+    await handleScheduled(
+      { scheduledTime: Date.now(), cron: "*/5 * * * *" } as ScheduledEvent,
+      env
+    );
 
     expect(await remainingKeys()).toEqual([]);
   });

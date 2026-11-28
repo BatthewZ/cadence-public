@@ -1,9 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Copy,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Copy, Trash2, X } from "lucide-react";
 import { useState } from "react";
 
 import type { TaskPriority } from "@/shared/types/roles";
@@ -39,8 +35,14 @@ interface BulkActionBarProps {
 /* ------------------------------------------------------------------ */
 
 export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarProps) {
-  const { addTask: ctxAddTask, updateTask: ctxUpdateTask, removeTask: ctxRemoveTask, tasks, members, taskGroups } =
-    useProject();
+  const {
+    addTask: ctxAddTask,
+    updateTask: ctxUpdateTask,
+    removeTask: ctxRemoveTask,
+    tasks,
+    members,
+    taskGroups,
+  } = useProject();
   const { workspace, members: workspaceMembers } = useWorkspace();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -55,17 +57,18 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
   const selectedTasks = tasks.filter((t) => selectedIds.has(t.id));
 
   // Use workspace members for assignee list, fall back to project members
-  const assigneeList = workspaceMembers.length > 0
-    ? workspaceMembers.map((m) => ({
-        userId: m.userId ?? m.id,
-        name: m.user?.name ?? "Unknown",
-        image: m.user?.image ?? null,
-      }))
-    : members.map((m) => ({
-        userId: m.userId,
-        name: m.name,
-        image: m.image ?? null,
-      }));
+  const assigneeList =
+    workspaceMembers.length > 0
+      ? workspaceMembers.map((m) => ({
+          userId: m.userId ?? m.id,
+          name: m.user?.name ?? "Unknown",
+          image: m.user?.image ?? null,
+        }))
+      : members.map((m) => ({
+          userId: m.userId,
+          name: m.name,
+          image: m.image ?? null,
+        }));
 
   /* ---- Helpers ---- */
 
@@ -88,7 +91,7 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
     optimisticFields: Record<string, unknown>,
     apiPayload: Record<string, unknown>,
     getRollback: (t: Task) => Record<string, unknown>,
-    labelFor: (t: Task) => string,
+    labelFor: (t: Task) => string
   ) {
     const rollbacks = selectedTasks.map((t) => ({ id: t.id, ...getRollback(t) }));
     for (const t of selectedTasks) {
@@ -125,7 +128,7 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
       { priority },
       { priority },
       (t) => ({ priority: t.priority }),
-      (t) => `Set priority of “${t.title}”`,
+      (t) => `Set priority of “${t.title}”`
     );
   }
 
@@ -134,7 +137,7 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
       { assigneeId, assigneeName: assigneeName ?? undefined },
       { assigneeId },
       (t) => ({ assigneeId: t.assigneeId, assigneeName: t.assigneeName }),
-      (t) => `Assign “${t.title}”`,
+      (t) => `Assign “${t.title}”`
     );
   }
 
@@ -143,7 +146,7 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
       { dueDate },
       { dueDate },
       (t) => ({ dueDate: t.dueDate }),
-      (t) => `Set due date of “${t.title}”`,
+      (t) => `Set due date of “${t.title}”`
     );
   }
 
@@ -182,7 +185,9 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
       );
       if (results.some((r) => r.status === "sent")) {
         invalidateSelectedTasks();
-        void qc.invalidateQueries({ queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id) });
+        void qc.invalidateQueries({
+          queryKey: queryKeys.workspaces.dashboardMyTasksPrefix(workspace.id),
+        });
       }
       toast(pluralTasks("Moved"), { variant: "success" });
       onClearSelection();
@@ -239,7 +244,7 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
         failed.length === deleted.length
           ? "Failed to delete tasks"
           : `Failed to delete ${failed.length} of ${deleted.length} tasks`,
-        { variant: "error" },
+        { variant: "error" }
       );
     } else {
       toast(pluralTasks("Deleted"), { variant: "success" });
@@ -264,10 +269,16 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
         <PriorityDropdown onSelect={(p) => void handleBulkPriority(p)} />
 
         {/* Assign to */}
-        <AssignDropdown members={assigneeList} onSelect={(id, name) => void handleBulkAssign(id, name)} />
+        <AssignDropdown
+          members={assigneeList}
+          onSelect={(id, name) => void handleBulkAssign(id, name)}
+        />
 
         {/* Move to section */}
-        <MoveToGroupDropdown taskGroups={taskGroups} onSelect={(id) => void handleBulkMoveToGroup(id)} />
+        <MoveToGroupDropdown
+          taskGroups={taskGroups}
+          onSelect={(id) => void handleBulkMoveToGroup(id)}
+        />
 
         {/* Set due date */}
         <DueDatePopover onSelect={(d) => void handleBulkSetDueDate(d)} />
@@ -300,11 +311,7 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
         <div className="w-px h-5 bg-border-default" />
 
         {/* Clear selection */}
-        <IconButton
-          aria-label="Clear selection"
-          className="size-7"
-          onClick={onClearSelection}
-        >
+        <IconButton aria-label="Clear selection" className="size-7" onClick={onClearSelection}>
           <X size={14} />
         </IconButton>
       </div>
@@ -316,8 +323,8 @@ export function BulkActionBar({ selectedIds, onClearSelection }: BulkActionBarPr
         title="Delete tasks"
         confirming={deleting}
       >
-        Are you sure you want to delete {count} task{count !== 1 ? "s" : ""}? This action
-        cannot be undone.
+        Are you sure you want to delete {count} task{count !== 1 ? "s" : ""}? This action cannot be
+        undone.
       </ConfirmDialog>
     </>
   );

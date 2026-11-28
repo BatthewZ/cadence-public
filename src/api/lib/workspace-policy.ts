@@ -28,7 +28,7 @@ import {
  */
 export async function loadWorkspacePolicy(
   db: Database,
-  workspaceId: string,
+  workspaceId: string
 ): Promise<WorkspacePolicy> {
   const [row] = await db
     .select({ policy: workspace.policy })

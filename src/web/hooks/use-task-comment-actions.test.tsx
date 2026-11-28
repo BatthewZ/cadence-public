@@ -12,9 +12,8 @@ import { useTaskCommentActions } from "./use-task-comment-actions";
 import type { CommentsPage } from "./use-task-comments";
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -57,12 +56,18 @@ function setup() {
     pages: [{ comments: [existing], nextCursor: null }],
     pageParams: [undefined],
   });
-  queryClient.setQueryData(queryKeys.tasks.detail(TASK_ID), { task: { id: TASK_ID, title: "Fix login" } });
+  queryClient.setQueryData(queryKeys.tasks.detail(TASK_ID), {
+    task: { id: TASK_ID, title: "Fix login" },
+  });
   const invalidateTaskQueries = vi.fn();
   const toast = vi.fn(() => "toast-id");
   // The board's cached card, and the panel's own copy of the task: both show 1 comment.
-  queryClient.setQueryData(queryKeys.projects.tasks(PROJECT_ID), { tasks: [{ id: TASK_ID, commentCount: 1 }] });
-  const local = { current: { id: TASK_ID, title: "Fix login", commentCount: 1 } as TaskDetail | null };
+  queryClient.setQueryData(queryKeys.projects.tasks(PROJECT_ID), {
+    tasks: [{ id: TASK_ID, commentCount: 1 }],
+  });
+  const local = {
+    current: { id: TASK_ID, title: "Fix login", commentCount: 1 } as TaskDetail | null,
+  };
   const setLocalTask = (next: SetStateAction<TaskDetail | null>) => {
     local.current = typeof next === "function" ? next(local.current) : next;
   };
@@ -80,12 +85,13 @@ function setup() {
         setLocalTask,
         projectId: PROJECT_ID,
       }),
-    { wrapper: Wrapper },
+    { wrapper: Wrapper }
   );
   const counts = () => ({
     panel: local.current?.commentCount,
-    card: queryClient.getQueryData<{ tasks: { commentCount: number }[] }>(queryKeys.projects.tasks(PROJECT_ID))?.tasks[0]
-      .commentCount,
+    card: queryClient.getQueryData<{ tasks: { commentCount: number }[] }>(
+      queryKeys.projects.tasks(PROJECT_ID)
+    )?.tasks[0].commentCount,
   });
   return { queryClient, result, invalidateTaskQueries, toast, counts };
 }
@@ -134,10 +140,17 @@ describe("useTaskCommentActions — add comment", () => {
       expect(mockPost).toHaveBeenCalledWith(`/api/tasks/${TASK_ID}/comments`, {
         id: NEW_ID,
         body: "Looks good",
-      }),
+      })
     );
 
-    const serverRow: Comment = { ...existing, id: NEW_ID, body: "Looks good", authorId: "u-1", authorName: "Ada", createdAt: "2026-01-02T00:00:00.000Z" };
+    const serverRow: Comment = {
+      ...existing,
+      id: NEW_ID,
+      body: "Looks good",
+      authorId: "u-1",
+      authorName: "Ada",
+      createdAt: "2026-01-02T00:00:00.000Z",
+    };
     await act(async () => {
       resolvePost({ comment: serverRow });
       await pending;
@@ -152,7 +165,7 @@ describe("useTaskCommentActions — add comment", () => {
     await addComment(result, "Hi");
 
     expect(mockSendWrite).toHaveBeenCalledWith(
-      expect.objectContaining({ method: "POST", label: "Comment on “Fix login”" }),
+      expect.objectContaining({ method: "POST", label: "Comment on “Fix login”" })
     );
   });
 
@@ -189,7 +202,7 @@ describe("useTaskCommentActions — add comment", () => {
     await addComment(result, "On the train");
 
     expect(mockSendWrite).toHaveBeenCalledWith(
-      expect.objectContaining({ body: { id: NEW_ID, body: "On the train" } }),
+      expect.objectContaining({ body: { id: NEW_ID, body: "On the train" } })
     );
   });
 

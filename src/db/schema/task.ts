@@ -22,9 +22,7 @@ export const taskGroup = sqliteTable(
       .references(() => project.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     color: text("color"),
-    isCompletionGroup: integer("is_completion_group", { mode: "boolean" })
-      .notNull()
-      .default(false),
+    isCompletionGroup: integer("is_completion_group", { mode: "boolean" }).notNull().default(false),
     position: text("position").notNull(),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
@@ -32,11 +30,8 @@ export const taskGroup = sqliteTable(
   (table) => [
     index("task_group_project_idx").on(table.projectId),
     index("task_group_project_updated_idx").on(table.projectId, table.updatedAt),
-    uniqueIndex("task_group_project_position_unique_idx").on(
-      table.projectId,
-      table.position,
-    ),
-  ],
+    uniqueIndex("task_group_project_position_unique_idx").on(table.projectId, table.position),
+  ]
 );
 
 export const task = sqliteTable(
@@ -74,7 +69,7 @@ export const task = sqliteTable(
      */
     startDate: integer("startDate", { mode: "timestamp" }),
     dueDate: integer("dueDate", { mode: "timestamp" }),
-    cost: integer("cost"),  // cost in cents (nullable, optional)
+    cost: integer("cost"), // cost in cents (nullable, optional)
     icon: text("icon"),
     coverImageKey: text("cover_image_key"),
     coverImagePosition: integer("cover_image_position"),
@@ -117,17 +112,14 @@ export const task = sqliteTable(
       .on(table.recurrenceParentId)
       .where(sql`recurrence_parent_id IS NOT NULL`),
     index("task_recurrence_series_idx").on(table.recurrenceSeriesId),
-    uniqueIndex("task_group_position_unique_idx").on(
-      table.taskGroupId,
-      table.position,
-    ),
+    uniqueIndex("task_group_position_unique_idx").on(table.taskGroupId, table.position),
     // Partial unique index backing import dedupe: one task per (project,
     // source event UID). Partial because non-imported tasks all have NULL
     // source_uid and must not collide. See the `sourceUid` column JSDoc.
     uniqueIndex("task_project_source_uid_unique_idx")
       .on(table.projectId, table.sourceUid)
       .where(sql`source_uid IS NOT NULL`),
-  ],
+  ]
 );
 
 export const subtask = sqliteTable(
@@ -144,11 +136,8 @@ export const subtask = sqliteTable(
   },
   (table) => [
     index("subtask_task_idx").on(table.taskId),
-    uniqueIndex("subtask_task_position_unique_idx").on(
-      table.taskId,
-      table.position,
-    ),
-  ],
+    uniqueIndex("subtask_task_position_unique_idx").on(table.taskId, table.position),
+  ]
 );
 
 export const comment = sqliteTable(
@@ -165,7 +154,7 @@ export const comment = sqliteTable(
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull(),
   },
-  (table) => [index("comment_task_created_idx").on(table.taskId, table.createdAt)],
+  (table) => [index("comment_task_created_idx").on(table.taskId, table.createdAt)]
 );
 
 export const taskActivity = sqliteTable(
@@ -185,5 +174,5 @@ export const taskActivity = sqliteTable(
     apiTokenId: text("apiTokenId").references(() => apiToken.id, { onDelete: "set null" }),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
   },
-  (table) => [index("task_activity_task_idx").on(table.taskId, table.createdAt)],
+  (table) => [index("task_activity_task_idx").on(table.taskId, table.createdAt)]
 );

@@ -23,13 +23,17 @@ export async function copyTaskRelations(
   db: Database,
   sourceTaskId: string,
   targetTaskId: string,
-  options?: CopyTaskRelationsOptions,
+  options?: CopyTaskRelationsOptions
 ): Promise<{ subtaskCount: number; labels: { id: string; name: string; color: string }[] }> {
   const resetSubtaskCompletion = options?.resetSubtaskCompletion ?? false;
 
   // Batch-fetch subtasks and labels for the source task in a single round-trip
   const [sourceSubtasks, sourceLabels] = await db.batch([
-    db.select().from(subtask).where(eq(subtask.taskId, sourceTaskId)).orderBy(asc(subtask.position), asc(subtask.id)),
+    db
+      .select()
+      .from(subtask)
+      .where(eq(subtask.taskId, sourceTaskId))
+      .orderBy(asc(subtask.position), asc(subtask.id)),
     db
       .select({
         labelId: taskLabel.labelId,
@@ -67,7 +71,11 @@ export async function copyTaskRelations(
         .delete(task)
         .where(eq(task.id, targetTaskId))
         .catch((cleanupError) =>
-          console.error("Failed to clean up task after subtask insert failure:", { sourceTaskId, targetTaskId }, cleanupError),
+          console.error(
+            "Failed to clean up task after subtask insert failure:",
+            { sourceTaskId, targetTaskId },
+            cleanupError
+          )
         );
       throwWithContext(error, "copyTaskRelations.subtasks");
     }
@@ -82,7 +90,7 @@ export async function copyTaskRelations(
           taskId: targetTaskId,
           labelId: sl.labelId,
           createdAt: now,
-        })),
+        }))
       );
     } catch (error) {
       // Attempt cleanup of the already-inserted target task (cascades subtasks)
@@ -90,7 +98,11 @@ export async function copyTaskRelations(
         .delete(task)
         .where(eq(task.id, targetTaskId))
         .catch((cleanupError) =>
-          console.error("Failed to clean up task after label insert failure:", { sourceTaskId, targetTaskId }, cleanupError),
+          console.error(
+            "Failed to clean up task after label insert failure:",
+            { sourceTaskId, targetTaskId },
+            cleanupError
+          )
         );
       throwWithContext(error, "copyTaskRelations.labels");
     }

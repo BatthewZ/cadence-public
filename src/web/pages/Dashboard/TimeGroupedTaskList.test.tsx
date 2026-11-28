@@ -10,9 +10,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // ---------------------------------------------------------------------------
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>(
-    "@/web/lib/api/client",
-  );
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
     api: Object.assign(vi.fn(), {
@@ -65,7 +64,8 @@ class IntersectionObserverStub {
   unobserve() {}
   disconnect() {}
 }
-globalThis.IntersectionObserver = IntersectionObserverStub as unknown as typeof IntersectionObserver;
+globalThis.IntersectionObserver =
+  IntersectionObserverStub as unknown as typeof IntersectionObserver;
 
 // Polyfill window.matchMedia for jsdom (used by use-reduced-motion hook)
 Object.defineProperty(window, "matchMedia", {
@@ -174,7 +174,7 @@ describe("Dashboard — TimeGroupedTaskList", () => {
     render(
       <Wrapper>
         <Dashboard />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -212,7 +212,7 @@ describe("Dashboard — TimeGroupedTaskList", () => {
     render(
       <Wrapper>
         <Dashboard />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -248,7 +248,7 @@ describe("Dashboard — TimeGroupedTaskList", () => {
     render(
       <Wrapper>
         <Dashboard />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -284,7 +284,7 @@ describe("Dashboard — TimeGroupedTaskList", () => {
     render(
       <Wrapper>
         <Dashboard />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {
@@ -328,7 +328,7 @@ describe("Dashboard — TimeGroupedTaskList", () => {
     render(
       <Wrapper>
         <Dashboard />
-      </Wrapper>,
+      </Wrapper>
     );
 
     await waitFor(() => {

@@ -28,11 +28,7 @@ import type { Task } from "@/web/contexts/ProjectContext";
 import { useWorkspace } from "@/web/contexts/WorkspaceContext";
 import { useDocumentTitle } from "@/web/hooks/use-document-title";
 import { usePrefersReducedMotion } from "@/web/hooks/use-reduced-motion";
-import {
-  FILTER_NONE,
-  parseDateParam,
-  parsePriorities,
-} from "@/web/hooks/use-task-filters";
+import { FILTER_NONE, parseDateParam, parsePriorities } from "@/web/hooks/use-task-filters";
 import { useWorkspaceLabels } from "@/web/hooks/use-workspace-labels";
 import { useWorkspaceProjects } from "@/web/hooks/use-workspace-projects";
 import { useWorkspaceTaskGroups } from "@/web/hooks/use-workspace-task-groups";
@@ -41,7 +37,11 @@ import { sendWrite } from "@/web/lib/offline/send-write";
 import { queryKeys } from "@/web/lib/query-keys";
 import { completionChange, completionFields, taskCompletionWrite } from "@/web/lib/task-writes";
 import { formatDueDate, isDueToday, isOverdue } from "@/web/util/date";
-import { getPriorityBadgeVariant, getPriorityLabel, PRIORITY_SORT_ORDER } from "@/web/util/task-display";
+import {
+  getPriorityBadgeVariant,
+  getPriorityLabel,
+  PRIORITY_SORT_ORDER,
+} from "@/web/util/task-display";
 
 import { MyTasksFilterBar } from "./MyTasksFilterBar";
 
@@ -111,7 +111,12 @@ function getApiPeriod(tab: FilterTab): string | undefined {
 /* ------------------------------------------------------------------ */
 
 function parseIdList(raw: string | null): string[] {
-  return raw ? raw.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  return raw
+    ? raw
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    : [];
 }
 
 /**
@@ -168,11 +173,11 @@ export default function MyTasks() {
 
   const selectedProjectIds = useMemo(
     () => parseIdList(searchParams.get("project")),
-    [searchParams],
+    [searchParams]
   );
   const selectedTaskGroupIds = useMemo(
     () => parseIdList(searchParams.get("taskGroup")),
-    [searchParams],
+    [searchParams]
   );
   /**
    * The remaining filter dimensions parse through the same validators the
@@ -184,20 +189,17 @@ export default function MyTasks() {
    */
   const selectedPriorities = useMemo(
     () => parsePriorities(searchParams.get("priority")),
-    [searchParams],
+    [searchParams]
   );
   const dueDateFrom = useMemo(
     () => parseDateParam(searchParams.get("dueDateFrom")),
-    [searchParams],
+    [searchParams]
   );
-  const dueDateTo = useMemo(
-    () => parseDateParam(searchParams.get("dueDateTo")),
-    [searchParams],
-  );
+  const dueDateTo = useMemo(() => parseDateParam(searchParams.get("dueDateTo")), [searchParams]);
   const noDueDate = searchParams.get("noDueDate") === "true";
   const selectedLabelNames = useMemo(
     () => parseLabelNameList(searchParams.get("label")),
-    [searchParams],
+    [searchParams]
   );
   const noLabel = searchParams.get("noLabel") === "true";
 
@@ -210,10 +212,10 @@ export default function MyTasks() {
           else params.delete("project");
           return params;
         },
-        { replace: true },
+        { replace: true }
       );
     },
-    [setSearchParams],
+    [setSearchParams]
   );
 
   const setTaskGroupFilter = useCallback(
@@ -225,10 +227,10 @@ export default function MyTasks() {
           else params.delete("taskGroup");
           return params;
         },
-        { replace: true },
+        { replace: true }
       );
     },
-    [setSearchParams],
+    [setSearchParams]
   );
 
   const setPriorityFilter = useCallback(
@@ -240,10 +242,10 @@ export default function MyTasks() {
           else params.delete("priority");
           return params;
         },
-        { replace: true },
+        { replace: true }
       );
     },
-    [setSearchParams],
+    [setSearchParams]
   );
 
   /**
@@ -273,10 +275,10 @@ export default function MyTasks() {
           }
           return params;
         },
-        { replace: true },
+        { replace: true }
       );
     },
-    [setSearchParams],
+    [setSearchParams]
   );
 
   /**
@@ -301,10 +303,10 @@ export default function MyTasks() {
           else params.delete("noLabel");
           return params;
         },
-        { replace: true },
+        { replace: true }
       );
     },
-    [setSearchParams],
+    [setSearchParams]
   );
 
   /**
@@ -323,7 +325,7 @@ export default function MyTasks() {
         for (const param of MY_TASKS_FILTER_PARAMS) params.delete(param);
         return params;
       },
-      { replace: true },
+      { replace: true }
     );
   }, [setSearchParams]);
 
@@ -336,17 +338,11 @@ export default function MyTasks() {
    */
   const projects = useMemo(
     () => (projectsQuery.data?.projects ?? []).filter((p) => p.status === "active"),
-    [projectsQuery.data],
+    [projectsQuery.data]
   );
 
-  const taskGroupsQuery = useWorkspaceTaskGroups(
-    workspace.id,
-    selectedProjectIds,
-  );
-  const taskGroups = useMemo(
-    () => taskGroupsQuery.data?.taskGroups ?? [],
-    [taskGroupsQuery.data],
-  );
+  const taskGroupsQuery = useWorkspaceTaskGroups(workspace.id, selectedProjectIds);
+  const taskGroups = useMemo(() => taskGroupsQuery.data?.taskGroups ?? [], [taskGroupsQuery.data]);
 
   /**
    * Workspace-wide deduplicated label options (name-keyed — see
@@ -355,10 +351,7 @@ export default function MyTasks() {
    * already scopes them to active projects the user can see.
    */
   const labelsQuery = useWorkspaceLabels(workspace.id);
-  const labels = useMemo(
-    () => labelsQuery.data?.labels ?? [],
-    [labelsQuery.data],
-  );
+  const labels = useMemo(() => labelsQuery.data?.labels ?? [], [labelsQuery.data]);
 
   /**
    * Prune selected task-group ids that are no longer valid for the current
@@ -401,7 +394,7 @@ export default function MyTasks() {
           noDueDate,
           labelNames: selectedLabelNames,
           noLabel,
-        },
+        }
       ),
     [
       workspace.id,
@@ -414,7 +407,7 @@ export default function MyTasks() {
       noDueDate,
       selectedLabelNames,
       noLabel,
-    ],
+    ]
   );
 
   const myTasksQuery = useInfiniteQuery<MyTasksResponse>({
@@ -443,7 +436,7 @@ export default function MyTasks() {
       }
       if (noLabel) params.set("noLabel", "true");
       return api.get<MyTasksResponse>(
-        `/api/workspaces/${workspace.id}/dashboard/my-tasks?${params.toString()}`,
+        `/api/workspaces/${workspace.id}/dashboard/my-tasks?${params.toString()}`
       );
     },
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
@@ -462,7 +455,7 @@ export default function MyTasks() {
 
   const allTasks = useMemo(
     () => (data?.pages.flatMap((p) => p.tasks) ?? []).map(normalizeMyTask),
-    [data?.pages],
+    [data?.pages]
   );
 
   /** Apply client-side filter for "today" and "overdue" tabs. */
@@ -492,12 +485,7 @@ export default function MyTasks() {
   // Custom sort comparator for priority and dueDate
   const sortComparator = useMemo(
     () =>
-      (
-        a: MyTask,
-        b: MyTask,
-        columnKey: string,
-        direction: "asc" | "desc",
-      ): number => {
+      (a: MyTask, b: MyTask, columnKey: string, direction: "asc" | "desc"): number => {
         let result: number;
 
         if (columnKey === "priority") {
@@ -515,7 +503,7 @@ export default function MyTasks() {
 
         return direction === "desc" ? -result : result;
       },
-    [],
+    []
   );
 
   const handleCompleteTask = useCallback(
@@ -536,7 +524,9 @@ export default function MyTasks() {
 
       // The project's board, if cached, shows the task completed and in its completion group at
       // once too: offline, nothing else moves it until the queue syncs.
-      const projectId = previousData?.pages.flatMap((p) => p.tasks).find((t) => t.id === taskId)?.projectId;
+      const projectId = previousData?.pages
+        .flatMap((p) => p.tasks)
+        .find((t) => t.id === taskId)?.projectId;
       const boardKey = projectId ? queryKeys.projects.tasks(projectId) : null;
       const onBoard = boardKey
         ? qc.getQueryData<{ tasks: Task[] }>(boardKey)?.tasks.find((t) => t.id === taskId)
@@ -545,7 +535,7 @@ export default function MyTasks() {
       const patchBoard = (fields: Partial<Task>) => {
         if (!boardKey || !boardBefore) return;
         qc.setQueryData<{ tasks: Task[] }>(boardKey, (old) =>
-          old ? { tasks: old.tasks.map((t) => (t.id === taskId ? { ...t, ...fields } : t)) } : old,
+          old ? { tasks: old.tasks.map((t) => (t.id === taskId ? { ...t, ...fields } : t)) } : old
         );
       };
       patchBoard(completionChange(qc, projectId, taskId, true));
@@ -562,7 +552,7 @@ export default function MyTasks() {
               tasks: page.tasks.filter((t) => t.id !== taskId),
             })),
           };
-        },
+        }
       );
 
       setCompletingIds((prev) => {
@@ -585,7 +575,7 @@ export default function MyTasks() {
         toast("Failed to complete task", { variant: "error" });
       }
     },
-    [completingIds, reducedMotion, workspace.id, myTasksQueryKey, qc, toast],
+    [completingIds, reducedMotion, workspace.id, myTasksQueryKey, qc, toast]
   );
 
   const columns = useMemo<ColumnDef<MyTask>[]>(
@@ -646,26 +636,24 @@ export default function MyTasks() {
           <Text
             variant="body-3"
             as="span"
-            color={
-              row.dueDate && isOverdue(row.dueDate) ? "primary" : "secondary"
-            }
-            className={
-              row.dueDate && isOverdue(row.dueDate) ? "text-status-error" : ""
-            }
+            color={row.dueDate && isOverdue(row.dueDate) ? "primary" : "secondary"}
+            className={row.dueDate && isOverdue(row.dueDate) ? "text-status-error" : ""}
           >
             {formatDueDate(row.dueDate)}
           </Text>
         ),
       },
     ],
-    [setSelectedTaskId, completingIds, handleCompleteTask],
+    [setSelectedTaskId, completingIds, handleCompleteTask]
   );
 
   return (
     <Container size="xl" className="py-r2">
       <Stack gap="r3">
         <Breadcrumbs>
-          <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>{workspace.name}</Breadcrumbs.Item>
+          <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>
+            {workspace.name}
+          </Breadcrumbs.Item>
           <Breadcrumbs.Item current>My Tasks</Breadcrumbs.Item>
         </Breadcrumbs>
         <Row justify="between" align="center">
@@ -708,10 +696,7 @@ export default function MyTasks() {
           <Tabs.List>
             {FILTER_TABS.map((tab) => {
               const isActive = activeTab === tab.value;
-              const count =
-                tab.value === "week"
-                  ? tabCounts.week
-                  : tabCounts[tab.value];
+              const count = tab.value === "week" ? tabCounts.week : tabCounts[tab.value];
               const isOverdueTab = tab.value === "overdue";
               const hasOverdue = isOverdueTab && (tabCounts.overdue ?? 0) > 0;
 

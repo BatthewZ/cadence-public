@@ -6,10 +6,7 @@ import {
   DragOverlay,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { GripVertical } from "lucide-react";
 
 import { Input } from "@/web/components/form/Input";
@@ -87,17 +84,9 @@ export function TaskSubtaskList({
         </SortableContext>
         <DragOverlay dropAnimation={null}>
           {activeSubtask && (
-            <Row
-              gap="r5"
-              align="center"
-              className="px-r5 py-r6 rounded bg-surface-1 shadow-md"
-            >
+            <Row gap="r5" align="center" className="px-r5 py-r6 rounded bg-surface-1 shadow-md">
               <GripVertical size={14} className="shrink-0 text-fg-muted" />
-              <TaskCheckbox
-                checked={activeSubtask.completed}
-                onChange={() => {}}
-                size="sm"
-              />
+              <TaskCheckbox checked={activeSubtask.completed} onChange={() => {}} size="sm" />
               <Text variant="body-2" className="flex-1">
                 {activeSubtask.title}
               </Text>

@@ -17,7 +17,29 @@ describe("useTheme", () => {
   it("returns all available themes", () => {
     const { result } = renderHook(() => useTheme());
     expect(result.current.themes).toBe(THEMES);
-    expect(result.current.themes).toEqual(["default", "noir", "botanical", "sunset", "candy", "cyberpunk", "pastel", "brutalist", "ocean", "ember", "luxe", "sakura", "melancholy", "storm", "dreamlike", "terminal", "synthwave", "forest", "slate", "paper", "carbon"]);
+    expect(result.current.themes).toEqual([
+      "default",
+      "noir",
+      "botanical",
+      "sunset",
+      "candy",
+      "cyberpunk",
+      "pastel",
+      "brutalist",
+      "ocean",
+      "ember",
+      "luxe",
+      "sakura",
+      "melancholy",
+      "storm",
+      "dreamlike",
+      "terminal",
+      "synthwave",
+      "forest",
+      "slate",
+      "paper",
+      "carbon",
+    ]);
   });
 
   it("reads the current theme from data-theme attribute", () => {
@@ -109,49 +131,37 @@ describe("useThemeApplication", () => {
   });
 
   it("applies project theme when both workspace and project themes are provided", () => {
-    const { result } = renderHook(() =>
-      useThemeApplication("botanical", "cyberpunk"),
-    );
+    const { result } = renderHook(() => useThemeApplication("botanical", "cyberpunk"));
     expect(result.current).toBe("cyberpunk");
     expect(document.documentElement.getAttribute("data-theme")).toBe("cyberpunk");
   });
 
   it("falls back to workspace theme when project theme is null", () => {
-    const { result } = renderHook(() =>
-      useThemeApplication("noir", null),
-    );
+    const { result } = renderHook(() => useThemeApplication("noir", null));
     expect(result.current).toBe("noir");
     expect(document.documentElement.getAttribute("data-theme")).toBe("noir");
   });
 
   it("falls back to workspace theme when project theme is undefined", () => {
-    const { result } = renderHook(() =>
-      useThemeApplication("sunset", undefined),
-    );
+    const { result } = renderHook(() => useThemeApplication("sunset", undefined));
     expect(result.current).toBe("sunset");
     expect(document.documentElement.getAttribute("data-theme")).toBe("sunset");
   });
 
   it("falls back to 'default' when both themes are null", () => {
-    const { result } = renderHook(() =>
-      useThemeApplication(null, null),
-    );
+    const { result } = renderHook(() => useThemeApplication(null, null));
     expect(result.current).toBe("default");
     expect(document.documentElement.getAttribute("data-theme")).toBeNull();
   });
 
   it("falls back to 'default' when both themes are undefined", () => {
-    const { result } = renderHook(() =>
-      useThemeApplication(undefined, undefined),
-    );
+    const { result } = renderHook(() => useThemeApplication(undefined, undefined));
     expect(result.current).toBe("default");
     expect(document.documentElement.getAttribute("data-theme")).toBeNull();
   });
 
   it("validates invalid theme strings and falls back to 'default'", () => {
-    const { result } = renderHook(() =>
-      useThemeApplication("totally-bogus-theme", null),
-    );
+    const { result } = renderHook(() => useThemeApplication("totally-bogus-theme", null));
     expect(result.current).toBe("default");
     expect(document.documentElement.getAttribute("data-theme")).toBeNull();
   });
@@ -160,18 +170,17 @@ describe("useThemeApplication", () => {
     // Invalid project theme should be treated as "default" (since raw resolves to invalid string)
     // Actually: raw = projectTheme ?? workspaceTheme ?? "default" = "invalid-project"
     // THEMES.includes("invalid-project") = false -> "default"
-    const { result } = renderHook(() =>
-      useThemeApplication("noir", "invalid-project"),
-    );
+    const { result } = renderHook(() => useThemeApplication("noir", "invalid-project"));
     // The raw value is "invalid-project" (project takes priority), which is invalid -> "default"
     expect(result.current).toBe("default");
   });
 
   it("updates DOM data-theme attribute correctly", () => {
     const { rerender } = renderHook(
-      ({ ws, proj }: { ws: string | null; proj: string | null }) =>
-        useThemeApplication(ws, proj),
-      { initialProps: { ws: "botanical", proj: null } as { ws: string | null; proj: string | null } },
+      ({ ws, proj }: { ws: string | null; proj: string | null }) => useThemeApplication(ws, proj),
+      {
+        initialProps: { ws: "botanical", proj: null } as { ws: string | null; proj: string | null },
+      }
     );
     expect(document.documentElement.getAttribute("data-theme")).toBe("botanical");
 
@@ -210,9 +219,7 @@ describe("useThemeApplication", () => {
     });
 
     // Should not throw
-    const { result } = renderHook(() =>
-      useThemeApplication("ember", null),
-    );
+    const { result } = renderHook(() => useThemeApplication("ember", null));
     expect(result.current).toBe("ember");
     expect(document.documentElement.getAttribute("data-theme")).toBe("ember");
 
@@ -260,10 +267,9 @@ describe("useThemePreview", () => {
     document.documentElement.setAttribute("data-theme", "botanical");
 
     type Props = { theme: import("@/shared/types/theme").Theme | null; active: boolean };
-    const { rerender } = renderHook(
-      ({ theme, active }: Props) => useThemePreview(theme, active),
-      { initialProps: { theme: "noir", active: true } as Props },
-    );
+    const { rerender } = renderHook(({ theme, active }: Props) => useThemePreview(theme, active), {
+      initialProps: { theme: "noir", active: true } as Props,
+    });
     expect(document.documentElement.getAttribute("data-theme")).toBe("noir");
 
     rerender({ theme: null, active: false });
@@ -292,10 +298,9 @@ describe("useThemePreview", () => {
     document.documentElement.setAttribute("data-theme", "botanical");
 
     type Props = { theme: import("@/shared/types/theme").Theme | null; active: boolean };
-    const { rerender } = renderHook(
-      ({ theme, active }: Props) => useThemePreview(theme, active),
-      { initialProps: { theme: "noir", active: true } as Props },
-    );
+    const { rerender } = renderHook(({ theme, active }: Props) => useThemePreview(theme, active), {
+      initialProps: { theme: "noir", active: true } as Props,
+    });
     expect(document.documentElement.getAttribute("data-theme")).toBe("noir");
 
     rerender({ theme: "candy", active: true });

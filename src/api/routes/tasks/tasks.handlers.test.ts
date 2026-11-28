@@ -14,7 +14,11 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 import { createDb } from "../../../db";
 import { WRITE_ERROR_CODES } from "../../../shared/constants/offline-sync";
-import { createCommentSchema, listCommentsQuerySchema, updateCommentSchema } from "../../../shared/schemas/comment";
+import {
+  createCommentSchema,
+  listCommentsQuerySchema,
+  updateCommentSchema,
+} from "../../../shared/schemas/comment";
 import { createSubtaskSchema, updateSubtaskSchema } from "../../../shared/schemas/subtask";
 import {
   createTaskSchema,
@@ -162,7 +166,6 @@ function createAwaitableExecutionCtx() {
   };
 }
 
-
 // =========================================================================
 // createTask
 // =========================================================================
@@ -170,12 +173,7 @@ function createAwaitableExecutionCtx() {
 describe("createTask", () => {
   it("creates a task in a valid task group and returns 201", async () => {
     const app = new Hono<AppEnv>();
-    app.post(
-      "/projects/:projectId/tasks",
-      auth(),
-      validateBody(createTaskSchema),
-      createTask,
-    );
+    app.post("/projects/:projectId/tasks", auth(), validateBody(createTaskSchema), createTask);
 
     const res = await app.request(
       `/projects/${projectId}/tasks`,
@@ -183,11 +181,13 @@ describe("createTask", () => {
         title: "My new task",
         taskGroupId,
         priority: "high",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ task: { title: string; priority: string; completed: boolean } }>();
+    const body = await res.json<{
+      task: { title: string; priority: string; completed: boolean };
+    }>();
     expect(body.task.title).toBe("My new task");
     expect(body.task.priority).toBe("high");
     expect(body.task.completed).toBe(false);
@@ -209,12 +209,7 @@ describe("createTask", () => {
     });
 
     const app = new Hono<AppEnv>();
-    app.post(
-      "/projects/:projectId/tasks",
-      auth(),
-      validateBody(createTaskSchema),
-      createTask,
-    );
+    app.post("/projects/:projectId/tasks", auth(), validateBody(createTaskSchema), createTask);
 
     const N = 8;
     const responses = await Promise.all(
@@ -224,9 +219,9 @@ describe("createTask", () => {
           jsonRequest("POST", `/projects/${projectId}/tasks`, {
             title: `Race Task ${i}`,
             taskGroupId: raceGroupId,
-          }),
-        ),
-      ),
+          })
+        )
+      )
     );
 
     for (const res of responses) {
@@ -234,7 +229,7 @@ describe("createTask", () => {
     }
 
     const bodies = await Promise.all(
-      responses.map((r) => r.json<{ task: { id: string; position: string } }>()),
+      responses.map((r) => r.json<{ task: { id: string; position: string } }>())
     );
     const positions = bodies.map((b) => b.task.position);
     expect(new Set(positions).size).toBe(N);
@@ -242,19 +237,14 @@ describe("createTask", () => {
 
   it("auto-completes task when created in a completion group", async () => {
     const app = new Hono<AppEnv>();
-    app.post(
-      "/projects/:projectId/tasks",
-      auth(),
-      validateBody(createTaskSchema),
-      createTask,
-    );
+    app.post("/projects/:projectId/tasks", auth(), validateBody(createTaskSchema), createTask);
 
     const res = await app.request(
       `/projects/${projectId}/tasks`,
       jsonRequest("POST", `/projects/${projectId}/tasks`, {
         title: "Done task",
         taskGroupId: completionGroupId,
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -264,12 +254,7 @@ describe("createTask", () => {
 
   it("returns 404 for nonexistent task group", async () => {
     const app = new Hono<AppEnv>();
-    app.post(
-      "/projects/:projectId/tasks",
-      auth(),
-      validateBody(createTaskSchema),
-      createTask,
-    );
+    app.post("/projects/:projectId/tasks", auth(), validateBody(createTaskSchema), createTask);
 
     const fakeGroupId = crypto.randomUUID();
     const res = await app.request(
@@ -277,7 +262,7 @@ describe("createTask", () => {
       jsonRequest("POST", `/projects/${projectId}/tasks`, {
         title: "No group",
         taskGroupId: fakeGroupId,
-      }),
+      })
     );
 
     expect(res.status).toBe(404);
@@ -287,18 +272,13 @@ describe("createTask", () => {
 
   it("returns 400 when title is missing", async () => {
     const app = new Hono<AppEnv>();
-    app.post(
-      "/projects/:projectId/tasks",
-      auth(),
-      validateBody(createTaskSchema),
-      createTask,
-    );
+    app.post("/projects/:projectId/tasks", auth(), validateBody(createTaskSchema), createTask);
 
     const res = await app.request(
       `/projects/${projectId}/tasks`,
       jsonRequest("POST", `/projects/${projectId}/tasks`, {
         taskGroupId,
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -329,7 +309,7 @@ describe("createTask", () => {
         jsonRequest("POST", `/projects/${autoAssignProjectId}/tasks`, {
           title: "Auto-assigned task",
           taskGroupId: autoAssignGroupId,
-        }),
+        })
       );
 
       expect(res.status).toBe(201);
@@ -347,7 +327,7 @@ describe("createTask", () => {
           title: "Explicitly assigned",
           taskGroupId: autoAssignGroupId,
           assigneeId: TEST_USER_2.id,
-        }),
+        })
       );
 
       expect(res.status).toBe(201);
@@ -364,7 +344,7 @@ describe("createTask", () => {
         jsonRequest("POST", `/projects/${projectId}/tasks`, {
           title: "No auto-assign",
           taskGroupId,
-        }),
+        })
       );
 
       expect(res.status).toBe(201);
@@ -405,7 +385,10 @@ describe("listTasks", () => {
   });
 
   it("with include=subtasks, carries each task's subtasks in detail order; without it, none", async () => {
-    const withSubs = await seedTask(d1, projectId, taskGroupId, { title: "List Task With Subtasks", position: "a2" });
+    const withSubs = await seedTask(d1, projectId, taskGroupId, {
+      title: "List Task With Subtasks",
+      position: "a2",
+    });
     await seedSubtask(d1, withSubs, { title: "Second", position: "a1" });
     await seedSubtask(d1, withSubs, { title: "First", position: "a0" });
     const app = new Hono<AppEnv>();
@@ -414,10 +397,15 @@ describe("listTasks", () => {
     const res = await app.request(`/projects/${projectId}/tasks?include=subtasks`);
     expect(res.status).toBe(200);
     const body = await res.json<{ tasks: { id: string; subtasks?: { title: string }[] }[] }>();
-    expect(body.tasks.find((t) => t.id === withSubs)?.subtasks?.map((s) => s.title)).toEqual(["First", "Second"]);
+    expect(body.tasks.find((t) => t.id === withSubs)?.subtasks?.map((s) => s.title)).toEqual([
+      "First",
+      "Second",
+    ]);
     expect(body.tasks.every((t) => Array.isArray(t.subtasks))).toBe(true);
 
-    const plain = await (await app.request(`/projects/${projectId}/tasks`)).json<{ tasks: { subtasks?: unknown }[] }>();
+    const plain = await (
+      await app.request(`/projects/${projectId}/tasks`)
+    ).json<{ tasks: { subtasks?: unknown }[] }>();
     expect(plain.tasks.every((t) => t.subtasks === undefined)).toBe(true);
   });
 
@@ -425,9 +413,7 @@ describe("listTasks", () => {
     const app = new Hono<AppEnv>();
     app.get("/projects/:projectId/tasks", auth(), listTasks);
 
-    const res = await app.request(
-      `/projects/${projectId}/tasks?taskGroupId=${taskGroupId}`,
-    );
+    const res = await app.request(`/projects/${projectId}/tasks?taskGroupId=${taskGroupId}`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ tasks: { taskGroupId: string }[] }>();
@@ -440,9 +426,7 @@ describe("listTasks", () => {
     const app = new Hono<AppEnv>();
     app.get("/projects/:projectId/tasks", auth(), listTasks);
 
-    const res = await app.request(
-      `/projects/${projectId}/tasks?priority=high`,
-    );
+    const res = await app.request(`/projects/${projectId}/tasks?priority=high`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ tasks: { priority: string }[] }>();
@@ -456,9 +440,7 @@ describe("listTasks", () => {
     const app = new Hono<AppEnv>();
     app.get("/projects/:projectId/tasks", auth(), listTasks);
 
-    const res = await app.request(
-      `/projects/${projectId}/tasks?assigneeId=${TEST_USER.id}`,
-    );
+    const res = await app.request(`/projects/${projectId}/tasks?assigneeId=${TEST_USER.id}`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ tasks: { assigneeId: string }[] }>();
@@ -472,9 +454,7 @@ describe("listTasks", () => {
     const app = new Hono<AppEnv>();
     app.get("/projects/:projectId/tasks", auth(), listTasks);
 
-    const res = await app.request(
-      `/projects/${projectId}/tasks?completed=true`,
-    );
+    const res = await app.request(`/projects/${projectId}/tasks?completed=true`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ tasks: { completed: boolean }[] }>();
@@ -491,7 +471,9 @@ describe("listTasks", () => {
     const res = await app.request(`/projects/${projectId}/tasks`);
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ tasks: { subtaskCount: number; commentCount: number; subtaskCompletedCount: number }[] }>();
+    const body = await res.json<{
+      tasks: { subtaskCount: number; commentCount: number; subtaskCompletedCount: number }[];
+    }>();
     for (const t of body.tasks) {
       expect(typeof t.subtaskCount).toBe("number");
       expect(typeof t.commentCount).toBe("number");
@@ -581,7 +563,9 @@ describe("listTasks", () => {
       name: "Foreign Filter WS",
       slug: "foreign-filter-ws",
     });
-    const foreignProjectId = await seedProject(d1, foreignWorkspaceId, { name: "Foreign Filter Project" });
+    const foreignProjectId = await seedProject(d1, foreignWorkspaceId, {
+      name: "Foreign Filter Project",
+    });
     const foreignGroupId = await seedTaskGroup(d1, foreignProjectId, { name: "To Do" });
     const foreignTaskId = await seedTask(d1, foreignProjectId, foreignGroupId, {
       title: "FOREIGN TENANT URGENT TASK",
@@ -622,7 +606,9 @@ describe("getTask", () => {
     const res = await app.request(`/tasks/${existingTaskId}`);
 
     expect(res.status).toBe(200);
-    const body = await res.json<{ task: { id: string; title: string; subtasks: { title: string }[]; commentCount: number } }>();
+    const body = await res.json<{
+      task: { id: string; title: string; subtasks: { title: string }[]; commentCount: number };
+    }>();
     expect(body.task.id).toBe(existingTaskId);
     expect(body.task.title).toBe("Get Task Test");
     expect(body.task.subtasks.length).toBe(1);
@@ -665,7 +651,7 @@ describe("updateTask", () => {
       jsonRequest("PATCH", `/tasks/${updateTaskId}`, {
         title: "Updated Title",
         priority: "urgent",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -683,23 +669,21 @@ describe("updateTask", () => {
       `/tasks/${updateTaskId}`,
       jsonRequest("PATCH", `/tasks/${updateTaskId}`, {
         priority: "low",
-      }),
+      })
     );
 
     // Verify activity was logged
     const activityApp = new Hono<AppEnv>();
     activityApp.get("/tasks/:taskId/activity", auth(), getTaskActivity);
 
-    const actRes = await activityApp.request(
-      `/tasks/${updateTaskId}/activity?limit=50`,
-    );
+    const actRes = await activityApp.request(`/tasks/${updateTaskId}/activity?limit=50`);
 
     expect(actRes.status).toBe(200);
     const actBody = await actRes.json<{
       activities: { action: string; field: string | null }[];
     }>();
     const priorityChange = actBody.activities.find(
-      (a) => a.action === "priority_changed" && a.field === "priority",
+      (a) => a.action === "priority_changed" && a.field === "priority"
     );
     expect(priorityChange).toBeDefined();
   });
@@ -712,7 +696,7 @@ describe("updateTask", () => {
       `/tasks/${crypto.randomUUID()}`,
       jsonRequest("PATCH", `/tasks/${crypto.randomUUID()}`, {
         title: "Nope",
-      }),
+      })
     );
 
     expect(res.status).toBe(404);
@@ -765,7 +749,7 @@ describe("updateTask", () => {
         `/tasks/${id}`,
         jsonRequest("PATCH", `/tasks/${id}`, {
           coverImageKey: "task-cover/attacker/forged.jpg",
-        }),
+        })
       );
 
       expect(res.status).toBe(200);
@@ -784,7 +768,7 @@ describe("updateTask", () => {
         `/tasks/${id}`,
         jsonRequest("PATCH", `/tasks/${id}`, {
           coverImageKey: "task-cover/other-workspace-user/private.jpg",
-        }),
+        })
       );
 
       expect(res.status).toBe(200);
@@ -803,7 +787,7 @@ describe("updateTask", () => {
 
       const res = await app.request(
         `/tasks/${id}`,
-        jsonRequest("PATCH", `/tasks/${id}`, { coverImageKey: null }),
+        jsonRequest("PATCH", `/tasks/${id}`, { coverImageKey: null })
       );
 
       expect(res.status).toBe(200);
@@ -828,7 +812,7 @@ describe("updateTask", () => {
           title: "Mixed Patch Renamed",
           coverImagePosition: 42,
           coverImageKey: "task-cover/attacker/forged.jpg",
-        }),
+        })
       );
 
       expect(res.status).toBe(200);
@@ -854,7 +838,7 @@ describe("updateTask", () => {
         `/tasks/${id}`,
         jsonRequest("PATCH", `/tasks/${id}`, {
           coverImageKey: "task-cover/attacker/forged.jpg",
-        }),
+        })
       );
 
       expect(res.status).toBe(200);
@@ -897,12 +881,7 @@ describe("updateTask", () => {
 describe("startDate", () => {
   function createApp() {
     const app = new Hono<AppEnv>();
-    app.post(
-      "/projects/:projectId/tasks",
-      auth(),
-      validateBody(createTaskSchema),
-      createTask,
-    );
+    app.post("/projects/:projectId/tasks", auth(), validateBody(createTaskSchema), createTask);
     return app;
   }
 
@@ -918,7 +897,12 @@ describe("startDate", () => {
     const res = await activityApp.request(`/tasks/${taskId}/activity?limit=50`);
     expect(res.status).toBe(200);
     const body = await res.json<{
-      activities: { action: string; field: string | null; oldValue: string | null; newValue: string | null }[];
+      activities: {
+        action: string;
+        field: string | null;
+        oldValue: string | null;
+        newValue: string | null;
+      }[];
     }>();
     return body.activities;
   }
@@ -936,11 +920,13 @@ describe("startDate", () => {
         taskGroupId,
         startDate: "2030-03-01",
         dueDate: "2030-03-05",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ task: { id: string; startDate: string | null; dueDate: string | null } }>();
+    const body = await res.json<{
+      task: { id: string; startDate: string | null; dueDate: string | null };
+    }>();
     expect(body.task.startDate).toBe("2030-03-01T00:00:00.000Z");
     expect(body.task.dueDate).toBe("2030-03-05T00:00:00.000Z");
 
@@ -950,7 +936,9 @@ describe("startDate", () => {
     getApp.get("/tasks/:taskId", auth(), getTask);
     const getRes = await getApp.request(`/tasks/${body.task.id}`);
     expect(getRes.status).toBe(200);
-    const getBody = await getRes.json<{ task: { startDate: string | null; dueDate: string | null } }>();
+    const getBody = await getRes.json<{
+      task: { startDate: string | null; dueDate: string | null };
+    }>();
     expect(getBody.task.startDate).toBe("2030-03-01T00:00:00.000Z");
     expect(getBody.task.dueDate).toBe("2030-03-05T00:00:00.000Z");
   });
@@ -963,12 +951,14 @@ describe("startDate", () => {
         title: "Start only",
         taskGroupId,
         startDate: "2030-03-01",
-      }),
+      })
     );
 
     // A start date no longer requires a due date — this is a valid task.
     expect(res.status).toBe(201);
-    const body = await res.json<{ task: { id: string; startDate: string | null; dueDate: string | null } }>();
+    const body = await res.json<{
+      task: { id: string; startDate: string | null; dueDate: string | null };
+    }>();
     expect(body.task.startDate).toBe("2030-03-01T00:00:00.000Z");
     expect(body.task.dueDate).toBeNull();
 
@@ -976,7 +966,9 @@ describe("startDate", () => {
     const getApp = new Hono<AppEnv>();
     getApp.get("/tasks/:taskId", auth(), getTask);
     const getRes = await getApp.request(`/tasks/${body.task.id}`);
-    const getBody = await getRes.json<{ task: { startDate: string | null; dueDate: string | null } }>();
+    const getBody = await getRes.json<{
+      task: { startDate: string | null; dueDate: string | null };
+    }>();
     expect(getBody.task.startDate).toBe("2030-03-01T00:00:00.000Z");
     expect(getBody.task.dueDate).toBeNull();
   });
@@ -990,7 +982,7 @@ describe("startDate", () => {
         taskGroupId,
         startDate: "2030-03-06",
         dueDate: "2030-03-05",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -1012,7 +1004,7 @@ describe("startDate", () => {
         taskGroupId,
         startDate: "2030-03-07",
         recurrenceRule: { frequency: "weekly", interval: 1 },
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -1030,7 +1022,7 @@ describe("startDate", () => {
         taskGroupId,
         startDate: "2030-02-30",
         dueDate: "2030-03-05",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -1051,7 +1043,7 @@ describe("startDate", () => {
     const app = updateApp();
     const res = await app.request(
       `/tasks/${taskId}`,
-      jsonRequest("PATCH", `/tasks/${taskId}`, { startDate: "2030-03-05" }),
+      jsonRequest("PATCH", `/tasks/${taskId}`, { startDate: "2030-03-05" })
     );
 
     expect(res.status).toBe(400);
@@ -1067,7 +1059,7 @@ describe("startDate", () => {
     const app = updateApp();
     const res = await app.request(
       `/tasks/${taskId}`,
-      jsonRequest("PATCH", `/tasks/${taskId}`, { startDate: "2030-03-01" }),
+      jsonRequest("PATCH", `/tasks/${taskId}`, { startDate: "2030-03-01" })
     );
 
     expect(res.status).toBe(200);
@@ -1088,7 +1080,7 @@ describe("startDate", () => {
       `/tasks/${taskId}`,
       jsonRequest("PATCH", `/tasks/${taskId}`, { startDate: "2030-03-03" }),
       {},
-      ctx,
+      ctx
     );
 
     expect(res.status).toBe(200);
@@ -1099,7 +1091,7 @@ describe("startDate", () => {
     await flush();
     const activities = await fetchActivities(taskId);
     const startChanged = activities.find(
-      (a) => a.action === "start_date_changed" && a.field === "startDate",
+      (a) => a.action === "start_date_changed" && a.field === "startDate"
     );
     expect(startChanged).toBeDefined();
     expect(startChanged!.oldValue).toBeNull();
@@ -1119,7 +1111,7 @@ describe("startDate", () => {
       `/tasks/${taskId}`,
       jsonRequest("PATCH", `/tasks/${taskId}`, { dueDate: null }),
       {},
-      ctx,
+      ctx
     );
 
     expect(res.status).toBe(200);
@@ -1148,7 +1140,7 @@ describe("startDate", () => {
       jsonRequest("PATCH", `/tasks/${taskId}`, {
         startDate: "2030-03-09",
         dueDate: "2030-03-08",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -1172,7 +1164,7 @@ describe("startDate", () => {
     app.post("/tasks/:taskId/duplicate", auth(), duplicateTask);
     const res = await app.request(
       `/tasks/${sourceId}/duplicate`,
-      jsonRequest("POST", `/tasks/${sourceId}/duplicate`),
+      jsonRequest("POST", `/tasks/${sourceId}/duplicate`)
     );
 
     expect(res.status).toBe(201);
@@ -1212,20 +1204,20 @@ describe("startDate", () => {
           currentProject: { id: projectId, workspaceId },
         }),
         validateBody(updateTaskSchema),
-        updateTask,
+        updateTask
       );
 
       const res = await app.request(
         `/tasks/${taskId}`,
         jsonRequest("PATCH", `/tasks/${taskId}`, { startDate: "2030-03-02" }),
         {},
-        ctx,
+        ctx
       );
       expect(res.status).toBe(200);
       await flush();
 
       const deliveryCall = fetchSpy.calls.find(
-        ([url]) => url === "https://hooks.example.com/start-date",
+        ([url]) => url === "https://hooks.example.com/start-date"
       );
       expect(deliveryCall).toBeDefined();
       const init = deliveryCall![1] as RequestInit;
@@ -1260,10 +1252,7 @@ describe("deleteTask", () => {
     const app = new Hono<AppEnv>();
     app.delete("/tasks/:taskId", auth(), deleteTask);
 
-    const res = await app.request(
-      `/tasks/${taskId}`,
-      jsonRequest("DELETE", `/tasks/${taskId}`),
-    );
+    const res = await app.request(`/tasks/${taskId}`, jsonRequest("DELETE", `/tasks/${taskId}`));
 
     expect(res.status).toBe(200);
     const body = await res.json<{ ok: boolean }>();
@@ -1282,7 +1271,7 @@ describe("deleteTask", () => {
 
     const res = await app.request(
       `/tasks/${crypto.randomUUID()}`,
-      jsonRequest("DELETE", `/tasks/${crypto.randomUUID()}`),
+      jsonRequest("DELETE", `/tasks/${crypto.randomUUID()}`)
     );
 
     expect(res.status).toBe(404);
@@ -1305,19 +1294,14 @@ describe("moveTask", () => {
     });
 
     const app = new Hono<AppEnv>();
-    app.patch(
-      "/tasks/:taskId/move",
-      auth(),
-      validateBody(moveTaskSchema),
-      moveTask,
-    );
+    app.patch("/tasks/:taskId/move", auth(), validateBody(moveTaskSchema), moveTask);
 
     const res = await app.request(
       `/tasks/${taskId}/move`,
       jsonRequest("PATCH", `/tasks/${taskId}/move`, {
         taskGroupId: secondGroup,
         position: "a0",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -1332,12 +1316,7 @@ describe("moveTask", () => {
     });
 
     const app = new Hono<AppEnv>();
-    app.patch(
-      "/tasks/:taskId/move",
-      auth(),
-      validateBody(moveTaskSchema),
-      moveTask,
-    );
+    app.patch("/tasks/:taskId/move", auth(), validateBody(moveTaskSchema), moveTask);
 
     // Target group (completionGroupId) already has tasks at low positions
     // from earlier tests in the suite (e.g. a task created via the
@@ -1349,7 +1328,7 @@ describe("moveTask", () => {
       jsonRequest("PATCH", `/tasks/${taskId}/move`, {
         taskGroupId: completionGroupId,
         position: "z1",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -1365,12 +1344,7 @@ describe("moveTask", () => {
     });
 
     const app = new Hono<AppEnv>();
-    app.patch(
-      "/tasks/:taskId/move",
-      auth(),
-      validateBody(moveTaskSchema),
-      moveTask,
-    );
+    app.patch("/tasks/:taskId/move", auth(), validateBody(moveTaskSchema), moveTask);
 
     // Use a unique target position — see comment on previous test for
     // the UNIQUE-index collision that earlier tests can create in
@@ -1380,7 +1354,7 @@ describe("moveTask", () => {
       jsonRequest("PATCH", `/tasks/${taskId}/move`, {
         taskGroupId: taskGroupId,
         position: "z2",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -1391,19 +1365,14 @@ describe("moveTask", () => {
 
   it("returns 404 for nonexistent task", async () => {
     const app = new Hono<AppEnv>();
-    app.patch(
-      "/tasks/:taskId/move",
-      auth(),
-      validateBody(moveTaskSchema),
-      moveTask,
-    );
+    app.patch("/tasks/:taskId/move", auth(), validateBody(moveTaskSchema), moveTask);
 
     const res = await app.request(
       `/tasks/${crypto.randomUUID()}/move`,
       jsonRequest("PATCH", `/tasks/${crypto.randomUUID()}/move`, {
         taskGroupId,
         position: "a0",
-      }),
+      })
     );
 
     expect(res.status).toBe(404);
@@ -1415,19 +1384,14 @@ describe("moveTask", () => {
     });
 
     const app = new Hono<AppEnv>();
-    app.patch(
-      "/tasks/:taskId/move",
-      auth(),
-      validateBody(moveTaskSchema),
-      moveTask,
-    );
+    app.patch("/tasks/:taskId/move", auth(), validateBody(moveTaskSchema), moveTask);
 
     const res = await app.request(
       `/tasks/${taskId}/move`,
       jsonRequest("PATCH", `/tasks/${taskId}/move`, {
         taskGroupId: crypto.randomUUID(),
         position: "a0",
-      }),
+      })
     );
 
     expect(res.status).toBe(404);
@@ -1447,7 +1411,9 @@ describe("moveTask", () => {
 
     const positions: string[] = [];
     for (const id of movers) {
-      const res = await app.request(jsonRequest("PATCH", `/tasks/${id}/move`, { taskGroupId: target, position: "a0" }));
+      const res = await app.request(
+        jsonRequest("PATCH", `/tasks/${id}/move`, { taskGroupId: target, position: "a0" })
+      );
       expect(res.status).toBe(200);
       const body = await res.json<{ task: { taskGroupId: string; position: string } }>();
       expect(body.task.taskGroupId).toBe(target);
@@ -1481,7 +1447,7 @@ type CompletionRow = {
 async function completionRow(taskId: string): Promise<CompletionRow> {
   const row = await d1
     .prepare(
-      "SELECT completed, completedAt, completedBy, taskGroupId, position FROM task WHERE id = ?",
+      "SELECT completed, completedAt, completedBy, taskGroupId, position FROM task WHERE id = ?"
     )
     .bind(taskId)
     .first<CompletionRow>();
@@ -1526,7 +1492,7 @@ describe("completeTask", () => {
 
     const res = await app.request(
       `/tasks/${taskId}/complete`,
-      jsonRequest("POST", `/tasks/${taskId}/complete`),
+      jsonRequest("POST", `/tasks/${taskId}/complete`)
     );
 
     expect(res.status).toBe(200);
@@ -1546,7 +1512,7 @@ describe("completeTask", () => {
 
     const res = await app.request(
       `/tasks/${taskId}/complete`,
-      jsonRequest("POST", `/tasks/${taskId}/complete`),
+      jsonRequest("POST", `/tasks/${taskId}/complete`)
     );
 
     expect(res.status).toBe(200);
@@ -1594,7 +1560,7 @@ describe("completeTask", () => {
       app.post(
         "/tasks/:taskId/complete",
         fakeAuth(d1, u, { workspaceMembership: { id: "wm-1", role: "owner" } }),
-        completeTask,
+        completeTask
       );
       return app;
     };
@@ -1605,7 +1571,7 @@ describe("completeTask", () => {
       `/tasks/${taskId}/complete`,
       jsonRequest("POST", `/tasks/${taskId}/complete`),
       {},
-      first.ctx,
+      first.ctx
     );
     expect(firstRes.status).toBe(200);
     const firstBody = await firstRes.json<{
@@ -1630,7 +1596,7 @@ describe("completeTask", () => {
       `/tasks/${taskId}/complete`,
       jsonRequest("POST", `/tasks/${taskId}/complete`),
       {},
-      second.ctx,
+      second.ctx
     );
     expect(secondRes.status).toBe(200);
     const secondBody = await secondRes.json<{
@@ -1704,7 +1670,7 @@ describe("completeTask", () => {
 
     const res = await app.request(
       `/tasks/${crypto.randomUUID()}/complete`,
-      jsonRequest("POST", `/tasks/fake/complete`),
+      jsonRequest("POST", `/tasks/fake/complete`)
     );
 
     expect(res.status).toBe(404);
@@ -1723,7 +1689,7 @@ describe("uncompleteTask", () => {
 
     const res = await app.request(
       `/tasks/${taskId}/uncomplete`,
-      jsonRequest("POST", `/tasks/${taskId}/uncomplete`),
+      jsonRequest("POST", `/tasks/${taskId}/uncomplete`)
     );
 
     expect(res.status).toBe(200);
@@ -1743,7 +1709,7 @@ describe("uncompleteTask", () => {
 
     const res = await app.request(
       `/tasks/${taskId}/uncomplete`,
-      jsonRequest("POST", `/tasks/${taskId}/uncomplete`),
+      jsonRequest("POST", `/tasks/${taskId}/uncomplete`)
     );
 
     expect(res.status).toBe(200);
@@ -1793,7 +1759,7 @@ describe("uncompleteTask", () => {
             workspaceMembership: { id: "wm-1", role: "owner" },
             currentProject: { id: projectId, workspaceId },
           }),
-          handler,
+          handler
         );
         return app;
       };
@@ -1805,7 +1771,7 @@ describe("uncompleteTask", () => {
         `/tasks/${taskId}/complete`,
         jsonRequest("POST", `/tasks/${taskId}/complete`),
         {},
-        setup.ctx,
+        setup.ctx
       );
       expect(setupRes.status).toBe(200);
       await setup.flush();
@@ -1816,7 +1782,7 @@ describe("uncompleteTask", () => {
         `/tasks/${taskId}/uncomplete`,
         jsonRequest("POST", `/tasks/${taskId}/uncomplete`),
         {},
-        first.ctx,
+        first.ctx
       );
       expect(firstRes.status).toBe(200);
       expect((await firstRes.json<{ task: { completed: boolean } }>()).task.completed).toBe(false);
@@ -1830,7 +1796,7 @@ describe("uncompleteTask", () => {
         `/tasks/${taskId}/uncomplete`,
         jsonRequest("POST", `/tasks/${taskId}/uncomplete`),
         {},
-        second.ctx,
+        second.ctx
       );
       expect(secondRes.status).toBe(200);
       expect((await secondRes.json<{ task: { completed: boolean } }>()).task.completed).toBe(false);
@@ -1845,7 +1811,7 @@ describe("uncompleteTask", () => {
 
       // One outbound `task.uncompleted` delivery, not two.
       const deliveries = fetchSpy.calls.filter(
-        ([url]) => url === "https://hooks.example.com/uncomplete-idempotency",
+        ([url]) => url === "https://hooks.example.com/uncomplete-idempotency"
       );
       expect(deliveries).toHaveLength(1);
     } finally {
@@ -1860,7 +1826,7 @@ describe("uncompleteTask", () => {
 
     const res = await app.request(
       `/tasks/${crypto.randomUUID()}/uncomplete`,
-      jsonRequest("POST", `/tasks/fake/uncomplete`),
+      jsonRequest("POST", `/tasks/fake/uncomplete`)
     );
 
     expect(res.status).toBe(404);
@@ -1922,7 +1888,13 @@ describe("un-completing a recurring task", () => {
   const deliveredEvents = () =>
     fetchSpy.calls
       .filter(([url]) => url === WEBHOOK_URL)
-      .map(([, init]) => (JSON.parse((init as RequestInit).body as string) as { event: string; data: { id: string } }));
+      .map(
+        ([, init]) =>
+          JSON.parse((init as RequestInit).body as string) as {
+            event: string;
+            data: { id: string };
+          }
+      );
 
   async function weeklyTaskDueSep20(): Promise<string> {
     const taskId = await seedTask(d1, projectId, taskGroupId, {
@@ -1964,7 +1936,9 @@ describe("un-completing a recurring task", () => {
     const taskId = await weeklyTaskDueSep20();
     const spawnedId = (await complete(taskId)).nextRecurringTask!.id;
     await d1
-      .prepare("UPDATE task SET title = 'Weekly review (agenda added)', updatedAt = updatedAt + 60 WHERE id = ?")
+      .prepare(
+        "UPDATE task SET title = 'Weekly review (agenda added)', updatedAt = updatedAt + 60 WHERE id = ?"
+      )
       .bind(spawnedId)
       .run();
 
@@ -1992,7 +1966,7 @@ describe("un-completing a recurring task", () => {
     const moved = await call<{ removedRecurringTaskId: string | null }>(
       "PATCH",
       `/tasks/${taskId}/move`,
-      { taskGroupId, position: `a0${crypto.randomUUID()}` },
+      { taskGroupId, position: `a0${crypto.randomUUID()}` }
     );
     expect(moved.removedRecurringTaskId).toBe(spawnedId);
     expect(await taskExists(spawnedId)).toBe(false);
@@ -2020,22 +1994,19 @@ describe("createSubtask", () => {
 
   it("creates a subtask on a task and returns 201", async () => {
     const app = new Hono<AppEnv>();
-    app.post(
-      "/tasks/:taskId/subtasks",
-      auth(),
-      validateBody(createSubtaskSchema),
-      createSubtask,
-    );
+    app.post("/tasks/:taskId/subtasks", auth(), validateBody(createSubtaskSchema), createSubtask);
 
     const res = await app.request(
       `/tasks/${parentTaskId}/subtasks`,
       jsonRequest("POST", `/tasks/${parentTaskId}/subtasks`, {
         title: "New subtask",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ subtask: { title: string; completed: boolean; taskId: string } }>();
+    const body = await res.json<{
+      subtask: { title: string; completed: boolean; taskId: string };
+    }>();
     expect(body.subtask.title).toBe("New subtask");
     expect(body.subtask.completed).toBe(false);
     expect(body.subtask.taskId).toBe(parentTaskId);
@@ -2043,24 +2014,19 @@ describe("createSubtask", () => {
 
   it("generates unique positions for multiple subtasks", async () => {
     const app = new Hono<AppEnv>();
-    app.post(
-      "/tasks/:taskId/subtasks",
-      auth(),
-      validateBody(createSubtaskSchema),
-      createSubtask,
-    );
+    app.post("/tasks/:taskId/subtasks", auth(), validateBody(createSubtaskSchema), createSubtask);
 
     const res1 = await app.request(
       `/tasks/${parentTaskId}/subtasks`,
       jsonRequest("POST", `/tasks/${parentTaskId}/subtasks`, {
         title: "Subtask 1",
-      }),
+      })
     );
     const res2 = await app.request(
       `/tasks/${parentTaskId}/subtasks`,
       jsonRequest("POST", `/tasks/${parentTaskId}/subtasks`, {
         title: "Subtask 2",
-      }),
+      })
     );
 
     const body1 = await res1.json<{ subtask: { position: string } }>();
@@ -2070,16 +2036,11 @@ describe("createSubtask", () => {
 
   it("returns 400 when title is missing", async () => {
     const app = new Hono<AppEnv>();
-    app.post(
-      "/tasks/:taskId/subtasks",
-      auth(),
-      validateBody(createSubtaskSchema),
-      createSubtask,
-    );
+    app.post("/tasks/:taskId/subtasks", auth(), validateBody(createSubtaskSchema), createSubtask);
 
     const res = await app.request(
       `/tasks/${parentTaskId}/subtasks`,
-      jsonRequest("POST", `/tasks/${parentTaskId}/subtasks`, {}),
+      jsonRequest("POST", `/tasks/${parentTaskId}/subtasks`, {})
     );
 
     expect(res.status).toBe(400);
@@ -2105,19 +2066,14 @@ describe("updateSubtask", () => {
 
   it("updates subtask fields", async () => {
     const app = new Hono<AppEnv>();
-    app.patch(
-      "/subtasks/:subtaskId",
-      auth(),
-      validateBody(updateSubtaskSchema),
-      updateSubtask,
-    );
+    app.patch("/subtasks/:subtaskId", auth(), validateBody(updateSubtaskSchema), updateSubtask);
 
     const res = await app.request(
       `/subtasks/${subtaskId}`,
       jsonRequest("PATCH", `/subtasks/${subtaskId}`, {
         title: "Updated subtask title",
         completed: true,
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
@@ -2128,25 +2084,22 @@ describe("updateSubtask", () => {
 
   it("returns 404 for nonexistent subtask", async () => {
     const app = new Hono<AppEnv>();
-    app.patch(
-      "/subtasks/:subtaskId",
-      auth(),
-      validateBody(updateSubtaskSchema),
-      updateSubtask,
-    );
+    app.patch("/subtasks/:subtaskId", auth(), validateBody(updateSubtaskSchema), updateSubtask);
 
     const res = await app.request(
       `/subtasks/${crypto.randomUUID()}`,
       jsonRequest("PATCH", `/subtasks/${crypto.randomUUID()}`, {
         title: "Nope",
-      }),
+      })
     );
 
     expect(res.status).toBe(404);
   });
 
   it("lands a stale reorder position that collides just after it instead of failing", async () => {
-    const parent = await seedTask(d1, projectId, taskGroupId, { title: "Subtask reorder collisions" });
+    const parent = await seedTask(d1, projectId, taskGroupId, {
+      title: "Subtask reorder collisions",
+    });
     await seedSubtask(d1, parent, { position: "a0" });
     await seedSubtask(d1, parent, { position: "a1" });
     const movers = [
@@ -2189,7 +2142,7 @@ describe("deleteSubtask", () => {
 
     const res = await app.request(
       `/subtasks/${subtaskId}`,
-      jsonRequest("DELETE", `/subtasks/${subtaskId}`),
+      jsonRequest("DELETE", `/subtasks/${subtaskId}`)
     );
 
     expect(res.status).toBe(200);
@@ -2203,7 +2156,7 @@ describe("deleteSubtask", () => {
 
     const res = await app.request(
       `/subtasks/${crypto.randomUUID()}`,
-      jsonRequest("DELETE", `/subtasks/${crypto.randomUUID()}`),
+      jsonRequest("DELETE", `/subtasks/${crypto.randomUUID()}`)
     );
 
     expect(res.status).toBe(404);
@@ -2225,22 +2178,19 @@ describe("createComment", () => {
 
   it("creates a comment and returns 201", async () => {
     const app = new Hono<AppEnv>();
-    app.post(
-      "/tasks/:taskId/comments",
-      auth(),
-      validateBody(createCommentSchema),
-      createComment,
-    );
+    app.post("/tasks/:taskId/comments", auth(), validateBody(createCommentSchema), createComment);
 
     const res = await app.request(
       `/tasks/${commentTaskId}/comments`,
       jsonRequest("POST", `/tasks/${commentTaskId}/comments`, {
         body: "This is a comment",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ comment: { body: string; authorName: string; taskId: string } }>();
+    const body = await res.json<{
+      comment: { body: string; authorName: string; taskId: string };
+    }>();
     expect(body.comment.body).toBe("This is a comment");
     expect(body.comment.authorName).toBe(TEST_USER.name);
     expect(body.comment.taskId).toBe(commentTaskId);
@@ -2248,18 +2198,13 @@ describe("createComment", () => {
 
   it("returns 400 when comment body is empty", async () => {
     const app = new Hono<AppEnv>();
-    app.post(
-      "/tasks/:taskId/comments",
-      auth(),
-      validateBody(createCommentSchema),
-      createComment,
-    );
+    app.post("/tasks/:taskId/comments", auth(), validateBody(createCommentSchema), createComment);
 
     const res = await app.request(
       `/tasks/${commentTaskId}/comments`,
       jsonRequest("POST", `/tasks/${commentTaskId}/comments`, {
         body: "",
-      }),
+      })
     );
 
     expect(res.status).toBe(400);
@@ -2293,12 +2238,10 @@ describe("listComments", () => {
       "/tasks/:taskId/comments",
       auth(),
       validateQuery(listCommentsQuerySchema),
-      listComments,
+      listComments
     );
 
-    const res = await app.request(
-      `/tasks/${listCommentTaskId}/comments`,
-    );
+    const res = await app.request(`/tasks/${listCommentTaskId}/comments`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ comments: { authorName: string }[] }>();
@@ -2315,12 +2258,10 @@ describe("listComments", () => {
       "/tasks/:taskId/comments",
       auth(),
       validateQuery(listCommentsQuerySchema),
-      listComments,
+      listComments
     );
 
-    const res = await app.request(
-      `/tasks/${listCommentTaskId}/comments?limit=3`,
-    );
+    const res = await app.request(`/tasks/${listCommentTaskId}/comments?limit=3`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ comments: { id: string }[]; nextCursor: string }>();
@@ -2329,7 +2270,7 @@ describe("listComments", () => {
 
     // Fetch page 2 using the cursor
     const res2 = await app.request(
-      `/tasks/${listCommentTaskId}/comments?limit=3&cursor=${encodeURIComponent(body.nextCursor)}`,
+      `/tasks/${listCommentTaskId}/comments?limit=3&cursor=${encodeURIComponent(body.nextCursor)}`
     );
 
     expect(res2.status).toBe(200);
@@ -2351,12 +2292,10 @@ describe("listComments", () => {
       "/tasks/:taskId/comments",
       auth(),
       validateQuery(listCommentsQuerySchema),
-      listComments,
+      listComments
     );
 
-    const res = await app.request(
-      `/tasks/${emptyTaskId}/comments`,
-    );
+    const res = await app.request(`/tasks/${emptyTaskId}/comments`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ comments: unknown[]; nextCursor: string | null }>();
@@ -2383,7 +2322,7 @@ describe("deleteComment", () => {
 
     const res = await app.request(
       `/comments/${commentId}`,
-      jsonRequest("DELETE", `/comments/${commentId}`),
+      jsonRequest("DELETE", `/comments/${commentId}`)
     );
 
     expect(res.status).toBe(200);
@@ -2405,7 +2344,7 @@ describe("deleteComment", () => {
 
     const res = await app.request(
       `/comments/${commentId}`,
-      jsonRequest("DELETE", `/comments/${commentId}`),
+      jsonRequest("DELETE", `/comments/${commentId}`)
     );
 
     expect(res.status).toBe(200);
@@ -2419,7 +2358,7 @@ describe("deleteComment", () => {
 
     const res = await app.request(
       `/comments/${crypto.randomUUID()}`,
-      jsonRequest("DELETE", `/comments/${crypto.randomUUID()}`),
+      jsonRequest("DELETE", `/comments/${crypto.randomUUID()}`)
     );
 
     expect(res.status).toBe(404);
@@ -2445,21 +2384,48 @@ describe("getTaskActivity", () => {
       d1
         .prepare(
           `INSERT INTO task_activity (id, taskId, actorId, action, field, oldValue, newValue, createdAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .bind(crypto.randomUUID(), activityTaskId, TEST_USER.id, "created", null, null, null, baseTime),
+        .bind(
+          crypto.randomUUID(),
+          activityTaskId,
+          TEST_USER.id,
+          "created",
+          null,
+          null,
+          null,
+          baseTime
+        ),
       d1
         .prepare(
           `INSERT INTO task_activity (id, taskId, actorId, action, field, oldValue, newValue, createdAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .bind(crypto.randomUUID(), activityTaskId, TEST_USER.id, "title_changed", "title", "Activity Test Task", "Renamed Task", baseTime + 2000),
+        .bind(
+          crypto.randomUUID(),
+          activityTaskId,
+          TEST_USER.id,
+          "title_changed",
+          "title",
+          "Activity Test Task",
+          "Renamed Task",
+          baseTime + 2000
+        ),
       d1
         .prepare(
           `INSERT INTO task_activity (id, taskId, actorId, action, field, oldValue, newValue, createdAt)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
         )
-        .bind(crypto.randomUUID(), activityTaskId, TEST_USER.id, "priority_changed", "priority", "none", "high", baseTime + 4000),
+        .bind(
+          crypto.randomUUID(),
+          activityTaskId,
+          TEST_USER.id,
+          "priority_changed",
+          "priority",
+          "none",
+          "high",
+          baseTime + 4000
+        ),
     ]);
   });
 
@@ -2469,12 +2435,10 @@ describe("getTaskActivity", () => {
       "/tasks/:taskId/activity",
       auth(),
       validateQuery(listActivityQuerySchema),
-      getTaskActivity,
+      getTaskActivity
     );
 
-    const res = await app.request(
-      `/tasks/${activityTaskId}/activity?limit=50`,
-    );
+    const res = await app.request(`/tasks/${activityTaskId}/activity?limit=50`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ activities: { action: string; actorName: string }[] }>();
@@ -2488,13 +2452,13 @@ describe("getTaskActivity", () => {
 
     // Verify the "title_changed" activity exists
     const titleChanged = body.activities.find(
-      (a: { action: string }) => a.action === "title_changed",
+      (a: { action: string }) => a.action === "title_changed"
     );
     expect(titleChanged).toBeDefined();
 
     // Verify the "priority_changed" activity exists
     const priorityChanged = body.activities.find(
-      (a: { action: string }) => a.action === "priority_changed",
+      (a: { action: string }) => a.action === "priority_changed"
     );
     expect(priorityChanged).toBeDefined();
   });
@@ -2505,13 +2469,11 @@ describe("getTaskActivity", () => {
       "/tasks/:taskId/activity",
       auth(),
       validateQuery(listActivityQuerySchema),
-      getTaskActivity,
+      getTaskActivity
     );
 
     // Fetch first page with limit of 1
-    const res = await app.request(
-      `/tasks/${activityTaskId}/activity?limit=1`,
-    );
+    const res = await app.request(`/tasks/${activityTaskId}/activity?limit=1`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ activities: { id: string }[]; nextCursor: string }>();
@@ -2520,7 +2482,7 @@ describe("getTaskActivity", () => {
 
     // Fetch next page
     const res2 = await app.request(
-      `/tasks/${activityTaskId}/activity?limit=1&cursor=${encodeURIComponent(body.nextCursor)}`,
+      `/tasks/${activityTaskId}/activity?limit=1&cursor=${encodeURIComponent(body.nextCursor)}`
     );
 
     expect(res2.status).toBe(200);
@@ -2543,12 +2505,10 @@ describe("getTaskActivity", () => {
       "/tasks/:taskId/activity",
       auth(),
       validateQuery(listActivityQuerySchema),
-      getTaskActivity,
+      getTaskActivity
     );
 
-    const res = await app.request(
-      `/tasks/${rawTaskId}/activity`,
-    );
+    const res = await app.request(`/tasks/${rawTaskId}/activity`);
 
     expect(res.status).toBe(200);
     const body = await res.json<{ activities: unknown[]; nextCursor: string | null }>();
@@ -2571,16 +2531,11 @@ describe("updateComment", () => {
     });
 
     const app = new Hono<AppEnv>();
-    app.patch(
-      "/comments/:commentId",
-      auth(),
-      validateBody(updateCommentSchema),
-      updateComment,
-    );
+    app.patch("/comments/:commentId", auth(), validateBody(updateCommentSchema), updateComment);
 
     const res = await app.request(
       `/comments/${commentId}`,
-      jsonRequest("PATCH", `/comments/${commentId}`, { body: "Updated body" }),
+      jsonRequest("PATCH", `/comments/${commentId}`, { body: "Updated body" })
     );
 
     expect(res.status).toBe(200);
@@ -2597,17 +2552,12 @@ describe("updateComment", () => {
 
   it("returns 404 for non-existent comment", async () => {
     const app = new Hono<AppEnv>();
-    app.patch(
-      "/comments/:commentId",
-      auth(),
-      validateBody(updateCommentSchema),
-      updateComment,
-    );
+    app.patch("/comments/:commentId", auth(), validateBody(updateCommentSchema), updateComment);
 
     const fakeCommentId = crypto.randomUUID();
     const res = await app.request(
       `/comments/${fakeCommentId}`,
-      jsonRequest("PATCH", `/comments/${fakeCommentId}`, { body: "Updated" }),
+      jsonRequest("PATCH", `/comments/${fakeCommentId}`, { body: "Updated" })
     );
 
     expect(res.status).toBe(404);
@@ -2624,16 +2574,11 @@ describe("updateComment", () => {
 
     // Try to update as TEST_USER (not the author)
     const app = new Hono<AppEnv>();
-    app.patch(
-      "/comments/:commentId",
-      auth(),
-      validateBody(updateCommentSchema),
-      updateComment,
-    );
+    app.patch("/comments/:commentId", auth(), validateBody(updateCommentSchema), updateComment);
 
     const res = await app.request(
       `/comments/${commentId}`,
-      jsonRequest("PATCH", `/comments/${commentId}`, { body: "Hijacked" }),
+      jsonRequest("PATCH", `/comments/${commentId}`, { body: "Hijacked" })
     );
 
     expect(res.status).toBe(403);
@@ -2648,16 +2593,11 @@ describe("updateComment", () => {
     });
 
     const app = new Hono<AppEnv>();
-    app.patch(
-      "/comments/:commentId",
-      auth(),
-      validateBody(updateCommentSchema),
-      updateComment,
-    );
+    app.patch("/comments/:commentId", auth(), validateBody(updateCommentSchema), updateComment);
 
     const res = await app.request(
       `/comments/${commentId}`,
-      jsonRequest("PATCH", `/comments/${commentId}`, { body: "" }),
+      jsonRequest("PATCH", `/comments/${commentId}`, { body: "" })
     );
 
     // Validation should reject empty string (min(1))
@@ -2675,25 +2615,21 @@ describe("updateComment", () => {
     });
 
     const app = new Hono<AppEnv>();
-    app.patch(
-      "/comments/:commentId",
-      auth(),
-      validateBody(updateCommentSchema),
-      updateComment,
-    );
+    app.patch("/comments/:commentId", auth(), validateBody(updateCommentSchema), updateComment);
 
     const res = await app.request(
       `/comments/${commentId}`,
-      jsonRequest("PATCH", `/comments/${commentId}`, { body: "New body" }),
+      jsonRequest("PATCH", `/comments/${commentId}`, { body: "New body" })
     );
 
     expect(res.status).toBe(200);
     const data = await res.json<{ comment: { body: string; updatedAt: number | string } }>();
     expect(data.comment.body).toBe("New body");
     // updatedAt should be more recent than the early seed date
-    const updatedAtMs = typeof data.comment.updatedAt === "number"
-      ? data.comment.updatedAt
-      : new Date(data.comment.updatedAt).getTime();
+    const updatedAtMs =
+      typeof data.comment.updatedAt === "number"
+        ? data.comment.updatedAt
+        : new Date(data.comment.updatedAt).getTime();
     expect(updatedAtMs).toBeGreaterThan(earlyDate.getTime());
   });
 });
@@ -2710,12 +2646,10 @@ describe("Comment activity logging", () => {
       "/tasks/:taskId/activity",
       auth(),
       validateQuery(listActivityQuerySchema),
-      getTaskActivity,
+      getTaskActivity
     );
 
-    const res = await activityApp.request(
-      `/tasks/${taskId}/activity?limit=50`,
-    );
+    const res = await activityApp.request(`/tasks/${taskId}/activity?limit=50`);
     expect(res.status).toBe(200);
     const body = await res.json<{
       activities: { action: string; newValue: string | null; actorName: string }[];
@@ -2733,21 +2667,19 @@ describe("Comment activity logging", () => {
       "/tasks/:taskId/comments",
       auth(),
       validateBody(createCommentSchema),
-      createComment,
+      createComment
     );
 
     const res = await commentApp.request(
       `/tasks/${taskId}/comments`,
       jsonRequest("POST", `/tasks/${taskId}/comments`, {
         body: "Activity test comment",
-      }),
+      })
     );
     expect(res.status).toBe(201);
 
     const activities = await fetchActivities(taskId);
-    const commentActivity = activities.find(
-      (a) => a.action === "comment_added",
-    );
+    const commentActivity = activities.find((a) => a.action === "comment_added");
     expect(commentActivity).toBeDefined();
     expect(commentActivity!.newValue).toBe("Activity test comment");
     expect(commentActivity!.actorName).toBe(TEST_USER.name);
@@ -2765,21 +2697,19 @@ describe("Comment activity logging", () => {
       "/tasks/:taskId/comments",
       auth(),
       validateBody(createCommentSchema),
-      createComment,
+      createComment
     );
 
     const res = await commentApp.request(
       `/tasks/${taskId}/comments`,
       jsonRequest("POST", `/tasks/${taskId}/comments`, {
         body: longBody,
-      }),
+      })
     );
     expect(res.status).toBe(201);
 
     const activities = await fetchActivities(taskId);
-    const commentActivity = activities.find(
-      (a) => a.action === "comment_added",
-    );
+    const commentActivity = activities.find((a) => a.action === "comment_added");
     expect(commentActivity).toBeDefined();
     expect(commentActivity!.newValue).toHaveLength(100);
   });
@@ -2797,21 +2727,19 @@ describe("Comment activity logging", () => {
       "/comments/:commentId",
       auth(),
       validateBody(updateCommentSchema),
-      updateComment,
+      updateComment
     );
 
     const res = await updateApp.request(
       `/comments/${commentId}`,
       jsonRequest("PATCH", `/comments/${commentId}`, {
         body: "Updated body",
-      }),
+      })
     );
     expect(res.status).toBe(200);
 
     const activities = await fetchActivities(taskId);
-    const updatedActivity = activities.find(
-      (a) => a.action === "comment_updated",
-    );
+    const updatedActivity = activities.find((a) => a.action === "comment_updated");
     expect(updatedActivity).toBeDefined();
     expect(updatedActivity!.actorName).toBe(TEST_USER.name);
   });
@@ -2829,14 +2757,12 @@ describe("Comment activity logging", () => {
 
     const res = await deleteApp.request(
       `/comments/${commentId}`,
-      jsonRequest("DELETE", `/comments/${commentId}`),
+      jsonRequest("DELETE", `/comments/${commentId}`)
     );
     expect(res.status).toBe(200);
 
     const activities = await fetchActivities(taskId);
-    const deletedActivity = activities.find(
-      (a) => a.action === "comment_deleted",
-    );
+    const deletedActivity = activities.find((a) => a.action === "comment_deleted");
     expect(deletedActivity).toBeDefined();
     expect(deletedActivity!.actorName).toBe(TEST_USER.name);
   });
@@ -2856,14 +2782,12 @@ describe("Comment activity logging", () => {
 
     const res = await deleteApp.request(
       `/comments/${commentId}`,
-      jsonRequest("DELETE", `/comments/${commentId}`),
+      jsonRequest("DELETE", `/comments/${commentId}`)
     );
     expect(res.status).toBe(200);
 
     const activities = await fetchActivities(taskId);
-    const deletedActivity = activities.find(
-      (a) => a.action === "comment_deleted",
-    );
+    const deletedActivity = activities.find((a) => a.action === "comment_deleted");
     expect(deletedActivity).toBeDefined();
     // Admin (TEST_USER) is the actor, not the comment author (TEST_USER_2)
     expect(deletedActivity!.actorName).toBe(TEST_USER.name);
@@ -2890,7 +2814,7 @@ describe("duplicateTask", () => {
 
     const res = await app.request(
       `/tasks/${sourceId}/duplicate`,
-      jsonRequest("POST", `/tasks/${sourceId}/duplicate`),
+      jsonRequest("POST", `/tasks/${sourceId}/duplicate`)
     );
 
     expect(res.status).toBe(201);
@@ -2938,11 +2862,13 @@ describe("duplicateTask", () => {
 
     const res = await app.request(
       `/tasks/${sourceId}/duplicate`,
-      jsonRequest("POST", `/tasks/${sourceId}/duplicate`),
+      jsonRequest("POST", `/tasks/${sourceId}/duplicate`)
     );
 
     expect(res.status).toBe(201);
-    const body = await res.json<{ task: { id: string; subtaskCount: number; subtaskCompletedCount: number } }>();
+    const body = await res.json<{
+      task: { id: string; subtaskCount: number; subtaskCompletedCount: number };
+    }>();
     expect(body.task.subtaskCount).toBe(3);
     expect(body.task.subtaskCompletedCount).toBe(0);
 
@@ -2952,9 +2878,11 @@ describe("duplicateTask", () => {
 
     const detailRes = await getApp.request(
       `/tasks/${body.task.id}`,
-      jsonRequest("GET", `/tasks/${body.task.id}`),
+      jsonRequest("GET", `/tasks/${body.task.id}`)
     );
-    const detail = await detailRes.json<{ task: { subtasks: Array<{ title: string; completed: boolean }> } }>();
+    const detail = await detailRes.json<{
+      task: { subtasks: Array<{ title: string; completed: boolean }> };
+    }>();
     expect(detail.task.subtasks).toHaveLength(3);
     // All subtasks should be incomplete regardless of source
     for (const st of detail.task.subtasks) {
@@ -2975,7 +2903,7 @@ describe("duplicateTask", () => {
 
     const res = await app.request(
       `/tasks/${sourceId}/duplicate`,
-      jsonRequest("POST", `/tasks/${sourceId}/duplicate`),
+      jsonRequest("POST", `/tasks/${sourceId}/duplicate`)
     );
 
     expect(res.status).toBe(201);
@@ -2994,7 +2922,7 @@ describe("duplicateTask", () => {
 
     const res = await app.request(
       `/tasks/${sourceId}/duplicate`,
-      jsonRequest("POST", `/tasks/${sourceId}/duplicate`),
+      jsonRequest("POST", `/tasks/${sourceId}/duplicate`)
     );
 
     expect(res.status).toBe(201);
@@ -3022,21 +2950,18 @@ describe("duplicateTask", () => {
         description: null,
         width: 100,
         height: 100,
-        photoUrl:
-          "https://unsplash.com/photos/src-photo?utm_source=cadence&utm_medium=referral",
-        downloadLocation:
-          "https://api.unsplash.com/photos/src-photo/download?ixid=x",
+        photoUrl: "https://unsplash.com/photos/src-photo?utm_source=cadence&utm_medium=referral",
+        downloadLocation: "https://api.unsplash.com/photos/src-photo/download?ixid=x",
         user: {
           name: "N",
           username: "u",
-          profileUrl:
-            "https://unsplash.com/@u?utm_source=cadence&utm_medium=referral",
+          profileUrl: "https://unsplash.com/@u?utm_source=cadence&utm_medium=referral",
         },
       },
     });
     const dupRes = await app.request(
       `/tasks/${unsplashSource}/duplicate`,
-      jsonRequest("POST", `/tasks/${unsplashSource}/duplicate`),
+      jsonRequest("POST", `/tasks/${unsplashSource}/duplicate`)
     );
     expect(dupRes.status).toBe(201);
     const dupBody = await dupRes.json<{
@@ -3057,7 +2982,7 @@ describe("duplicateTask", () => {
     const fakeId = crypto.randomUUID();
     const res = await app.request(
       `/tasks/${fakeId}/duplicate`,
-      jsonRequest("POST", `/tasks/${fakeId}/duplicate`),
+      jsonRequest("POST", `/tasks/${fakeId}/duplicate`)
     );
 
     expect(res.status).toBe(404);
@@ -3073,7 +2998,7 @@ describe("duplicateTask", () => {
 
     const res = await app.request(
       `/tasks/${sourceId}/duplicate`,
-      jsonRequest("POST", `/tasks/${sourceId}/duplicate`),
+      jsonRequest("POST", `/tasks/${sourceId}/duplicate`)
     );
 
     const body = await res.json<{ task: { id: string } }>();
@@ -3085,12 +3010,12 @@ describe("duplicateTask", () => {
       "/tasks/:taskId/activity",
       auth(),
       validateQuery(listActivityQuerySchema),
-      getTaskActivity,
+      getTaskActivity
     );
 
     const actRes = await actApp.request(
       `/tasks/${newTaskId}/activity`,
-      jsonRequest("GET", `/tasks/${newTaskId}/activity`),
+      jsonRequest("GET", `/tasks/${newTaskId}/activity`)
     );
     const actBody = await actRes.json<{
       activities: Array<{ action: string; newValue: string | null }>;
@@ -3112,7 +3037,7 @@ describe("duplicateTask", () => {
 
     const res = await app.request(
       `/tasks/${sourceId}/duplicate`,
-      jsonRequest("POST", `/tasks/${sourceId}/duplicate`),
+      jsonRequest("POST", `/tasks/${sourceId}/duplicate`)
     );
 
     expect(res.status).toBe(201);
@@ -3125,12 +3050,12 @@ describe("duplicateTask", () => {
       "/tasks/:taskId/comments",
       auth(),
       validateQuery(listCommentsQuerySchema),
-      listComments,
+      listComments
     );
 
     const commRes = await commApp.request(
       `/tasks/${body.task.id}/comments`,
-      jsonRequest("GET", `/tasks/${body.task.id}/comments`),
+      jsonRequest("GET", `/tasks/${body.task.id}/comments`)
     );
     const commBody = await commRes.json<{ comments: unknown[] }>();
     expect(commBody.comments).toHaveLength(0);
@@ -3196,10 +3121,7 @@ describe("task cover image handlers", () => {
       c.set("session", null);
       c.set("requestId", "test-request-id");
       // Default: admin via direct project membership (allows writes).
-      c.set(
-        "projectAccess",
-        opts?.projectAccess ?? { role: "admin", source: "project" },
-      );
+      c.set("projectAccess", opts?.projectAccess ?? { role: "admin", source: "project" });
 
       await next();
     };
@@ -3224,9 +3146,7 @@ describe("task cover image handlers", () => {
 
   async function readCoverState(taskIdParam: string) {
     const row = await coverD1
-      .prepare(
-        "SELECT cover_image_key AS k, cover_unsplash AS u FROM task WHERE id = ?",
-      )
+      .prepare("SELECT cover_image_key AS k, cover_unsplash AS u FROM task WHERE id = ?")
       .bind(taskIdParam)
       .first<{ k: string | null; u: string | null }>();
     return {
@@ -3263,7 +3183,7 @@ describe("task cover image handlers", () => {
       "/tasks/:taskId/cover/unsplash",
       coverAuth(),
       validateBody(unsplashCoverPayloadSchema),
-      applyTaskUnsplashCover,
+      applyTaskUnsplashCover
     );
 
     const payload = sampleUnsplashPayload("t-apply-fresh");
@@ -3282,7 +3202,7 @@ describe("task cover image handlers", () => {
     expect(state.coverUnsplash?.id).toBe("t-apply-fresh");
 
     const matching = fetchSpy.calls.filter(
-      ([url]) => typeof url === "string" && url.startsWith(payload.downloadLocation),
+      ([url]) => typeof url === "string" && url.startsWith(payload.downloadLocation)
     );
     expect(matching.length).toBe(1);
     const init = matching[0][1] as RequestInit;
@@ -3297,9 +3217,7 @@ describe("task cover image handlers", () => {
 
     const uploadApp = new Hono<AppEnv>();
     uploadApp.put("/tasks/:taskId/cover", coverAuth(), uploadTaskCover);
-    const uploadRes = await uploadApp.request(
-      uploadRequest(tId, fakeCoverPngFile()),
-    );
+    const uploadRes = await uploadApp.request(uploadRequest(tId, fakeCoverPngFile()));
     expect(uploadRes.status).toBe(200);
     const { coverImageKey: oldKey } = await uploadRes.json<{
       coverImageKey: string;
@@ -3311,11 +3229,9 @@ describe("task cover image handlers", () => {
       "/tasks/:taskId/cover/unsplash",
       coverAuth(),
       validateBody(unsplashCoverPayloadSchema),
-      applyTaskUnsplashCover,
+      applyTaskUnsplashCover
     );
-    const res = await app.request(
-      unsplashRequest(tId, sampleUnsplashPayload("t-swap-r2-us")),
-    );
+    const res = await app.request(unsplashRequest(tId, sampleUnsplashPayload("t-swap-r2-us")));
     expect(res.status).toBe(200);
 
     const state = await readCoverState(tId);
@@ -3365,7 +3281,7 @@ describe("task cover image handlers", () => {
     const app = new Hono<AppEnv>();
     app.delete("/tasks/:taskId/cover", coverAuth(), deleteTaskCover);
     const res = await app.request(
-      new Request(`http://localhost/tasks/${tId}/cover`, { method: "DELETE" }),
+      new Request(`http://localhost/tasks/${tId}/cover`, { method: "DELETE" })
     );
     expect(res.status).toBe(200);
     const body = await res.json<{ ok: boolean }>();
@@ -3383,9 +3299,7 @@ describe("task cover image handlers", () => {
 
     const uploadApp = new Hono<AppEnv>();
     uploadApp.put("/tasks/:taskId/cover", coverAuth(), uploadTaskCover);
-    const uploadRes = await uploadApp.request(
-      uploadRequest(tId, fakeCoverPngFile()),
-    );
+    const uploadRes = await uploadApp.request(uploadRequest(tId, fakeCoverPngFile()));
     expect(uploadRes.status).toBe(200);
     const { coverImageKey: key } = await uploadRes.json<{
       coverImageKey: string;
@@ -3394,7 +3308,7 @@ describe("task cover image handlers", () => {
     const delApp = new Hono<AppEnv>();
     delApp.delete("/tasks/:taskId/cover", coverAuth(), deleteTaskCover);
     const res = await delApp.request(
-      new Request(`http://localhost/tasks/${tId}/cover`, { method: "DELETE" }),
+      new Request(`http://localhost/tasks/${tId}/cover`, { method: "DELETE" })
     );
     expect(res.status).toBe(200);
 
@@ -3418,11 +3332,9 @@ describe("task cover image handlers", () => {
       "/tasks/:taskId/cover/unsplash",
       coverAuth({ unsplashAccessKey: null }),
       validateBody(unsplashCoverPayloadSchema),
-      applyTaskUnsplashCover,
+      applyTaskUnsplashCover
     );
-    const res = await app.request(
-      unsplashRequest(tId, sampleUnsplashPayload("t-503")),
-    );
+    const res = await app.request(unsplashRequest(tId, sampleUnsplashPayload("t-503")));
     expect(res.status).toBe(503);
     const body = await res.json<{ error: string }>();
     expect(body.error).toContain("Unsplash");
@@ -3440,10 +3352,7 @@ describe("task cover image handlers", () => {
     const getApp = new Hono<AppEnv>();
     getApp.get("/tasks/:taskId", coverAuth(), getTask);
 
-    const r1 = await getApp.request(
-      `/tasks/${tId}`,
-      jsonRequest("GET", `/tasks/${tId}`),
-    );
+    const r1 = await getApp.request(`/tasks/${tId}`, jsonRequest("GET", `/tasks/${tId}`));
     expect(r1.status).toBe(200);
     const body1 = await r1.json<{
       task: { coverUnsplash: StoredUnsplashCoverPayload | null };
@@ -3456,17 +3365,14 @@ describe("task cover image handlers", () => {
       "/tasks/:taskId/cover/unsplash",
       coverAuth(),
       validateBody(unsplashCoverPayloadSchema),
-      applyTaskUnsplashCover,
+      applyTaskUnsplashCover
     );
     const applyRes = await applyApp.request(
-      unsplashRequest(tId, sampleUnsplashPayload("t-detail-reads")),
+      unsplashRequest(tId, sampleUnsplashPayload("t-detail-reads"))
     );
     expect(applyRes.status).toBe(200);
 
-    const r2 = await getApp.request(
-      `/tasks/${tId}`,
-      jsonRequest("GET", `/tasks/${tId}`),
-    );
+    const r2 = await getApp.request(`/tasks/${tId}`, jsonRequest("GET", `/tasks/${tId}`));
     const body2 = await r2.json<{
       task: { coverUnsplash: StoredUnsplashCoverPayload | null };
     }>();
@@ -3519,7 +3425,7 @@ describe("completeTask (recurring spawn startDate)", () => {
 
     const res = await app.request(
       `/tasks/${taskId}/complete`,
-      jsonRequest("POST", `/tasks/${taskId}/complete`),
+      jsonRequest("POST", `/tasks/${taskId}/complete`)
     );
 
     expect(res.status).toBe(200);
@@ -3558,7 +3464,7 @@ describe("completeTask (recurring spawn startDate)", () => {
 
     const res = await app.request(
       `/tasks/${taskId}/complete`,
-      jsonRequest("POST", `/tasks/${taskId}/complete`),
+      jsonRequest("POST", `/tasks/${taskId}/complete`)
     );
 
     expect(res.status).toBe(200);
@@ -3592,7 +3498,7 @@ describe("completeTask (recurring spawn startDate)", () => {
 
     const res = await app.request(
       `/tasks/${taskId}/complete`,
-      jsonRequest("POST", `/tasks/${taskId}/complete`),
+      jsonRequest("POST", `/tasks/${taskId}/complete`)
     );
 
     expect(res.status).toBe(200);
@@ -3627,7 +3533,7 @@ describe("updateTask descriptionBase", () => {
     const taskId = await seedTask(d1, projectId, taskGroupId, { description: "v1" });
 
     const res = await patchApp().request(
-      jsonRequest("PATCH", `/tasks/${taskId}`, { description: "v2", descriptionBase: "v1" }),
+      jsonRequest("PATCH", `/tasks/${taskId}`, { description: "v2", descriptionBase: "v1" })
     );
 
     expect(res.status).toBe(200);
@@ -3640,7 +3546,7 @@ describe("updateTask descriptionBase", () => {
     const taskId = await seedTask(d1, projectId, taskGroupId);
 
     const res = await patchApp().request(
-      jsonRequest("PATCH", `/tasks/${taskId}`, { description: "first", descriptionBase: "" }),
+      jsonRequest("PATCH", `/tasks/${taskId}`, { description: "first", descriptionBase: "" })
     );
 
     expect(res.status).toBe(200);
@@ -3648,17 +3554,30 @@ describe("updateTask descriptionBase", () => {
   });
 
   it("answers 409 description_conflict with the current task and applies nothing on mismatch", async () => {
-    const taskId = await seedTask(d1, projectId, taskGroupId, { title: "Before", description: "theirs" });
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Before",
+      description: "theirs",
+    });
     await seedSubtask(d1, taskId, { title: "Kept" });
 
     const res = await patchApp().request(
-      jsonRequest("PATCH", `/tasks/${taskId}`, { title: "After", description: "mine", descriptionBase: "original" }),
+      jsonRequest("PATCH", `/tasks/${taskId}`, {
+        title: "After",
+        description: "mine",
+        descriptionBase: "original",
+      })
     );
 
     expect(res.status).toBe(409);
     const body = await res.json<{
       code: string;
-      task: { id: string; description: string; subtasks: { title: string }[]; labels: unknown[]; commentCount: number };
+      task: {
+        id: string;
+        description: string;
+        subtasks: { title: string }[];
+        labels: unknown[];
+        commentCount: number;
+      };
     }>();
     expect(body.code).toBe(WRITE_ERROR_CODES.descriptionConflict);
     expect(body.task.id).toBe(taskId);
@@ -3670,10 +3589,13 @@ describe("updateTask descriptionBase", () => {
   });
 
   it("ignores descriptionBase when the patch does not touch description", async () => {
-    const taskId = await seedTask(d1, projectId, taskGroupId, { title: "Before", description: "theirs" });
+    const taskId = await seedTask(d1, projectId, taskGroupId, {
+      title: "Before",
+      description: "theirs",
+    });
 
     const res = await patchApp().request(
-      jsonRequest("PATCH", `/tasks/${taskId}`, { title: "After", descriptionBase: "stale" }),
+      jsonRequest("PATCH", `/tasks/${taskId}`, { title: "After", descriptionBase: "stale" })
     );
 
     expect(res.status).toBe(200);
@@ -3698,19 +3620,21 @@ describe("updateTask descriptionBase", () => {
           currentProject: { id: projectId, workspaceId },
         }),
         validateBody(updateTaskSchema),
-        updateTask,
+        updateTask
       );
 
       const res = await app.request(
         `/tasks/${taskId}`,
         jsonRequest("PATCH", `/tasks/${taskId}`, { description: "v2", descriptionBase: "v1" }),
         {},
-        ctx,
+        ctx
       );
       expect(res.status).toBe(200);
       await flush();
 
-      const deliveryCall = fetchSpy.calls.find(([url]) => url === "https://hooks.example.com/description-base");
+      const deliveryCall = fetchSpy.calls.find(
+        ([url]) => url === "https://hooks.example.com/description-base"
+      );
       expect(deliveryCall).toBeDefined();
       const payload = JSON.parse((deliveryCall![1] as RequestInit).body as string) as {
         data: Record<string, unknown>;

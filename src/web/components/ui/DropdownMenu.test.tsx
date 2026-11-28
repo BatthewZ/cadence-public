@@ -4,9 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { DropdownMenu } from "./DropdownMenu";
 
-function renderMenu(
-  options: { onSelect?: () => void; disabledOnSelect?: () => void } = {},
-) {
+function renderMenu(options: { onSelect?: () => void; disabledOnSelect?: () => void } = {}) {
   const onSelect = options.onSelect ?? vi.fn();
   const disabledOnSelect = options.disabledOnSelect ?? vi.fn();
 
@@ -27,7 +25,7 @@ function renderMenu(
             Delete
           </DropdownMenu.Item>
         </DropdownMenu.Content>
-      </DropdownMenu>,
+      </DropdownMenu>
     ),
   };
 }

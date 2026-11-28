@@ -18,7 +18,9 @@ beforeAll(() => {
   }
 });
 
-function renderTabs(props: { defaultValue?: string; variant?: "underline" | "pill" | "enclosed" } = {}) {
+function renderTabs(
+  props: { defaultValue?: string; variant?: "underline" | "pill" | "enclosed" } = {}
+) {
   const { defaultValue = "one", variant } = props;
   return render(
     <Tabs defaultValue={defaultValue} variant={variant}>
@@ -30,7 +32,7 @@ function renderTabs(props: { defaultValue?: string; variant?: "underline" | "pil
       <Tabs.Panel value="one">Panel One Content</Tabs.Panel>
       <Tabs.Panel value="two">Panel Two Content</Tabs.Panel>
       <Tabs.Panel value="three">Panel Three Content</Tabs.Panel>
-    </Tabs>,
+    </Tabs>
   );
 }
 
@@ -76,13 +78,19 @@ describe("Tabs", () => {
 
     expect(screen.getByRole("tab", { name: "Tab One" })).toHaveAttribute("aria-selected", "true");
     expect(screen.getByRole("tab", { name: "Tab Two" })).toHaveAttribute("aria-selected", "false");
-    expect(screen.getByRole("tab", { name: "Tab Three" })).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("tab", { name: "Tab Three" })).toHaveAttribute(
+      "aria-selected",
+      "false"
+    );
 
     await user.click(screen.getByRole("tab", { name: "Tab Two" }));
 
     expect(screen.getByRole("tab", { name: "Tab One" })).toHaveAttribute("aria-selected", "false");
     expect(screen.getByRole("tab", { name: "Tab Two" })).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByRole("tab", { name: "Tab Three" })).toHaveAttribute("aria-selected", "false");
+    expect(screen.getByRole("tab", { name: "Tab Three" })).toHaveAttribute(
+      "aria-selected",
+      "false"
+    );
   });
 
   it("tab panel has role='tabpanel' linked via aria-labelledby", () => {
@@ -155,7 +163,7 @@ describe("Tabs", () => {
           <Tabs.Tab value="one">Tab One</Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="one">Panel One</Tabs.Panel>
-      </Tabs>,
+      </Tabs>
     );
 
     expect(screen.getByRole("tablist")).toHaveClass("tabs-list--pill");
@@ -166,7 +174,7 @@ describe("Tabs", () => {
           <Tabs.Tab value="one">Tab One</Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="one">Panel One</Tabs.Panel>
-      </Tabs>,
+      </Tabs>
     );
 
     expect(screen.getByRole("tablist")).toHaveClass("tabs-list--enclosed");
@@ -196,11 +204,13 @@ describe("Tabs", () => {
       <Tabs defaultValue="one">
         <Tabs.List>
           <Tabs.Tab value="one">Tab One</Tabs.Tab>
-          <Tabs.Tab value="two" disabled>Tab Two</Tabs.Tab>
+          <Tabs.Tab value="two" disabled>
+            Tab Two
+          </Tabs.Tab>
         </Tabs.List>
         <Tabs.Panel value="one">Panel One Content</Tabs.Panel>
         <Tabs.Panel value="two">Panel Two Content</Tabs.Panel>
-      </Tabs>,
+      </Tabs>
     );
 
     await user.click(screen.getByRole("tab", { name: "Tab Two" }));
@@ -222,7 +232,7 @@ describe("Tabs", () => {
         </Tabs.List>
         <Tabs.Panel value="one">Panel One</Tabs.Panel>
         <Tabs.Panel value="two">Panel Two</Tabs.Panel>
-      </Tabs>,
+      </Tabs>
     );
 
     await user.click(screen.getByRole("tab", { name: "Tab Two" }));

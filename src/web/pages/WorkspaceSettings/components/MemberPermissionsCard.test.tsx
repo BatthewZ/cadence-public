@@ -49,7 +49,7 @@ function renderCard(allowMemberProjectCreation = true) {
 
 function cachedPolicy(workspaceId: string) {
   return queryClient.getQueryData<{ workspace: WorkspaceDetail }>(
-    queryKeys.workspaces.detail(workspaceId),
+    queryKeys.workspaces.detail(workspaceId)
   )?.workspace.policy;
 }
 
@@ -79,7 +79,7 @@ describe("MemberPermissionsCard", () => {
 
     expect(screen.getByRole("switch", { name: /members can create projects/i })).toHaveAttribute(
       "aria-checked",
-      "true",
+      "true"
     );
   });
 
@@ -88,7 +88,7 @@ describe("MemberPermissionsCard", () => {
 
     expect(screen.getByRole("switch", { name: /members can create projects/i })).toHaveAttribute(
       "aria-checked",
-      "false",
+      "false"
     );
   });
 
@@ -146,10 +146,9 @@ describe("MemberPermissionsCard", () => {
     // back on its own and the admin has no idea whether they mis-clicked or
     // the save failed.
     await waitFor(() => {
-      expect(mockToast).toHaveBeenCalledWith(
-        expect.stringMatching(/could not update/i),
-        { variant: "error" },
-      );
+      expect(mockToast).toHaveBeenCalledWith(expect.stringMatching(/could not update/i), {
+        variant: "error",
+      });
     });
   });
 

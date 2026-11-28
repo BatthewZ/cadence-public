@@ -16,11 +16,7 @@ import { type ReactNode } from "react";
 import { type WorkspaceMember } from "@/web/contexts/WorkspaceContext";
 import { cn } from "@/web/util/style/style";
 
-import {
-  type MdInline,
-  type MdNode,
-  parseMarkdown,
-} from "./parse";
+import { type MdInline, type MdNode, parseMarkdown } from "./parse";
 
 /**
  * Protocols a link may point at. Anything else (notably `javascript:` and
@@ -96,12 +92,7 @@ function renderInline(nodes: MdInline[]): ReactNode[] {
           return <span key={index}>{children}</span>;
         }
         return (
-          <a
-            key={index}
-            href={safeHref}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a key={index} href={safeHref} target="_blank" rel="noopener noreferrer">
             {children}
           </a>
         );
@@ -159,11 +150,7 @@ function renderBlock(node: MdNode, index: number): ReactNode {
       const items = node.items.map((item, itemIndex) => (
         <li key={itemIndex}>{renderInline(item)}</li>
       ));
-      return node.ordered ? (
-        <ol key={index}>{items}</ol>
-      ) : (
-        <ul key={index}>{items}</ul>
-      );
+      return node.ordered ? <ol key={index}>{items}</ol> : <ul key={index}>{items}</ul>;
     }
 
     default:

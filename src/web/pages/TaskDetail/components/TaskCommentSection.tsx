@@ -92,10 +92,7 @@ export function TaskCommentSection({
           const isOwn = currentUserId === comment.authorId;
           const isEditing = editingCommentId === comment.id;
           return (
-            <div
-              key={comment.id}
-              className="group rounded-md border border-border-default p-r4"
-            >
+            <div key={comment.id} className="group rounded-md border border-border-default p-r4">
               <Row gap="r5" align="center" className="mb-r6">
                 <Avatar size="xs" name={comment.authorName} src={author?.user.image} />
                 <Text variant="body-3" weight="semibold">
@@ -115,10 +112,7 @@ export function TaskCommentSection({
                     )}
                 </Text>
                 {isOwn && !isEditing && (
-                  <Row
-                    gap="r6"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
+                  <Row gap="r6" className="opacity-0 group-hover:opacity-100 transition-opacity">
                     <IconButton
                       aria-label="Edit comment"
                       className="p-1"
@@ -153,11 +147,7 @@ export function TaskCommentSection({
                     autoFocus
                   />
                   <Row gap="r6" className="justify-end">
-                    <IconButton
-                      aria-label="Cancel editing"
-                      className="p-1"
-                      onClick={onEditCancel}
-                    >
+                    <IconButton aria-label="Cancel editing" className="p-1" onClick={onEditCancel}>
                       <X size={14} />
                     </IconButton>
                     <IconButton
@@ -180,12 +170,7 @@ export function TaskCommentSection({
 
         {hasMore && (
           <div className="flex justify-center">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={onLoadMore}
-              disabled={isFetchingMore}
-            >
+            <Button variant="ghost" size="sm" onClick={onLoadMore} disabled={isFetchingMore}>
               {isFetchingMore ? "Loading..." : "Load more comments"}
             </Button>
           </div>

@@ -18,7 +18,7 @@ describe("Table", () => {
             <Table.Cell>Cell</Table.Cell>
           </Table.Row>
         </Table.Body>
-      </Table>,
+      </Table>
     );
 
     expect(screen.getByRole("table")).toBeInTheDocument();
@@ -38,7 +38,7 @@ describe("Table", () => {
             <Table.Cell>Cell</Table.Cell>
           </Table.Row>
         </Table.Body>
-      </Table>,
+      </Table>
     );
 
     const rowgroups = screen.getAllByRole("rowgroup");
@@ -65,7 +65,7 @@ describe("Table", () => {
             <Table.Cell>Cell</Table.Cell>
           </Table.Row>
         </Table.Body>
-      </Table>,
+      </Table>
     );
 
     const rows = screen.getAllByRole("row");
@@ -92,7 +92,7 @@ describe("Table", () => {
             <Table.Cell>Cell</Table.Cell>
           </Table.Row>
         </Table.Body>
-      </Table>,
+      </Table>
     );
 
     expect(screen.getByRole("table")).toHaveClass("table--sticky-header");
@@ -114,14 +114,12 @@ describe("Table", () => {
             <Table.Cell>Row 2</Table.Cell>
           </Table.Row>
         </Table.Body>
-      </Table>,
+      </Table>
     );
 
     const rows = screen.getAllByRole("row");
     const bodyRows = rows.filter((row) => row.closest("tbody"));
-    const hasStripedClass = bodyRows.some((row) =>
-      row.classList.contains("table-row--striped"),
-    );
+    const hasStripedClass = bodyRows.some((row) => row.classList.contains("table-row--striped"));
     expect(hasStripedClass).toBe(true);
   });
 
@@ -140,13 +138,10 @@ describe("Table", () => {
             <Table.Cell>Cell</Table.Cell>
           </Table.Row>
         </Table.Body>
-      </Table>,
+      </Table>
     );
 
-    expect(screen.getByRole("columnheader")).toHaveAttribute(
-      "aria-sort",
-      "ascending",
-    );
+    expect(screen.getByRole("columnheader")).toHaveAttribute("aria-sort", "ascending");
   });
 
   it("HeaderCell with sortDirection='desc' has aria-sort='descending'", () => {
@@ -164,13 +159,10 @@ describe("Table", () => {
             <Table.Cell>Cell</Table.Cell>
           </Table.Row>
         </Table.Body>
-      </Table>,
+      </Table>
     );
 
-    expect(screen.getByRole("columnheader")).toHaveAttribute(
-      "aria-sort",
-      "descending",
-    );
+    expect(screen.getByRole("columnheader")).toHaveAttribute("aria-sort", "descending");
   });
 
   it("HeaderCell onSort callback fires on click", async () => {
@@ -191,7 +183,7 @@ describe("Table", () => {
             <Table.Cell>Cell</Table.Cell>
           </Table.Row>
         </Table.Body>
-      </Table>,
+      </Table>
     );
 
     await user.click(screen.getByRole("columnheader"));
@@ -214,7 +206,7 @@ describe("Table", () => {
             <Table.Cell>Normal Row</Table.Cell>
           </Table.Row>
         </Table.Body>
-      </Table>,
+      </Table>
     );
 
     const rows = screen.getAllByRole("row");
@@ -236,7 +228,7 @@ describe("Table", () => {
             <Table.Cell>Cell</Table.Cell>
           </Table.Row>
         </Table.Body>
-      </Table>,
+      </Table>
     );
 
     const wrapper = container.firstElementChild;

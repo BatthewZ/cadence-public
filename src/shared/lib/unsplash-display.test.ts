@@ -1,17 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type {
-  StoredUnsplashCoverPayload,
-  UnsplashCoverPayload,
-} from "../schemas/unsplash";
-import {
-  buildUnsplashDisplaySrcSet,
-  buildUnsplashDisplayUrl,
-} from "./unsplash-display";
+import type { StoredUnsplashCoverPayload, UnsplashCoverPayload } from "../schemas/unsplash";
+import { buildUnsplashDisplaySrcSet, buildUnsplashDisplayUrl } from "./unsplash-display";
 
-function makePayload(
-  overrides: Partial<UnsplashCoverPayload> = {},
-): UnsplashCoverPayload {
+function makePayload(overrides: Partial<UnsplashCoverPayload> = {}): UnsplashCoverPayload {
   return {
     id: "x",
     rawUrl: "https://images.unsplash.com/photo-1?ixid=abc",
@@ -37,9 +29,7 @@ describe("buildUnsplashDisplayUrl", () => {
   it("appends cover preset imgix params to rawUrl", () => {
     const url = buildUnsplashDisplayUrl(makePayload(), "cover");
     const parsed = new URL(url);
-    expect(parsed.origin + parsed.pathname).toBe(
-      "https://images.unsplash.com/photo-1",
-    );
+    expect(parsed.origin + parsed.pathname).toBe("https://images.unsplash.com/photo-1");
     expect(parsed.searchParams.get("w")).toBe("1600");
     expect(parsed.searchParams.get("q")).toBe("80");
     expect(parsed.searchParams.get("auto")).toBe("format");
@@ -75,12 +65,8 @@ describe("buildUnsplashDisplayUrl", () => {
 
   it("falls back when rawUrl is not a valid URL", () => {
     const broken = makePayload({ rawUrl: "not a url" });
-    expect(buildUnsplashDisplayUrl(broken, "cover")).toBe(
-      broken.url,
-    );
-    expect(buildUnsplashDisplayUrl(broken, "card")).toBe(
-      broken.thumbUrl,
-    );
+    expect(buildUnsplashDisplayUrl(broken, "cover")).toBe(broken.url);
+    expect(buildUnsplashDisplayUrl(broken, "card")).toBe(broken.thumbUrl);
   });
 
   it("overrides existing query params on rawUrl rather than duplicating", () => {
@@ -124,7 +110,7 @@ describe("buildUnsplashDisplaySrcSet", () => {
 
   it("strips an existing `w` param on rawUrl so descriptors don't duplicate", () => {
     const srcset = buildUnsplashDisplaySrcSet(
-      makePayload({ rawUrl: "https://images.unsplash.com/photo-1?w=42&ixid=abc" }),
+      makePayload({ rawUrl: "https://images.unsplash.com/photo-1?w=42&ixid=abc" })
     );
     expect(srcset).not.toBeNull();
     for (const entry of srcset!.split(", ")) {
@@ -144,8 +130,6 @@ describe("buildUnsplashDisplaySrcSet", () => {
   });
 
   it("returns null when rawUrl is not a parseable URL", () => {
-    expect(
-      buildUnsplashDisplaySrcSet(makePayload({ rawUrl: "not a url" })),
-    ).toBeNull();
+    expect(buildUnsplashDisplaySrcSet(makePayload({ rawUrl: "not a url" }))).toBeNull();
   });
 });

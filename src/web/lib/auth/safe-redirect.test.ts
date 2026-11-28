@@ -16,7 +16,7 @@ describe("safeRedirectPath", () => {
 
   it("preserves query and hash on an accepted path", () => {
     expect(safeRedirectPath("/w/acme/projects?tab=board#task-1")).toBe(
-      "/w/acme/projects?tab=board#task-1",
+      "/w/acme/projects?tab=board#task-1"
     );
   });
 

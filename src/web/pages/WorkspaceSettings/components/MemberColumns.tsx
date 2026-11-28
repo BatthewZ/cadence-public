@@ -3,14 +3,7 @@ import { UserCog, UserMinus } from "lucide-react";
 import { ROLE_LABELS } from "@/shared/types/roles";
 import { Row } from "@/web/components/layout";
 import type { OnlineOnly } from "@/web/components/sync/use-online-only";
-import {
-  Avatar,
-  Badge,
-  Button,
-  type ColumnDef,
-  DropdownMenu,
-  Text,
-} from "@/web/components/ui";
+import { Avatar, Badge, Button, type ColumnDef, DropdownMenu, Text } from "@/web/components/ui";
 import type { WorkspaceMember } from "@/web/contexts/WorkspaceContext";
 import { getRoleBadgeVariant } from "@/web/util/role-display";
 
@@ -66,7 +59,9 @@ export function getMemberColumns({
       render: (row) => (
         <Row gap="r5" align="center">
           <Avatar src={row.user.image} name={row.user.name} size="sm" />
-          <Text variant="body-2" weight="semibold">{row.user.name}</Text>
+          <Text variant="body-2" weight="semibold">
+            {row.user.name}
+          </Text>
         </Row>
       ),
     },
@@ -75,7 +70,9 @@ export function getMemberColumns({
       header: "Email",
       className: "hidden md:table-cell",
       render: (row) => (
-        <Text variant="body-2" color="secondary" className="truncate max-w-48">{row.user.email}</Text>
+        <Text variant="body-2" color="secondary" className="truncate max-w-48">
+          {row.user.email}
+        </Text>
       ),
     },
     {

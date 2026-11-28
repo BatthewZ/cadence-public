@@ -124,9 +124,7 @@ export function useWorkspacePermissions(): WorkspacePermissions {
 
   return useMemo(() => {
     const userId = session?.user?.id;
-    const membership = userId
-      ? members.find((m) => m.userId === userId)
-      : undefined;
+    const membership = userId ? members.find((m) => m.userId === userId) : undefined;
     const role = membership?.role ? parseWorkspaceRole(membership.role) : null;
     // One expression, read twice. `canManageWorkspace` IS "owner or admin" —
     // it was spelled out a second time, and two copies of a permission rule are
@@ -150,9 +148,7 @@ export function useWorkspacePermissions(): WorkspacePermissions {
       // unknown role from reading as a denied one — see the field's docs for
       // why this flag in particular needs it.
       canCreateProject:
-        !isResolved ||
-        isWorkspaceAdmin ||
-        workspace.policy.allowMemberProjectCreation,
+        !isResolved || isWorkspaceAdmin || workspace.policy.allowMemberProjectCreation,
       isResolved,
     };
   }, [session?.user?.id, members, workspace.policy]);
@@ -207,7 +203,7 @@ export function useWorkspacePermissions(): WorkspacePermissions {
  * on ProjectContext (which is what typically calls this hook).
  */
 export function useProjectPermissions(
-  projectMembers: Array<{ userId: string; role: string }>,
+  projectMembers: Array<{ userId: string; role: string }>
 ): ProjectPermissions {
   const { data: session } = useSession();
   const { members: workspaceMembers } = useWorkspace();

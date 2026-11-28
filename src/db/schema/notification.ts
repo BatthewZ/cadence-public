@@ -41,14 +41,7 @@ export const notification = sqliteTable(
     readAt: integer("readAt", { mode: "timestamp" }),
   },
   (table) => [
-    index("notification_user_read_idx").on(
-      table.userId,
-      table.read,
-      table.createdAt,
-    ),
-    index("notification_user_created_idx").on(
-      table.userId,
-      table.createdAt,
-    ),
-  ],
+    index("notification_user_read_idx").on(table.userId, table.read, table.createdAt),
+    index("notification_user_created_idx").on(table.userId, table.createdAt),
+  ]
 );

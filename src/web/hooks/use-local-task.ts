@@ -36,7 +36,7 @@ export function useLocalTask(taskId: string, taskFromServer: TaskDetail | null |
         return { ...old, task };
       });
     },
-    [qc, taskId],
+    [qc, taskId]
   );
 
   return { localTask, setLocalTask, resetLocalTask };

@@ -54,10 +54,7 @@ const COVER_SRCSET_WIDTHS = [800, 1600, 2400] as const;
  * `rawUrl` is optional for exactly that reason — so the fallback branch
  * below stays honest by construction rather than via a hand-written type.
  */
-type SourceWithFallback = Pick<
-  StoredUnsplashCoverPayload,
-  "url" | "thumbUrl" | "rawUrl"
->;
+type SourceWithFallback = Pick<StoredUnsplashCoverPayload, "url" | "thumbUrl" | "rawUrl">;
 
 /**
  * Compose a display URL from an Unsplash payload and a preset.
@@ -67,7 +64,7 @@ type SourceWithFallback = Pick<
  */
 export function buildUnsplashDisplayUrl(
   payload: SourceWithFallback,
-  preset: UnsplashDisplayPreset,
+  preset: UnsplashDisplayPreset
 ): string {
   const raw = payload.rawUrl;
   if (!raw) {
@@ -101,9 +98,7 @@ export function buildUnsplashDisplayUrl(
  * There's no card equivalent because picker thumbnails render at a fixed
  * ~250–350 CSS px; a single `w=500` rendition is plenty there.
  */
-export function buildUnsplashDisplaySrcSet(
-  payload: SourceWithFallback,
-): string | null {
+export function buildUnsplashDisplaySrcSet(payload: SourceWithFallback): string | null {
   const raw = payload.rawUrl;
   if (!raw) return null;
   try {

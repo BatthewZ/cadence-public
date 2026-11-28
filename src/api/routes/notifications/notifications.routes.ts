@@ -62,7 +62,12 @@ app.use("/notifications/mark-all-read", taskReadScope, taskWriteScope);
 app.use("/notifications/:id", taskReadScope, taskWriteScope);
 app.use("/notifications/:id/read", taskReadScope, taskWriteScope);
 
-app.get("/notifications", requireAuth, validateQuery(listNotificationsQuerySchema), listNotifications);
+app.get(
+  "/notifications",
+  requireAuth,
+  validateQuery(listNotificationsQuerySchema),
+  listNotifications
+);
 app.get("/notifications/unread-count", requireAuth, getUnreadCount);
 app.patch("/notifications/:id/read", requireAuth, markAsRead);
 app.post("/notifications/mark-all-read", requireAuth, markAllAsRead);

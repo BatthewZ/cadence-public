@@ -161,7 +161,7 @@ function createApp(
     | typeof requireReadScopeForResource
   >,
   fixture: Fixture,
-  routePath = "/ws/:workspaceId",
+  routePath = "/ws/:workspaceId"
 ) {
   const app = new Hono<AppEnv>();
   app.use("*", async (c, next) => {
@@ -175,8 +175,7 @@ function createApp(
     c.set("db", fixture.db ?? ({} as never));
     if (fixture.user !== undefined) c.set("user", fixture.user);
     if (fixture.token !== undefined) c.set("apiToken", fixture.token);
-    if (fixture.membership !== undefined)
-      c.set("workspaceMembership", fixture.membership);
+    if (fixture.membership !== undefined) c.set("workspaceMembership", fixture.membership);
     await next();
   });
   app.use(routePath, middleware);
@@ -289,7 +288,7 @@ describe("requireProjectAccess (PAT project-scope guard)", () => {
         // the project-selection half in isolation.
         token: fakeToken({ workspaceId: "ws_alpha", projectScope: "all", projectIds: null }),
       },
-      "/projects/:projectId",
+      "/projects/:projectId"
     );
 
     const res = await app.request("/projects/proj_1");
@@ -313,7 +312,7 @@ describe("requireProjectAccess (PAT project-scope guard)", () => {
           projectIds: JSON.stringify(["proj_42", "proj_99"]),
         }),
       },
-      "/projects/:projectId",
+      "/projects/:projectId"
     );
 
     const res = await app.request("/projects/proj_42");
@@ -341,7 +340,7 @@ describe("requireProjectAccess (PAT project-scope guard)", () => {
           projectIds: JSON.stringify(["proj_42"]),
         }),
       },
-      "/projects/:projectId",
+      "/projects/:projectId"
     );
 
     const res = await app.request("/projects/proj_other");
@@ -361,7 +360,7 @@ describe("requireProjectAccess (PAT project-scope guard)", () => {
     const app = createApp(
       requireProjectAccess(),
       { user: fakeUser(), token: null, db: projectLookupStub([]) },
-      "/projects/:projectId",
+      "/projects/:projectId"
     );
 
     const res = await app.request("/projects/proj_missing");
@@ -392,7 +391,7 @@ describe("requireProjectRole (PAT project-scope guard)", () => {
           projectIds: JSON.stringify(["proj_42"]),
         }),
       },
-      "/projects/:projectId",
+      "/projects/:projectId"
     );
 
     const res = await app.request("/projects/proj_other");
@@ -425,7 +424,7 @@ describe("requireTaskAccess (PAT project-scope guard)", () => {
           projectIds: JSON.stringify(["proj_unrelated"]),
         }),
       },
-      "/tasks/:taskId",
+      "/tasks/:taskId"
     );
 
     const res = await app.request("/tasks/task_1");
@@ -452,7 +451,7 @@ describe("requireTaskAccess (PAT project-scope guard)", () => {
           projectIds: JSON.stringify(["proj_owner"]),
         }),
       },
-      "/tasks/:taskId",
+      "/tasks/:taskId"
     );
 
     const res = await app.request("/tasks/task_1");
@@ -472,7 +471,7 @@ describe("requireTokenScope", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["task:write"]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/");
@@ -486,7 +485,7 @@ describe("requireTokenScope", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["task:read"]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/");
@@ -498,11 +497,7 @@ describe("requireTokenScope", () => {
   });
 
   it("is a no-op for cookie auth (no apiToken in context)", async () => {
-    const app = createApp(
-      requireTokenScope("task:write"),
-      { user: fakeUser(), token: null },
-      "/",
-    );
+    const app = createApp(requireTokenScope("task:write"), { user: fakeUser(), token: null }, "/");
 
     const res = await app.request("/");
     expect(res.status).toBe(200);
@@ -515,7 +510,7 @@ describe("requireTokenScope", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["write:*"]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/");
@@ -529,7 +524,7 @@ describe("requireTokenScope", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["write:*"]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/");
@@ -550,7 +545,7 @@ describe("requireWriteScopeForResource", () => {
         // No scopes at all — would fail any scope check.
         token: fakeToken({ scopes: JSON.stringify([]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/");
@@ -564,7 +559,7 @@ describe("requireWriteScopeForResource", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["task:read"]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/", { method: "POST" });
@@ -580,7 +575,7 @@ describe("requireWriteScopeForResource", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["task:write"]) }),
       },
-      "/",
+      "/"
     );
 
     const patchRes = await app.request("/", { method: "PATCH" });
@@ -607,19 +602,19 @@ describe("requireWriteScopeForResource", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["task:read"]) }),
       },
-      "/",
+      "/"
     );
 
     const patchRes = await app.request("/", { method: "PATCH" });
     expect(patchRes.status).toBe(403);
     expect((await patchRes.json<{ error: string }>()).error).toBe(
-      "Insufficient scope: requires task:write",
+      "Insufficient scope: requires task:write"
     );
 
     const putRes = await app.request("/", { method: "PUT" });
     expect(putRes.status).toBe(403);
     expect((await putRes.json<{ error: string }>()).error).toBe(
-      "Insufficient scope: requires task:write",
+      "Insufficient scope: requires task:write"
     );
   });
 
@@ -631,7 +626,7 @@ describe("requireWriteScopeForResource", () => {
         // task:write alone is not enough — :delete is a heightened scope.
         token: fakeToken({ scopes: JSON.stringify(["task:write"]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/", { method: "DELETE" });
@@ -647,7 +642,7 @@ describe("requireWriteScopeForResource", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["task:delete"]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/", { method: "DELETE" });
@@ -663,7 +658,7 @@ describe("requireWriteScopeForResource", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["label:write"]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/", { method: "DELETE" });
@@ -689,7 +684,7 @@ describe("requireWriteScopeForResource", () => {
         // Read-only integration token — must not be able to delete.
         token: fakeToken({ scopes: JSON.stringify(["webhook:read"]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/", { method: "DELETE" });
@@ -702,7 +697,7 @@ describe("requireWriteScopeForResource", () => {
     const app = createApp(
       requireWriteScopeForResource({ resource: "task", allowDelete: true }),
       { user: fakeUser(), token: null },
-      "/",
+      "/"
     );
 
     const postRes = await app.request("/", { method: "POST" });
@@ -719,7 +714,7 @@ describe("requireWriteScopeForResource", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["write:*"]) }),
       },
-      "/",
+      "/"
     );
 
     const postRes = await app.request("/", { method: "POST" });
@@ -743,7 +738,7 @@ describe("requireReadScopeForResource", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["task:write"]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/");
@@ -759,7 +754,7 @@ describe("requireReadScopeForResource", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["task:read"]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/");
@@ -773,7 +768,7 @@ describe("requireReadScopeForResource", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify(["read:*"]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/");
@@ -787,7 +782,7 @@ describe("requireReadScopeForResource", () => {
         user: fakeUser(),
         token: fakeToken({ scopes: JSON.stringify([]) }),
       },
-      "/",
+      "/"
     );
 
     const res = await app.request("/", { method: "POST" });
@@ -798,7 +793,7 @@ describe("requireReadScopeForResource", () => {
     const app = createApp(
       requireReadScopeForResource("task"),
       { user: fakeUser(), token: null },
-      "/",
+      "/"
     );
 
     const res = await app.request("/");
@@ -831,10 +826,7 @@ describe("tokenAllowsProject (shared PAT binding policy)", () => {
 
   it("allows an `all` token inside its own workspace", () => {
     expect(
-      tokenAllowsProject(
-        fakeToken({ workspaceId: "ws_alpha", projectScope: "all" }),
-        projAlpha,
-      ),
+      tokenAllowsProject(fakeToken({ workspaceId: "ws_alpha", projectScope: "all" }), projAlpha)
     ).toBe(true);
   });
 
@@ -843,10 +835,7 @@ describe("tokenAllowsProject (shared PAT binding policy)", () => {
     // means "all projects in MY workspace", never "all projects anywhere the
     // owning human happens to be a member".
     expect(
-      tokenAllowsProject(
-        fakeToken({ workspaceId: "ws_beta", projectScope: "all" }),
-        projAlpha,
-      ),
+      tokenAllowsProject(fakeToken({ workspaceId: "ws_beta", projectScope: "all" }), projAlpha)
     ).toBe(false);
   });
 
@@ -858,8 +847,8 @@ describe("tokenAllowsProject (shared PAT binding policy)", () => {
           projectScope: "selected",
           projectIds: JSON.stringify(["proj_alpha", "proj_other"]),
         }),
-        projAlpha,
-      ),
+        projAlpha
+      )
     ).toBe(true);
   });
 
@@ -871,8 +860,8 @@ describe("tokenAllowsProject (shared PAT binding policy)", () => {
           projectScope: "selected",
           projectIds: JSON.stringify(["proj_other"]),
         }),
-        projAlpha,
-      ),
+        projAlpha
+      )
     ).toBe(false);
   });
 
@@ -887,8 +876,8 @@ describe("tokenAllowsProject (shared PAT binding policy)", () => {
             projectScope: "selected",
             projectIds,
           }),
-          projAlpha,
-        ),
+          projAlpha
+        )
       ).toBe(false);
     }
   });
@@ -901,8 +890,8 @@ describe("tokenAllowsProject (shared PAT binding policy)", () => {
           projectScope: "future_mode",
           projectIds: JSON.stringify(["proj_alpha"]),
         }),
-        projAlpha,
-      ),
+        projAlpha
+      )
     ).toBe(false);
   });
 
@@ -916,8 +905,8 @@ describe("tokenAllowsProject (shared PAT binding policy)", () => {
           projectScope: "selected",
           projectIds: JSON.stringify(["proj_alpha"]),
         }),
-        projAlpha,
-      ),
+        projAlpha
+      )
     ).toBe(false);
   });
 });
@@ -944,7 +933,7 @@ describe("project + task middleware enforce the workspace half of the binding", 
         user: fakeUser(),
         token: fakeToken({ workspaceId: "ws_beta", projectScope: "all" }),
       },
-      "/projects/:projectId",
+      "/projects/:projectId"
     );
 
     const res = await app.request("/projects/proj_1");
@@ -969,7 +958,7 @@ describe("project + task middleware enforce the workspace half of the binding", 
         user: fakeUser(),
         token: fakeToken({ workspaceId: "ws_beta", projectScope: "all" }),
       },
-      "/tasks/:taskId",
+      "/tasks/:taskId"
     );
 
     const res = await app.request("/tasks/task_1");
@@ -986,7 +975,7 @@ describe("project + task middleware enforce the workspace half of the binding", 
     const app = createApp(
       requireProjectAccess(),
       { user: fakeUser(), token: null },
-      "/projects/:projectId",
+      "/projects/:projectId"
     );
 
     const res = await app.request("/projects/proj_1");
@@ -1067,8 +1056,8 @@ describe("tokenProjectAllowList", () => {
         fakeToken({
           projectScope: "selected",
           projectIds: JSON.stringify(["proj_a", "proj_b"]),
-        }),
-      ),
+        })
+      )
     ).toEqual(["proj_a", "proj_b"]);
   });
 
@@ -1077,11 +1066,9 @@ describe("tokenProjectAllowList", () => {
     // everything). A storage bug in `projectIds` must degrade to zero access,
     // so every unreadable form has to land on `[]`.
     for (const projectIds of [null, "", "not json", '{"not":"an array"}', "[]"]) {
-      expect(
-        tokenProjectAllowList(
-          fakeToken({ projectScope: "selected", projectIds }),
-        ),
-      ).toEqual([]);
+      expect(tokenProjectAllowList(fakeToken({ projectScope: "selected", projectIds }))).toEqual(
+        []
+      );
     }
   });
 
@@ -1091,8 +1078,8 @@ describe("tokenProjectAllowList", () => {
         fakeToken({
           projectScope: "future_mode",
           projectIds: JSON.stringify(["proj_a"]),
-        }),
-      ),
+        })
+      )
     ).toEqual([]);
   });
 });
@@ -1170,10 +1157,9 @@ describe("tokenProjectAllowList agrees with tokenAllowsProject", () => {
           id,
           workspaceId: "ws_alpha",
         });
-        expect(
-          viaList,
-          `${label}: enumeration and predicate disagree about ${id}`,
-        ).toBe(viaPredicate);
+        expect(viaList, `${label}: enumeration and predicate disagree about ${id}`).toBe(
+          viaPredicate
+        );
       }
     });
   }
@@ -1232,12 +1218,8 @@ describe("tokenWorkspaceScopeFilter", () => {
     // Asymmetry with the project half, and the reason these are two functions:
     // EVERY PAT is bound to exactly one workspace, so `all` narrows nothing
     // about projects but still narrows workspaces.
-    const c = await contextWithToken(
-      fakeToken({ workspaceId: "ws_alpha", projectScope: "all" }),
-    );
-    const { sql: text, params } = compile(
-      tokenWorkspaceScopeFilter(c, notification.workspaceId),
-    );
+    const c = await contextWithToken(fakeToken({ workspaceId: "ws_alpha", projectScope: "all" }));
+    const { sql: text, params } = compile(tokenWorkspaceScopeFilter(c, notification.workspaceId));
     expect(text).toContain('"notification"."workspaceId" = ?');
     expect(params).toEqual(["ws_alpha"]);
   });
@@ -1245,7 +1227,7 @@ describe("tokenWorkspaceScopeFilter", () => {
   it("binds to whichever workspace-id column the caller passes", async () => {
     const c = await contextWithToken(fakeToken({ workspaceId: "ws_alpha" }));
     expect(compile(tokenWorkspaceScopeFilter(c, project.workspaceId)).sql).toContain(
-      '"project"."workspaceId" = ?',
+      '"project"."workspaceId" = ?'
     );
   });
 });
@@ -1269,7 +1251,7 @@ describe("tokenProjectScopeFilter", () => {
       fakeToken({
         projectScope: "selected",
         projectIds: JSON.stringify(["proj_a", "proj_b"]),
-      }),
+      })
     );
     const { sql: text, params } = compile(tokenProjectScopeFilter(c, project.id));
     expect(text).toContain('"project"."id" in (?, ?)');
@@ -1282,9 +1264,7 @@ describe("tokenProjectScopeFilter", () => {
     // would return the entire workspace to a token narrowed to nothing. We
     // write `1 = 0` ourselves so the fail-closed behaviour does not depend on
     // the ORM version.
-    const c = await contextWithToken(
-      fakeToken({ projectScope: "selected", projectIds: "[]" }),
-    );
+    const c = await contextWithToken(fakeToken({ projectScope: "selected", projectIds: "[]" }));
     const { sql: text, params } = compile(tokenProjectScopeFilter(c, project.id));
     expect(text).toBe("1 = 0");
     expect(params).toEqual([]);
@@ -1295,13 +1275,13 @@ describe("tokenProjectScopeFilter", () => {
     // `webhook.projectId` in scope. The helper must bind to the column it is
     // given rather than assuming a particular table is joined.
     const c = await contextWithToken(
-      fakeToken({ projectScope: "selected", projectIds: JSON.stringify(["p"]) }),
+      fakeToken({ projectScope: "selected", projectIds: JSON.stringify(["p"]) })
     );
     expect(compile(tokenProjectScopeFilter(c, task.projectId)).sql).toContain(
-      '"task"."projectId" in (?)',
+      '"task"."projectId" in (?)'
     );
     expect(compile(tokenProjectScopeFilter(c, webhook.projectId)).sql).toContain(
-      '"webhook"."projectId" in (?)',
+      '"webhook"."projectId" in (?)'
     );
   });
 });
@@ -1325,7 +1305,7 @@ describe("enforceTokenWorkspaceWideAccess", () => {
       fakeToken({
         projectScope: "selected",
         projectIds: JSON.stringify(["proj_a"]),
-      }),
+      })
     );
     const res = enforceTokenWorkspaceWideAccess(c);
     expect(res).not.toBeNull();
@@ -1334,9 +1314,7 @@ describe("enforceTokenWorkspaceWideAccess", () => {
   });
 
   it("refuses a selected token even when its list is empty", async () => {
-    const c = await contextWithToken(
-      fakeToken({ projectScope: "selected", projectIds: "[]" }),
-    );
+    const c = await contextWithToken(fakeToken({ projectScope: "selected", projectIds: "[]" }));
     expect(enforceTokenWorkspaceWideAccess(c)?.status).toBe(403);
   });
 });

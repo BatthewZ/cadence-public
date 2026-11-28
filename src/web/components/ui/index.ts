@@ -9,10 +9,16 @@ export { Button } from "./Button";
 export { Card } from "./Card";
 export { Carousel } from "./Carousel";
 export { ConfirmDialog } from "./ConfirmDialog";
-export { type ColumnDef,DataTable } from "./DataTable";
+export { type ColumnDef, DataTable } from "./DataTable";
 export { Dialog } from "./Dialog";
 export { DropdownMenu } from "./DropdownMenu";
-export { EmptyState, EmptyStateActions, EmptyStateDescription, EmptyStateIcon, EmptyStateTitle } from "./EmptyState";
+export {
+  EmptyState,
+  EmptyStateActions,
+  EmptyStateDescription,
+  EmptyStateIcon,
+  EmptyStateTitle,
+} from "./EmptyState";
 export { ErrorBoundary } from "./ErrorBoundary";
 export { FileUpload } from "./FileUpload";
 export { Hero } from "./Hero";

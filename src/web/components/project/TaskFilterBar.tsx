@@ -1,15 +1,10 @@
-import {
-  Filter,
-} from "lucide-react";
+import { Filter } from "lucide-react";
 import { useState } from "react";
 
 import type { Task } from "@/web/contexts/ProjectContext";
 import { useProject } from "@/web/contexts/ProjectContext";
 import { useLabels } from "@/web/hooks/use-labels";
-import {
-  type TaskFilters,
-  useTaskFilters,
-} from "@/web/hooks/use-task-filters";
+import { type TaskFilters, useTaskFilters } from "@/web/hooks/use-task-filters";
 
 import { AssigneeFilter } from "./filters/AssigneeFilter";
 import { DueDateFilter, type DueDateFilterValue } from "./filters/DueDateFilter";
@@ -45,8 +40,7 @@ export interface TaskFilterBarProps {
 export function TaskFilterBar({ tasks }: TaskFilterBarProps) {
   const { members, project } = useProject();
   const filtersReturn = useTaskFilters(tasks);
-  const { filters, setFilter, setFilters, hasActiveFilters, clearFilters } =
-    filtersReturn;
+  const { filters, setFilter, setFilters, hasActiveFilters, clearFilters } = filtersReturn;
   const { data: labelsData } = useLabels(project.id);
   const allLabels = labelsData?.labels ?? [];
   const [managementOpen, setManagementOpen] = useState(false);
@@ -74,10 +68,7 @@ export function TaskFilterBar({ tasks }: TaskFilterBarProps) {
         <ViewSwitcher projectId={project.id} />
         <Filter size={14} className="text-fg-muted shrink-0" />
 
-        <AssigneeFilter
-          members={members}
-          filtersReturn={filtersReturn}
-        />
+        <AssigneeFilter members={members} filtersReturn={filtersReturn} />
         <PriorityFilter
           selected={filters.priorities}
           onChange={(next) => setFilter("priorities", next)}
@@ -99,11 +90,7 @@ export function TaskFilterBar({ tasks }: TaskFilterBarProps) {
         {hasActiveFilters && (
           <>
             <SaveViewButton projectId={project.id} />
-            <button
-              type="button"
-              className="task-filter-bar__clear"
-              onClick={clearFilters}
-            >
+            <button type="button" className="task-filter-bar__clear" onClick={clearFilters}>
               Clear filters
             </button>
           </>

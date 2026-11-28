@@ -9,14 +9,23 @@ describe("performWrite", () => {
     // A stalled network: the request is neither answered nor refused until it is aborted.
     const stalled = ((_path: string, init?: RequestInit) =>
       new Promise<Response>((_, reject) => {
-        init?.signal?.addEventListener("abort", () => reject(new DOMException("Aborted", "AbortError")));
+        init?.signal?.addEventListener("abort", () =>
+          reject(new DOMException("Aborted", "AbortError"))
+        );
       })) as typeof fetch;
 
     await expect(performWrite(write, stalled, 30)).resolves.toEqual({ kind: "network" });
   });
 
   it("returns the server's answer when it comes in time", async () => {
-    const ok = (() => Promise.resolve(new Response(JSON.stringify({ task: { id: "t1" } }), { status: 200 }))) as typeof fetch;
-    await expect(performWrite(write, ok, 1_000)).resolves.toEqual({ kind: "ok", status: 200, data: { task: { id: "t1" } } });
+    const ok = (() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ task: { id: "t1" } }), { status: 200 })
+      )) as typeof fetch;
+    await expect(performWrite(write, ok, 1_000)).resolves.toEqual({
+      kind: "ok",
+      status: 200,
+      data: { task: { id: "t1" } },
+    });
   });
 });

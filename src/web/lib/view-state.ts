@@ -75,10 +75,7 @@ const RESERVED_SERIALIZE_KEYS: ReadonlySet<string> = new Set(["view"]);
  * the same filter state, and storing the empty form would later trip the
  * dirty indicator against a URL that simply omits the key.
  */
-export function captureViewState(
-  tab: string,
-  searchParams: URLSearchParams,
-): SavedViewState {
+export function captureViewState(tab: string, searchParams: URLSearchParams): SavedViewState {
   const params: Record<string, string> = {};
   for (const key of TASK_VIEW_PARAM_KEYS) {
     const value = searchParams.get(key);

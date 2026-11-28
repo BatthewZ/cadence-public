@@ -10,7 +10,7 @@ describe("Spotlight", () => {
         <Spotlight.Item>
           <Spotlight.Content>Hello</Spotlight.Content>
         </Spotlight.Item>
-      </Spotlight>,
+      </Spotlight>
     );
     expect(container.querySelector(".spotlight")).toBeInTheDocument();
   });
@@ -24,7 +24,7 @@ describe("Spotlight", () => {
             <p>Description of the feature.</p>
           </Spotlight.Content>
         </Spotlight.Item>
-      </Spotlight>,
+      </Spotlight>
     );
     expect(screen.getByRole("heading", { level: 2, name: "Featured Article" })).toBeInTheDocument();
     expect(screen.getByText("Description of the feature.")).toBeInTheDocument();
@@ -37,7 +37,7 @@ describe("Spotlight", () => {
           <Spotlight.Image src="/hero.jpg" alt="Hero image" />
           <Spotlight.Content>Content</Spotlight.Content>
         </Spotlight.Item>
-      </Spotlight>,
+      </Spotlight>
     );
     const img = screen.getByRole("img", { name: "Hero image" });
     expect(img).toBeInTheDocument();
@@ -51,7 +51,7 @@ describe("Spotlight", () => {
           <Spotlight.Image src="/bg.jpg" />
           <Spotlight.Content>Content</Spotlight.Content>
         </Spotlight.Item>
-      </Spotlight>,
+      </Spotlight>
     );
     expect(screen.getByRole("presentation")).toBeInTheDocument();
   });
@@ -62,7 +62,7 @@ describe("Spotlight", () => {
         <Spotlight.Item reversed>
           <Spotlight.Content>Reversed</Spotlight.Content>
         </Spotlight.Item>
-      </Spotlight>,
+      </Spotlight>
     );
     const item = container.querySelector(".spotlight-item");
     expect(item?.className).toContain("spotlight-item--reversed");
@@ -74,7 +74,7 @@ describe("Spotlight", () => {
         <Spotlight.Item>
           <Spotlight.Content>Normal</Spotlight.Content>
         </Spotlight.Item>
-      </Spotlight>,
+      </Spotlight>
     );
     const item = container.querySelector(".spotlight-item");
     expect(item?.className).not.toContain("spotlight-item--reversed");
@@ -86,7 +86,7 @@ describe("Spotlight", () => {
         <Spotlight.Item>
           <Spotlight.Content>Text</Spotlight.Content>
         </Spotlight.Item>
-      </Spotlight>,
+      </Spotlight>
     );
     expect(container.querySelector(".spotlight-content")).toBeInTheDocument();
   });
@@ -97,7 +97,7 @@ describe("Spotlight", () => {
         <Spotlight.Item>
           <Spotlight.Image src="/photo.jpg" alt="Photo" />
         </Spotlight.Item>
-      </Spotlight>,
+      </Spotlight>
     );
     expect(container.querySelector(".spotlight-image")).toBeInTheDocument();
   });
@@ -108,7 +108,7 @@ describe("Spotlight", () => {
         <Spotlight.Item>
           <Spotlight.Content>Text</Spotlight.Content>
         </Spotlight.Item>
-      </Spotlight>,
+      </Spotlight>
     );
     const root = container.querySelector(".spotlight");
     expect(root?.className).toContain("custom-spotlight");
@@ -120,7 +120,7 @@ describe("Spotlight", () => {
         <Spotlight.Item className="item-custom">
           <Spotlight.Content>Text</Spotlight.Content>
         </Spotlight.Item>
-      </Spotlight>,
+      </Spotlight>
     );
     const item = container.querySelector(".spotlight-item");
     expect(item?.className).toContain("item-custom");

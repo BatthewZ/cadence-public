@@ -139,7 +139,7 @@ function bumpFeedLastUsedAt(c: Context<AppEnv>, feedTokenId: string): void {
           op: "bumpFeedLastUsedAt",
           feedTokenId,
           error: err instanceof Error ? err.message : String(err),
-        }),
+        })
       );
     }
   });
@@ -173,9 +173,7 @@ function bumpFeedLastUsedAt(c: Context<AppEnv>, feedTokenId: string): void {
 export async function getCalendarFeed(c: Context<AppEnv>) {
   const db = c.get("db");
   const rawToken = requireParam(c, "token");
-  const plaintext = rawToken.endsWith(".ics")
-    ? rawToken.slice(0, -".ics".length)
-    : rawToken;
+  const plaintext = rawToken.endsWith(".ics") ? rawToken.slice(0, -".ics".length) : rawToken;
 
   // Cheap reject: wrong-prefix garbage must not cost an HMAC or a DB lookup,
   // and PAT plaintexts must be structurally unable to open the feed.
@@ -205,8 +203,8 @@ export async function getCalendarFeed(c: Context<AppEnv>) {
       workspaceMember,
       and(
         eq(workspaceMember.workspaceId, calendarFeedToken.workspaceId),
-        eq(workspaceMember.userId, calendarFeedToken.userId),
-      ),
+        eq(workspaceMember.userId, calendarFeedToken.userId)
+      )
     )
     .where(eq(calendarFeedToken.tokenHash, tokenHash))
     .limit(1);
@@ -253,8 +251,8 @@ export async function getCalendarFeed(c: Context<AppEnv>) {
         eq(task.assigneeId, userId),
         eq(project.workspaceId, workspaceId),
         or(isNotNull(task.dueDate), isNotNull(task.startDate)),
-        or(eq(task.completed, false), gt(task.completedAt, completedCutoff)),
-      ),
+        or(eq(task.completed, false), gt(task.completedAt, completedCutoff))
+      )
     )
     .orderBy(asc(sql`coalesce(${task.dueDate}, ${task.startDate})`))
     .limit(FEED_TASK_LIMIT);
@@ -335,12 +333,7 @@ export async function getCalendarFeedStatus(c: Context<AppEnv>) {
       lastUsedAt: calendarFeedToken.lastUsedAt,
     })
     .from(calendarFeedToken)
-    .where(
-      and(
-        eq(calendarFeedToken.userId, me.id),
-        eq(calendarFeedToken.workspaceId, workspaceId),
-      ),
-    )
+    .where(and(eq(calendarFeedToken.userId, me.id), eq(calendarFeedToken.workspaceId, workspaceId)))
     .limit(1);
 
   if (!row) {
@@ -405,10 +398,7 @@ export async function createCalendarFeed(c: Context<AppEnv>) {
     throwWithContext(error, "createCalendarFeed");
   }
 
-  return c.json(
-    { url: `${appBaseUrl(c)}/api/calendar/feed/${plaintext}` },
-    201,
-  );
+  return c.json({ url: `${appBaseUrl(c)}/api/calendar/feed/${plaintext}` }, 201);
 }
 
 // ---------------------------------------------------------------------------
@@ -431,10 +421,7 @@ export async function deleteCalendarFeed(c: Context<AppEnv>) {
   await db
     .delete(calendarFeedToken)
     .where(
-      and(
-        eq(calendarFeedToken.userId, me.id),
-        eq(calendarFeedToken.workspaceId, workspaceId),
-      ),
+      and(eq(calendarFeedToken.userId, me.id), eq(calendarFeedToken.workspaceId, workspaceId))
     );
 
   return c.json({ ok: true });

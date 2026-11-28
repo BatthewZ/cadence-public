@@ -49,8 +49,7 @@ import { resolveProjectAccess } from "./access";
  * access" — telling an attacker which user ids exist would hand back a user
  * enumeration oracle in exchange for a slightly nicer error.
  */
-export const ASSIGNEE_NOT_ASSIGNABLE_MESSAGE =
-  "Assignee must have access to this project";
+export const ASSIGNEE_NOT_ASSIGNABLE_MESSAGE = "Assignee must have access to this project";
 
 /**
  * True when `userId` can access `projectId` and may therefore hold its tasks.
@@ -71,7 +70,7 @@ export const ASSIGNEE_NOT_ASSIGNABLE_MESSAGE =
 export async function canUserBeAssigned(
   db: Database,
   projectId: string,
-  userId: string,
+  userId: string
 ): Promise<boolean> {
   return (await resolveProjectAccess(db, projectId, userId)) !== null;
 }
@@ -93,7 +92,7 @@ export async function canUserBeAssigned(
 export async function retainAssignableAssignee(
   db: Database,
   projectId: string,
-  assigneeId: string | null,
+  assigneeId: string | null
 ): Promise<string | null> {
   if (!assigneeId) return null;
   return (await canUserBeAssigned(db, projectId, assigneeId)) ? assigneeId : null;

@@ -3,11 +3,7 @@ import { useEffect, useState } from "react";
 
 import { Input } from "@/web/components/form/Input";
 import { Row, Stack } from "@/web/components/layout";
-import {
-  Button,
-  Dialog,
-  Text,
-} from "@/web/components/ui";
+import { Button, Dialog, Text } from "@/web/components/ui";
 import { useToast } from "@/web/components/ui/ToastContext";
 import { useWorkspace, type WorkspaceProject } from "@/web/contexts/WorkspaceContext";
 import { apiErrorMessage } from "@/web/lib/api/client";
@@ -49,10 +45,12 @@ export function RenameProjectDialog({
     const previousList = qc.getQueryData(listKey);
     const previousDetail = qc.getQueryData(detailKey);
     qc.setQueryData(listKey, (old: { projects: WorkspaceProject[] } | undefined) =>
-      old ? { projects: old.projects.map((p) => (p.id === projectId ? { ...p, name: trimmed } : p)) } : old,
+      old
+        ? { projects: old.projects.map((p) => (p.id === projectId ? { ...p, name: trimmed } : p)) }
+        : old
     );
     qc.setQueryData(detailKey, (old: { project: { name: string } } | undefined) =>
-      old ? { ...old, project: { ...old.project, name: trimmed } } : old,
+      old ? { ...old, project: { ...old.project, name: trimmed } } : old
     );
     try {
       const result = await sendWrite({
@@ -97,12 +95,7 @@ export function RenameProjectDialog({
             autoFocus
           />
           <Row gap="r4" justify="end">
-            <Button
-              variant="ghost"
-              type="button"
-              onClick={() => onClose()}
-              disabled={renaming}
-            >
+            <Button variant="ghost" type="button" onClick={() => onClose()} disabled={renaming}>
               Cancel
             </Button>
             <Button

@@ -33,7 +33,7 @@ vi.mock("../../lib/auth", () => ({
 
 type EmailMessage = { to: string; from?: string; subject: string; html: string; text?: string };
 const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<{ id: string }>>(() =>
-  Promise.resolve({ id: "test-email-id" }),
+  Promise.resolve({ id: "test-email-id" })
 );
 vi.mock("../../lib/email", () => ({
   createEmailService: vi.fn(() => ({ send: mockEmailSend })),
@@ -83,7 +83,7 @@ function installCookieAuthMock() {
             });
           }),
         },
-      }) as never,
+      }) as never
   );
 }
 
@@ -119,12 +119,7 @@ function cookieRequest(method: string, path: string, body?: unknown): Request {
   return new Request(`http://localhost${path}`, init);
 }
 
-function patRequest(
-  plaintext: string,
-  method: string,
-  path: string,
-  body?: unknown,
-): Request {
+function patRequest(plaintext: string, method: string, path: string, body?: unknown): Request {
   const headers: Record<string, string> = { Authorization: `Bearer ${plaintext}` };
   const init: RequestInit = { method, headers };
   if (body !== undefined) {
@@ -141,7 +136,7 @@ async function mintPat(app: Hono<AppEnv>, scopes: string[]): Promise<string> {
       name: "invite-link probe",
       scopes,
       projectScope: "all",
-    }),
+    })
   );
   expect(res.status).toBe(201);
   const body = await res.json<{ token: { plaintext: string } }>();
@@ -200,7 +195,7 @@ describe("E2E: invitation token disclosure boundaries", () => {
     // PAT refusal below cannot pass by the route being broken for everyone.
     const app = buildE2EApp();
     const res = await app.request(
-      cookieRequest("GET", `/workspaces/${workspaceId}/invitations/e2e-link-inv/link`),
+      cookieRequest("GET", `/workspaces/${workspaceId}/invitations/e2e-link-inv/link`)
     );
 
     expect(res.status).toBe(200);
@@ -218,17 +213,13 @@ describe("E2E: invitation token disclosure boundaries", () => {
     const plaintext = await mintPat(app, ["workspace:read", "invitation:write"]);
 
     const res = await app.request(
-      patRequest(
-        plaintext,
-        "GET",
-        `/workspaces/${workspaceId}/invitations/e2e-link-inv/link`,
-      ),
+      patRequest(plaintext, "GET", `/workspaces/${workspaceId}/invitations/e2e-link-inv/link`)
     );
 
     expect(res.status).toBe(403);
     expect(await res.clone().text()).not.toContain("e2e-secret-invite-token");
     expect((await res.json<{ error: string }>()).error).toBe(
-      "API tokens cannot retrieve invitation links",
+      "API tokens cannot retrieve invitation links"
     );
   });
 
@@ -269,7 +260,7 @@ describe("E2E: listing your pending invitations is closed to machine credentials
     expect(res.status).toBe(200);
     const body = await res.json<{ invitations: { workspace: { id: string } }[] }>();
     expect(body.invitations.map((i) => i.workspace.id).sort()).toEqual(
-      [patAcceptWsId, cookieAcceptWsId].sort(),
+      [patAcceptWsId, cookieAcceptWsId].sort()
     );
   });
 
@@ -293,9 +284,7 @@ describe("E2E: listing your pending invitations is closed to machine credentials
     const text = await res.clone().text();
     expect(text).not.toContain(patAcceptWsId);
     expect(text).not.toContain(cookieAcceptWsId);
-    expect((await res.json<{ error: string }>()).error).toBe(
-      "API tokens cannot list invitations",
-    );
+    expect((await res.json<{ error: string }>()).error).toBe("API tokens cannot list invitations");
   });
 });
 
@@ -321,7 +310,7 @@ describe("E2E: accepting an invitation is closed to machine credentials", () => 
     const res = await app.request(
       patRequest(plaintext, "POST", "/invitations/accept", {
         token: "e2e-pat-accept-token",
-      }),
+      })
     );
 
     expect(res.status).toBe(403);
@@ -329,7 +318,7 @@ describe("E2E: accepting an invitation is closed to machine credentials", () => 
     // is about token management, which on this route is simply false and sends
     // an integration developer hunting for a scope that does not exist.
     expect((await res.clone().json<{ error: string }>()).error).toBe(
-      "API tokens cannot accept invitations",
+      "API tokens cannot accept invitations"
     );
 
     // Post-conditions, not just the status: a 403 that had already written the
@@ -356,16 +345,14 @@ describe("E2E: accepting an invitation is closed to machine credentials", () => 
     const res = await app.request(
       cookieRequest("POST", "/invitations/accept", {
         token: "e2e-cookie-accept-token",
-      }),
+      })
     );
 
     expect(res.status).toBe(200);
     expect((await res.json<{ workspaceId: string }>()).workspaceId).toBe(cookieAcceptWsId);
 
     const membership = await d1
-      .prepare(
-        "SELECT role FROM workspace_member WHERE workspaceId = ? AND userId = ?",
-      )
+      .prepare("SELECT role FROM workspace_member WHERE workspaceId = ? AND userId = ?")
       .bind(cookieAcceptWsId, TEST_USER.id)
       .first<{ role: string }>();
     expect(membership?.role).toBe("member");
@@ -396,7 +383,7 @@ describe("E2E: invitation creation is rate limited", () => {
     const res = await app.request(
       cookieRequest("POST", `/workspaces/${workspaceId}/invitations`, {
         email: "ratelimit-probe@example.com",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);

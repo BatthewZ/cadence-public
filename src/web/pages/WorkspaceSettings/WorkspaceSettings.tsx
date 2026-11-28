@@ -59,17 +59,28 @@ export default function WorkspaceSettings() {
   const currentMember = members.find((m) => m.userId === currentUserId);
   const canEditTheme = currentMember?.role === "owner" || currentMember?.role === "admin";
 
-  const { mutateAsync: updateWorkspace, isPending: saving, error: saveErrorObj } = useMutation({
+  const {
+    mutateAsync: updateWorkspace,
+    isPending: saving,
+    error: saveErrorObj,
+  } = useMutation({
     mutationFn: (input: UpdateWorkspaceInput) =>
       api.patch<unknown>(`/api/workspaces/${workspace?.id ?? ""}`, input),
     onMutate: async (input) => {
       const key = queryKeys.workspaces.detail(workspace?.id ?? "");
       await qc.cancelQueries({ queryKey: key });
       const previousData = qc.getQueryData(key);
-      qc.setQueryData(
-        key,
-        (old: { workspace: WorkspaceDetail } | undefined) =>
-          old ? { workspace: { ...old.workspace, name: input.name, slug: input.slug, description: input.description } } : old,
+      qc.setQueryData(key, (old: { workspace: WorkspaceDetail } | undefined) =>
+        old
+          ? {
+              workspace: {
+                ...old.workspace,
+                name: input.name,
+                slug: input.slug,
+                description: input.description,
+              },
+            }
+          : old
       );
       return { previousData };
     },
@@ -100,7 +111,7 @@ export default function WorkspaceSettings() {
       qc.setQueryData(
         queryKeys.workspaces.detail(workspace.id),
         (old: { workspace: WorkspaceDetail } | undefined) =>
-          old ? { workspace: { ...old.workspace, theme: newTheme } } : old,
+          old ? { workspace: { ...old.workspace, theme: newTheme } } : old
       );
       return { previousData };
     },
@@ -119,9 +130,12 @@ export default function WorkspaceSettings() {
     },
   });
 
-  const { mutateAsync: deleteWorkspace, isPending: deleting, error: deleteErrorObj } = useMutation({
-    mutationFn: () =>
-      api.delete<unknown>(`/api/workspaces/${workspace?.id ?? ""}`),
+  const {
+    mutateAsync: deleteWorkspace,
+    isPending: deleting,
+    error: deleteErrorObj,
+  } = useMutation({
+    mutationFn: () => api.delete<unknown>(`/api/workspaces/${workspace?.id ?? ""}`),
   });
   const deleteError = deleteErrorObj?.message ?? null;
 
@@ -162,7 +176,9 @@ export default function WorkspaceSettings() {
     <Container size="lg">
       <Stack gap="r3" className="py-r2">
         <Breadcrumbs>
-          <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>{workspace.name}</Breadcrumbs.Item>
+          <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>
+            {workspace.name}
+          </Breadcrumbs.Item>
           <Breadcrumbs.Item current>Settings</Breadcrumbs.Item>
         </Breadcrumbs>
         <Text variant="h3">Workspace Settings</Text>
@@ -174,9 +190,7 @@ export default function WorkspaceSettings() {
               <Text variant="h5">General</Text>
 
               {!canManageWorkspace && (
-                <Alert variant="info">
-                  You do not have permission to edit workspace settings.
-                </Alert>
+                <Alert variant="info">You do not have permission to edit workspace settings.</Alert>
               )}
 
               <Field>
@@ -286,7 +300,9 @@ export default function WorkspaceSettings() {
       {canDeleteWorkspace && (
         <Dialog open={deleteDialogOpen} onClose={handleDeleteDialogClose}>
           <Stack gap="r4">
-            <Text variant="h5" weight="semibold">Delete Workspace</Text>
+            <Text variant="h5" weight="semibold">
+              Delete Workspace
+            </Text>
             <Text variant="body-2" color="secondary">
               This will permanently delete the workspace and all associated projects, tasks, and
               members. Type <strong>DELETE</strong> to confirm.

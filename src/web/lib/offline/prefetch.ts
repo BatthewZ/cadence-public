@@ -59,7 +59,8 @@ interface PrefetchSummary {
 class Stopped extends Error {}
 
 /** No connection (status 0) or no session: nothing more will load this pass. */
-const endsPass = (err: unknown) => err instanceof ApiError && (err.status === 0 || err.status === 401);
+const endsPass = (err: unknown) =>
+  err instanceof ApiError && (err.status === 0 || err.status === 401);
 
 const stampKey = (projectId: string) => `prefetch:project:${projectId}`;
 
@@ -101,11 +102,19 @@ export async function prefetchForOffline(deps: PrefetchDeps): Promise<PrefetchSu
   const online = deps.isOnline ?? (() => onlineManager.isOnline());
   // Writes waiting to sync: the server's copy lacks them, so loading it would hide them on screen.
   const canRun = () =>
-    isCurrent() && online() && !saveData() && outbox.getStatus().pending === 0 && outbox.getStatus().sending === 0;
+    isCurrent() &&
+    online() &&
+    !saveData() &&
+    outbox.getStatus().pending === 0 &&
+    outbox.getStatus().sending === 0;
   if (!canRun()) return null;
 
   /** Fetches `path` into `key`, unless the run stopped or this device made a write meanwhile. */
-  const load = async <T>(key: QueryKey, path: string, onLoaded?: (data: T, startedAt: number) => unknown) => {
+  const load = async <T>(
+    key: QueryKey,
+    path: string,
+    onLoaded?: (data: T, startedAt: number) => unknown
+  ) => {
     const startedAt = now();
     const writes = outbox.writesMade();
     const data = await get<T>(path);
@@ -114,20 +123,27 @@ export async function prefetchForOffline(deps: PrefetchDeps): Promise<PrefetchSu
     qc.setQueryData(key, onLoaded ? onLoaded(data, startedAt) : data, { updatedAt: startedAt });
     return data;
   };
-  const freshEnough = (key: QueryKey) => now() - (qc.getQueryState(key)?.dataUpdatedAt ?? 0) < WORKSPACE_FRESH_MS;
+  const freshEnough = (key: QueryKey) =>
+    now() - (qc.getQueryState(key)?.dataUpdatedAt ?? 0) < WORKSPACE_FRESH_MS;
   const loadUnlessFresh = <T>(key: QueryKey, path: string) =>
     freshEnough(key) ? Promise.resolve(qc.getQueryData<T>(key) ?? null) : load<T>(key, path);
 
   const summary: PrefetchSummary = { projects: 0, loaded: 0, skipped: 0, failed: 0 };
   try {
-    const workspaces = await loadUnlessFresh<{ workspaces: { id: string }[] }>(queryKeys.workspaces.all, "/api/workspaces");
+    const workspaces = await loadUnlessFresh<{ workspaces: { id: string }[] }>(
+      queryKeys.workspaces.all,
+      "/api/workspaces"
+    );
     const projectIds: string[] = [];
     for (const ws of workspaces?.workspaces ?? []) {
       await loadUnlessFresh(queryKeys.workspaces.detail(ws.id), `/api/workspaces/${ws.id}`);
-      await loadUnlessFresh(queryKeys.workspaces.members(ws.id), `/api/workspaces/${ws.id}/members`);
+      await loadUnlessFresh(
+        queryKeys.workspaces.members(ws.id),
+        `/api/workspaces/${ws.id}/members`
+      );
       const projects = await loadUnlessFresh<{ projects: { id: string }[] }>(
         queryKeys.workspaces.projects(ws.id),
-        `/api/workspaces/${ws.id}/projects`,
+        `/api/workspaces/${ws.id}/projects`
       );
       for (const p of projects?.projects ?? []) projectIds.push(p.id);
     }
@@ -172,7 +188,7 @@ export async function prefetchForOffline(deps: PrefetchDeps): Promise<PrefetchSu
           seedTaskDetails(qc, projectId, data.tasks, startedAt);
           // The board's query holds the plain list; the subtasks went to each task's detail.
           return { tasks: data.tasks.map(withoutSubtasks) };
-        },
+        }
       ),
     ]);
     // A write made meanwhile left something unloaded: no stamp, so the next pass tries again.
@@ -190,12 +206,17 @@ function seedTaskDetails(
   qc: QueryClient,
   projectId: string,
   tasks: TaskWithSubtasks[],
-  startedAt: number,
+  startedAt: number
 ): void {
   for (const task of tasksWithDetail(tasks)) {
     const key = queryKeys.tasks.detail(task.id);
     if ((qc.getQueryState(key)?.dataUpdatedAt ?? 0) >= startedAt) continue;
-    const detail: TaskDetail = { ...task, projectId, subtasks: task.subtasks ?? [], commentCount: task.commentCount ?? 0 };
+    const detail: TaskDetail = {
+      ...task,
+      projectId,
+      subtasks: task.subtasks ?? [],
+      commentCount: task.commentCount ?? 0,
+    };
     qc.setQueryData(key, { task: detail }, { updatedAt: startedAt });
   }
 }

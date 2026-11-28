@@ -53,7 +53,11 @@ export function CreateWebhookDialog({
       {newSecret ? (
         <Stack gap="r4">
           <Text variant="h5">Webhook Created</Text>
-          <SecretDisplay secret={newSecret} label="Webhook Signing Secret" onCopied={onCopiedSecret} />
+          <SecretDisplay
+            secret={newSecret}
+            label="Webhook Signing Secret"
+            onCopied={onCopiedSecret}
+          />
           <Row justify="end" className="pt-r3">
             <Button variant="primary" size="md" onClick={onClose}>
               Done
@@ -82,29 +86,17 @@ export function CreateWebhookDialog({
               onClearFieldError={onClearFieldError}
             />
 
-            {errorMessage && (
-              <Alert variant="error">{errorMessage}</Alert>
-            )}
+            {errorMessage && <Alert variant="error">{errorMessage}</Alert>}
 
             <Row gap="r4" justify="end" className="pt-r3">
-              <Button
-                variant="ghost"
-                size="md"
-                type="button"
-                onClick={onClose}
-              >
+              <Button variant="ghost" size="md" type="button" onClick={onClose}>
                 Cancel
               </Button>
               <Button
                 type="submit"
                 variant="primary"
                 size="md"
-                disabled={
-                  isPending ||
-                  !name.trim() ||
-                  !url.trim() ||
-                  events.length === 0
-                }
+                disabled={isPending || !name.trim() || !url.trim() || events.length === 0}
               >
                 {isPending ? "Creating..." : "Create Webhook"}
               </Button>

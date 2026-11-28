@@ -16,10 +16,7 @@ import { SearchInput } from "@/web/components/form/SearchInput";
 import { Select } from "@/web/components/form/Select";
 import { useFeatures } from "@/web/hooks/use-features";
 import { useFileUpload } from "@/web/hooks/use-file-upload";
-import {
-  type UnsplashOrientation,
-  useUnsplashSearch,
-} from "@/web/hooks/use-unsplash-search";
+import { type UnsplashOrientation, useUnsplashSearch } from "@/web/hooks/use-unsplash-search";
 import { formatBytes } from "@/web/util/format";
 import { COVER_PRESET, isAnimatedGif, optimizeImage } from "@/web/util/image-optimization";
 import { cn } from "@/web/util/style/style";
@@ -88,8 +85,7 @@ export function CoverImagePicker({
   const features = useFeatures();
   const unsplashEnabled = features.data?.unsplash === true;
 
-  const resolvedInitial: CoverTabValue =
-    initialTab ?? (unsplashEnabled ? "unsplash" : "upload");
+  const resolvedInitial: CoverTabValue = initialTab ?? (unsplashEnabled ? "unsplash" : "upload");
 
   const [activeTab, setActiveTab] = useState<CoverTabValue>(resolvedInitial);
   // Track previous `open` so we can reset the tab to the computed default on
@@ -126,75 +122,66 @@ export function CoverImagePicker({
       aria-labelledby="cover-image-picker-title"
     >
       <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between gap-r4 px-r3 py-r4 border-b border-border-default shrink-0">
-        <h2
-          id="cover-image-picker-title"
-          className="text-body-1 font-semibold text-fg-primary"
-        >
-          Set cover image
-        </h2>
-        <button
-          type="button"
-          aria-label="Close"
-          onClick={onClose}
-          className={cn(
-            "inline-flex items-center justify-center rounded-md p-r6 duration-fast cursor-pointer",
-            "text-fg-secondary hover:bg-surface-2 active:bg-surface-3",
-            "ring-2 ring-transparent focus-visible:ring-border-focus focus-visible:ring-offset-0",
-          )}
-        >
-          <X size={18} />
-        </button>
-      </div>
+        {/* Header */}
+        <div className="flex items-center justify-between gap-r4 px-r3 py-r4 border-b border-border-default shrink-0">
+          <h2 id="cover-image-picker-title" className="text-body-1 font-semibold text-fg-primary">
+            Set cover image
+          </h2>
+          <button
+            type="button"
+            aria-label="Close"
+            onClick={onClose}
+            className={cn(
+              "inline-flex items-center justify-center rounded-md p-r6 duration-fast cursor-pointer",
+              "text-fg-secondary hover:bg-surface-2 active:bg-surface-3",
+              "ring-2 ring-transparent focus-visible:ring-border-focus focus-visible:ring-offset-0"
+            )}
+          >
+            <X size={18} />
+          </button>
+        </div>
 
-      {/* Body */}
-      <Tabs
-        value={activeTab}
-        onValueChange={(v) => setActiveTab(v as CoverTabValue)}
-        defaultValue={resolvedInitial}
-        variant="underline"
-        className="flex-1 min-h-0 flex flex-col"
-      >
-        {/* Only render the tab list when the Unsplash tab is available — when
+        {/* Body */}
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as CoverTabValue)}
+          defaultValue={resolvedInitial}
+          variant="underline"
+          className="flex-1 min-h-0 flex flex-col"
+        >
+          {/* Only render the tab list when the Unsplash tab is available — when
             the feature is off there's only one panel and a bare list would be
             visual noise. */}
-        {unsplashEnabled ? (
-          <div className="px-r3 pt-r5 shrink-0">
-            <Tabs.List>
-              <Tabs.Tab value="upload">Upload</Tabs.Tab>
-              <Tabs.Tab value="unsplash">Unsplash</Tabs.Tab>
-            </Tabs.List>
-          </div>
-        ) : null}
+          {unsplashEnabled ? (
+            <div className="px-r3 pt-r5 shrink-0">
+              <Tabs.List>
+                <Tabs.Tab value="upload">Upload</Tabs.Tab>
+                <Tabs.Tab value="unsplash">Unsplash</Tabs.Tab>
+              </Tabs.List>
+            </div>
+          ) : null}
 
-        <Tabs.Panel
-          value="upload"
-          className="flex-1 min-h-0 overflow-hidden px-r3 py-r4"
-        >
-          <UploadPanel
-            onUploaded={(file) => {
-              onUploadFile(file);
-              onClose();
-            }}
-          />
-        </Tabs.Panel>
-
-        {unsplashEnabled ? (
-          <Tabs.Panel
-            value="unsplash"
-            className="flex-1 min-h-0 overflow-hidden flex flex-col"
-          >
-            <UnsplashPanel
-              active={open && activeTab === "unsplash"}
-              onSelect={(payload) => {
-                onSelectUnsplash(payload);
+          <Tabs.Panel value="upload" className="flex-1 min-h-0 overflow-hidden px-r3 py-r4">
+            <UploadPanel
+              onUploaded={(file) => {
+                onUploadFile(file);
                 onClose();
               }}
             />
           </Tabs.Panel>
-        ) : null}
-      </Tabs>
+
+          {unsplashEnabled ? (
+            <Tabs.Panel value="unsplash" className="flex-1 min-h-0 overflow-hidden flex flex-col">
+              <UnsplashPanel
+                active={open && activeTab === "unsplash"}
+                onSelect={(payload) => {
+                  onSelectUnsplash(payload);
+                  onClose();
+                }}
+              />
+            </Tabs.Panel>
+          ) : null}
+        </Tabs>
       </div>
     </Dialog>
   );
@@ -242,7 +229,7 @@ function UploadPanel({ onUploaded }: UploadPanelProps) {
         setBusy(false);
       }
     },
-    [validate, onUploaded],
+    [validate, onUploaded]
   );
 
   const handleInputChange = useCallback(
@@ -252,7 +239,7 @@ function UploadPanel({ onUploaded }: UploadPanelProps) {
       e.target.value = "";
       if (file) void handleFile(file);
     },
-    [handleFile],
+    [handleFile]
   );
 
   const openFilePicker = useCallback(() => {
@@ -267,7 +254,7 @@ function UploadPanel({ onUploaded }: UploadPanelProps) {
         openFilePicker();
       }
     },
-    [openFilePicker],
+    [openFilePicker]
   );
 
   const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
@@ -291,7 +278,7 @@ function UploadPanel({ onUploaded }: UploadPanelProps) {
       const file = e.dataTransfer.files?.[0];
       if (file) void handleFile(file);
     },
-    [busy, handleFile],
+    [busy, handleFile]
   );
 
   return (
@@ -315,7 +302,7 @@ function UploadPanel({ onUploaded }: UploadPanelProps) {
           "hover:bg-surface-2 hover:border-fg-muted",
           "data-[drag-over]:bg-accent-subtle data-[drag-over]:border-accent data-[drag-over]:text-accent",
           "data-[busy]:opacity-60 data-[busy]:cursor-progress",
-          "ring-2 ring-transparent focus-visible:ring-border-focus focus-visible:ring-offset-2 focus:outline-none",
+          "ring-2 ring-transparent focus-visible:ring-border-focus focus-visible:ring-offset-2 focus:outline-none"
         )}
       >
         {busy ? (
@@ -414,7 +401,7 @@ function UnsplashPanel({ active, onSelect }: UnsplashPanelProps) {
           }
         }
       },
-      { root, rootMargin: "200px" },
+      { root, rootMargin: "200px" }
     );
 
     observer.observe(sentinel);
@@ -425,10 +412,8 @@ function UnsplashPanel({ active, onSelect }: UnsplashPanelProps) {
 
   /* -- Derived state ------------------------------------------------- */
 
-  const showEmpty =
-    !isLoading && !isError && results.length === 0 && debouncedQuery.length > 0;
-  const showCuratedEmpty =
-    !isLoading && !isError && results.length === 0 && isCurated;
+  const showEmpty = !isLoading && !isError && results.length === 0 && debouncedQuery.length > 0;
+  const showCuratedEmpty = !isLoading && !isError && results.length === 0 && isCurated;
 
   return (
     <>
@@ -437,7 +422,7 @@ function UnsplashPanel({ active, onSelect }: UnsplashPanelProps) {
         className={cn(
           "sticky top-0 z-10 flex flex-col gap-r5 px-r3 py-r4",
           "border-b border-border-default bg-surface-0 shrink-0",
-          "sm:flex-row sm:items-center",
+          "sm:flex-row sm:items-center"
         )}
       >
         <SearchInput
@@ -468,16 +453,8 @@ function UnsplashPanel({ active, onSelect }: UnsplashPanelProps) {
       >
         {isError ? (
           <Alert variant="error" className="flex-col items-start gap-r5">
-            <div>
-              {error?.message ??
-                "Unsplash is unavailable right now. Please try again."}
-            </div>
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={() => refetch()}
-            >
+            <div>{error?.message ?? "Unsplash is unavailable right now. Please try again."}</div>
+            <Button type="button" variant="secondary" size="sm" onClick={() => refetch()}>
               <RefreshCw size={14} className="mr-r6" aria-hidden="true" />
               Retry
             </Button>
@@ -487,9 +464,7 @@ function UnsplashPanel({ active, onSelect }: UnsplashPanelProps) {
         ) : showEmpty ? (
           <div className="flex flex-col items-center justify-center gap-r5 py-r1 text-center">
             <ImagePlus size={32} className="text-fg-muted" aria-hidden="true" />
-            <p className="text-body-2 text-fg-secondary">
-              No photos match that search.
-            </p>
+            <p className="text-body-2 text-fg-secondary">No photos match that search.</p>
             <p className="text-body-3 text-fg-muted">
               Try a broader term, or clear the search to see curated picks.
             </p>
@@ -497,9 +472,7 @@ function UnsplashPanel({ active, onSelect }: UnsplashPanelProps) {
         ) : showCuratedEmpty ? (
           <div className="flex flex-col items-center justify-center gap-r5 py-r1 text-center">
             <ImagePlus size={32} className="text-fg-muted" aria-hidden="true" />
-            <p className="text-body-2 text-fg-secondary">
-              No curated photos available right now.
-            </p>
+            <p className="text-body-2 text-fg-secondary">No curated photos available right now.</p>
           </div>
         ) : (
           <>
@@ -598,17 +571,14 @@ function PhotoCard({ photo, onSelect }: PhotoCardProps) {
         "bg-surface-2 border border-border-default",
         "ring-2 ring-transparent duration-fast",
         "focus-within:ring-border-focus focus-within:ring-offset-2",
-        "hover:border-fg-muted",
+        "hover:border-fg-muted"
       )}
     >
       <button
         type="button"
         onClick={() => onSelect(photo)}
         aria-label={`Use photo by ${photo.user.name}`}
-        className={cn(
-          "block w-full cursor-pointer text-left",
-          "focus:outline-none",
-        )}
+        className={cn("block w-full cursor-pointer text-left", "focus:outline-none")}
         style={{ aspectRatio: "3 / 2" }}
       >
         <img
@@ -624,14 +594,14 @@ function PhotoCard({ photo, onSelect }: PhotoCardProps) {
           aria-hidden="true"
           className={cn(
             "absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0",
-            "opacity-80 group-hover:opacity-100 duration-fast",
+            "opacity-80 group-hover:opacity-100 duration-fast"
           )}
         />
         <span
           aria-hidden="true"
           className={cn(
             "absolute inset-x-0 top-0 flex justify-end p-r5",
-            "opacity-0 group-hover:opacity-100 duration-fast",
+            "opacity-0 group-hover:opacity-100 duration-fast"
           )}
         >
           <span className="inline-flex items-center gap-r6 rounded-md bg-black/60 px-r5 py-r6 text-body-3 font-medium text-white">
@@ -646,7 +616,7 @@ function PhotoCard({ photo, onSelect }: PhotoCardProps) {
       <div
         className={cn(
           "absolute inset-x-0 bottom-0 flex items-center justify-between gap-r5",
-          "px-r4 py-r5 text-body-3",
+          "px-r4 py-r5 text-body-3"
         )}
       >
         <a
@@ -657,7 +627,7 @@ function PhotoCard({ photo, onSelect }: PhotoCardProps) {
           className={cn(
             "inline-flex items-center gap-r6 max-w-full truncate",
             "text-white/90 hover:text-white hover:underline",
-            "pointer-events-auto",
+            "pointer-events-auto"
           )}
         >
           <span className="truncate font-medium">{photo.user.name}</span>
@@ -670,7 +640,7 @@ function PhotoCard({ photo, onSelect }: PhotoCardProps) {
           aria-label={`View photo by ${photo.user.name} on Unsplash`}
           className={cn(
             "inline-flex items-center gap-r6 text-white/80 hover:text-white",
-            "pointer-events-auto",
+            "pointer-events-auto"
           )}
         >
           <ExternalLink size={12} aria-hidden="true" />

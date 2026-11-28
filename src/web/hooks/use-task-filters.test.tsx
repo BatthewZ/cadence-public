@@ -69,9 +69,7 @@ const ids = (tasks: Task[]) => tasks.map((t) => t.id);
 
 describe("useTaskFilterControls", () => {
   it("parses the none sentinel and noDueDate from the URL", () => {
-    const { wrapper } = createWrapper(
-      "/?assignee=u1,none&label=none&noDueDate=true",
-    );
+    const { wrapper } = createWrapper("/?assignee=u1,none&label=none&noDueDate=true");
     const { result } = renderHook(() => useTaskFilterControls(), { wrapper });
 
     expect(result.current.filters.assigneeIds).toEqual(["u1", FILTER_NONE]);
@@ -110,16 +108,14 @@ describe("useTaskFilterControls", () => {
         });
       });
 
-      expect(search.current).toBe(
-        "?dueDateFrom=2026-06-01&dueDateTo=2026-06-30",
-      );
+      expect(search.current).toBe("?dueDateFrom=2026-06-01&dueDateTo=2026-06-30");
       expect(result.current.filters.dueDateFrom).toBe("2026-06-01");
       expect(result.current.filters.dueDateTo).toBe("2026-06-30");
     });
 
     it('clears the whole due-date dimension at once ("Clear dates")', () => {
       const { wrapper, search } = createWrapper(
-        "/?dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true&view=board",
+        "/?dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true&view=board"
       );
       const { result } = renderHook(() => useTaskFilterControls(), { wrapper });
 
@@ -168,9 +164,7 @@ describe("useTaskFilterControls", () => {
     });
 
     it("drops non-date garbage in dueDateTo while keeping a valid dueDateFrom", () => {
-      const { wrapper } = createWrapper(
-        "/?dueDateFrom=2030-03-01&dueDateTo=banana",
-      );
+      const { wrapper } = createWrapper("/?dueDateFrom=2030-03-01&dueDateTo=banana");
       const { result } = renderHook(() => useTaskFilterControls(), { wrapper });
 
       expect(result.current.filters.dueDateFrom).toBe("2030-03-01");
@@ -207,7 +201,7 @@ describe("useTaskFilterControls", () => {
 
   it("clearFilters removes all filter params (including noDueDate) but preserves unrelated params", () => {
     const { wrapper, search } = createWrapper(
-      "/?assignee=u1,none&priority=high&completed=true&dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true&label=none&view=board",
+      "/?assignee=u1,none&priority=high&completed=true&dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true&label=none&view=board"
     );
     const { result } = renderHook(() => useTaskFilterControls(), { wrapper });
 
@@ -275,20 +269,13 @@ describe("useTaskFilters", () => {
       const onlyNone = renderHook(() => useTaskFilters(labelTasks), {
         wrapper: only.wrapper,
       });
-      expect(ids(onlyNone.result.current.filteredTasks)).toEqual([
-        "t-bare",
-        "t-undef",
-      ]);
+      expect(ids(onlyNone.result.current.filteredTasks)).toEqual(["t-bare", "t-undef"]);
 
       const mixed = createWrapper("/?label=l1,none");
       const labelOrNone = renderHook(() => useTaskFilters(labelTasks), {
         wrapper: mixed.wrapper,
       });
-      expect(ids(labelOrNone.result.current.filteredTasks)).toEqual([
-        "t-l1",
-        "t-bare",
-        "t-undef",
-      ]);
+      expect(ids(labelOrNone.result.current.filteredTasks)).toEqual(["t-l1", "t-bare", "t-undef"]);
     });
 
     it("noDueDate alone matches only tasks without a due date", () => {
@@ -300,10 +287,7 @@ describe("useTaskFilters", () => {
       const { wrapper } = createWrapper("/?noDueDate=true");
       const { result } = renderHook(() => useTaskFilters(dueTasks), { wrapper });
 
-      expect(ids(result.current.filteredTasks)).toEqual([
-        "t-nodue",
-        "t-undef-due",
-      ]);
+      expect(ids(result.current.filteredTasks)).toEqual(["t-nodue", "t-undef-due"]);
     });
   });
 
@@ -316,20 +300,15 @@ describe("useTaskFilters", () => {
 
     it("range + noDueDate passes in-range tasks OR tasks without a due date", () => {
       const { wrapper } = createWrapper(
-        "/?dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true",
+        "/?dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true"
       );
       const { result } = renderHook(() => useTaskFilters(tasks), { wrapper });
 
-      expect(ids(result.current.filteredTasks)).toEqual([
-        "t-in-range",
-        "t-no-due",
-      ]);
+      expect(ids(result.current.filteredTasks)).toEqual(["t-in-range", "t-no-due"]);
     });
 
     it("range alone still excludes tasks without a due date (regression guard)", () => {
-      const { wrapper } = createWrapper(
-        "/?dueDateFrom=2026-06-01&dueDateTo=2026-06-30",
-      );
+      const { wrapper } = createWrapper("/?dueDateFrom=2026-06-01&dueDateTo=2026-06-30");
       const { result } = renderHook(() => useTaskFilters(tasks), { wrapper });
 
       expect(ids(result.current.filteredTasks)).toEqual(["t-in-range"]);
@@ -351,7 +330,7 @@ describe("useTaskFilters", () => {
   describe("active-filter counting", () => {
     it("counts the due-date trio (from/to/noDueDate) as one dimension", () => {
       const { wrapper } = createWrapper(
-        "/?dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true",
+        "/?dueDateFrom=2026-06-01&dueDateTo=2026-06-30&noDueDate=true"
       );
       const { result } = renderHook(() => useTaskFilters([]), { wrapper });
 
@@ -369,7 +348,7 @@ describe("useTaskFilters", () => {
 
     it("counts each dimension once across the board", () => {
       const { wrapper } = createWrapper(
-        "/?assignee=u1,none&priority=high,low&completed=false&noDueDate=true&label=none",
+        "/?assignee=u1,none&priority=high,low&completed=false&noDueDate=true&label=none"
       );
       const { result } = renderHook(() => useTaskFilters([]), { wrapper });
 

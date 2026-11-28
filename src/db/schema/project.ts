@@ -1,10 +1,4 @@
-import {
-  index,
-  integer,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from "drizzle-orm/sqlite-core";
+import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 import type { StoredUnsplashCoverPayload } from "../../shared/schemas/unsplash";
 import type { ProjectRole } from "../../shared/types/roles";
@@ -35,7 +29,7 @@ export const project = sqliteTable(
   (table) => [
     index("project_workspace_idx").on(table.workspaceId),
     index("project_workspace_updated_idx").on(table.workspaceId, table.updatedAt),
-  ],
+  ]
 );
 
 export const projectMember = sqliteTable(
@@ -52,10 +46,7 @@ export const projectMember = sqliteTable(
     addedAt: integer("addedAt", { mode: "timestamp" }).notNull(),
   },
   (table) => [
-    uniqueIndex("project_member_project_user_unique").on(
-      table.projectId,
-      table.userId,
-    ),
+    uniqueIndex("project_member_project_user_unique").on(table.projectId, table.userId),
     index("project_member_user_idx").on(table.userId),
-  ],
+  ]
 );

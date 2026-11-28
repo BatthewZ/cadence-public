@@ -54,7 +54,7 @@ export function scheduleWebhookCreatedEmail(
     events: string[];
     projectId: string | null;
     createdAt: Date;
-  },
+  }
 ): void {
   deferWork(c, async () => {
     try {
@@ -72,9 +72,17 @@ export function scheduleWebhookCreatedEmail(
       // body. Both are user-visible identifiers — null-coalesce so the
       // text never says "undefined".
       const [[ws], projectRow] = await Promise.all([
-        db.select({ name: workspace.name }).from(workspace).where(eq(workspace.id, args.workspaceId)).limit(1),
+        db
+          .select({ name: workspace.name })
+          .from(workspace)
+          .where(eq(workspace.id, args.workspaceId))
+          .limit(1),
         args.projectId
-          ? db.select({ name: project.name }).from(project).where(eq(project.id, args.projectId)).limit(1)
+          ? db
+              .select({ name: project.name })
+              .from(project)
+              .where(eq(project.id, args.projectId))
+              .limit(1)
           : Promise.resolve<{ name: string }[]>([]),
       ]);
       const workspaceName = ws?.name ?? "your workspace";
@@ -136,7 +144,7 @@ export function scheduleWebhookCreatedEmail(
           op: "scheduleWebhookCreatedEmail",
           workspaceId: args.workspaceId,
           error: error instanceof Error ? error.message : String(error),
-        }),
+        })
       );
     }
   });

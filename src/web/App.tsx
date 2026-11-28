@@ -68,21 +68,13 @@ function UnauthorizedRedirect() {
 /** Error boundary that auto-resets when the workspace slug changes */
 function WorkspaceBoundary({ children }: { children: React.ReactNode }) {
   const { workspaceSlug } = useParams();
-  return (
-    <ErrorBoundary resetKeys={[workspaceSlug]}>
-      {children}
-    </ErrorBoundary>
-  );
+  return <ErrorBoundary resetKeys={[workspaceSlug]}>{children}</ErrorBoundary>;
 }
 
 /** Error boundary that auto-resets when the project ID changes */
 function ProjectBoundary({ children }: { children: React.ReactNode }) {
   const { projectId } = useParams();
-  return (
-    <ErrorBoundary resetKeys={[projectId]}>
-      {children}
-    </ErrorBoundary>
-  );
+  return <ErrorBoundary resetKeys={[projectId]}>{children}</ErrorBoundary>;
 }
 
 export function App() {
@@ -95,12 +87,12 @@ export function App() {
         Skip to content
       </a>
       <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <UnauthorizedRedirect />
-        <UpdatePrompt />
-        <SyncNotices />
-        <ErrorBoundary>
-          <Suspense
+        <ToastProvider>
+          <UnauthorizedRedirect />
+          <UpdatePrompt />
+          <SyncNotices />
+          <ErrorBoundary>
+            <Suspense
               fallback={
                 <Center className="min-h-screen">
                   <Spinner size="lg" />
@@ -166,11 +158,14 @@ export function App() {
                     <Route path="dashboard" element={<Dashboard />} />
                     <Route path="my-tasks" element={<MyTasks />} />
                     <Route path="projects" element={<ProjectList />} />
-                    <Route path="projects/:projectId" element={
-                      <ProjectBoundary>
-                        <ProjectLayout />
-                      </ProjectBoundary>
-                    }>
+                    <Route
+                      path="projects/:projectId"
+                      element={
+                        <ProjectBoundary>
+                          <ProjectLayout />
+                        </ProjectBoundary>
+                      }
+                    >
                       <Route index element={<Navigate to="board" replace />} />
                       <Route path="dashboard" element={<ProjectDashboard />} />
                       <Route path="board" element={<ProjectBoard />} />
@@ -239,9 +234,9 @@ export function App() {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>
-          </Suspense>
-        </ErrorBoundary>
-      </ToastProvider>
+            </Suspense>
+          </ErrorBoundary>
+        </ToastProvider>
       </QueryClientProvider>
     </BrowserRouter>
   );

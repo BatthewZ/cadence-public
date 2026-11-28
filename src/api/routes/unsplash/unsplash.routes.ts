@@ -1,9 +1,6 @@
 import { Hono } from "hono";
 
-import {
-  unsplashCuratedQuerySchema,
-  unsplashSearchSchema,
-} from "../../../shared/schemas/unsplash";
+import { unsplashCuratedQuerySchema, unsplashSearchSchema } from "../../../shared/schemas/unsplash";
 import type { AppEnv } from "../../env";
 import { rateLimit } from "../../middleware/rate-limit";
 import { requireAuth } from "../../middleware/require-auth";
@@ -30,7 +27,7 @@ app.get(
   requireAuth,
   unsplashRateLimit,
   validateQuery(unsplashSearchSchema),
-  unsplashSearch,
+  unsplashSearch
 );
 
 app.get(
@@ -38,7 +35,7 @@ app.get(
   requireAuth,
   unsplashRateLimit,
   validateQuery(unsplashCuratedQuerySchema),
-  unsplashCurated,
+  unsplashCurated
 );
 
 export default app;

@@ -43,7 +43,7 @@ function renderRoleOptions(canGrantAdmin: boolean): string[] {
       inviting={false}
       inviteError={null}
       onSubmit={vi.fn()}
-    />,
+    />
   );
   const select = document.getElementById("invite-role");
   if (select?.tagName !== "SELECT") {

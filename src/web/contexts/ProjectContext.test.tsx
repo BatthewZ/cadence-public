@@ -4,10 +4,17 @@ import { useEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 
 vi.mock("@/web/lib/api/client", async () => {
-  const actual = await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
+  const actual =
+    await vi.importActual<typeof import("@/web/lib/api/client")>("@/web/lib/api/client");
   return {
     ...actual,
-    api: Object.assign(vi.fn(), { get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() }),
+    api: Object.assign(vi.fn(), {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      patch: vi.fn(),
+      delete: vi.fn(),
+    }),
   };
 });
 
@@ -19,10 +26,18 @@ import { type ProjectContextValue, ProjectProvider, type Task, useProject } from
 
 const mockGet = api.get as unknown as Mock<(url: string) => Promise<unknown>>;
 
-const TASK: Task = { id: "t-1", title: "Write report", taskGroupId: "g-1", priority: "none", completed: false, position: "a0" };
+const TASK: Task = {
+  id: "t-1",
+  title: "Write report",
+  taskGroupId: "g-1",
+  priority: "none",
+  completed: false,
+  position: "a0",
+};
 
 function respond(url: string): Promise<unknown> {
-  if (url === "/api/projects/p-1") return Promise.resolve({ project: { id: "p-1", name: "Launch", workspaceId: "ws-1" } });
+  if (url === "/api/projects/p-1")
+    return Promise.resolve({ project: { id: "p-1", name: "Launch", workspaceId: "ws-1" } });
   if (url === "/api/projects/p-1/tasks") return Promise.resolve({ tasks: [TASK] });
   if (url === "/api/projects/p-1/task-groups") return Promise.resolve({ taskGroups: [] });
   return Promise.resolve({ members: [] });
@@ -34,7 +49,13 @@ function Probe() {
   useEffect(() => {
     probe.ctx = value;
   });
-  return <ul>{value.tasks.map((t) => <li key={t.id}>{t.title}</li>)}</ul>;
+  return (
+    <ul>
+      {value.tasks.map((t) => (
+        <li key={t.id}>{t.title}</li>
+      ))}
+    </ul>
+  );
 }
 
 function renderProvider(qc: QueryClient) {
@@ -43,7 +64,7 @@ function renderProvider(qc: QueryClient) {
       <ProjectProvider projectId="p-1">
         <Probe />
       </ProjectProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
 }
 
@@ -72,7 +93,9 @@ describe("ProjectProvider offline", () => {
   });
 
   it("renders the saved project offline when it was loaded before", async () => {
-    qc.setQueryData(["projects", "p-1"], { project: { id: "p-1", name: "Launch", workspaceId: "ws-1" } });
+    qc.setQueryData(["projects", "p-1"], {
+      project: { id: "p-1", name: "Launch", workspaceId: "ws-1" },
+    });
     qc.setQueryData(["projects", "p-1", "tasks"], { tasks: [TASK] });
     onlineManager.setOnline(false);
     renderProvider(qc);

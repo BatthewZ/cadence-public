@@ -10,7 +10,12 @@ import { clientIdConflict } from "../../../lib/client-id";
 import { errorResponse } from "../../../lib/error-response";
 import { parseMentions } from "../../../lib/mentions";
 import { createNotifications } from "../../../lib/notifications";
-import { compoundCursorCondition, computeCompoundNextCursor, parseCompoundCursor, parseCursorParams } from "../../../lib/pagination";
+import {
+  compoundCursorCondition,
+  computeCompoundNextCursor,
+  parseCompoundCursor,
+  parseCursorParams,
+} from "../../../lib/pagination";
 import { requireParam } from "../../../lib/params";
 import { validJson } from "../../../lib/validated";
 import { dispatchWebhook } from "../../../lib/webhook-payloads";
@@ -69,7 +74,11 @@ export async function createComment(c: Context<AppEnv>) {
       }
     }
   } catch (error) {
-    console.error("Failed to process mentions or notifications for createComment:", { taskId, userId: user.id, commentId: id }, error);
+    console.error(
+      "Failed to process mentions or notifications for createComment:",
+      { taskId, userId: user.id, commentId: id },
+      error
+    );
     // Non-fatal: comment was already created
   }
 
@@ -82,7 +91,11 @@ export async function createComment(c: Context<AppEnv>) {
       apiTokenId: c.get("apiToken")?.id ?? null,
     });
   } catch (error) {
-    console.error("Failed to log activity for createComment:", { taskId, userId: user.id, commentId: id }, error);
+    console.error(
+      "Failed to log activity for createComment:",
+      { taskId, userId: user.id, commentId: id },
+      error
+    );
     // Non-fatal: comment was already created
   }
 
@@ -115,11 +128,7 @@ export async function updateComment(c: Context<AppEnv>) {
   const body = validJson(c, updateCommentSchema);
 
   // Look up the comment
-  const [found] = await db
-    .select()
-    .from(comment)
-    .where(eq(comment.id, commentId))
-    .limit(1);
+  const [found] = await db.select().from(comment).where(eq(comment.id, commentId)).limit(1);
 
   if (!found) {
     return errorResponse(c, "Comment not found", 404);
@@ -158,7 +167,11 @@ export async function updateComment(c: Context<AppEnv>) {
   const now = new Date();
 
   const [[updated]] = await db.batch([
-    db.update(comment).set({ body: body.body, updatedAt: now }).where(eq(comment.id, commentId)).returning(),
+    db
+      .update(comment)
+      .set({ body: body.body, updatedAt: now })
+      .where(eq(comment.id, commentId))
+      .returning(),
     db.update(task).set({ updatedAt: now }).where(eq(task.id, found.taskId)),
   ] as const);
 
@@ -187,11 +200,7 @@ export async function deleteComment(c: Context<AppEnv>) {
   const commentId = requireParam(c, "commentId");
 
   // Look up the comment
-  const [found] = await db
-    .select()
-    .from(comment)
-    .where(eq(comment.id, commentId))
-    .limit(1);
+  const [found] = await db.select().from(comment).where(eq(comment.id, commentId)).limit(1);
 
   if (!found) {
     return errorResponse(c, "Comment not found", 404);
@@ -303,7 +312,12 @@ export async function listComments(c: Context<AppEnv>) {
     .orderBy(asc(comment.createdAt), asc(comment.id))
     .limit(limit);
 
-  const nextCursor = computeCompoundNextCursor(comments, limit, (r) => r.createdAt, (r) => r.id);
+  const nextCursor = computeCompoundNextCursor(
+    comments,
+    limit,
+    (r) => r.createdAt,
+    (r) => r.id
+  );
 
   return c.json({
     comments: comments.map((r) => ({

@@ -1,13 +1,7 @@
 import { CheckCircle2, CircleDot, DollarSign } from "lucide-react";
 
 import { Row, Stack } from "@/web/components/layout";
-import {
-  Badge,
-  Card,
-  ProgressBar,
-  StatCard,
-  Text,
-} from "@/web/components/ui";
+import { Badge, Card, ProgressBar, StatCard, Text } from "@/web/components/ui";
 import type { ProjectDashboardData } from "@/web/hooks/use-project-dashboard";
 import { formatCurrency } from "@/web/util/format";
 
@@ -66,10 +60,7 @@ export function BudgetAndCostsSection({ data }: { data: ProjectDashboardData }) 
           </StatCard.Value>
         </StatCard>
       </div>
-      <BudgetCard
-        budget={data.budget}
-        costAggregation={data.costAggregation}
-      />
+      <BudgetCard budget={data.budget} costAggregation={data.costAggregation} />
       <CostPerMemberSection costPerMember={data.costPerMember} />
     </Stack>
   );
@@ -153,21 +144,21 @@ export function BudgetCard({
               <Row gap="r5" align="center">
                 <Row gap="r6" align="center">
                   <span className="inline-block size-2 rounded-full bg-status-warning" />
-                  <Text variant="body-3" color="muted">Budget</Text>
+                  <Text variant="body-3" color="muted">
+                    Budget
+                  </Text>
                 </Row>
                 <Row gap="r6" align="center">
                   <span className="inline-block size-2 rounded-full bg-status-error" />
-                  <Text variant="body-3" color="muted">Overage</Text>
+                  <Text variant="body-3" color="muted">
+                    Overage
+                  </Text>
                 </Row>
               </Row>
             </Row>
           </Stack>
         ) : (
-          <ProgressBar
-            value={pct}
-            size="sm"
-            color="accent"
-          />
+          <ProgressBar value={pct} size="sm" color="accent" />
         )}
       </Stack>
     </Card>

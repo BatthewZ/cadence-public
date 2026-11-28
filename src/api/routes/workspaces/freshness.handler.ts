@@ -36,14 +36,17 @@ export async function getWorkspaceFreshness(c: Context<AppEnv>) {
   const db = c.get("db");
 
   const [wsResult, projectsResult, tasksResult] = await db.batch([
-    db.select({ updatedAt: workspace.updatedAt })
+    db
+      .select({ updatedAt: workspace.updatedAt })
       .from(workspace)
       .where(eq(workspace.id, workspaceId))
       .limit(1),
-    db.select({ max: sql<number>`MAX(${project.updatedAt})`, count: count() })
+    db
+      .select({ max: sql<number>`MAX(${project.updatedAt})`, count: count() })
       .from(project)
       .where(eq(project.workspaceId, workspaceId)),
-    db.select({ max: sql<number>`MAX(${task.updatedAt})`, count: count() })
+    db
+      .select({ max: sql<number>`MAX(${task.updatedAt})`, count: count() })
       .from(task)
       .innerJoin(project, eq(task.projectId, project.id))
       .where(eq(project.workspaceId, workspaceId)),

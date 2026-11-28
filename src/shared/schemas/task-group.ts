@@ -38,7 +38,12 @@ export const workspaceTaskGroupsQuerySchema = z.object({
   projectIds: z
     .string()
     .min(1, "projectIds is required")
-    .transform((v) => v.split(",").map((s) => s.trim()).filter(Boolean))
+    .transform((v) =>
+      v
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    )
     .pipe(z.array(z.string().min(1)).min(1).max(100)),
 });
 

@@ -149,9 +149,7 @@ export function DataTable<T>({
     // If sort is controlled, assume server handles sorting
     if (isControlledSort) return data;
     const comparator = sortComparator ?? defaultComparator;
-    return [...data].sort((a, b) =>
-      comparator(a, b, currentSort.key, currentSort.direction)
-    );
+    return [...data].sort((a, b) => comparator(a, b, currentSort.key, currentSort.direction));
   }, [data, currentSort, isControlledSort, sortComparator]);
 
   // Selection helpers
@@ -159,7 +157,8 @@ export function DataTable<T>({
     () => sortedData.map((row, i) => rowKey(row, i)),
     [sortedData, rowKey]
   );
-  const allSelected = selectedKeys != null && visibleKeys.length > 0 && visibleKeys.every((k) => selectedKeys.has(k));
+  const allSelected =
+    selectedKeys != null && visibleKeys.length > 0 && visibleKeys.every((k) => selectedKeys.has(k));
   const someSelected = selectedKeys != null && visibleKeys.some((k) => selectedKeys.has(k));
 
   function handleSelectAll() {
@@ -197,7 +196,11 @@ export function DataTable<T>({
           <Table.Row>
             {selectable && <Table.HeaderCell style={{ width: 40 }} />}
             {columns.map((col) => (
-              <Table.HeaderCell key={col.key} className={col.className} style={{ width: col.width }}>
+              <Table.HeaderCell
+                key={col.key}
+                className={col.className}
+                style={{ width: col.width }}
+              >
                 {col.header}
               </Table.HeaderCell>
             ))}
@@ -232,7 +235,11 @@ export function DataTable<T>({
             <Table.Row>
               {selectable && <Table.HeaderCell style={{ width: 40 }} />}
               {columns.map((col) => (
-                <Table.HeaderCell key={col.key} className={col.className} style={{ width: col.width }}>
+                <Table.HeaderCell
+                  key={col.key}
+                  className={col.className}
+                  style={{ width: col.width }}
+                >
                   {col.header}
                 </Table.HeaderCell>
               ))}
@@ -299,7 +306,11 @@ export function DataTable<T>({
           {sortedData.map((row, i) => {
             const key = rowKey(row, i);
             return (
-              <Table.Row key={key} selected={selectedKeys?.has(key)} className={rowClassName?.(row, i)}>
+              <Table.Row
+                key={key}
+                selected={selectedKeys?.has(key)}
+                className={rowClassName?.(row, i)}
+              >
                 {selectable && (
                   <Table.Cell>
                     <Checkbox
@@ -310,8 +321,14 @@ export function DataTable<T>({
                   </Table.Cell>
                 )}
                 {columns.map((col) => (
-                  <Table.Cell key={col.key} className={col.className} style={{ textAlign: col.align }}>
-                    {col.render ? col.render(row, i) : cellToString((row as Record<string, unknown>)[col.key])}
+                  <Table.Cell
+                    key={col.key}
+                    className={col.className}
+                    style={{ textAlign: col.align }}
+                  >
+                    {col.render
+                      ? col.render(row, i)
+                      : cellToString((row as Record<string, unknown>)[col.key])}
                   </Table.Cell>
                 ))}
               </Table.Row>
@@ -322,11 +339,7 @@ export function DataTable<T>({
 
       {page != null && totalPages != null && onPageChange && (
         <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
-          <Pagination
-            page={page}
-            totalPages={totalPages}
-            onPageChange={onPageChange}
-          />
+          <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} />
         </div>
       )}
     </div>

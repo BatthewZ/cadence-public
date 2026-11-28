@@ -97,10 +97,9 @@ export const acceptInvitationSchema = z
     token: z.string().min(1, "Token is required").optional(),
     invitationId: z.string().min(1, "Invitation id is required").optional(),
   })
-  .refine(
-    (value) => (value.token === undefined) !== (value.invitationId === undefined),
-    { message: "Provide exactly one of token or invitationId" },
-  );
+  .refine((value) => (value.token === undefined) !== (value.invitationId === undefined), {
+    message: "Provide exactly one of token or invitationId",
+  });
 
 export type CreateInvitationInput = z.infer<typeof createInvitationSchema>;
 export type AcceptInvitationInput = z.infer<typeof acceptInvitationSchema>;

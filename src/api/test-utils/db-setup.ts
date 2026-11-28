@@ -16,7 +16,7 @@ function splitStatements(sql: string): string[] {
     .filter(
       (s) =>
         s.length > 0 &&
-        !s.split("\n").every((line) => line.trim().startsWith("--") || line.trim() === ""),
+        !s.split("\n").every((line) => line.trim().startsWith("--") || line.trim() === "")
     );
 }
 

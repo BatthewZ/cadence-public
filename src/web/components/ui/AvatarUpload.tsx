@@ -1,9 +1,6 @@
 import { type ComponentPropsWithRef, forwardRef, useCallback, useRef, useState } from "react";
 
-import {
-  ALLOWED_IMAGE_TYPES,
-  MAX_AVATAR_SIZE,
-} from "@/shared/schemas/upload";
+import { ALLOWED_IMAGE_TYPES, MAX_AVATAR_SIZE } from "@/shared/schemas/upload";
 import { useFileUpload } from "@/web/hooks/use-file-upload";
 import { AVATAR_PRESET, isAnimatedGif, optimizeImage } from "@/web/util/image-optimization";
 import { cn } from "@/web/util/style/style";
@@ -79,7 +76,7 @@ function CameraIcon({ className }: { className?: string }) {
 
 export const AvatarUpload = forwardRef<HTMLDivElement, AvatarUploadProps>(function AvatarUpload(
   { src, name, size = "xl", onUploadComplete, className, ...props },
-  ref,
+  ref
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
   const { state, upload, validate, error: uploadError } = useFileUpload<UploadResult>();
@@ -100,7 +97,7 @@ export const AvatarUpload = forwardRef<HTMLDivElement, AvatarUploadProps>(functi
         inputRef.current?.click();
       }
     },
-    [state],
+    [state]
   );
 
   const handleFileChange = useCallback(
@@ -156,7 +153,7 @@ export const AvatarUpload = forwardRef<HTMLDivElement, AvatarUploadProps>(functi
 
       URL.revokeObjectURL(objectUrl);
     },
-    [validate, upload, onUploadComplete],
+    [validate, upload, onUploadComplete]
   );
 
   return (
@@ -179,7 +176,7 @@ export const AvatarUpload = forwardRef<HTMLDivElement, AvatarUploadProps>(functi
           "absolute inset-0 flex items-center justify-center rounded-full",
           "bg-black/50 text-white opacity-0 transition-opacity duration-fast",
           "group-hover:opacity-100 group-focus-visible:opacity-100",
-          state === "uploading" && "opacity-100",
+          state === "uploading" && "opacity-100"
         )}
         aria-hidden="true"
       >
@@ -194,7 +191,7 @@ export const AvatarUpload = forwardRef<HTMLDivElement, AvatarUploadProps>(functi
       <span
         className={cn(
           "pointer-events-none absolute inset-0 rounded-full ring-2 ring-transparent",
-          "group-focus-visible:ring-border-focus group-focus-visible:ring-offset-2",
+          "group-focus-visible:ring-border-focus group-focus-visible:ring-offset-2"
         )}
         aria-hidden="true"
       />

@@ -29,21 +29,15 @@ export function UserMenu() {
 
   // When inside AppShell (workspace view with sidebar), use sidebar-appropriate placements.
   // When outside AppShell (e.g. /workspaces top nav), use "bottom-end" so it drops below the trigger.
-  const placement = appShell
-    ? (isMobile ? "top-end" : "right-end")
-    : "bottom-end" as const;
+  const placement = appShell ? (isMobile ? "top-end" : "right-end") : ("bottom-end" as const);
 
   if (!session?.user) return null;
 
   const { name, email, image } = session.user;
 
   // Settings paths require an active workspace for proper layout/context
-  const accountSettingsPath = workspaceCtx
-    ? `/w/${workspaceCtx.workspace.slug}/account`
-    : null;
-  const workspaceSettingsPath = workspaceCtx
-    ? `/w/${workspaceCtx.workspace.slug}/settings`
-    : null;
+  const accountSettingsPath = workspaceCtx ? `/w/${workspaceCtx.workspace.slug}/account` : null;
+  const workspaceSettingsPath = workspaceCtx ? `/w/${workspaceCtx.workspace.slug}/settings` : null;
   const settingsItemCount = [accountSettingsPath, workspaceSettingsPath].filter(Boolean).length;
 
   return (
@@ -94,7 +88,10 @@ export function UserMenu() {
 
           {(accountSettingsPath || workspaceSettingsPath) && <DropdownMenu.Divider />}
 
-          <InstallAppMenuItem index={settingsItemCount} onShowHelp={() => setInstallHelpOpen(true)} />
+          <InstallAppMenuItem
+            index={settingsItemCount}
+            onShowHelp={() => setInstallHelpOpen(true)}
+          />
 
           <DropdownMenu.Item
             index={settingsItemCount + (installed ? 0 : 1)}

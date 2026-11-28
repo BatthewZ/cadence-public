@@ -3,11 +3,7 @@ import { useState } from "react";
 import { Checkbox, Label } from "@/web/components/form";
 import { Row, Stack } from "@/web/components/layout";
 import { useOnlineOnly } from "@/web/components/sync/use-online-only";
-import {
-  Button,
-  Dialog,
-  Text,
-} from "@/web/components/ui";
+import { Button, Dialog, Text } from "@/web/components/ui";
 import { useToast } from "@/web/components/ui/ToastContext";
 import type { WorkspaceProject } from "@/web/contexts/WorkspaceContext";
 import { api } from "@/web/lib/api/client";
@@ -32,7 +28,7 @@ export function DuplicateProjectDialog({
     try {
       const result = await api.post<{ project: { id: string } }>(
         `/api/projects/${duplicateTarget.id}/duplicate`,
-        { includeMembers },
+        { includeMembers }
       );
       toast("Project duplicated", { variant: "success" });
       onDuplicated(result.project.id);
@@ -56,9 +52,8 @@ export function DuplicateProjectDialog({
       <Stack gap="r4">
         <Text variant="h5">Duplicate Project</Text>
         <Text variant="body-2" color="secondary">
-          This will create a copy of <strong>{duplicateTarget?.name}</strong> with
-          its settings, task groups, and labels. Tasks, comments, and attachments
-          will not be copied.
+          This will create a copy of <strong>{duplicateTarget?.name}</strong> with its settings,
+          task groups, and labels. Tasks, comments, and attachments will not be copied.
         </Text>
         <Row gap="r4" align="center">
           <Checkbox

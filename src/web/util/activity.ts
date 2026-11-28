@@ -57,7 +57,7 @@ const LABEL_ACTIONS = new Set(["label_added", "label_removed"]);
  * multiple labels on a task at once.
  */
 export function groupLabelActivities<T extends ActivityItem>(
-  activities: T[],
+  activities: T[]
 ): GroupedActivity<T>[] {
   const groups: GroupedActivity<T>[] = [];
   let i = 0;
@@ -118,9 +118,7 @@ export function groupLabelActivities<T extends ActivityItem>(
  * Format a grouped label activity into a human-readable message.
  * Produces messages like "updated labels (added Bug, removed Feature)".
  */
-export function formatGroupedLabelMessage(
-  group: GroupedActivity<ActivityItem>,
-): string {
+export function formatGroupedLabelMessage(group: GroupedActivity<ActivityItem>): string {
   const parts: string[] = [];
   if (group.labelsAdded.length > 0) {
     parts.push(`added ${group.labelsAdded.map((l) => `"${l}"`).join(", ")}`);
@@ -144,7 +142,7 @@ export function formatGroupedLabelMessage(
  * - apiTokenId null                        → null  (cookie auth)
  */
 export function formatTokenAttribution(
-  activity: Pick<ActivityItem, "apiTokenId" | "tokenName">,
+  activity: Pick<ActivityItem, "apiTokenId" | "tokenName">
 ): string | null {
   if (!activity.apiTokenId) return null;
   const name = activity.tokenName?.trim();
@@ -212,10 +210,7 @@ export function formatRelativeFuture(timestamp: string | number): string {
  * Resolve a user ID to a display name using the workspace members list.
  * Falls back to "Someone" if the user is not found.
  */
-function resolveUserName(
-  userId: string | null,
-  members: WorkspaceMember[],
-): string {
+function resolveUserName(userId: string | null, members: WorkspaceMember[]): string {
   if (!userId) return "Someone";
   const member = members.find((m) => m.userId === userId);
   return member?.user.name ?? "Someone";
@@ -238,10 +233,7 @@ function formatActivityDate(dateStr: string | null): string {
  * Convert a task activity record into a human-readable message string.
  * The message describes what changed (e.g., "changed priority from Low to High").
  */
-export function formatActivityMessage(
-  activity: ActivityItem,
-  members: WorkspaceMember[],
-): string {
+export function formatActivityMessage(activity: ActivityItem, members: WorkspaceMember[]): string {
   const { action, field, oldValue, newValue } = activity;
 
   switch (action) {

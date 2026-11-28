@@ -26,19 +26,14 @@ const sessionPhase = Math.random();
  * @throws RangeError on non-finite/out-of-range input — a bad constant should be
  *   loud at first render, not silently clamped into a hot-spinning timer.
  */
-export function jitteredInterval(
-  baseMs: number,
-  ratio = 0.2,
-): (query: PolledQuery) => number {
+export function jitteredInterval(baseMs: number, ratio = 0.2): (query: PolledQuery) => number {
   if (!Number.isFinite(baseMs) || baseMs <= 0) {
     throw new RangeError(
-      `jitteredInterval: baseMs must be a positive finite number, got ${baseMs}`,
+      `jitteredInterval: baseMs must be a positive finite number, got ${baseMs}`
     );
   }
   if (!Number.isFinite(ratio) || ratio < 0 || ratio >= 1) {
-    throw new RangeError(
-      `jitteredInterval: ratio must be within [0, 1), got ${ratio}`,
-    );
+    throw new RangeError(`jitteredInterval: ratio must be within [0, 1), got ${ratio}`);
   }
 
   const spread = baseMs * ratio;

@@ -1,4 +1,4 @@
-import { type AnySQLiteColumn,index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { type AnySQLiteColumn, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 import { user } from "./auth";
 import { workspace } from "./workspace";
@@ -18,9 +18,9 @@ export const apiToken = sqliteTable(
     tokenPrefix: text("tokenPrefix").notNull(),
 
     // Permissions
-    scopes: text("scopes").notNull(),                  // JSON string array
-    projectScope: text("projectScope").notNull(),      // "all" | "selected"
-    projectIds: text("projectIds"),                    // JSON array; null when projectScope="all"
+    scopes: text("scopes").notNull(), // JSON string array
+    projectScope: text("projectScope").notNull(), // "all" | "selected"
+    projectIds: text("projectIds"), // JSON array; null when projectScope="all"
 
     // Lifecycle
     lastUsedAt: integer("lastUsedAt", { mode: "timestamp" }),
@@ -35,7 +35,7 @@ export const apiToken = sqliteTable(
     index("api_token_user_idx").on(table.userId),
     index("api_token_workspace_idx").on(table.workspaceId),
     index("api_token_revoke_at_idx").on(table.revokeAt),
-  ],
+  ]
 );
 
 export type ApiToken = typeof apiToken.$inferSelect;

@@ -18,10 +18,9 @@ describe("useDebounce", () => {
   });
 
   it("returns debounced value after delay", () => {
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, 300),
-      { initialProps: { value: "a" } }
-    );
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), {
+      initialProps: { value: "a" },
+    });
 
     rerender({ value: "ab" });
     expect(result.current).toBe("a");
@@ -34,10 +33,9 @@ describe("useDebounce", () => {
   });
 
   it("resets timer when value changes rapidly", () => {
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, 300),
-      { initialProps: { value: "a" } }
-    );
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), {
+      initialProps: { value: "a" },
+    });
 
     rerender({ value: "ab" });
     act(() => {
@@ -59,10 +57,9 @@ describe("useDebounce", () => {
   });
 
   it("returns value immediately when delay is 0", () => {
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, 0),
-      { initialProps: { value: "a" } }
-    );
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 0), {
+      initialProps: { value: "a" },
+    });
 
     rerender({ value: "ab" });
 

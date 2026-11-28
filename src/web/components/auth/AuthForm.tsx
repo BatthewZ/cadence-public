@@ -24,9 +24,7 @@ export type AuthFormFieldProps = {
  * successfully").  Returning `void`/`undefined` means the form stays
  * visible (useful when the page navigates away on success).
  */
-export type AuthSubmitResult =
-  | { success: true; message?: ReactNode }
-  | void;
+export type AuthSubmitResult = { success: true; message?: ReactNode } | void;
 
 type AuthFormProps<TSchema extends z.ZodType> = {
   /** Page / document title shown in the browser tab. */
@@ -45,7 +43,7 @@ type AuthFormProps<TSchema extends z.ZodType> = {
    */
   onSubmit: (
     data: z.infer<TSchema>,
-    helpers: { setError: (msg: string) => void },
+    helpers: { setError: (msg: string) => void }
   ) => Promise<AuthSubmitResult>;
 
   /** Label shown on the submit button in its idle state. */
@@ -112,8 +110,7 @@ export function AuthForm<TSchema extends z.ZodType>({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successView, setSuccessView] = useState<ReactNode | null>(null);
-  const { fieldErrors, clearFieldError, setFromZodError, resetFieldErrors } =
-    useFieldErrors();
+  const { fieldErrors, clearFieldError, setFromZodError, resetFieldErrors } = useFieldErrors();
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

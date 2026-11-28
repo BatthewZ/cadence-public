@@ -64,7 +64,7 @@ import {
  * narrow `RouteHandler<R, AppEnv>` that `app.openapi()` expects.
  */
 function asRouteHandler<R extends RouteConfig>(
-  fn: (c: Context<AppEnv>) => unknown,
+  fn: (c: Context<AppEnv>) => unknown
 ): RouteHandler<R, AppEnv> {
   return fn as unknown as RouteHandler<R, AppEnv>;
 }
@@ -176,9 +176,7 @@ const baseMiddleware = tokenRouteMiddleware(requireWorkspaceMember());
  * the handler: being an admin does not let you rotate someone else's token,
  * because the plaintext response would hand you their credential.
  */
-const tokenIssuanceMiddleware = tokenRouteMiddleware(
-  requireWorkspaceRole("owner", "admin"),
-);
+const tokenIssuanceMiddleware = tokenRouteMiddleware(requireWorkspaceRole("owner", "admin"));
 
 // ---------------------------------------------------------------------------
 // Route definitions
@@ -253,8 +251,7 @@ const getApiTokenRoute = createRoute({
   path: "/workspaces/{workspaceId}/api-tokens/{tokenId}",
   tags: ["API Tokens"],
   summary: "Get an API token",
-  description:
-    "Owner sees their token; workspace admins see any token. Non-owners receive 404.",
+  description: "Owner sees their token; workspace admins see any token. Non-owners receive 404.",
   security,
   middleware: baseMiddleware,
   request: {

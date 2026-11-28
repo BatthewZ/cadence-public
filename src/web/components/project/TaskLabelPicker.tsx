@@ -6,11 +6,7 @@ import { SearchInput } from "@/web/components/form/SearchInput";
 import { Popover } from "@/web/components/ui/Popover";
 import { Text } from "@/web/components/ui/Text";
 import { useToast } from "@/web/components/ui/ToastContext";
-import {
-  useAssignLabel,
-  useLabels,
-  useUnassignLabel,
-} from "@/web/hooks/use-labels";
+import { useAssignLabel, useLabels, useUnassignLabel } from "@/web/hooks/use-labels";
 
 import { LabelChip } from "./LabelChip";
 import { LabelManagementDialog } from "./LabelManagementDialog";
@@ -114,21 +110,15 @@ export function TaskLabelPicker({
                     className="task-label-picker__swatch"
                     style={{ backgroundColor: lbl.color }}
                   />
-                  <span className="task-label-picker__label-name truncate">
-                    {lbl.name}
-                  </span>
-                  {isAssigned && (
-                    <Check size={14} className="task-label-picker__check" />
-                  )}
+                  <span className="task-label-picker__label-name truncate">{lbl.name}</span>
+                  {isAssigned && <Check size={14} className="task-label-picker__check" />}
                 </button>
               );
             })}
 
             {filteredLabels.length === 0 && (
               <Text variant="body-3" color="muted" className="py-2 text-center">
-                {allLabels.length === 0
-                  ? "No labels created yet"
-                  : "No labels found"}
+                {allLabels.length === 0 ? "No labels created yet" : "No labels found"}
               </Text>
             )}
           </div>

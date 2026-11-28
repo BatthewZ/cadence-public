@@ -79,9 +79,7 @@ export function MembersTab({
   const { data: projectMembersData } = useQuery({
     queryKey: queryKeys.projects.members(projectId),
     queryFn: () =>
-      api.get<{ members: ProjectMemberApiResponse[] }>(
-        `/api/projects/${projectId}/members`
-      ),
+      api.get<{ members: ProjectMemberApiResponse[] }>(`/api/projects/${projectId}/members`),
     enabled: !!projectId,
   });
   const members: ProjectMember[] = (projectMembersData?.members ?? []).map((m) => ({
@@ -152,7 +150,9 @@ export function MembersTab({
     {
       key: "role",
       header: "Role",
-      render: (row) => <Badge variant={getRoleBadgeVariant(row.role)}>{ROLE_LABELS[row.role]}</Badge>,
+      render: (row) => (
+        <Badge variant={getRoleBadgeVariant(row.role)}>{ROLE_LABELS[row.role]}</Badge>
+      ),
     },
     {
       key: "joinedAt",
@@ -206,7 +206,12 @@ export function MembersTab({
                   Change Role
                 </DropdownMenu.Item>
               )}
-              <DropdownMenu.Item index={removeIndex} variant="danger" icon={<UserMinus size={14} />} onSelect={() => void handleRemoveMember(row.userId)}>
+              <DropdownMenu.Item
+                index={removeIndex}
+                variant="danger"
+                icon={<UserMinus size={14} />}
+                onSelect={() => void handleRemoveMember(row.userId)}
+              >
                 Remove
               </DropdownMenu.Item>
             </DropdownMenu.Content>

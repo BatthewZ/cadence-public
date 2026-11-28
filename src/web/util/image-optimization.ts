@@ -89,7 +89,7 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 function stepDownResize(
   source: HTMLImageElement | HTMLCanvasElement,
   targetWidth: number,
-  targetHeight: number,
+  targetHeight: number
 ): HTMLCanvasElement {
   let currentWidth = "naturalWidth" in source ? source.naturalWidth : source.width;
   let currentHeight = "naturalHeight" in source ? source.naturalHeight : source.height;
@@ -129,7 +129,11 @@ function stepDownResize(
 /*  Canvas → File export                                               */
 /* ------------------------------------------------------------------ */
 
-function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob | null> {
+function canvasToBlob(
+  canvas: HTMLCanvasElement,
+  type: string,
+  quality: number
+): Promise<Blob | null> {
   return new Promise((resolve) => {
     canvas.toBlob((blob) => resolve(blob), type, quality);
   });
@@ -142,7 +146,7 @@ function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number):
 async function exportCanvas(
   canvas: HTMLCanvasElement,
   originalName: string,
-  quality: number,
+  quality: number
 ): Promise<File> {
   const baseName = originalName.replace(/\.[^.]+$/, "");
 

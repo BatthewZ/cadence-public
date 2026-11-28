@@ -55,12 +55,10 @@ export function MemberPermissionsCard({ workspace }: MemberPermissionsCardProps)
     onMutate: async (policy) => {
       await qc.cancelQueries({ queryKey: detailKey });
       const previous = qc.getQueryData<{ workspace: WorkspaceDetail }>(detailKey);
-      qc.setQueryData(
-        detailKey,
-        (old: { workspace: WorkspaceDetail } | undefined) =>
-          old
-            ? { workspace: { ...old.workspace, policy: { ...old.workspace.policy, ...policy } } }
-            : old,
+      qc.setQueryData(detailKey, (old: { workspace: WorkspaceDetail } | undefined) =>
+        old
+          ? { workspace: { ...old.workspace, policy: { ...old.workspace.policy, ...policy } } }
+          : old
       );
       return { previous };
     },

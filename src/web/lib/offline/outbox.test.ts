@@ -4,7 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { IDEMPOTENCY_KEY_HEADER, WRITE_ERROR_CODES } from "@/shared/constants/offline-sync";
 
 import { type OfflineDb, openOfflineDb } from "./idb";
-import { MAX_SERVER_ERROR_ATTEMPTS, Outbox, type OutboxDeps, queuedCount, type Refusal } from "./outbox";
+import {
+  MAX_SERVER_ERROR_ATTEMPTS,
+  Outbox,
+  type OutboxDeps,
+  queuedCount,
+  type Refusal,
+} from "./outbox";
 import type { WriteRequest } from "./perform-write";
 
 type Reply = { status: number; body?: unknown; headers?: Record<string, string> } | "network";
@@ -33,7 +39,7 @@ function scriptedFetch(replies: Reply[]) {
       new Response(reply.body === undefined ? null : JSON.stringify(reply.body), {
         status: reply.status,
         headers: { "Content-Type": "application/json", ...reply.headers },
-      }),
+      })
     );
   });
   return { impl: impl as unknown as typeof fetch, sent };
@@ -172,7 +178,11 @@ describe("Outbox", () => {
 
     expect(sent).toHaveLength(1);
     expect(onUnauthorized).toHaveBeenCalledOnce();
-    expect(outbox.getStatus()).toMatchObject({ state: "blocked", blockedReason: "auth", pending: 2 });
+    expect(outbox.getStatus()).toMatchObject({
+      state: "blocked",
+      blockedReason: "auth",
+      pending: 2,
+    });
 
     outbox.kick();
     await settle(outbox);
@@ -190,7 +200,11 @@ describe("Outbox", () => {
     outbox.kick();
     await settle(outbox);
 
-    expect(outbox.getStatus()).toMatchObject({ state: "waiting", nextRetryAt: now + 7_000, pending: 1 });
+    expect(outbox.getStatus()).toMatchObject({
+      state: "waiting",
+      nextRetryAt: now + 7_000,
+      pending: 1,
+    });
     outbox.stop();
   });
 
@@ -212,7 +226,9 @@ describe("Outbox", () => {
   });
 
   it("marks a write stuck after repeated server errors, survives a reload, and can be retried or discarded", async () => {
-    const { impl, sent } = scriptedFetch([{ status: 500, body: { error: "Internal Server Error" } }]);
+    const { impl, sent } = scriptedFetch([
+      { status: 500, body: { error: "Internal Server Error" } },
+    ]);
     const outbox = makeOutbox(impl);
     await outbox.start();
     await outbox.enqueue(write(1), 1, "k1");
@@ -223,7 +239,11 @@ describe("Outbox", () => {
     }
     expect(sent).toHaveLength(MAX_SERVER_ERROR_ATTEMPTS);
     expect(sent.every((s) => s.path === "/api/tasks/t1")).toBe(true);
-    expect(outbox.getStatus()).toMatchObject({ state: "blocked", blockedReason: "stuck", pending: 2 });
+    expect(outbox.getStatus()).toMatchObject({
+      state: "blocked",
+      blockedReason: "stuck",
+      pending: 2,
+    });
     outbox.stop();
 
     const reloaded = makeOutbox(impl);
@@ -260,7 +280,9 @@ describe("Outbox", () => {
 
   it("is a read barrier only while draining", async () => {
     let release: (value: Response) => void = () => undefined;
-    const impl = vi.fn(() => new Promise<Response>((resolve) => (release = resolve))) as unknown as typeof fetch;
+    const impl = vi.fn(
+      () => new Promise<Response>((resolve) => (release = resolve))
+    ) as unknown as typeof fetch;
     const outbox = makeOutbox(impl);
     await outbox.start();
     await expect(outbox.whenSettled()).resolves.toBeUndefined();
@@ -310,10 +332,15 @@ function heldFetch() {
       new Promise<Response>((resolve) => {
         sent.push(path);
         held.set(path, resolve);
-      }),
+      })
   ) as unknown as typeof fetch;
   const reply = async (path: string, status = 200, body: unknown = { path }) => {
-    held.get(path)!(new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } }));
+    held.get(path)!(
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
     held.delete(path);
     await new Promise((r) => setTimeout(r, 0));
   };
@@ -379,7 +406,9 @@ describe("Outbox.send (writes made online)", () => {
 
     const bulk = await outbox.send([newWrite(1), newWrite(2), newWrite(3)], 1);
     const [later] = await outbox.send([newWrite(4)], 2);
-    await vi.waitFor(() => expect([...sent].sort()).toEqual(["/api/tasks/t1", "/api/tasks/t2", "/api/tasks/t3"]));
+    await vi.waitFor(() =>
+      expect([...sent].sort()).toEqual(["/api/tasks/t1", "/api/tasks/t2", "/api/tasks/t3"])
+    );
     const stored = await outbox.list();
     expect(new Set(stored.slice(0, 3).map((w) => w.batch)).size).toBe(1);
     expect(stored[0].batch).toBeDefined();
@@ -427,8 +456,16 @@ describe("Outbox.send (writes made online)", () => {
 
     const [refused] = await outbox.send([newWrite(1)], 1);
     const [failed] = await outbox.send([newWrite(2)], 2);
-    await expect(refused).resolves.toMatchObject({ kind: "refused", status: 404, code: "not_found" });
-    await expect(failed).resolves.toMatchObject({ kind: "server-error", status: 500, message: "Boom" });
+    await expect(refused).resolves.toMatchObject({
+      kind: "refused",
+      status: 404,
+      code: "not_found",
+    });
+    await expect(failed).resolves.toMatchObject({
+      kind: "server-error",
+      status: 500,
+      message: "Boom",
+    });
     await settle(outbox);
 
     expect(refusals).toEqual([]);
@@ -493,4 +530,3 @@ describe("Outbox.send (writes made online)", () => {
     await expect(answer).resolves.toEqual({ kind: "queued" });
   });
 });
-

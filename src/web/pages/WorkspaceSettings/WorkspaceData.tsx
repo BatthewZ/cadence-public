@@ -129,7 +129,7 @@ function BorderedList({
     <ul
       className={cn(
         "rounded-md border divide-y divide-border-default/40",
-        tone === "error" ? "border-status-error/30" : "border-border-default",
+        tone === "error" ? "border-status-error/30" : "border-border-default"
       )}
     >
       {children}
@@ -175,9 +175,9 @@ function SkippedSummary({ skipped }: { skipped: ImportSkipped }) {
         Not imported
       </Text>
       <Text variant="body-3" color="muted">
-        These items travel in exports for archival value but are never re-created by an
-        import: webhooks and invitations carry secrets, activity history can&apos;t be
-        honestly replayed, and attachment files don&apos;t round-trip in the manifest.
+        These items travel in exports for archival value but are never re-created by an import:
+        webhooks and invitations carry secrets, activity history can&apos;t be honestly replayed,
+        and attachment files don&apos;t round-trip in the manifest.
       </Text>
       <BorderedList>
         {rows.map(([key, label]) => (
@@ -205,13 +205,7 @@ function WarningsList({ warnings }: { warnings: string[] }) {
 /*  Export card                                                        */
 /* ------------------------------------------------------------------ */
 
-function ExportCard({
-  workspaceId,
-  canManage,
-}: {
-  workspaceId: string;
-  canManage: boolean;
-}) {
+function ExportCard({ workspaceId, canManage }: { workspaceId: string; canManage: boolean }) {
   const [includeActivity, setIncludeActivity] = useState(false);
   const onlineOnly = useOnlineOnly();
 
@@ -225,9 +219,8 @@ function ExportCard({
       <Stack gap="r4">
         <Text variant="h5">Export</Text>
         <Text variant="body-2" color="secondary">
-          Download everything in this workspace — projects, task groups, tasks, subtasks,
-          comments and labels — as a single JSON file you can archive or import into
-          another workspace later.
+          Download everything in this workspace — projects, task groups, tasks, subtasks, comments
+          and labels — as a single JSON file you can archive or import into another workspace later.
         </Text>
 
         <Row gap="r5" align="center">
@@ -240,8 +233,8 @@ function ExportCard({
           <Label htmlFor="export-include-activity">Include activity history</Label>
         </Row>
         <Text variant="body-3" color="muted">
-          Activity history is kept for archival value and can grow the file considerably.
-          It is never replayed by an import.
+          Activity history is kept for archival value and can grow the file considerably. It is
+          never replayed by an import.
         </Text>
 
         <div>
@@ -257,9 +250,9 @@ function ExportCard({
         </div>
 
         <Alert variant="info">
-          Attachments are referenced by URL in the export manifest — their files are not
-          bundled into the download. Download any attachments you need while this
-          workspace is still accessible.
+          Attachments are referenced by URL in the export manifest — their files are not bundled
+          into the download. Download any attachments you need while this workspace is still
+          accessible.
         </Alert>
 
         <Text variant="body-3" color="muted">
@@ -274,13 +267,7 @@ function ExportCard({
 /*  Import card                                                        */
 /* ------------------------------------------------------------------ */
 
-function ImportCard({
-  workspaceId,
-  canManage,
-}: {
-  workspaceId: string;
-  canManage: boolean;
-}) {
+function ImportCard({ workspaceId, canManage }: { workspaceId: string; canManage: boolean }) {
   /**
    * The selected file MUST stay in state across the whole preview → confirm
    * flow: the dry-run is stateless server-side, so confirming re-uploads
@@ -304,7 +291,7 @@ function ImportCard({
       const query = dryRun ? "?dryRun=true" : "";
       return api.post<ImportResponse>(`/api/workspaces/${workspaceId}/import${query}`, body);
     },
-    [workspaceId],
+    [workspaceId]
   );
 
   const previewMutation = useMutation({
@@ -362,16 +349,14 @@ function ImportCard({
         return;
       }
       if (selected.size > MAX_IMPORT_FILE_BYTES) {
-        setUploadError(
-          `File is too large — the limit is ${formatBytes(MAX_IMPORT_FILE_BYTES)}.`,
-        );
+        setUploadError(`File is too large — the limit is ${formatBytes(MAX_IMPORT_FILE_BYTES)}.`);
         return;
       }
 
       setFile(selected);
       previewMutation.mutate(selected);
     },
-    [resetImport, previewMutation],
+    [resetImport, previewMutation]
   );
 
   const showReport = result !== null;
@@ -383,9 +368,9 @@ function ImportCard({
       <Stack gap="r4">
         <Text variant="h5">Import</Text>
         <Text variant="body-2" color="secondary">
-          Import a Cadence workspace export or a Trello board export (JSON file). Imported
-          content is created as new projects in this workspace — nothing existing is
-          modified or overwritten.
+          Import a Cadence workspace export or a Trello board export (JSON file). Imported content
+          is created as new projects in this workspace — nothing existing is modified or
+          overwritten.
         </Text>
 
         {!canManage && (
@@ -402,9 +387,8 @@ function ImportCard({
               </Alert>
             ) : (
               <Alert variant="warning">
-                Imported {plural(result.counts.projects, "project")};{" "}
-                {result.failedProjects.length} failed and{" "}
-                {result.failedProjects.length === 1 ? "was" : "were"} rolled back.
+                Imported {plural(result.counts.projects, "project")}; {result.failedProjects.length}{" "}
+                failed and {result.failedProjects.length === 1 ? "was" : "were"} rolled back.
               </Alert>
             )}
 
@@ -428,8 +412,8 @@ function ImportCard({
                   ))}
                 </BorderedList>
                 <Text variant="body-3" color="muted">
-                  Failed projects were fully rolled back. Successfully imported projects
-                  will be duplicated if you import the same file again.
+                  Failed projects were fully rolled back. Successfully imported projects will be
+                  duplicated if you import the same file again.
                 </Text>
               </Stack>
             )}
@@ -451,8 +435,7 @@ function ImportCard({
               <Row gap="r5" align="center" className="min-w-0">
                 <Badge variant="info">{SOURCE_FORMAT_LABELS[preview.sourceFormat]}</Badge>
                 <Text variant="body-2" color="secondary" className="truncate">
-                  Preview of{" "}
-                  <span className="font-semibold text-fg-primary">{file.name}</span>
+                  Preview of <span className="font-semibold text-fg-primary">{file.name}</span>
                 </Text>
               </Row>
               <Button
@@ -474,9 +457,9 @@ function ImportCard({
                   Unmatched people
                 </Text>
                 <Text variant="body-3" color="muted">
-                  These people aren&apos;t members of this workspace, so their assignments
-                  and authorship will be imported as unassigned. Invite them first if you
-                  want their work re-linked.
+                  These people aren&apos;t members of this workspace, so their assignments and
+                  authorship will be imported as unassigned. Invite them first if you want their
+                  work re-linked.
                 </Text>
                 <BorderedList>
                   {preview.unmatchedUsers.map((unmatched) => (
@@ -485,8 +468,7 @@ function ImportCard({
                       className="flex items-center justify-between gap-r4 px-r4 py-r5 min-w-0"
                     >
                       <Text variant="body-2" className="truncate">
-                        {unmatched.name}{" "}
-                        <span className="text-fg-muted">({unmatched.email})</span>
+                        {unmatched.name} <span className="text-fg-muted">({unmatched.email})</span>
                       </Text>
                       <Text variant="body-3" color="muted" className="shrink-0">
                         {plural(unmatched.taskCount, "task")}
@@ -511,7 +493,11 @@ function ImportCard({
             <FileUpload
               onFilesSelected={handleFilesSelected}
               disabled={!canManage || onlineOnly.disabled}
-              hint={onlineOnly.online ? `.json export file, up to ${formatBytes(MAX_IMPORT_FILE_BYTES)}` : "Importing needs a connection."}
+              hint={
+                onlineOnly.online
+                  ? `.json export file, up to ${formatBytes(MAX_IMPORT_FILE_BYTES)}`
+                  : "Importing needs a connection."
+              }
               uploading={previewMutation.isPending}
               error={uploadError}
             />
@@ -528,7 +514,9 @@ function ImportCard({
               onClick={() => {
                 if (file !== null) commitMutation.mutate(file);
               }}
-              disabled={!canManage || preview === null || commitMutation.isPending || onlineOnly.disabled}
+              disabled={
+                !canManage || preview === null || commitMutation.isPending || onlineOnly.disabled
+              }
               title={onlineOnly.title}
             >
               {commitMutation.isPending
@@ -560,17 +548,15 @@ export default function WorkspaceData() {
           <Breadcrumbs.Item href={`/w/${workspace.slug}/dashboard`}>
             {workspace.name}
           </Breadcrumbs.Item>
-          <Breadcrumbs.Item href={`/w/${workspace.slug}/settings`}>
-            Settings
-          </Breadcrumbs.Item>
+          <Breadcrumbs.Item href={`/w/${workspace.slug}/settings`}>Settings</Breadcrumbs.Item>
           <Breadcrumbs.Item current>Data</Breadcrumbs.Item>
         </Breadcrumbs>
         <Text variant="h3">Workspace Settings</Text>
         <SettingsNav basePath={`/w/${workspace.slug}/settings`} />
 
         <AdminOnlyNotice>
-          Only workspace owners and admins can export or import workspace data. Ask a
-          workspace admin if you need a copy of this workspace.
+          Only workspace owners and admins can export or import workspace data. Ask a workspace
+          admin if you need a copy of this workspace.
         </AdminOnlyNotice>
 
         <ExportCard workspaceId={workspace.id} canManage={canManageWorkspace} />

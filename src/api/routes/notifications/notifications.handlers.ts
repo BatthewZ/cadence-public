@@ -9,10 +9,7 @@ import type { AppEnv } from "../../env";
 import { errorResponse } from "../../lib/error-response";
 import { computeNextCursor, parseCursorDate, parseCursorParams } from "../../lib/pagination";
 import { requireParam } from "../../lib/params";
-import {
-  tokenProjectScopeFilter,
-  tokenWorkspaceScopeFilter,
-} from "../../middleware/authorize";
+import { tokenProjectScopeFilter, tokenWorkspaceScopeFilter } from "../../middleware/authorize";
 
 // ---------------------------------------------------------------------------
 // PAT scoping
@@ -83,20 +80,17 @@ function tokenNotificationScope(c: Context<AppEnv>): SQL | undefined {
         and(
           eq(project.id, notification.projectId),
           tokenWorkspaceScopeFilter(c, project.workspaceId),
-          tokenProjectScopeFilter(c, project.id),
-        ),
-      ),
+          tokenProjectScopeFilter(c, project.id)
+        )
+      )
   );
 
   return or(
     projectOwned,
     and(
       isNull(notification.projectId),
-      or(
-        isNull(notification.workspaceId),
-        tokenWorkspaceScopeFilter(c, notification.workspaceId),
-      ),
-    ),
+      or(isNull(notification.workspaceId), tokenWorkspaceScopeFilter(c, notification.workspaceId))
+    )
   );
 }
 
@@ -181,11 +175,7 @@ export async function getUnreadCount(c: Context<AppEnv>) {
     .select({ count: count() })
     .from(notification)
     .where(
-      and(
-        eq(notification.userId, user.id),
-        eq(notification.read, false),
-        tokenNotificationScope(c),
-      ),
+      and(eq(notification.userId, user.id), eq(notification.read, false), tokenNotificationScope(c))
     );
 
   return c.json({ count: result?.count ?? 0 });
@@ -214,11 +204,7 @@ export async function markAsRead(c: Context<AppEnv>) {
     .update(notification)
     .set({ read: true, readAt: new Date() })
     .where(
-      and(
-        eq(notification.id, id),
-        eq(notification.userId, user.id),
-        tokenNotificationScope(c),
-      ),
+      and(eq(notification.id, id), eq(notification.userId, user.id), tokenNotificationScope(c))
     )
     .returning({ id: notification.id });
 
@@ -248,11 +234,7 @@ export async function markAllAsRead(c: Context<AppEnv>) {
     .update(notification)
     .set({ read: true, readAt: new Date() })
     .where(
-      and(
-        eq(notification.userId, user.id),
-        eq(notification.read, false),
-        tokenNotificationScope(c),
-      ),
+      and(eq(notification.userId, user.id), eq(notification.read, false), tokenNotificationScope(c))
     );
 
   return c.json({ ok: true });
@@ -277,11 +259,7 @@ export async function deleteNotification(c: Context<AppEnv>) {
   const [deleted] = await db
     .delete(notification)
     .where(
-      and(
-        eq(notification.id, id),
-        eq(notification.userId, user.id),
-        tokenNotificationScope(c),
-      ),
+      and(eq(notification.id, id), eq(notification.userId, user.id), tokenNotificationScope(c))
     )
     .returning({ id: notification.id });
 

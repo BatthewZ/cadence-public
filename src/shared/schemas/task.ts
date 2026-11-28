@@ -25,7 +25,7 @@ import { clientIdSchema } from "./client-id";
 const taskDateSchema = (field: "Start date" | "Due date") =>
   z.union(
     [z.iso.date(), z.iso.datetime({ offset: true, local: true })],
-    `${field} must be a valid calendar date (YYYY-MM-DD) or ISO 8601 datetime`,
+    `${field} must be a valid calendar date (YYYY-MM-DD) or ISO 8601 datetime`
   );
 
 /**
@@ -55,7 +55,7 @@ export const DATE_RANGE_ERROR = {
  */
 export function dateRangeError(
   startDate: string | null | undefined,
-  dueDate: string | null | undefined,
+  dueDate: string | null | undefined
 ): string | null {
   if (startDate && dueDate && startDate.slice(0, 10) > dueDate.slice(0, 10)) {
     return DATE_RANGE_ERROR.startAfterDue;
@@ -70,7 +70,7 @@ export function dateRangeError(
 function validateDateRange(
   startDate: string | null | undefined,
   dueDate: string | null | undefined,
-  ctx: z.RefinementCtx,
+  ctx: z.RefinementCtx
 ): void {
   const message = dateRangeError(startDate, dueDate);
   if (message) {
@@ -83,10 +83,12 @@ export const recurrenceRuleSchema = z.object({
   interval: z.number().int().min(1).max(365),
   daysOfWeek: z.array(z.number().int().min(0).max(6)).min(1).optional(),
   dayOfMonth: z.number().int().min(1).max(31).optional(),
-  nthWeekday: z.object({
-    n: z.number().int().min(1).max(5),
-    day: z.number().int().min(0).max(6),
-  }).optional(),
+  nthWeekday: z
+    .object({
+      n: z.number().int().min(1).max(5),
+      day: z.number().int().min(0).max(6),
+    })
+    .optional(),
   /**
    * Strict `YYYY-MM-DD` calendar date (calendar-aware, not a shape regex).
    * `computeNextDueDate` parses this with `Date.UTC(y, m - 1, d)`, which

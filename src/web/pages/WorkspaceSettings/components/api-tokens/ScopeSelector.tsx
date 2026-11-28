@@ -60,17 +60,10 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
           <Text variant="body-3" color="muted" as="span">
             {totalSelected} {totalSelected === 1 ? "scope" : "scopes"} selected
           </Text>
-          {totalSelected === 0 && (
-            <Badge variant="warning">At least one required</Badge>
-          )}
+          {totalSelected === 0 && <Badge variant="warning">At least one required</Badge>}
         </Row>
         <Row gap="r5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={selectAllReads}
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={selectAllReads}>
             Select all reads
           </Button>
           <Button
@@ -130,9 +123,7 @@ export function ScopeSelector({ value, onChange }: ScopeSelectorProps) {
                     <Text variant="body-3" as="span" className="flex-1">
                       {scope.label}
                     </Text>
-                    <code className="font-mono text-body-3 text-fg-muted">
-                      {scope.value}
-                    </code>
+                    <code className="font-mono text-body-3 text-fg-muted">{scope.value}</code>
                   </label>
                 ))}
               </Stack>

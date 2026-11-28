@@ -54,7 +54,7 @@ beforeAll(async () => {
   // seedUser only accepts TEST_USER / TEST_USER_2 types, so seed USER_3 via raw SQL
   await d1
     .prepare(
-      "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      "INSERT INTO user (id, name, email, emailVerified, image, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?)"
     )
     .bind(
       USER_3.id,
@@ -63,7 +63,7 @@ beforeAll(async () => {
       USER_3.emailVerified ? 1 : 0,
       USER_3.image,
       Math.floor(USER_3.createdAt.getTime() / 1000),
-      Math.floor(USER_3.updatedAt.getTime() / 1000),
+      Math.floor(USER_3.updatedAt.getTime() / 1000)
     )
     .run();
 
@@ -260,7 +260,9 @@ describe("createNotifications", () => {
     });
 
     // Verify no rows were inserted
-    const allRows = await d1.prepare("SELECT COUNT(*) as count FROM notification").first<{ count: number }>();
+    const allRows = await d1
+      .prepare("SELECT COUNT(*) as count FROM notification")
+      .first<{ count: number }>();
     expect(allRows!.count).toBe(0);
   });
 

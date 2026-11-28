@@ -30,16 +30,7 @@
  */
 
 import { Hono } from "hono";
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Module-level mocks must be declared BEFORE importing the modules under
@@ -55,7 +46,7 @@ vi.mock("../../lib/auth", () => ({
 
 type EmailMessage = { to: string; from?: string; subject: string; html: string; text?: string };
 const mockEmailSend = vi.fn<(msg: EmailMessage) => Promise<{ id: string }>>(() =>
-  Promise.resolve({ id: "test-email-id" }),
+  Promise.resolve({ id: "test-email-id" })
 );
 vi.mock("../../lib/email", () => ({
   createEmailService: vi.fn(() => ({ send: mockEmailSend })),
@@ -117,7 +108,7 @@ function installCookieAuthMock() {
             });
           }),
         },
-      }) as never,
+      }) as never
   );
 }
 
@@ -162,11 +153,7 @@ function buildE2EApp(): Hono<AppEnv> {
  * Request constructor that attaches a session cookie so the cookie-auth
  * branch fires inside `authSessionMiddleware`.
  */
-function cookieRequest(
-  method: string,
-  path: string,
-  body?: unknown,
-): Request {
+function cookieRequest(method: string, path: string, body?: unknown): Request {
   const headers: Record<string, string> = {
     cookie: "better-auth.session_token=test-session-token",
   };
@@ -182,12 +169,7 @@ function cookieRequest(
  * Request constructor that attaches a PAT bearer token so the PAT branch
  * fires inside `authSessionMiddleware`.
  */
-function patRequest(
-  plaintext: string,
-  method: string,
-  path: string,
-  body?: unknown,
-): Request {
+function patRequest(plaintext: string, method: string, path: string, body?: unknown): Request {
   const headers: Record<string, string> = {
     Authorization: `Bearer ${plaintext}`,
   };
@@ -261,7 +243,7 @@ describe("E2E: full lifecycle", () => {
         name: "Lifecycle test",
         scopes: ["workspace:read"],
         projectScope: "all",
-      }),
+      })
     );
     expect(mintRes.status).toBe(201);
     const minted = await mintRes.json<{
@@ -270,24 +252,17 @@ describe("E2E: full lifecycle", () => {
     expect(minted.token.plaintext).toMatch(/^cdn_pat_/);
 
     // 2. Use the plaintext as a Bearer to GET /workspaces.
-    const listRes = await app.request(
-      patRequest(minted.token.plaintext, "GET", "/workspaces"),
-    );
+    const listRes = await app.request(patRequest(minted.token.plaintext, "GET", "/workspaces"));
     expect(listRes.status).toBe(200);
 
     // 3. Revoke the token via cookie auth.
     const revokeRes = await app.request(
-      cookieRequest(
-        "DELETE",
-        `/workspaces/${workspaceId}/api-tokens/${minted.token.id}`,
-      ),
+      cookieRequest("DELETE", `/workspaces/${workspaceId}/api-tokens/${minted.token.id}`)
     );
     expect(revokeRes.status).toBe(200);
 
     // 4. The plaintext now must not authenticate.
-    const afterRevoke = await app.request(
-      patRequest(minted.token.plaintext, "GET", "/workspaces"),
-    );
+    const afterRevoke = await app.request(patRequest(minted.token.plaintext, "GET", "/workspaces"));
     expect(afterRevoke.status).toBe(401);
   });
 });
@@ -306,7 +281,7 @@ describe("E2E: rotation flow with grace period", () => {
         name: "Rotation original",
         scopes: ["workspace:read"],
         projectScope: "all",
-      }),
+      })
     );
     expect(mintRes.status).toBe(201);
     const original = await mintRes.json<{
@@ -316,10 +291,7 @@ describe("E2E: rotation flow with grace period", () => {
 
     // Rotate — yields plaintext B and queues plaintext A for revocation.
     const rotateRes = await app.request(
-      cookieRequest(
-        "POST",
-        `/workspaces/${workspaceId}/api-tokens/${original.token.id}/rotate`,
-      ),
+      cookieRequest("POST", `/workspaces/${workspaceId}/api-tokens/${original.token.id}/rotate`)
     );
     expect(rotateRes.status).toBe(201);
     const rotated = await rotateRes.json<{
@@ -329,21 +301,15 @@ describe("E2E: rotation flow with grace period", () => {
     expect(plaintextB).not.toBe(plaintextA);
 
     // Both A and B must authenticate during the grace window.
-    const aDuringGrace = await app.request(
-      patRequest(plaintextA, "GET", "/workspaces"),
-    );
+    const aDuringGrace = await app.request(patRequest(plaintextA, "GET", "/workspaces"));
     expect(aDuringGrace.status).toBe(200);
-    const bDuringGrace = await app.request(
-      patRequest(plaintextB, "GET", "/workspaces"),
-    );
+    const bDuringGrace = await app.request(patRequest(plaintextB, "GET", "/workspaces"));
     expect(bDuringGrace.status).toBe(200);
 
     // The DB row for the original must point at the new id and have a
     // future revokeAt approximately 7 days out.
     const oldRow = await d1
-      .prepare(
-        "SELECT rotatedToId, revokeAt, revokedAt FROM api_token WHERE id = ?",
-      )
+      .prepare("SELECT rotatedToId, revokeAt, revokedAt FROM api_token WHERE id = ?")
       .bind(original.token.id)
       .first<{ rotatedToId: string | null; revokeAt: number | null; revokedAt: number | null }>();
     expect(oldRow?.rotatedToId).toBe(rotated.token.id);
@@ -367,13 +333,9 @@ describe("E2E: rotation flow with grace period", () => {
     expect(revoked).toBe(1);
 
     // Plaintext A must now be rejected; plaintext B must still work.
-    const aAfterSweep = await app.request(
-      patRequest(plaintextA, "GET", "/workspaces"),
-    );
+    const aAfterSweep = await app.request(patRequest(plaintextA, "GET", "/workspaces"));
     expect(aAfterSweep.status).toBe(401);
-    const bAfterSweep = await app.request(
-      patRequest(plaintextB, "GET", "/workspaces"),
-    );
+    const bAfterSweep = await app.request(patRequest(plaintextB, "GET", "/workspaces"));
     expect(bAfterSweep.status).toBe(200);
   });
 });
@@ -392,29 +354,22 @@ describe("E2E: PAT lockout on token-management endpoints", () => {
         name: "Read-only",
         scopes: ["workspace:read"],
         projectScope: "all",
-      }),
+      })
     );
     expect(mintRes.status).toBe(201);
     const minted = await mintRes.json<{ token: { plaintext: string } }>();
 
     // The read scope should let it list workspaces.
-    const readRes = await app.request(
-      patRequest(minted.token.plaintext, "GET", "/workspaces"),
-    );
+    const readRes = await app.request(patRequest(minted.token.plaintext, "GET", "/workspaces"));
     expect(readRes.status).toBe(200);
 
     // The PAT-lockout (independent of scope) must block sibling mint.
     const mintViaPatRes = await app.request(
-      patRequest(
-        minted.token.plaintext,
-        "POST",
-        `/workspaces/${workspaceId}/api-tokens`,
-        {
-          name: "Pat cannot mint",
-          scopes: ["workspace:read"],
-          projectScope: "all",
-        },
-      ),
+      patRequest(minted.token.plaintext, "POST", `/workspaces/${workspaceId}/api-tokens`, {
+        name: "Pat cannot mint",
+        scopes: ["workspace:read"],
+        projectScope: "all",
+      })
     );
     expect(mintViaPatRes.status).toBe(403);
     const body = await mintViaPatRes.json<{ error: string }>();
@@ -435,7 +390,7 @@ describe("E2E: token issuance is owner/admin-only", () => {
         name: "Member should not get this",
         scopes: ["workspace:read"],
         projectScope: "all",
-      }),
+      })
     );
 
     expect(res.status).toBe(403);
@@ -458,8 +413,8 @@ describe("E2E: token issuance is owner/admin-only", () => {
     const res = await app.request(
       cookieRequest(
         "POST",
-        `/workspaces/${memberOnlyWorkspaceId}/api-tokens/tok_does_not_exist/rotate`,
-      ),
+        `/workspaces/${memberOnlyWorkspaceId}/api-tokens/tok_does_not_exist/rotate`
+      )
     );
 
     expect(res.status).toBe(403);
@@ -469,7 +424,7 @@ describe("E2E: token issuance is owner/admin-only", () => {
     const app = buildE2EApp();
 
     const res = await app.request(
-      cookieRequest("GET", `/workspaces/${memberOnlyWorkspaceId}/api-tokens`),
+      cookieRequest("GET", `/workspaces/${memberOnlyWorkspaceId}/api-tokens`)
     );
 
     expect(res.status).toBe(200);
@@ -485,7 +440,7 @@ describe("E2E: token issuance is owner/admin-only", () => {
         name: "Owner may mint",
         scopes: ["workspace:read"],
         projectScope: "all",
-      }),
+      })
     );
 
     expect(res.status).toBe(201);
@@ -506,7 +461,7 @@ describe("E2E: workspace-scope guard", () => {
         name: "WS-A token",
         scopes: ["workspace:read"],
         projectScope: "all",
-      }),
+      })
     );
     expect(mintRes.status).toBe(201);
     const minted = await mintRes.json<{ token: { plaintext: string } }>();
@@ -515,13 +470,13 @@ describe("E2E: workspace-scope guard", () => {
     // 403 — the token's workspaceId is the boundary, NOT the user's
     // workspace memberships (the user owns both workspaces).
     const crossRes = await app.request(
-      patRequest(minted.token.plaintext, "GET", `/workspaces/${otherWorkspaceId}`),
+      patRequest(minted.token.plaintext, "GET", `/workspaces/${otherWorkspaceId}`)
     );
     expect(crossRes.status).toBe(403);
 
     // Sanity: against the correct workspace it works.
     const sameRes = await app.request(
-      patRequest(minted.token.plaintext, "GET", `/workspaces/${workspaceId}`),
+      patRequest(minted.token.plaintext, "GET", `/workspaces/${workspaceId}`)
     );
     expect(sameRes.status).toBe(200);
   });
@@ -542,24 +497,20 @@ describe("E2E: project-scope guard", () => {
         scopes: ["project:read"],
         projectScope: "selected",
         projectIds: [projectInPrimary],
-      }),
+      })
     );
     expect(mintRes.status).toBe(201);
     const minted = await mintRes.json<{ token: { plaintext: string } }>();
 
     // Allowed: the listed project.
     const allowed = await app.request(
-      patRequest(minted.token.plaintext, "GET", `/projects/${projectInPrimary}`),
+      patRequest(minted.token.plaintext, "GET", `/projects/${projectInPrimary}`)
     );
     expect(allowed.status).toBe(200);
 
     // Forbidden: a sibling project in the same workspace not on the list.
     const denied = await app.request(
-      patRequest(
-        minted.token.plaintext,
-        "GET",
-        `/projects/${otherProjectInPrimary}`,
-      ),
+      patRequest(minted.token.plaintext, "GET", `/projects/${otherProjectInPrimary}`)
     );
     expect(denied.status).toBe(403);
   });
@@ -579,9 +530,7 @@ describe("E2E: tampered token", () => {
     const tampered = `${TOKEN_PREFIX}AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`;
     expect(tampered).toMatch(/^cdn_pat_[A-Za-z0-9_-]{32}$/);
 
-    const res = await app.request(
-      patRequest(tampered, "GET", "/workspaces"),
-    );
+    const res = await app.request(patRequest(tampered, "GET", "/workspaces"));
     expect(res.status).toBe(401);
     const body = await res.json<{ error: string }>();
     expect(body.error).toContain("Invalid API token");
@@ -598,7 +547,7 @@ describe("E2E: tampered token", () => {
       new Request(`http://localhost/workspaces`, {
         method: "GET",
         headers: { Authorization: "Bearer not-a-pat-token" },
-      }),
+      })
     );
     expect(res.status).toBe(401);
   });

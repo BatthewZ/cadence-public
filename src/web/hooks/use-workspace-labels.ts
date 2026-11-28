@@ -33,16 +33,10 @@ export interface WorkspaceLabel {
  * projects the caller can see), so the query runs whenever a workspace id is
  * present.
  */
-export function useWorkspaceLabels(
-  workspaceId: string,
-  options?: { enabled?: boolean },
-) {
+export function useWorkspaceLabels(workspaceId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: queryKeys.workspaces.labels(workspaceId),
-    queryFn: () =>
-      api.get<{ labels: WorkspaceLabel[] }>(
-        `/api/workspaces/${workspaceId}/labels`,
-      ),
+    queryFn: () => api.get<{ labels: WorkspaceLabel[] }>(`/api/workspaces/${workspaceId}/labels`),
     enabled: Boolean(workspaceId) && options?.enabled !== false,
   });
 }

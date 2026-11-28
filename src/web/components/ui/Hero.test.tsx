@@ -7,13 +7,17 @@ import { Hero } from "./Hero";
 // Mock animation components to avoid their side-effects in tests
 vi.mock("@/web/components/animation/Parallax", () => ({
   Parallax: ({ children, ...props }: { children: React.ReactNode }) => (
-    <div data-testid="parallax" {...props}>{children}</div>
+    <div data-testid="parallax" {...props}>
+      {children}
+    </div>
   ),
 }));
 
 vi.mock("@/web/components/animation/ScrollReveal", () => ({
   ScrollReveal: ({ children, ...props }: { children: React.ReactNode }) => (
-    <div data-testid="scroll-reveal" {...props}>{children}</div>
+    <div data-testid="scroll-reveal" {...props}>
+      {children}
+    </div>
   ),
 }));
 
@@ -42,17 +46,29 @@ describe("Hero", () => {
     });
 
     it("applies sm size class", () => {
-      render(<Hero data-testid="hero" size="sm">Content</Hero>);
+      render(
+        <Hero data-testid="hero" size="sm">
+          Content
+        </Hero>
+      );
       expect(screen.getByTestId("hero").className).toContain("hero--sm");
     });
 
     it("applies lg size class", () => {
-      render(<Hero data-testid="hero" size="lg">Content</Hero>);
+      render(
+        <Hero data-testid="hero" size="lg">
+          Content
+        </Hero>
+      );
       expect(screen.getByTestId("hero").className).toContain("hero--lg");
     });
 
     it("applies full size class", () => {
-      render(<Hero data-testid="hero" size="full">Content</Hero>);
+      render(
+        <Hero data-testid="hero" size="full">
+          Content
+        </Hero>
+      );
       expect(screen.getByTestId("hero").className).toContain("hero--full");
     });
 
@@ -62,12 +78,20 @@ describe("Hero", () => {
     });
 
     it("applies start alignment class", () => {
-      render(<Hero data-testid="hero" align="start">Content</Hero>);
+      render(
+        <Hero data-testid="hero" align="start">
+          Content
+        </Hero>
+      );
       expect(screen.getByTestId("hero").className).toContain("hero--align-start");
     });
 
     it("applies center alignment class", () => {
-      render(<Hero data-testid="hero" align="center">Content</Hero>);
+      render(
+        <Hero data-testid="hero" align="center">
+          Content
+        </Hero>
+      );
       expect(screen.getByTestId("hero").className).toContain("hero--align-center");
     });
 
@@ -84,7 +108,11 @@ describe("Hero", () => {
     });
 
     it("merges custom className", () => {
-      render(<Hero data-testid="hero" className="my-hero">Content</Hero>);
+      render(
+        <Hero data-testid="hero" className="my-hero">
+          Content
+        </Hero>
+      );
       const cls = screen.getByTestId("hero").className;
       expect(cls).toContain("hero");
       expect(cls).toContain("my-hero");
@@ -170,7 +198,11 @@ describe("Hero", () => {
     });
 
     it("merges custom className", () => {
-      render(<Hero.Content className="custom-content" data-testid="content">C</Hero.Content>);
+      render(
+        <Hero.Content className="custom-content" data-testid="content">
+          C
+        </Hero.Content>
+      );
       const cls = screen.getByTestId("content").className;
       expect(cls).toContain("hero__content");
       expect(cls).toContain("custom-content");

@@ -136,9 +136,7 @@ describe("ResendEmailService", () => {
         subject: "Fail",
         html: "<p>No</p>",
       })
-    ).rejects.toThrow(
-      'Resend API error (403 Forbidden): {"message":"Invalid API key"}'
-    );
+    ).rejects.toThrow('Resend API error (403 Forbidden): {"message":"Invalid API key"}');
   });
 
   it("throws on network error", async () => {

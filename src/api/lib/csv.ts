@@ -102,7 +102,7 @@ function encodeField(value: CsvValue): string {
  */
 export function toCsv<const H extends readonly string[]>(
   headers: H,
-  rows: ReadonlyArray<Record<H[number], CsvValue>>,
+  rows: ReadonlyArray<Record<H[number], CsvValue>>
 ): string {
   const lines: string[] = [headers.map(encodeField).join(",")];
   for (const row of rows) {

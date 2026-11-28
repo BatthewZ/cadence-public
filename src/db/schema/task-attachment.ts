@@ -15,5 +15,5 @@ export const taskAttachment = sqliteTable(
       .references(() => upload.id, { onDelete: "cascade" }),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull(),
   },
-  (table) => [index("task_attachment_task_idx").on(table.taskId, table.createdAt)],
+  (table) => [index("task_attachment_task_idx").on(table.taskId, table.createdAt)]
 );

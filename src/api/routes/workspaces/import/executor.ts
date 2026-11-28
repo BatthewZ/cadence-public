@@ -8,9 +8,7 @@ import { project, projectMember } from "../../../../db/schema/project";
 import { comment, subtask, task, taskGroup } from "../../../../db/schema/task";
 import { workspaceMember } from "../../../../db/schema/workspace";
 import { generateNKeysBetween } from "../../../../shared/lib/fractional-index";
-import type {
-  ExportedProject,
-} from "../../../../shared/schemas/workspace-export";
+import type { ExportedProject } from "../../../../shared/schemas/workspace-export";
 import type {
   ImportCounts,
   ImportDocument,
@@ -110,7 +108,7 @@ export interface ResolvedUsers {
 export async function resolveUserMap(
   db: Database,
   workspaceId: string,
-  doc: ImportDocument,
+  doc: ImportDocument
 ): Promise<ResolvedUsers> {
   const members = await db
     .select({ userId: workspaceMember.userId, email: user.email })
@@ -119,7 +117,7 @@ export async function resolveUserMap(
     .where(eq(workspaceMember.workspaceId, workspaceId));
 
   const memberIdByEmail = new Map<string, string>(
-    members.map((m) => [m.email.toLowerCase(), m.userId]),
+    members.map((m) => [m.email.toLowerCase(), m.userId])
   );
 
   const refToUserId = new Map<string, string>();
@@ -171,7 +169,7 @@ export async function resolveUserMap(
 export async function previewImport(
   db: Database,
   workspaceId: string,
-  doc: ImportDocument,
+  doc: ImportDocument
 ): Promise<ImportPreviewReport> {
   const { unmatchedUsers } = await resolveUserMap(db, workspaceId, doc);
   const counts = zeroCounts();
@@ -204,7 +202,7 @@ export async function executeImport(
   db: Database,
   workspaceId: string,
   importingUserId: string,
-  doc: ImportDocument,
+  doc: ImportDocument
 ): Promise<ImportExecutionReport> {
   const { refToUserId, unmatchedUsers } = await resolveUserMap(db, workspaceId, doc);
 
@@ -241,30 +239,20 @@ export async function executeImport(
       // Phase 1: project root + everything that FKs only onto project/user.
       await runBatches(db, [
         db.insert(project).values(plan.projectRow),
-        ...chunkRowsForInsert(plan.memberRows).map((rows) =>
-          db.insert(projectMember).values(rows),
-        ),
-        ...chunkRowsForInsert(plan.groupRows).map((rows) =>
-          db.insert(taskGroup).values(rows),
-        ),
+        ...chunkRowsForInsert(plan.memberRows).map((rows) => db.insert(projectMember).values(rows)),
+        ...chunkRowsForInsert(plan.groupRows).map((rows) => db.insert(taskGroup).values(rows)),
         ...chunkRowsForInsert(plan.labelRows).map((rows) => db.insert(label).values(rows)),
       ]);
       // Phase 2: tasks (FK onto project + groups).
       await runBatches(
         db,
-        chunkRowsForInsert(plan.taskRows).map((rows) => db.insert(task).values(rows)),
+        chunkRowsForInsert(plan.taskRows).map((rows) => db.insert(task).values(rows))
       );
       // Phase 3: task children (FK onto tasks/labels).
       await runBatches(db, [
-        ...chunkRowsForInsert(plan.subtaskRows).map((rows) =>
-          db.insert(subtask).values(rows),
-        ),
-        ...chunkRowsForInsert(plan.commentRows).map((rows) =>
-          db.insert(comment).values(rows),
-        ),
-        ...chunkRowsForInsert(plan.taskLabelRows).map((rows) =>
-          db.insert(taskLabel).values(rows),
-        ),
+        ...chunkRowsForInsert(plan.subtaskRows).map((rows) => db.insert(subtask).values(rows)),
+        ...chunkRowsForInsert(plan.commentRows).map((rows) => db.insert(comment).values(rows)),
+        ...chunkRowsForInsert(plan.taskLabelRows).map((rows) => db.insert(taskLabel).values(rows)),
       ]);
     } catch (err) {
       const failure: ImportFailedProject = {
@@ -394,7 +382,7 @@ export function repairProject(source: ExportedProject): RepairedProject {
     let recurrenceParentId = t.recurrenceParentId;
     if (recurrenceParentId !== null && !taskIds.has(recurrenceParentId)) {
       warnings.push(
-        `Project "${source.name}": task "${t.title}" references a recurrence parent that is not in the file; the recurrence link was removed.`,
+        `Project "${source.name}": task "${t.title}" references a recurrence parent that is not in the file; the recurrence link was removed.`
       );
       recurrenceParentId = null;
       changed = true;
@@ -414,7 +402,7 @@ export function repairProject(source: ExportedProject): RepairedProject {
     }
     if (droppedLabels > 0) {
       warnings.push(
-        `Project "${source.name}": task "${t.title}" references ${droppedLabels} label${droppedLabels === 1 ? "" : "s"} that ${droppedLabels === 1 ? "is" : "are"} not in the file; the label link${droppedLabels === 1 ? " was" : "s were"} removed.`,
+        `Project "${source.name}": task "${t.title}" references ${droppedLabels} label${droppedLabels === 1 ? "" : "s"} that ${droppedLabels === 1 ? "is" : "are"} not in the file; the label link${droppedLabels === 1 ? " was" : "s were"} removed.`
       );
     }
     if (keptLabelIds.length !== t.labelIds.length) changed = true;
@@ -537,7 +525,7 @@ function buildProjectRows(source: ExportedProject, ctx: BuildContext): ProjectRo
   });
 
   const groupIdByOld = new Map<string, string>(
-    source.taskGroups.map((g) => [g.id, crypto.randomUUID()]),
+    source.taskGroups.map((g) => [g.id, crypto.randomUUID()])
   );
   const groupRows: TaskGroupInsert[] = source.taskGroups.map((g) => ({
     id: requireMapped(groupIdByOld, g.id, "task group"),
@@ -551,7 +539,7 @@ function buildProjectRows(source: ExportedProject, ctx: BuildContext): ProjectRo
   }));
 
   const labelIdByOld = new Map<string, string>(
-    source.labels.map((l) => [l.id, crypto.randomUUID()]),
+    source.labels.map((l) => [l.id, crypto.randomUUID()])
   );
   const labelRows: LabelInsert[] = source.labels.map((l) => ({
     id: requireMapped(labelIdByOld, l.id, "label"),
@@ -563,9 +551,7 @@ function buildProjectRows(source: ExportedProject, ctx: BuildContext): ProjectRo
 
   // Pre-mint ALL task ids before building rows so recurrenceParentId can
   // reference a task that appears later in the array.
-  const taskIdByOld = new Map<string, string>(
-    source.tasks.map((t) => [t.id, crypto.randomUUID()]),
-  );
+  const taskIdByOld = new Map<string, string>(source.tasks.map((t) => [t.id, crypto.randomUUID()]));
   // Series ids are opaque grouping UUIDs (not task refs): each distinct
   // source value gets ONE fresh UUID so series stay grouped in the target
   // without ever colliding with the source instance's ids.
@@ -577,7 +563,7 @@ function buildProjectRows(source: ExportedProject, ctx: BuildContext): ProjectRo
       // Parse-level integrity validation rejects this; the throw keeps the
       // engine safe (clean per-project failure) if it's ever driven directly.
       throw new Error(
-        `Task "${t.title}" references task group "${t.taskGroupId}", which does not exist in project "${source.name}"`,
+        `Task "${t.title}" references task group "${t.taskGroupId}", which does not exist in project "${source.name}"`
       );
     }
     return {
@@ -606,13 +592,9 @@ function buildProjectRows(source: ExportedProject, ctx: BuildContext): ProjectRo
       // repairProject nulled danglers, so a non-null value maps; `?? null`
       // keeps the row total even if repair is bypassed.
       recurrenceParentId:
-        t.recurrenceParentId !== null
-          ? (taskIdByOld.get(t.recurrenceParentId) ?? null)
-          : null,
+        t.recurrenceParentId !== null ? (taskIdByOld.get(t.recurrenceParentId) ?? null) : null,
       recurrenceSeriesId:
-        t.recurrenceSeriesId !== null
-          ? remapSeriesId(seriesIdByOld, t.recurrenceSeriesId)
-          : null,
+        t.recurrenceSeriesId !== null ? remapSeriesId(seriesIdByOld, t.recurrenceSeriesId) : null,
       sourceUid: t.sourceUid,
       position: t.position,
       createdAt: new Date(t.createdAt),
@@ -702,7 +684,7 @@ function requireMapped(map: ReadonlyMap<string, string>, oldId: string, kind: st
 async function nextProjectPositions(
   db: Database,
   workspaceId: string,
-  count: number,
+  count: number
 ): Promise<string[]> {
   if (count === 0) return [];
   const [last] = await db

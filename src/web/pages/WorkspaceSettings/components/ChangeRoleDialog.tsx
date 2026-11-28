@@ -46,10 +46,7 @@ export function ChangeRoleDialog({
   }
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-    >
+    <Dialog open={open} onClose={onClose}>
       <form onSubmit={(e) => void handleSubmit(e)}>
         <Stack gap="r4">
           <Text variant="h5">Change Role</Text>
@@ -72,20 +69,10 @@ export function ChangeRoleDialog({
           {roleError && <Alert variant="error">{roleError}</Alert>}
 
           <Row gap="r4" justify="end">
-            <Button
-              variant="ghost"
-              size="md"
-              type="button"
-              onClick={onClose}
-            >
+            <Button variant="ghost" size="md" type="button" onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="md"
-              disabled={updatingRole}
-            >
+            <Button type="submit" variant="primary" size="md" disabled={updatingRole}>
               {updatingRole ? "Updating..." : "Update Role"}
             </Button>
           </Row>

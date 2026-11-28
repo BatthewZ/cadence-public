@@ -53,7 +53,8 @@
   transform: translateY(-50%);
   z-index: 10;
   opacity: 1;
-  transition: opacity var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
+  transition:
+    opacity var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER),
     background-color var(--MOTION-DURATION-ENTER) var(--MOTION-EASE-ENTER);
 }
 

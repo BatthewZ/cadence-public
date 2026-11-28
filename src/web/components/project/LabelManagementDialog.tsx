@@ -9,12 +9,7 @@ import { ConfirmDialog } from "@/web/components/ui/ConfirmDialog";
 import { Dialog } from "@/web/components/ui/Dialog";
 import { Text } from "@/web/components/ui/Text";
 import { useToast } from "@/web/components/ui/ToastContext";
-import {
-  type Label,
-  useCreateLabel,
-  useDeleteLabel,
-  useUpdateLabel,
-} from "@/web/hooks/use-labels";
+import { type Label, useCreateLabel, useDeleteLabel, useUpdateLabel } from "@/web/hooks/use-labels";
 
 interface LabelManagementDialogProps {
   open: boolean;

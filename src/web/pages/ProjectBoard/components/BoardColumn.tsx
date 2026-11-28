@@ -1,19 +1,7 @@
-import {
-  SortableContext,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
+import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Check,
-  CircleCheckBig,
-  MoreHorizontal,
-  Palette,
-  Pencil,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Check, CircleCheckBig, MoreHorizontal, Palette, Pencil, Trash2, X } from "lucide-react";
 import {
   type CSSProperties,
   type KeyboardEvent,
@@ -410,18 +398,29 @@ export function SortableColumn({
                 <DropdownMenu.Item index={0} icon={<Pencil size={14} />} onSelect={startRename}>
                   Rename
                 </DropdownMenu.Item>
-                <DropdownMenu.Item index={1} icon={<Palette size={14} />} onSelect={() => setShowColorPicker(true)}>
+                <DropdownMenu.Item
+                  index={1}
+                  icon={<Palette size={14} />}
+                  onSelect={() => setShowColorPicker(true)}
+                >
                   Change color
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   index={2}
                   icon={<CircleCheckBig size={14} />}
-                  onSelect={() => { void handleToggleCompletionGroup(); }}
+                  onSelect={() => {
+                    void handleToggleCompletionGroup();
+                  }}
                 >
                   {group.isCompletionGroup ? "Unmark as done column" : "Set as done column"}
                 </DropdownMenu.Item>
                 <DropdownMenu.Divider />
-                <DropdownMenu.Item index={3} variant="danger" icon={<Trash2 size={14} />} onSelect={openDeleteDialog}>
+                <DropdownMenu.Item
+                  index={3}
+                  variant="danger"
+                  icon={<Trash2 size={14} />}
+                  onSelect={openDeleteDialog}
+                >
                   Delete section
                 </DropdownMenu.Item>
               </DropdownMenu.Content>

@@ -61,30 +61,22 @@ export function RotateTokenDialog({
           </Row>
 
           <Text variant="body-2" color="secondary">
-            Rotate <strong>{tokenName ?? "this token"}</strong>? A new token
-            will be issued with the same scopes and project access. The
-            previous token will continue to work for 7 days, then
-            automatically revoke.
+            Rotate <strong>{tokenName ?? "this token"}</strong>? A new token will be issued with the
+            same scopes and project access. The previous token will continue to work for 7 days,
+            then automatically revoke.
           </Text>
 
           <Alert variant="info">
             <Text variant="body-3" as="span">
-              Use the 7-day grace window to update every place the old token
-              is used (CI secrets, environment variables, etc.) before it
-              expires.
+              Use the 7-day grace window to update every place the old token is used (CI secrets,
+              environment variables, etc.) before it expires.
             </Text>
           </Alert>
 
           {errorMessage && <Alert variant="error">{errorMessage}</Alert>}
 
           <Row gap="r4" justify="end" className="pt-r3">
-            <Button
-              type="button"
-              variant="ghost"
-              size="md"
-              onClick={onClose}
-              disabled={isPending}
-            >
+            <Button type="button" variant="ghost" size="md" onClick={onClose} disabled={isPending}>
               Cancel
             </Button>
             <Button

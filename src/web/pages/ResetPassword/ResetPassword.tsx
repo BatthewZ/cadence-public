@@ -51,9 +51,7 @@ export function ResetPassword() {
           success: true as const,
           message: (
             <Stack gap="r4">
-              <Alert variant="success">
-                Your password has been reset successfully.
-              </Alert>
+              <Alert variant="success">Your password has been reset successfully.</Alert>
               <Text variant="body-2" color="secondary" className="text-center">
                 <Link to="/login" className="link">
                   Sign in with your new password
@@ -87,9 +85,7 @@ export function ResetPassword() {
               required
             />
             <FieldError>{fieldErrors.newPassword}</FieldError>
-            {newPassword.length > 0 && (
-              <PasswordRequirements password={newPassword} />
-            )}
+            {newPassword.length > 0 && <PasswordRequirements password={newPassword} />}
           </Field>
 
           <Field>
@@ -127,9 +123,7 @@ function ResetPasswordMissingToken() {
           <Text variant="h4" as="h1" className="text-center">
             Reset Password
           </Text>
-          <Alert variant="error">
-            Invalid or expired reset link. Please request a new one.
-          </Alert>
+          <Alert variant="error">Invalid or expired reset link. Please request a new one.</Alert>
           <Text variant="body-2" color="secondary" className="text-center">
             <Link to="/forgot-password" className="link">
               Request new reset link

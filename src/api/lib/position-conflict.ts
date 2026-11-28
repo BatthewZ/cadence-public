@@ -63,7 +63,7 @@ export function isUniqueConstraintViolation(err: unknown): boolean {
  */
 export async function retryOnPositionConflict<T>(
   fn: () => Promise<T>,
-  maxAttempts = 10,
+  maxAttempts = 10
 ): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -74,10 +74,9 @@ export async function retryOnPositionConflict<T>(
       lastError = err;
     }
   }
-  throw new Error(
-    `Position conflict persisted after ${maxAttempts} attempts`,
-    { cause: lastError },
-  );
+  throw new Error(`Position conflict persisted after ${maxAttempts} attempts`, {
+    cause: lastError,
+  });
 }
 
 /**
@@ -89,13 +88,12 @@ export async function retryOnPositionConflict<T>(
 export async function writeClientPosition<T>(
   requested: string,
   nextAfter: (position: string) => Promise<string | null>,
-  write: (position: string) => Promise<T>,
+  write: (position: string) => Promise<T>
 ): Promise<T> {
   let attempt = 0;
   return retryOnPositionConflict(async () => {
-    const position = attempt++ === 0
-      ? requested
-      : generateKeyBetween(requested, await nextAfter(requested));
+    const position =
+      attempt++ === 0 ? requested : generateKeyBetween(requested, await nextAfter(requested));
     return write(position);
   });
 }
@@ -108,7 +106,7 @@ export function nextSiblingPosition(
   db: Database,
   table: SQLiteTable & { id: AnySQLiteColumn; position: AnySQLiteColumn<{ data: string }> },
   siblings: SQL,
-  selfId: string,
+  selfId: string
 ): (after: string) => Promise<string | null> {
   return async (after) => {
     const [next] = await db
